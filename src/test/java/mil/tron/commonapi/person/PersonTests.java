@@ -1,6 +1,5 @@
 package mil.tron.commonapi.person;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,12 +26,6 @@ public class PersonTests {
         Person secondTestPerson = new Person();
         UUID secondUUID = secondTestPerson.getId();
         boolean areEqual = firstUUID == secondUUID;
-        System.out.println(firstUUID);
-        System.out.println(secondUUID);
         assertEquals(areEqual, false);
-    }
-    @Test
-    public void purposefulFailure() {
-        assertEquals(true, false);
     }
 }

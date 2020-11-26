@@ -6,20 +6,22 @@ import javax.persistence.Entity;
 import javax.persistence.*;
 import javax.validation.constraints.Email;
 
-import org.hibernate.annotations.GenericGenerator;
-
 import java.util.UUID;
 
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Person {
 
     @Id
     @Getter
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
-    @GeneratedValue(generator = "UUID")
-    private UUID id;
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
+
+    public boolean equals(Person other) {
+        return this.id == other.getId();
+    }
 
     @Getter
     @Setter
