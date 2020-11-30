@@ -10,10 +10,6 @@ import mil.tron.commonapi.person.Person;
 
 @Service
 public class PersonServiceImpl implements PersonService {
-	public PersonServiceImpl() {
-		
-	}
-	
 	HashMap<UUID, Person> persons = new HashMap<>();
 
 	@Override

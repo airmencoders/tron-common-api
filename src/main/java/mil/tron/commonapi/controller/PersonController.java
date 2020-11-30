@@ -21,7 +21,7 @@ import mil.tron.commonapi.person.Person;
 import mil.tron.commonapi.service.PersonServiceImpl;
 
 @RestController
-@RequestMapping("/persons")
+@RequestMapping("/person")
 public class PersonController {
 	
 	@Autowired
@@ -56,7 +56,7 @@ public class PersonController {
 	
 	@Operation(summary = "Deletes an existing person", description = "Deletes an existing person")
 	@DeleteMapping(value = "/{id}")
-	public ResponseEntity deletePerson(
+	public ResponseEntity<Object> deletePerson(
 			@Parameter(description = "Person ID to delete", required = true) @PathVariable("id") UUID personId) {
 		return new ResponseEntity<>(HttpStatus.OK);
 	}
