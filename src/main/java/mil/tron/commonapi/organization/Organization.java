@@ -6,6 +6,7 @@ import javax.persistence.Entity;
 import javax.persistence.*;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import mil.tron.commonapi.person.Person;
@@ -31,11 +32,13 @@ public class Organization {
 
     @Getter
     @Setter
+    @OneToOne
     private Organization parentOrganization;
 
     @Getter
+    @ElementCollection
     @Builder.Default
-    private ArrayList<Organization> subordinateOrganizations = new ArrayList<Organization>();
+    private List<Organization> subordinateOrganizations = new ArrayList<Organization>();
 
     public void addSubordinateOrganization(Organization subOrg) {
         if (!this.subordinateOrganizations.contains(subOrg)) {
@@ -53,6 +56,7 @@ public class Organization {
     }
 
     @Getter
+    @OneToOne
     private Person leader;
 
     public void setLeader(Person leader) {
@@ -64,8 +68,9 @@ public class Organization {
     }
 
     @Getter
+    @ElementCollection
     @Builder.Default
-    private ArrayList<Person> members = new ArrayList<Person>();
+    private List<Person> members = new ArrayList<Person>();
 
     public void addMember(Person member) {
         if (!this.members.contains(member)) {
