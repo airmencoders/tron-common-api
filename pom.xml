@@ -18,32 +18,6 @@
         <java.version>11</java.version>
     </properties>
 
-	<profiles>
-		<profile>
-		    <id>prod</id>
-		    <activation>
-		        <activeByDefault>true</activeByDefault>
-		    </activation>
-		    <properties>
-		        <spring.profiles.active>prod</spring.profiles.active>
-		    </properties>
-		</profile>
-		
-		<profile>
-		    <id>dev</id>
-		    <properties>
-		        <spring.profiles.active>dev</spring.profiles.active>
-		    </properties>
-		</profile>
-		
-		<profile>
-		    <id>staging</id>
-		    <properties>
-		        <spring.profiles.active>staging</spring.profiles.active>
-		    </properties>
-		</profile>
-	 </profiles>
-
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
