@@ -14,7 +14,7 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public Person createPerson(Person person) {
-		persons.put(UUID.randomUUID(), person);
+		persons.put(person.getId(), person);
 		
 		return person;
 	}

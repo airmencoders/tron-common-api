@@ -43,7 +43,7 @@ public class PersonController {
 	@Operation(summary = "Adds a person", description = "Adds a person")
 	@PostMapping
 	public ResponseEntity<Person> createPerson(@Parameter(description = "Person to create", required = true) @RequestBody Person person) {
-		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.OK);
+		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
