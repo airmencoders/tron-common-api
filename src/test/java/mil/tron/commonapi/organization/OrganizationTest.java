@@ -46,10 +46,10 @@ public class OrganizationTest {
         Organization testOrg = new Organization();
         Person testPerson1 = new Person();
         Person testPerson2 = new Person();
-        testOrg.setLeader(testPerson1);
+        testOrg.setLeaderAndUpdateMembers(testPerson1);
         assertEquals(testOrg.getMembers().contains(testPerson1), true);
         assertEquals(testOrg.getLeader(), testPerson1);
-        testOrg.setLeader(testPerson2);
+        testOrg.setLeaderAndUpdateMembers(testPerson2);
         assertEquals(testOrg.getMembers().contains(testPerson1), false);
     }
     
