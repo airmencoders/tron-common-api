@@ -29,6 +29,10 @@ public class Person {
     @Setter
     private String lastName;
     
+    /**
+    * The title of a person, as in how they should be addressed.
+    * Examples: Mr., Ms., Dr., SSgt, PFC, PO2, LCpl
+    */
     @Getter
     @Setter
     private String title;
@@ -39,7 +43,12 @@ public class Person {
     private String email;
     
     public boolean equals(Person other) {
-        return this.id == other.getId();
+        if (other == null) {
+            return false;
+        }
+        else {
+            return this.id == other.getId();
+        }
     }
     public String getFullName() {
         return String.format("%s %s", firstName, lastName);
