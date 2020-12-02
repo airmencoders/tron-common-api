@@ -28,4 +28,10 @@ public class PersonTests {
         boolean areEqual = firstUUID == secondUUID;
         assertEquals(areEqual, false);
     }
+
+    @Test
+    public void shouldNotEqualNull() {
+        Person testPerson = new Person();
+        assertEquals(testPerson == null, false);
+    }
 }

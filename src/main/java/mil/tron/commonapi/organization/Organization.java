@@ -43,16 +43,21 @@ public class Organization {
     private List<Organization> subordinateOrganizations = new ArrayList<Organization>();
     
     public boolean equals(Organization other) {
-        return this.id == other.getId();
+        if (other == null) {
+            return false;
+        }
+        else {
+            return this.id == other.getId();
+        }
     }
     
-    public void addSubordinateOrganization(Organization subOrg) {
+    public void addSubordinateOrganization(@NonNull Organization subOrg) {
         if (!this.subordinateOrganizations.contains(subOrg)) {
             this.subordinateOrganizations.add(subOrg);
         }
     }
     
-    public boolean removeSubordinateOrganization(Organization subOrg) {
+    public boolean removeSubordinateOrganization(@NonNull Organization subOrg) {
         if (this.subordinateOrganizations.remove(subOrg)) {
             return true;
         }
@@ -61,7 +66,7 @@ public class Organization {
         }
     }
     
-    public void setLeaderAndUpdateMembers(Person leader) {
+    public void setLeaderAndUpdateMembers(@NonNull Person leader) {
         this.members.remove(this.leader);
         this.leader = leader;
         if (!this.members.contains(leader)) {
@@ -70,13 +75,13 @@ public class Organization {
     }
     
     
-    public void addMember(Person member) {
+    public void addMember(@NonNull Person member) {
         if (!this.members.contains(member)) {
             this.members.add(member);
         }
     }
     
-    public boolean removeMember(Person member) {
+    public boolean removeMember(@NonNull Person member) {
         if (this.members.remove(member)) {
             return true;
         }

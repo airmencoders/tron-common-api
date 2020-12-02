@@ -52,5 +52,11 @@ public class OrganizationTest {
         testOrg.setLeaderAndUpdateMembers(testPerson2);
         assertEquals(testOrg.getMembers().contains(testPerson1), false);
     }
+
+    @Test
+    public void shouldNotEqualNull() {
+        Organization testOrg = new Organization();
+        assertEquals(testOrg == null, false);
+    }
     
 }
