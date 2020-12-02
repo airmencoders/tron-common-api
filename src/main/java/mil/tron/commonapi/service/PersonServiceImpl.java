@@ -21,9 +21,9 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public Person updatePerson(UUID id, Person person) {
-		persons.replace(id, person);
+		Person replaced = persons.replace(id, person);
 		
-		return person;
+		return replaced != null ? person : null;
 	}
 
 	@Override

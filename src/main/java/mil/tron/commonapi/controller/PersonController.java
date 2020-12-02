@@ -37,7 +37,13 @@ public class PersonController {
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<Person> getPerson(
 			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId) {
-		return new ResponseEntity<>(personService.getPerson(personId), HttpStatus.OK);
+		
+		Person person = personService.getPerson(personId);
+		
+		if (person != null)
+			return new ResponseEntity<>(person, HttpStatus.OK);
+		else
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
 	
 	@Operation(summary = "Adds a person", description = "Adds a person")
@@ -51,14 +57,20 @@ public class PersonController {
 	public ResponseEntity<Person> updatePerson(
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
 			@Parameter(description = "Updated person", required = true) @RequestBody Person person) {
-		return new ResponseEntity<>(personService.updatePerson(personId, person), HttpStatus.OK);
+		
+		Person updatedPerson = personService.updatePerson(personId, person);
+		
+		if (updatedPerson != null)
+			return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
+		else
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
 	
 	@Operation(summary = "Deletes an existing person", description = "Deletes an existing person")
 	@DeleteMapping(value = "/{id}")
 	public ResponseEntity<Object> deletePerson(
 			@Parameter(description = "Person ID to delete", required = true) @PathVariable("id") UUID personId) {
-		return new ResponseEntity<>(HttpStatus.OK);
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
 }
