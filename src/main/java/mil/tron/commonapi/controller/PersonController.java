@@ -3,7 +3,6 @@ package mil.tron.commonapi.controller;
 import java.util.Collection;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,14 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import mil.tron.commonapi.person.Person;
-import mil.tron.commonapi.service.PersonServiceImpl;
+import mil.tron.commonapi.service.PersonService;
 
 @RestController
 @RequestMapping("/person")
 public class PersonController {
-	
-	@Autowired
-	private PersonServiceImpl personService;
+	private PersonService personService;
+
+	public PersonController(PersonService personService) {
+		this.personService = personService;
+	}
 	
 	@Operation(summary = "Retrieves all persons", description = "Retrieves all persons")
 	@GetMapping

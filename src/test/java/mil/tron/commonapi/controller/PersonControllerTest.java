@@ -6,14 +6,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -30,18 +28,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.person.Person;
-import mil.tron.commonapi.service.PersonServiceImpl;
+import mil.tron.commonapi.service.PersonService;
 
 @WebMvcTest(PersonController.class)
 public class PersonControllerTest {
+	private static final String ENDPOINT = "/person/";
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	
 	@Autowired
 	private MockMvc mockMvc;
 	
 	@MockBean
-	private PersonServiceImpl personService;
-	
-	private static final String ENDPOINT = "/person/";
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private PersonService personService;
 	
 	private Person testPerson;
 	private String testPersonJson;
