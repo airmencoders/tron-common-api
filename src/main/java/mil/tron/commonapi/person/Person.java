@@ -42,12 +42,17 @@ public class Person {
     @Setter
     private String email;
     
-    public boolean equals(Person other) {
+    @Override
+    public boolean equals(Object other) {
         if (other == null) {
             return false;
         }
+        else if (other instanceof Person) {
+            Person otherPerson = (Person) other;
+            return this.id == otherPerson.getId();
+        }
         else {
-            return this.id == other.getId();
+            return false;
         }
     }
     public String getFullName() {
