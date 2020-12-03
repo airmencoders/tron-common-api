@@ -21,7 +21,7 @@ import mil.tron.commonapi.organization.Organization;
 import mil.tron.commonapi.service.OrganizationServiceImpl;
 
 @RestController
-@RequestMapping("/organizations")
+@RequestMapping("/organization")
 public class OrganizationController {
 
 	@Autowired
@@ -48,7 +48,12 @@ public class OrganizationController {
 	@Operation(summary = "Adds an organization", description = "Adds an organization")
 	@PostMapping
 	public ResponseEntity<Organization> createOrganization(@Parameter(description = "Organization to create", required = true) @RequestBody Organization organization) {
-		return new ResponseEntity<>(organizationService.createOrganization(organization), HttpStatus.OK);
+		Organization createdOrg = organizationService.createOrganization(organization);
+		
+		if (createdOrg != null)
+			return new ResponseEntity<>(createdOrg, HttpStatus.CREATED);
+		else
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 	}
 	
 	@Operation(summary = "Updates an existing organization", description = "Updates an existing organization")
