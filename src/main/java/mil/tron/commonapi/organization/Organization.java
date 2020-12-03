@@ -41,13 +41,17 @@ public class Organization {
     @Getter
     @Builder.Default
     private List<Organization> subordinateOrganizations = new ArrayList<Organization>();
-    
-    public boolean equals(Organization other) {
+ 
+    @Override  
+    public boolean equals(Object other) {
         if (other == null) {
             return false;
         }
-        else {
-            return this.id == other.getId();
+        else if (other instanceof Organization) {
+            Organization otherOrg = (Organization) other;
+            return this.id == otherOrg.getId();
+        } else {
+            return false;
         }
     }
     
