@@ -3,7 +3,6 @@ package mil.tron.commonapi.controller;
 import java.util.Collection;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,14 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import mil.tron.commonapi.organization.Organization;
-import mil.tron.commonapi.service.OrganizationServiceImpl;
+import mil.tron.commonapi.service.OrganizationService;
 
 @RestController
 @RequestMapping("/organization")
 public class OrganizationController {
-
-	@Autowired
-	private OrganizationServiceImpl organizationService;
+	private OrganizationService organizationService;
+	
+	public OrganizationController (OrganizationService organizationService) {
+		this.organizationService = organizationService;
+	}
 	
 	@Operation(summary = "Retrieves all organizations", description = "Retrieves all organizations")
 	@GetMapping
@@ -47,7 +48,8 @@ public class OrganizationController {
 	
 	@Operation(summary = "Adds an organization", description = "Adds an organization")
 	@PostMapping
-	public ResponseEntity<Organization> createOrganization(@Parameter(description = "Organization to create", required = true) @RequestBody Organization organization) {
+	public ResponseEntity<Organization> createOrganization(
+			@Parameter(description = "Organization to create", required = true) @RequestBody Organization organization) {
 		Organization createdOrg = organizationService.createOrganization(organization);
 		
 		if (createdOrg != null)

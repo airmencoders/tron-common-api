@@ -29,19 +29,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.organization.Organization;
 import mil.tron.commonapi.person.Person;
-import mil.tron.commonapi.service.OrganizationServiceImpl;
+import mil.tron.commonapi.service.OrganizationService;
 
 @WebMvcTest(OrganizationController.class)
 public class OrganizationControllerTest {
-	
+	private static final String ENDPOINT = "/organization/";
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
 	@Autowired
 	private MockMvc mockMvc;
 	
 	@MockBean
-	private OrganizationServiceImpl organizationService;
-	
-	private static final String ENDPOINT = "/organization/";
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private OrganizationService organizationService;
 	
 	private Person testPerson;
 	private Person testLeaderPerson;
