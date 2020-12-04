@@ -29,6 +29,8 @@ public class OrganizationTest {
         assertEquals(testOrg.getSubordinateOrganizations().contains(subOrg), true);
         assertEquals(testOrg.removeSubordinateOrganization(subOrg), true);
         assertEquals(testOrg.getSubordinateOrganizations().contains(subOrg), false);
+        assertEquals(testOrg.removeSubordinateOrganization(subOrg), false);
+        assertEquals(testOrg.removeSubordinateOrganization(subOrg), false);
     }
 
     @Test
@@ -37,8 +39,9 @@ public class OrganizationTest {
         Person testPerson = new Person();
         testOrg.addMember(testPerson);
         assertEquals(testOrg.getMembers().contains(testPerson), true);
-        testOrg.removeMember(testPerson);
+        assertEquals(testOrg.removeMember(testPerson), true);
         assertEquals(testOrg.getMembers().contains(testPerson), false);
+        assertEquals(testOrg.removeMember(testPerson), false);
     }
 
     @Test
@@ -54,9 +57,14 @@ public class OrganizationTest {
     }
 
     @Test
-    public void shouldNotEqualNull() {
+    public void testEquals() {
         Organization testOrg = new Organization();
-        assertEquals(testOrg == null, false);
+        Organization testOrg2 = new Organization();
+        Object testObj = new Object();
+        assertEquals(testOrg.equals(null), false);
+        assertEquals(testOrg.equals(testObj), false);
+        assertEquals(testOrg.equals(testOrg), true);
+        assertEquals(testOrg.equals(testOrg2), false);
     }
     
 }

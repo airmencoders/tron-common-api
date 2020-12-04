@@ -32,6 +32,9 @@ public class PersonTests {
     @Test
     public void shouldNotEqualNull() {
         Person testPerson = new Person();
-        assertEquals(testPerson == null, false);
+        assertEquals(testPerson.equals(null), false);
+        assertEquals(testPerson.equals(testPerson), true);
+        assertEquals(testPerson.equals(new Object()), false);
+        assertEquals(testPerson.equals(new Person()), false);
     }
 }

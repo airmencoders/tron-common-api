@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift
+FROM openjdk:11.0.9.1-jre
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} /app/commonapi.jar
 EXPOSE 8080
