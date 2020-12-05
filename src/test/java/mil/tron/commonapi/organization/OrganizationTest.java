@@ -26,11 +26,11 @@ public class OrganizationTest {
         Organization testOrg = new Organization();
         Organization subOrg = new Organization();
         testOrg.addSubordinateOrganization(subOrg);
-        assertEquals(testOrg.getSubordinateOrganizations().contains(subOrg), true);
-        assertEquals(testOrg.removeSubordinateOrganization(subOrg), true);
-        assertEquals(testOrg.getSubordinateOrganizations().contains(subOrg), false);
-        assertEquals(testOrg.removeSubordinateOrganization(subOrg), false);
-        assertEquals(testOrg.removeSubordinateOrganization(subOrg), false);
+        assertEquals(true, testOrg.getSubordinateOrganizations().contains(subOrg));
+        assertEquals(true, testOrg.removeSubordinateOrganization(subOrg));
+        assertEquals(false, testOrg.getSubordinateOrganizations().contains(subOrg));
+        assertEquals(false, testOrg.removeSubordinateOrganization(subOrg));
+        assertEquals(false, testOrg.removeSubordinateOrganization(subOrg));
     }
 
     @Test
@@ -38,10 +38,10 @@ public class OrganizationTest {
         Organization testOrg = new Organization();
         Person testPerson = new Person();
         testOrg.addMember(testPerson);
-        assertEquals(testOrg.getMembers().contains(testPerson), true);
-        assertEquals(testOrg.removeMember(testPerson), true);
-        assertEquals(testOrg.getMembers().contains(testPerson), false);
-        assertEquals(testOrg.removeMember(testPerson), false);
+        assertEquals(true, testOrg.getMembers().contains(testPerson));
+        assertEquals(true, testOrg.removeMember(testPerson));
+        assertEquals(false, testOrg.getMembers().contains(testPerson));
+        assertEquals(false, testOrg.removeMember(testPerson));
     }
 
     @Test
@@ -50,10 +50,10 @@ public class OrganizationTest {
         Person testPerson1 = new Person();
         Person testPerson2 = new Person();
         testOrg.setLeaderAndUpdateMembers(testPerson1);
-        assertEquals(testOrg.getMembers().contains(testPerson1), true);
-        assertEquals(testOrg.getLeader(), testPerson1);
+        assertEquals(true, testOrg.getMembers().contains(testPerson1));
+        assertEquals(testPerson1, testOrg.getLeader());
         testOrg.setLeaderAndUpdateMembers(testPerson2);
-        assertEquals(testOrg.getMembers().contains(testPerson1), false);
+        assertEquals(false, testOrg.getMembers().contains(testPerson1));
     }
 
     @Test
@@ -61,10 +61,10 @@ public class OrganizationTest {
         Organization testOrg = new Organization();
         Organization testOrg2 = new Organization();
         Object testObj = new Object();
-        assertEquals(testOrg.equals(null), false);
-        assertEquals(testOrg.equals(testObj), false);
-        assertEquals(testOrg.equals(testOrg), true);
-        assertEquals(testOrg.equals(testOrg2), false);
+        assertEquals(false, testOrg.equals(null));
+        assertEquals(false, testOrg.equals(testObj));
+        assertEquals(true, testOrg.equals(testOrg));
+        assertEquals(false, testOrg.equals(testOrg2));
     }
     
 }

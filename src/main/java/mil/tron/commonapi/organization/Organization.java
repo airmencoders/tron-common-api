@@ -44,13 +44,10 @@ public class Organization {
  
     @Override  
     public boolean equals(Object other) {
-        System.out.println("run");
         if (other instanceof Organization) {
-            System.out.println("First branch");
             Organization otherOrg = (Organization) other;
             return this.id == otherOrg.getId();
         } else {
-            System.out.println("Second branch");
             return false;
         }
     }
