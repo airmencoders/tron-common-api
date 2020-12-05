@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import java.util.Enumeration;
 @Slf4j
 public class CommonApiLogger {
 
+
     @Autowired HttpServletRequest req;
 
     // decodes the Istio JWT
@@ -30,6 +32,7 @@ public class CommonApiLogger {
 
     // grab the email from the Istio JWT for increased logging granularity
     private String getRequestorEmail(){
+        if (req == null || req.getHeaderNames() == null) return "Unknown";
         Enumeration<String> headerNames = req.getHeaderNames();
         while (headerNames.hasMoreElements()){
             if (headerNames.nextElement().equals("authorization")){
@@ -41,26 +44,37 @@ public class CommonApiLogger {
     }
 
     // log the Advice from the JoinPoints below that match their defined Pointcuts
-    private void logAdvice(String entry) {
-        // change level of logging here if needed
+    public void logAdvice(String entry) {
         log.info("[Request from: " + getRequestorEmail() +  "] - " + entry);
     }
 
-    // log all method calls in the PersonController
-    @Before("execution(* mil.tron.commonapi.controller.PersonController.*(..))")
-    private void logEndpointAccess(JoinPoint jp) {
-        logAdvice("Accessing '" + jp.getSignature().getName() + "'");
+    // log when exceptions occur app-wide
+    @AfterThrowing(pointcut = "(execution (* mil.tron.commonapi.*.*.*(..))) || (execution (* mil.tron.commonapi.*.*(..)))", throwing="ex")
+    public void exceptionThrown(JoinPoint jp, Exception ex) {
+        logAdvice("Exception thrown in " + jp.getSignature().getName() + " threw: " + ex);
     }
 
     // log all GET requests
     @Before("@annotation(org.springframework.web.bind.annotation.GetMapping)")
-    private void beforeGetRequest(JoinPoint jp) {
+    public void beforeGetRequest(JoinPoint jp) {
         logAdvice("GET request for " + jp.getSignature().toLongString());
     }
 
     // log all POST requests
     @Before("@annotation(org.springframework.web.bind.annotation.PostMapping)")
-    private void beforePostRequest(JoinPoint jp) {
+    public void beforePostRequest(JoinPoint jp) {
         logAdvice("POST request for " + jp.getSignature().toLongString());
+    }
+
+    // log all PUT requests
+    @Before("@annotation(org.springframework.web.bind.annotation.PutMapping)")
+    public void beforePutRequest(JoinPoint jp) {
+        logAdvice("PUT request for " + jp.getSignature().toLongString());
+    }
+
+    // log all DELETE requests
+    @Before("@annotation(org.springframework.web.bind.annotation.DeleteMapping)")
+    public void beforeDeleteRequest(JoinPoint jp) {
+        logAdvice("DELETE request for " + jp.getSignature().toLongString());
     }
 }
