@@ -15,7 +15,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	@Override
 	public Organization createOrganization(Organization organization) {
-		if (organizations.put(UUID.randomUUID(), organization) != null)
+		if (organizations.putIfAbsent(organization.getId(), organization) == null)
 			return organization;
 		else
 			return null;

@@ -96,6 +96,14 @@ public class OrganizationControllerTest {
 		}
 		
 		@Test
+		void testGetByIdNotFound() throws Exception {
+			Mockito.when(organizationService.getOrganization(Mockito.any(UUID.class))).thenReturn(null);
+			
+			mockMvc.perform(get(ENDPOINT + "{id}", testOrg.getId()))
+				.andExpect(status().isNotFound());
+		}
+		
+		@Test
 		void testGetByIdBadPathVariable() throws Exception {
 			// Send an invalid UUID as ID path variable
 			mockMvc.perform(get(ENDPOINT + "{id}", "asdf1234"))
@@ -124,6 +132,17 @@ public class OrganizationControllerTest {
 			mockMvc.perform(post(ENDPOINT).accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON).content(""))
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
+		}
+		
+		@Test
+		void testPostOrganizationWithIdAlreadyExists() throws Exception {
+			Mockito.when(organizationService.createOrganization(Mockito.any(Organization.class))).thenReturn(null);
+			
+			mockMvc.perform(post(ENDPOINT)
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(testOrgJsonString))
+				.andExpect(status().isBadRequest());
 		}
 	}
 	
