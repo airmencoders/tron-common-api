@@ -2,6 +2,7 @@ package mil.tron.commonapi.logging;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.MockToken;
 import mil.tron.commonapi.person.Person;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
@@ -29,8 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @AutoConfigureMockMvc
 public class CommonApiLoggerTest {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private final String token = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJlbWFpbCI6InRlc3RAdGVzdC5jb20ifQ.04BSkxtfqwws2v893h2CDJHFtc7bqn0CGmdDIGI80TA";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();    
 
     @Autowired
     private MockMvc mockMvc;
@@ -51,7 +51,7 @@ public class CommonApiLoggerTest {
 
     @Test
     public void callBeforeDeleteRequest() throws Throwable {
-        mockMvc.perform(delete("/person/" + UUID.randomUUID().toString()).header("authorization", token));
+        mockMvc.perform(delete("/person/" + UUID.randomUUID().toString()).header("authorization", MockToken.token));
         assertEquals(true, outputStreamCaptor.toString().contains("DELETE request"));
     }
 
@@ -59,7 +59,7 @@ public class CommonApiLoggerTest {
     public void callBeforePutRequest() throws Throwable {
         Person p = new Person();
         mockMvc.perform(put("/person/" + UUID.randomUUID().toString())
-                .header("authorization", token)
+                .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(p)));
@@ -70,7 +70,7 @@ public class CommonApiLoggerTest {
     public void callBeforePostRequest() throws Throwable {
         Person p = new Person();
         mockMvc.perform(post("/person/")
-                .header("authorization", token)
+                .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(p)));
@@ -81,7 +81,7 @@ public class CommonApiLoggerTest {
     public void callBeforeGetRequest() throws Throwable {
         Person p = new Person();
         mockMvc.perform(get("/person")
-                .header("authorization", token)
+                .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON));
         assertEquals(true, outputStreamCaptor.toString().contains("GET request"));
     }
