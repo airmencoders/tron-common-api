@@ -4,9 +4,9 @@ import lombok.*;
 
 import javax.persistence.*;
 
-import java.util.List;
+import java.util.Set;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.UUID;
 
 import mil.tron.commonapi.person.Person;
@@ -28,7 +28,7 @@ public class Organization {
 
     @Getter
     @Builder.Default
-    private List<Person> members = new ArrayList<Person>();
+    private Set<Person> members = new HashSet<Person>();
 
     @Getter
     @Setter
@@ -40,14 +40,11 @@ public class Organization {
     
     @Getter
     @Builder.Default
-    private List<Organization> subordinateOrganizations = new ArrayList<Organization>();
+    private Set<Organization> subordinateOrganizations = new HashSet<Organization>();
  
     @Override  
     public boolean equals(Object other) {
-        if (other == null) {
-            return false;
-        }
-        else if (other instanceof Organization) {
+        if (other instanceof Organization) {
             Organization otherOrg = (Organization) other;
             return this.id == otherOrg.getId();
         } else {
@@ -55,43 +52,27 @@ public class Organization {
         }
     }
     
-    public void addSubordinateOrganization(@NonNull Organization subOrg) {
-        if (!this.subordinateOrganizations.contains(subOrg)) {
-            this.subordinateOrganizations.add(subOrg);
-        }
+    public void addSubordinateOrganization(Organization subOrg) {
+        this.subordinateOrganizations.add(subOrg);
     }
     
-    public boolean removeSubordinateOrganization(@NonNull Organization subOrg) {
-        if (this.subordinateOrganizations.remove(subOrg)) {
-            return true;
-        }
-        else {
-            return false;
-        }
+    public boolean removeSubordinateOrganization(Organization subOrg) {
+        return this.subordinateOrganizations.remove(subOrg);
     }
     
-    public void setLeaderAndUpdateMembers(@NonNull Person leader) {
+    public void setLeaderAndUpdateMembers(Person leader) {
         this.members.remove(this.leader);
         this.leader = leader;
-        if (!this.members.contains(leader)) {
-            this.members.add(leader);
-        }
+        this.members.add(leader);
     }
     
     
-    public void addMember(@NonNull Person member) {
-        if (!this.members.contains(member)) {
-            this.members.add(member);
-        }
+    public void addMember(Person member) {
+        this.members.add(member);
     }
     
-    public boolean removeMember(@NonNull Person member) {
-        if (this.members.remove(member)) {
-            return true;
-        }
-        else {
-            return false;
-        }
+    public boolean removeMember(Person member) {
+        return this.members.remove(member);
     }
     
 }

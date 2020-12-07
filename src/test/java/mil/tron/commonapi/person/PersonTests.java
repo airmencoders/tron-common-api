@@ -6,7 +6,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
 
-@SpringBootTest
 public class PersonTests {
 
     @Test
@@ -16,7 +15,7 @@ public class PersonTests {
         testPerson.setLastName("Duder");
         String actualFullName = testPerson.getFullName();
         String expectedFullName = "Dude Duder";
-        assertEquals(actualFullName, expectedFullName);
+        assertEquals(expectedFullName, actualFullName);
     }
 
     @Test
@@ -26,12 +25,15 @@ public class PersonTests {
         Person secondTestPerson = new Person();
         UUID secondUUID = secondTestPerson.getId();
         boolean areEqual = firstUUID == secondUUID;
-        assertEquals(areEqual, false);
+        assertEquals(false, areEqual);
     }
 
     @Test
     public void shouldNotEqualNull() {
         Person testPerson = new Person();
-        assertEquals(testPerson == null, false);
+        assertEquals(false, testPerson.equals(null));
+        assertEquals(true, testPerson.equals(testPerson));
+        assertEquals(false, testPerson.equals(new Object()));
+        assertEquals(false, testPerson.equals(new Person()));
     }
 }
