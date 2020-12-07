@@ -1,4 +1,4 @@
-FROM openjdk:11.0.9.1-jre
+FROM adoptopenjdk/openjdk11:centos
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} /app/commonapi.jar
 EXPOSE 8080
