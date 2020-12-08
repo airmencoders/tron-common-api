@@ -20,7 +20,7 @@ import mil.tron.commonapi.person.Person;
 import mil.tron.commonapi.service.PersonService;
 
 @RestController
-@RequestMapping("/person")
+@RequestMapping("${api-prefix.v1}/person")
 public class PersonController {
 	private PersonService personService;
 

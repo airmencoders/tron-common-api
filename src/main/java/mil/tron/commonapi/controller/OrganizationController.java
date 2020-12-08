@@ -20,7 +20,7 @@ import mil.tron.commonapi.organization.Organization;
 import mil.tron.commonapi.service.OrganizationService;
 
 @RestController
-@RequestMapping("/organization")
+@RequestMapping("${api-prefix.v1}/organization")
 public class OrganizationController {
 	private OrganizationService organizationService;
 	

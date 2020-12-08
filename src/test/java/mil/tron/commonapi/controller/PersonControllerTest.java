@@ -32,7 +32,7 @@ import mil.tron.commonapi.service.PersonService;
 
 @WebMvcTest(PersonController.class)
 public class PersonControllerTest {
-	private static final String ENDPOINT = "/person/";
+	private static final String ENDPOINT = "/api/v1/person/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	
 	@Autowired
