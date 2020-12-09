@@ -17,7 +17,7 @@ public class CommonApiApplication {
     }
     
     @Bean
-    public OpenAPI configOpenAPI(@Value("${springdoc.api-version}") String version) {
+    public OpenAPI configOpenAPI(@Value("${api-version}") String version) {
     	return new OpenAPI()
     			.components(new Components())
     			.info(new Info()
