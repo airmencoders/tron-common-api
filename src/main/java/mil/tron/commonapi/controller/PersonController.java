@@ -67,7 +67,7 @@ public class PersonController {
 	
 	@Operation(summary = "Adds a person", description = "Adds a person")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200",
+			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = Person.class)))
 	})

@@ -65,7 +65,7 @@ public class OrganizationController {
 	
 	@Operation(summary = "Adds an organization", description = "Adds an organization")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200",
+			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = Organization.class))),
 			@ApiResponse(responseCode = "400",
