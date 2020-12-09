@@ -10,6 +10,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Entity
 public class Person {
 
     @Id
