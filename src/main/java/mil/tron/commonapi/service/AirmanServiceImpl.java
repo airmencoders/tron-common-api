@@ -15,7 +15,20 @@ public class AirmanServiceImpl implements AirmanService {
 
     @Override
     public Airman createAirman(Airman airman) {
-        return airmanRepo.save(airman);
+
+        // the record with this 'id' shouldn't already exist...
+        if (!airmanRepo.existsById(airman.getId())) {
+
+            if (airman.getId() == null) {
+                // we have to generate an ID manually since we're not using normal
+                //  serial ID but rather an UUID for Person entity...
+                airman.setId(UUID.randomUUID());
+            }
+
+            return airmanRepo.save(airman);
+        }
+
+        return null;
     }
 
     @Override
@@ -24,8 +37,8 @@ public class AirmanServiceImpl implements AirmanService {
             return null;
         }
 
-        // the airman object's id better match the id given
-        //  otherwise hibernate will save under whatever id's in the object
+        // the airman object's id better match the id given,
+        //  otherwise hibernate will save under whatever id's inside the object
         if (!airman.getId().equals(id)) {
             return null;
         }

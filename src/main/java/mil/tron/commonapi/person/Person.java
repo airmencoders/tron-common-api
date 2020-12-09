@@ -16,6 +16,7 @@ public class Person {
 
     @Id
     @Getter
+    @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
 

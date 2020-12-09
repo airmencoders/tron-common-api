@@ -65,6 +65,39 @@ public class AirmanControllerTest {
     @Transactional
     @Rollback
     @Test
+    public void testAddNewAirmenWithNullId() throws Exception {
+
+        // simulate request with id as null...
+        String strAirman = "{\"id\":null,\"firstName\":\"John\",\"middleName\":\"Hero\",\"lastName\":\"Public\",\"title\":\"Capt\",\"email\":\"john@test.com\",\"afsc\":\"17D\",\"etsDate\":\"2021-06-29\",\"ptDate\":\"2020-10-01\",\"fullName\":\"John Public\"}";
+
+        mockMvc.perform(post("/airman")
+                .contentType(MediaType.APPLICATION_JSON).content(strAirman))
+                .andExpect(status().is(HttpStatus.CREATED.value()));
+
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void testAddNewAirmenOverwriteExistingFails() throws Exception {
+
+        MvcResult response = mockMvc.perform(post("/airman")
+                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
+                .andExpect(status().is(HttpStatus.CREATED.value()))
+                .andReturn();
+
+        Airman newAirman = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
+
+        // this POST will fail since it'll detect UUID in db already exists
+        mockMvc.perform(post("/airman")
+                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(newAirman)))
+                .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
+
+    }
+
+    @Transactional
+    @Rollback
+    @Test
     public void testGetAirman() throws Exception {
 
         MvcResult response = mockMvc.perform(post("/airman")

@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.util.UUID;
 
 @RestController
@@ -34,7 +35,13 @@ public class AirmanController {
     @Operation(summary = "Adds a new airman", description = "Adds a new airman, ID field should be null")
     @PostMapping("")
     public ResponseEntity<Airman> addAirman(@Parameter(description = "Airman record to add", required = true) @RequestBody Airman airman) {
-        return new ResponseEntity<>(airmanService.createAirman(airman), HttpStatus.CREATED);
+        Airman newAirman = airmanService.createAirman(airman);
+        if (newAirman != null) {
+            return new ResponseEntity<>(newAirman, HttpStatus.CREATED);
+        }
+        else {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
     }
 
     @Operation(summary = "Updates an existing airman record", description = "Updates an existing airman")
