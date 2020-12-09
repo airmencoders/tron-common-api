@@ -33,7 +33,7 @@ import mil.tron.commonapi.service.OrganizationService;
 
 @WebMvcTest(OrganizationController.class)
 public class OrganizationControllerTest {
-	private static final String ENDPOINT = "/api/v1/organization/";
+	private static final String ENDPOINT = "/v1/organization/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	@Autowired
