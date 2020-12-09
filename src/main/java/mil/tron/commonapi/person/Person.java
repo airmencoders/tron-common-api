@@ -10,6 +10,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 public class Person {
 
     @Id
