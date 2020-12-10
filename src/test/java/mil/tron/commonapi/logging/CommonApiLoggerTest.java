@@ -17,7 +17,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.UUID;
@@ -88,7 +91,10 @@ public class CommonApiLoggerTest {
 
     @Test
     public void callExceptionHappened() throws Throwable {
-        CommonApiLogger logger = new CommonApiLogger();
+        HttpServletRequest curRequest =
+                ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+                        .getRequest();
+        CommonApiLogger logger = new CommonApiLogger(curRequest);
         JoinPoint jp = new JoinPoint() {
             @Override
             public String toShortString() {

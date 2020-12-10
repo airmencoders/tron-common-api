@@ -7,7 +7,6 @@ import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
@@ -21,8 +20,11 @@ import java.util.Enumeration;
 @Slf4j
 public class CommonApiLogger {
 
+    private HttpServletRequest request;
 
-    @Autowired HttpServletRequest req;
+    public CommonApiLogger(HttpServletRequest request) {
+        this.request = request;
+    }
 
     // decodes the Istio JWT
     private DecodedJWT decodeJwt (HttpServletRequest request) {
@@ -32,11 +34,11 @@ public class CommonApiLogger {
 
     // grab the email from the Istio JWT for increased logging granularity
     private String getRequestorEmail(){
-        if (req == null || req.getHeaderNames() == null) return "Unknown";
-        Enumeration<String> headerNames = req.getHeaderNames();
+        if (request == null || request.getHeaderNames() == null) return "Unknown";
+        Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()){
             if (headerNames.nextElement().equals("authorization")){
-                DecodedJWT decodedJwt = decodeJwt(req);
+                DecodedJWT decodedJwt = decodeJwt(request);
                 return decodedJwt.getClaim("email").asString();
             }
         }
