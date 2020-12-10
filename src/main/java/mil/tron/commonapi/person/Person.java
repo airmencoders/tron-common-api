@@ -11,10 +11,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 public class Person {
 
     @Id
     @Getter
+    @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
