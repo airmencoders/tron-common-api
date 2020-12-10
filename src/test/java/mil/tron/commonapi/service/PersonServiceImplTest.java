@@ -36,8 +36,7 @@ class PersonServiceImplTest {
 
     @Test
     void createPersonTest() {
-        Mockito.when(personService.createPerson(Mockito.any(Person.class))).thenReturn(testPerson);
-        
+        Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
         Person createdPerson = personService.createPerson(testPerson);
         assertThat(createdPerson).isEqualTo(testPerson);
     }
@@ -49,14 +48,13 @@ class PersonServiceImplTest {
     	assertThat(idNotMatchingPersonId).isNull();
     	
     	// Test id not exist
+    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
     	Person idNotExist = personService.updatePerson(testPerson.getId(), testPerson);
     	assertThat(idNotExist).isNull();
     	
     	// Successful update
     	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-//    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
-    	Mockito.when(personService.updatePerson(testPerson.getId(), testPerson)).thenReturn(testPerson);
-    	
+    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
     	Person updatedPerson = personService.updatePerson(testPerson.getId(), testPerson);
     	assertThat(updatedPerson).isEqualTo(testPerson);
     }
@@ -64,24 +62,27 @@ class PersonServiceImplTest {
     @Test
     void deletePersonTest() {
         personService.deletePerson(testPerson.getId());
-        
         Mockito.verify(repository, Mockito.times(1)).deleteById(testPerson.getId());    
     }
 
     @Test
     void getPersonsTest() {
-    	Mockito.when(personService.getPersons()).thenReturn(Arrays.asList(testPerson));
-    	
+    	Mockito.when(repository.findAll()).thenReturn(Arrays.asList(testPerson));
     	Iterable<Person> persons = personService.getPersons();
     	assertThat(persons).hasSize(1);
     }
 
     @Test
     void getPersonTest() {
+    	// Test person exists
     	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.of(testPerson));
-    	
     	Person retrievedPerson = personService.getPerson(testPerson.getId());
     	assertThat(retrievedPerson).isEqualTo(testPerson);
+    	
+    	// Test person not exists
+    	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.ofNullable(null));
+    	Person notExistsPerson = personService.getPerson(testPerson.getId());
+    	assertThat(notExistsPerson).isNull();
     }
     
 }
