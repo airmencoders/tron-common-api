@@ -26,4 +26,10 @@ public class Airman extends Person {
     @Setter
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date ptDate;
+
+    @Getter
+    @Setter
+    // Putting as a string since using a Long would require manually padding
+    //  value in string output if the dodid had leading zeros, this was it stays literal
+    private String dodid;
 }
