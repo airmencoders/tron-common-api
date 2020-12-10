@@ -17,7 +17,7 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public Person createPerson(Person person) {
-		return repository.save(person);
+		return repository.existsById(person.getId()) ? null : repository.save(person);
 	}
 
 	@Override

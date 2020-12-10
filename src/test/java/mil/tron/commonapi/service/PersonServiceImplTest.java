@@ -20,12 +20,12 @@ import java.util.UUID;
 @ExtendWith(MockitoExtension.class)
 class PersonServiceImplTest {
 	@Mock
-	PersonRepository repository;
+	private PersonRepository repository;
 	
 	@InjectMocks
-	PersonServiceImpl personService;
+	private PersonServiceImpl personService;
 	
-	Person testPerson;
+	private Person testPerson;
 	
 	@BeforeEach
 	public void beforeEachSetup() {
@@ -36,9 +36,15 @@ class PersonServiceImplTest {
 
     @Test
     void createPersonTest() {
+    	// Test successful save
         Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
         Person createdPerson = personService.createPerson(testPerson);
         assertThat(createdPerson).isEqualTo(testPerson);
+        
+        // Test id already exists
+        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Person notCreatedPerson = personService.createPerson(testPerson);
+        assertThat(notCreatedPerson).isNull();
     }
 
     @Test
