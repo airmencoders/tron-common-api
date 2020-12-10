@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.person.Person;
 import mil.tron.commonapi.service.PersonService;
 
@@ -29,12 +34,25 @@ public class PersonController {
 	}
 	
 	@Operation(summary = "Retrieves all persons", description = "Retrieves all persons")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+						content = @Content(array = @ArraySchema(schema = @Schema(implementation = Person.class))))
+	})
 	@GetMapping
 	public ResponseEntity<Collection<Person>> getPersons() {
 		return new ResponseEntity<>(personService.getPersons(), HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Retrieves a person by ID", description = "Retrieves a person by ID")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = Person.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content)
+	})
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<Person> getPerson(
 			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId) {
@@ -48,12 +66,25 @@ public class PersonController {
 	}
 	
 	@Operation(summary = "Adds a person", description = "Adds a person")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = Person.class)))
+	})
 	@PostMapping
 	public ResponseEntity<Person> createPerson(@Parameter(description = "Person to create", required = true) @RequestBody Person person) {
 		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = Person.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content)
+	})
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<Person> updatePerson(
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
@@ -68,6 +99,11 @@ public class PersonController {
 	}
 	
 	@Operation(summary = "Deletes an existing person", description = "Deletes an existing person")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation",
+					content = @Content)
+	})
 	@DeleteMapping(value = "/{id}")
 	public ResponseEntity<Object> deletePerson(
 			@Parameter(description = "Person ID to delete", required = true) @PathVariable("id") UUID personId) {
