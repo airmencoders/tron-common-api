@@ -20,6 +20,7 @@ public class Organization {
 
     @Id
     @Getter
+    @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
     

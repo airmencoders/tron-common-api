@@ -15,15 +15,14 @@ public class SquadronServiceImpl implements SquadronService {
 
     @Override
     public Squadron createSquadron(Squadron squadron) {
+        if (squadron.getId() == null) {
+            // we have to generate an ID manually since we're not using normal
+            //  serial ID but rather an UUID for Person entity...
+            squadron.setId(UUID.randomUUID());
+        }
+
         // the record with this 'id' shouldn't already exist...
         if (!squadronRepo.existsById(squadron.getId())) {
-
-            if (squadron.getId() == null) {
-                // we have to generate an ID manually since we're not using normal
-                //  serial ID but rather an UUID for Person entity...
-                //squadron.setId(UUID.randomUUID());
-            }
-
             return squadronRepo.save(squadron);
         }
 
