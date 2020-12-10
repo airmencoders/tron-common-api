@@ -1,6 +1,5 @@
 package mil.tron.commonapi.controller;
 
-import java.util.Collection;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -39,7 +38,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = Organization.class)))
 	})
 	@GetMapping
-	public ResponseEntity<Collection<Organization>> getOrganizations() {
+	public ResponseEntity<Iterable<Organization>> getOrganizations() {
 		return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
 	}
 	
@@ -114,6 +113,7 @@ public class OrganizationController {
 	@DeleteMapping(value = "/{id}")
 	public ResponseEntity<Object> deleteOrganization(
 			@Parameter(description = "Organization ID to delete", required = true) @PathVariable("id") UUID organizationId) {
+		organizationService.deleteOrganization(organizationId);
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 	
