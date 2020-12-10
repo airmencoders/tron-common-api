@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest
 @AutoConfigureMockMvc
 public class CommonApiLoggerTest {
-
+    private static final String ENDPOINT = "/v1/person/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();    
 
     @Autowired
@@ -54,14 +54,14 @@ public class CommonApiLoggerTest {
 
     @Test
     public void callBeforeDeleteRequest() throws Throwable {
-        mockMvc.perform(delete("/person/" + UUID.randomUUID().toString()).header("authorization", MockToken.token));
+        mockMvc.perform(delete(ENDPOINT + UUID.randomUUID().toString()).header("authorization", MockToken.token));
         assertEquals(true, outputStreamCaptor.toString().contains("DELETE request"));
     }
 
     @Test
     public void callBeforePutRequest() throws Throwable {
         Person p = new Person();
-        mockMvc.perform(put("/person/" + UUID.randomUUID().toString())
+        mockMvc.perform(put(ENDPOINT + UUID.randomUUID().toString())
                 .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -72,7 +72,7 @@ public class CommonApiLoggerTest {
     @Test
     public void callBeforePostRequest() throws Throwable {
         Person p = new Person();
-        mockMvc.perform(post("/person/")
+        mockMvc.perform(post(ENDPOINT)
                 .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -83,7 +83,7 @@ public class CommonApiLoggerTest {
     @Test
     public void callBeforeGetRequest() throws Throwable {
         Person p = new Person();
-        mockMvc.perform(get("/person")
+        mockMvc.perform(get(ENDPOINT)
                 .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON));
         assertEquals(true, outputStreamCaptor.toString().contains("GET request"));
