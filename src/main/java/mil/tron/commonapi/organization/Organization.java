@@ -15,6 +15,7 @@ import mil.tron.commonapi.person.Person;
 @NoArgsConstructor
 @Builder
 @Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 public class Organization {
 
     @Id
