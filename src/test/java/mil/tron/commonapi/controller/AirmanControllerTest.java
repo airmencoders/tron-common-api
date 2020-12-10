@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 public class AirmanControllerTest {
-
+    private static final String ENDPOINT = "/v1/airman/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -54,7 +54,7 @@ public class AirmanControllerTest {
     @Test
     public void testAddNewAirmen() throws Exception {
 
-        MvcResult response = mockMvc.perform(post("/airman")
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
@@ -70,7 +70,7 @@ public class AirmanControllerTest {
         // simulate request with id as null...
         String strAirman = "{\"id\":null,\"firstName\":\"John\",\"middleName\":\"Hero\",\"lastName\":\"Public\",\"title\":\"Capt\",\"email\":\"john@test.com\",\"afsc\":\"17D\",\"etsDate\":\"2021-06-29\",\"ptDate\":\"2020-10-01\",\"fullName\":\"John Public\"}";
 
-        mockMvc.perform(post("/airman")
+        mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(strAirman))
                 .andExpect(status().is(HttpStatus.CREATED.value()));
 
@@ -81,7 +81,7 @@ public class AirmanControllerTest {
     @Test
     public void testAddNewAirmenOverwriteExistingFails() throws Exception {
 
-        MvcResult response = mockMvc.perform(post("/airman")
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
@@ -89,7 +89,7 @@ public class AirmanControllerTest {
         Airman newAirman = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
 
         // this POST will fail since it'll detect UUID in db already exists
-        mockMvc.perform(post("/airman")
+        mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(newAirman)))
                 .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
 
@@ -100,7 +100,7 @@ public class AirmanControllerTest {
     @Test
     public void testGetAirman() throws Exception {
 
-        MvcResult response = mockMvc.perform(post("/airman")
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
@@ -108,7 +108,7 @@ public class AirmanControllerTest {
         Airman newGuy = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
         UUID id = newGuy.getId();
 
-        MvcResult response2 = mockMvc.perform(get("/airman/" + id.toString()))
+        MvcResult response2 = mockMvc.perform(get(ENDPOINT + id.toString()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -120,13 +120,13 @@ public class AirmanControllerTest {
     @Test
     public void testGetBogusAirmanFails() throws Exception {
 
-        mockMvc.perform(post("/airman")
+        mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
                 .andExpect(status().is(HttpStatus.CREATED.value()));
 
         UUID id = UUID.randomUUID();
 
-        mockMvc.perform(get("/airman/" + id.toString()))
+        mockMvc.perform(get(ENDPOINT + id.toString()))
                 .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
     }
 
@@ -135,7 +135,7 @@ public class AirmanControllerTest {
     @Test
     public void testUpdateAirman() throws Exception {
 
-        MvcResult response = mockMvc.perform(post("/airman")
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(airman)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
@@ -146,7 +146,7 @@ public class AirmanControllerTest {
 
         newGuy.setTitle("Maj");
 
-        MvcResult response2 = mockMvc.perform(put("/airman/" + id.toString())
+        MvcResult response2 = mockMvc.perform(put(ENDPOINT + id.toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newGuy)))
                 .andExpect(status().is(HttpStatus.OK.value()))
@@ -154,7 +154,7 @@ public class AirmanControllerTest {
 
         assertEquals(OBJECT_MAPPER.writeValueAsString(newGuy), response2.getResponse().getContentAsString());
 
-        MvcResult response3 = mockMvc.perform(get("/airman/" + id.toString()))
+        MvcResult response3 = mockMvc.perform(get(ENDPOINT + id.toString()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -166,7 +166,7 @@ public class AirmanControllerTest {
     @Test
     public void testUpdateBogusAirmanFails() throws Exception {
 
-        MvcResult response = mockMvc.perform(post("/airman")
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(airman)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
@@ -177,7 +177,7 @@ public class AirmanControllerTest {
 
         newGuy.setTitle("Maj");
 
-        mockMvc.perform(put("/airman/" + id.toString())
+        mockMvc.perform(put(ENDPOINT + id.toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newGuy)))
                 .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
@@ -188,7 +188,7 @@ public class AirmanControllerTest {
     @Test
     public void testUpdateAirmanDifferingIdsFails() throws Exception {
 
-        MvcResult response = mockMvc.perform(post("/airman")
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(airman)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
@@ -198,7 +198,7 @@ public class AirmanControllerTest {
         newGuy.setTitle("Maj");
 
         // now inject a random UUID for the id, so that it and the one in the request body will be different...
-        mockMvc.perform(put("/airman/" + UUID.randomUUID())
+        mockMvc.perform(put(ENDPOINT + UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newGuy)))
                 .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
@@ -209,7 +209,7 @@ public class AirmanControllerTest {
     @Test
     public void testDeleteAirman() throws Exception {
 
-        MvcResult response = mockMvc.perform(post("/airman")
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(airman)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
@@ -219,7 +219,7 @@ public class AirmanControllerTest {
         UUID id = newGuy.getId();
 
         // see how many recs are in there now
-        MvcResult allRecs = mockMvc.perform(get("/airman"))
+        MvcResult allRecs = mockMvc.perform(get(ENDPOINT))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -227,10 +227,10 @@ public class AirmanControllerTest {
         int totalRecs = allAirmanRecs.length;
 
         // delete the record
-        mockMvc.perform(delete("/airman/" + id.toString())).andExpect(status().is(HttpStatus.NO_CONTENT.value()));
+        mockMvc.perform(delete(ENDPOINT + id.toString())).andExpect(status().is(HttpStatus.NO_CONTENT.value()));
 
         // refetch all recs
-        MvcResult modRecs = mockMvc.perform(get("/airman"))
+        MvcResult modRecs = mockMvc.perform(get(ENDPOINT))
                 .andExpect(status().isOk())
                 .andReturn();
 
