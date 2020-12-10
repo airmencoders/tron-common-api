@@ -16,14 +16,13 @@ public class AirmanServiceImpl implements AirmanService {
     @Override
     public Airman createAirman(Airman airman) {
 
+        if (airman.getId() == null) {
+            // we have to generate an ID manually since we're not using normal
+            //  serial ID but rather an UUID for Person entity...
+            airman.setId(UUID.randomUUID());
+        }
         // the record with this 'id' shouldn't already exist...
         if (!airmanRepo.existsById(airman.getId())) {
-
-            if (airman.getId() == null) {
-                // we have to generate an ID manually since we're not using normal
-                //  serial ID but rather an UUID for Person entity...
-                airman.setId(UUID.randomUUID());
-            }
 
             return airmanRepo.save(airman);
         }
@@ -60,6 +59,6 @@ public class AirmanServiceImpl implements AirmanService {
 
     @Override
     public Airman getAirman(UUID id) {
-        return airmanRepo.findById(id);
+        return airmanRepo.findById(id).orElse(null);
     }
 }
