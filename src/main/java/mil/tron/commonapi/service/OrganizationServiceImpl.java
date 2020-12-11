@@ -1,47 +1,46 @@
 package mil.tron.commonapi.service;
 
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.organization.Organization;
+import mil.tron.commonapi.repository.OrganizationRepository;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
+	private OrganizationRepository repository;
 	
-	private HashMap<UUID, Organization> organizations = new HashMap<>();
-
+	public OrganizationServiceImpl(OrganizationRepository repository) {
+		this.repository = repository;
+	}
+		
 	@Override
 	public Organization createOrganization(Organization organization) {
-		if (organizations.putIfAbsent(organization.getId(), organization) == null)
-			return organization;
-		else
-			return null;
+		return repository.existsById(organization.getId()) ? null : repository.save(organization);
 	}
 
 	@Override
 	public Organization updateOrganization(UUID id, Organization organization) {
-		if (organizations.replace(id, organization) != null)
-			return organization;
-		else
+		if (!id.equals(organization.getId()) || !repository.existsById(id))
 			return null;
+		
+		return repository.save(organization);
 	}
 
 	@Override
 	public void deleteOrganization(UUID id) {
-		organizations.remove(id);
+		repository.deleteById(id);
 	}
 
 	@Override
-	public Collection<Organization> getOrganizations() {
-		return organizations.values();
+	public Iterable<Organization> getOrganizations() {
+		return repository.findAll();
 	}
 
 	@Override
 	public Organization getOrganization(UUID id) {
-		return organizations.get(id);
+		return repository.findById(id).orElse(null);
 	}
 
 }

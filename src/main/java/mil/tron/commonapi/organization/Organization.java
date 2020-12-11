@@ -14,6 +14,7 @@ import mil.tron.commonapi.person.Person;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Entity
 public class Organization {
 
     @Id
@@ -28,18 +29,22 @@ public class Organization {
 
     @Getter
     @Builder.Default
+    @OneToMany
     private Set<Person> members = new HashSet<Person>();
 
     @Getter
     @Setter
+    @ManyToOne
     private Person leader;
     
     @Getter
     @Setter
+    @ManyToOne
     private Organization parentOrganization;
     
     @Getter
     @Builder.Default
+    @OneToMany
     private Set<Organization> subordinateOrganizations = new HashSet<Organization>();
  
     @Override  
