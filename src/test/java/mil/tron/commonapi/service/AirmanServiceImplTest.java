@@ -1,6 +1,8 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.airman.Airman;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AirmanRepository;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,15 +16,12 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import javax.transaction.Transactional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -74,8 +73,7 @@ public class AirmanServiceImplTest {
     @Test
     public void updateAirmanBadIdTest() throws Exception {
         Airman savedAirman = airmanService.createAirman(airman);
-        Airman updatedAirman = airmanService.updateAirman(UUID.randomUUID(), savedAirman);
-        assertNull(updatedAirman);
+        assertThrows(RecordNotFoundException.class, () -> airmanService.updateAirman(UUID.randomUUID(), savedAirman));
     }
 
     @Transactional
@@ -94,8 +92,7 @@ public class AirmanServiceImplTest {
 
         Airman savedAirman = airmanService.createAirman(airman);
         Airman savedAirman2 = airmanService.createAirman(airman2);
-        Airman updatedAirman = airmanService.updateAirman(airman2.getId(), savedAirman);
-        assertNull(updatedAirman);
+        assertThrows(InvalidRecordUpdateRequest.class, () -> airmanService.updateAirman(savedAirman2.getId(), savedAirman));
     }
 
     @Transactional
