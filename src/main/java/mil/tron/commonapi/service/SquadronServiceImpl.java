@@ -1,8 +1,9 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.squadron.Squadron;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -10,8 +11,11 @@ import java.util.UUID;
 @Service
 public class SquadronServiceImpl implements SquadronService {
 
-    @Autowired
     private SquadronRepository squadronRepo;
+
+    public SquadronServiceImpl(SquadronRepository squadronRepo) {
+        this.squadronRepo = squadronRepo;
+    }
 
     @Override
     public Squadron createSquadron(Squadron squadron) {
@@ -30,24 +34,28 @@ public class SquadronServiceImpl implements SquadronService {
     }
 
     @Override
-    public Squadron updateSquadron(UUID id, Squadron squadron) {
+    public Squadron updateSquadron(UUID id, Squadron squadron) throws InvalidRecordUpdateRequest, RecordNotFoundException {
         if (!squadronRepo.existsById(id)) {
-            return null;
+            throw new RecordNotFoundException("Provided squadron UUID does not match any existing records");
         }
 
         // the squadrons object's id better match the id given,
         //  otherwise hibernate will save under whatever id's inside the object
         if (!squadron.getId().equals(id)) {
-            return null;
+            throw new InvalidRecordUpdateRequest(
+                    "Provided squadron UUID mismatched UUID in squadron object");
         }
 
         return squadronRepo.save(squadron);
     }
 
     @Override
-    public void removeSquadron(UUID id) {
+    public void removeSquadron(UUID id) throws RecordNotFoundException {
         if (squadronRepo.existsById(id)) {
             squadronRepo.deleteById(id);
+        }
+        else {
+            throw new RecordNotFoundException("Squadron record with provided UUID does not exist");
         }
     }
 

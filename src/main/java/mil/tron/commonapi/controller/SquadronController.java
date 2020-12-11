@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.squadron.Squadron;
 import mil.tron.commonapi.service.SquadronService;
 import org.springframework.http.HttpStatus;
@@ -77,26 +79,47 @@ public class SquadronController {
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = Squadron.class))),
             @ApiResponse(responseCode = "404",
-                    description = "Resource not found / Attempt to update squadron that does not exist",
+                    description = "Record not found / Attempt to update squadron that does not exist with provided UUID",
+                    content = @Content),
+            @ApiResponse(responseCode = "409",
+                    description = "Invalid update request - provided UUID didn't exist or did not match UUID in provided record",
                     content = @Content)
     })
     @PutMapping("/{id}")
     public ResponseEntity<Squadron> updateSquadron(@Parameter(description = "Squadron record ID to update", required = true) @PathVariable UUID id,
                                                @Parameter(description = "Squadron record data", required = true) @RequestBody Squadron squadron) {
 
-        Squadron updatedSquadron = squadronService.updateSquadron(id, squadron);
-        return updatedSquadron != null ? new ResponseEntity<>(updatedSquadron, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        try {
+            Squadron updatedSquadron = squadronService.updateSquadron(id, squadron);
+            return new ResponseEntity<>(updatedSquadron, HttpStatus.OK);
+        }
+        catch (InvalidRecordUpdateRequest ex) {
+            return new ResponseEntity<>(HttpStatus.CONFLICT);
+        }
+        catch (RecordNotFoundException ex) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @Operation(summary = "Deletes a squadron record", description = "Removes a squadron record from the database")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204",
+            @ApiResponse(responseCode = "200",
                     description = "Successful operation / Request Performed",
+                    content = @Content),
+            @ApiResponse(responseCode = "404",
+                    description = "Record to delete does not exist",
                     content = @Content)
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteSquadron(@Parameter(description = "UUID id of the squadron record", required = true) @PathVariable UUID id) {
-        squadronService.removeSquadron(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+        try {
+            squadronService.removeSquadron(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+        catch (RecordNotFoundException ex) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
     }
 }
