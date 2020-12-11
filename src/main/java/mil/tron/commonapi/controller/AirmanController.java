@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.airman.Airman;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.person.Person;
 import mil.tron.commonapi.service.AirmanService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,27 +81,48 @@ public class AirmanController {
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = Airman.class))),
             @ApiResponse(responseCode = "404",
-                    description = "Resource not found / Attempt to update airman that does not exist",
+                    description = "Record not found / Attempt to update airman record with provided UUID does not exist",
+                    content = @Content),
+            @ApiResponse(responseCode = "409",
+                    description = "Invalid update request - provided UUID didn't exist or did not match UUID in provided record",
                     content = @Content)
     })
     @PutMapping("/{id}")
     public ResponseEntity<Airman> updateAirman(@Parameter(description = "Airman record ID to update", required = true) @PathVariable UUID id,
             @Parameter(description = "Airman record data", required = true) @RequestBody Airman airman) {
 
-        Airman updatedAirman = airmanService.updateAirman(id, airman);
-        return updatedAirman != null ? new ResponseEntity<>(updatedAirman, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        try {
+            Airman updatedAirman = airmanService.updateAirman(id, airman);
+            return new ResponseEntity<>(updatedAirman, HttpStatus.OK);
+        }
+        catch (InvalidRecordUpdateRequest ex) {
+            return new ResponseEntity<>(HttpStatus.CONFLICT);
+        }
+        catch (RecordNotFoundException ex) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @Operation(summary = "Deletes an airman record", description = "Removes an airman record from the database")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204",
+            @ApiResponse(responseCode = "200",
                     description = "Successful operation / Request Performed",
+                    content = @Content),
+            @ApiResponse(responseCode = "404",
+                    description = "Record to delete does not exist",
                     content = @Content)
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> deleteAirman(@Parameter(description = "UUID id of the airman record", required = true) @PathVariable UUID id) {
-        airmanService.removeAirman(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<Object> deleteAirman(@Parameter(description = "UUID id of the airman record to delete", required = true) @PathVariable UUID id) {
+
+        try {
+            airmanService.removeAirman(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+        catch (RecordNotFoundException ex) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
     }
 
 }
