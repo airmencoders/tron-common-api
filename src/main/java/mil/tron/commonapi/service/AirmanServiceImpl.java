@@ -1,10 +1,13 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.airman.Airman;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AirmanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.lang.reflect.Parameter;
 import java.util.UUID;
 
 @Service
@@ -31,24 +34,28 @@ public class AirmanServiceImpl implements AirmanService {
     }
 
     @Override
-    public Airman updateAirman(UUID id, Airman airman) {
+    public Airman updateAirman(UUID id, Airman airman) throws InvalidRecordUpdateRequest, RecordNotFoundException {
         if (!airmanRepo.existsById(id)) {
-            return null;
+            throw new RecordNotFoundException("Provided airman UUID does not match any existing records");
         }
 
         // the airman object's id better match the id given,
         //  otherwise hibernate will save under whatever id's inside the object
         if (!airman.getId().equals(id)) {
-            return null;
+            throw new InvalidRecordUpdateRequest(
+                    "Provided airman UUID mismatched UUID in airman object");
         }
 
         return airmanRepo.save(airman);
     }
 
     @Override
-    public void removeAirman(UUID id) {
+    public void removeAirman(UUID id) throws RecordNotFoundException  {
         if (airmanRepo.existsById(id)) {
             airmanRepo.deleteById(id);
+        }
+        else {
+            throw new RecordNotFoundException("Airman record with provided UUID does not exist");
         }
     }
 

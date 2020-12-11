@@ -196,12 +196,14 @@ public class AirmanControllerTest {
 
         Airman newGuy = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
         newGuy.setTitle("Maj");
+        UUID realId = newGuy.getId();
+        newGuy.setId(UUID.randomUUID());
 
         // now inject a random UUID for the id, so that it and the one in the request body will be different...
-        mockMvc.perform(put(ENDPOINT + UUID.randomUUID())
+        mockMvc.perform(put(ENDPOINT + realId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newGuy)))
-                .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
+                .andExpect(status().is(HttpStatus.CONFLICT.value()));
     }
 
     @Transactional
@@ -227,7 +229,7 @@ public class AirmanControllerTest {
         int totalRecs = allAirmanRecs.length;
 
         // delete the record
-        mockMvc.perform(delete(ENDPOINT + id.toString())).andExpect(status().is(HttpStatus.NO_CONTENT.value()));
+        mockMvc.perform(delete(ENDPOINT + id.toString())).andExpect(status().is(HttpStatus.OK.value()));
 
         // refetch all recs
         MvcResult modRecs = mockMvc.perform(get(ENDPOINT))
