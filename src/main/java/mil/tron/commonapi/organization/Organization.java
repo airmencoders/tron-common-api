@@ -4,6 +4,8 @@ import lombok.*;
 
 import javax.persistence.*;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.Set;
 
 import java.util.HashSet;
@@ -65,6 +67,7 @@ public class Organization {
         return this.subordinateOrganizations.remove(subOrg);
     }
     
+    @JsonIgnore
     public void setLeaderAndUpdateMembers(Person leader) {
         this.members.remove(this.leader);
         this.leader = leader;

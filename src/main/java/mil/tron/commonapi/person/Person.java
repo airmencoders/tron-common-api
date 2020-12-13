@@ -5,6 +5,8 @@ import lombok.*;
 import javax.persistence.*;
 import javax.validation.constraints.Email;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -58,6 +60,8 @@ public class Person {
             return false;
         }
     }
+    
+    @JsonIgnore
     public String getFullName() {
         return String.format("%s %s", firstName, lastName);
     }
