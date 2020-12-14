@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import java.lang.reflect.Parameter;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class PersonServiceImpl implements PersonService {
 	@Override
 	public Person createPerson(Person person) {
 		if (repository.existsById(person.getId())) 
-			throw new ResourceAlreadyExistsException("Person resource with the id: " + person.getId() + " does not exist.");
+			throw new ResourceAlreadyExistsException("Person resource with the id: " + person.getId() + " already exists.");
 		else 
 			return repository.save(person);
 	}
@@ -41,7 +42,12 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public void deletePerson(UUID id) {
-		repository.deleteById(id);
+		if (repository.existsById(id)) {
+			repository.deleteById(id);
+		}
+		else {
+			throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
+		}
 	}
 
 	@Override

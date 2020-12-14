@@ -91,7 +91,7 @@ public class AirmanControllerTest {
         // this POST will fail since it'll detect UUID in db already exists
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(newAirman)))
-                .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
+                .andExpect(status().is(HttpStatus.CONFLICT.value()));
 
     }
 
@@ -203,7 +203,7 @@ public class AirmanControllerTest {
         mockMvc.perform(put(ENDPOINT + realId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newGuy)))
-                .andExpect(status().is(HttpStatus.CONFLICT.value()));
+                .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
     }
 
     @Transactional

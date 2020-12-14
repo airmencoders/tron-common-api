@@ -14,7 +14,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler({ ResourceAlreadyExistsException.class })
 	protected ResponseEntity<Object> handleResourceAlreadyExistsException(ResourceAlreadyExistsException ex, WebRequest request) {
-		return new ResponseEntity<>(HttpStatus.CONFLICT);
+		return new ResponseEntity<>(ex.getMessage(), HttpStatus.CONFLICT);
 	}
 	
 	@ExceptionHandler({ ConstraintViolationException.class })
@@ -24,11 +24,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	
 	@ExceptionHandler({ InvalidRecordUpdateRequest.class })
 	protected ResponseEntity<Object> handleInvalidRecordUpdateRequest(InvalidRecordUpdateRequest ex, WebRequest request) {
-		return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
 	}
 	
 	@ExceptionHandler({ RecordNotFoundException.class })
 	protected ResponseEntity<Object> handleRecordNotFoundException(RecordNotFoundException ex, WebRequest request) {
-		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
 	}
 }

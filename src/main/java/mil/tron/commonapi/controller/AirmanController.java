@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.UUID;
 
 @RestController
@@ -48,8 +49,7 @@ public class AirmanController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<Airman> getAirman(@Parameter(description = "UUID of the airman record", required= true) @PathVariable UUID id) {
-        Airman airman = airmanService.getAirman(id);
-        return airman != null ? new ResponseEntity<>(airman, HttpStatus.OK) : new ResponseEntity(HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>( airmanService.getAirman(id), HttpStatus.OK);
     }
 
     @Operation(summary = "Adds a new airman", description = "Adds a new airman, ID field should be null")
@@ -62,14 +62,9 @@ public class AirmanController {
                     content = @Content)
     })
     @PostMapping("")
-    public ResponseEntity<Airman> addAirman(@Parameter(description = "Airman record to add", required = true) @RequestBody Airman airman) {
-        Airman newAirman = airmanService.createAirman(airman);
-        if (newAirman != null) {
-            return new ResponseEntity<>(newAirman, HttpStatus.CREATED);
-        }
-        else {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<Airman> addAirman(@Parameter(description = "Airman record to add", required = true) @Valid @RequestBody Airman airman) {
+        return new ResponseEntity<>(airmanService.createAirman(airman), HttpStatus.CREATED);
+
     }
 
     @Operation(summary = "Updates an existing airman record", description = "Updates an existing airman")
@@ -86,18 +81,10 @@ public class AirmanController {
     })
     @PutMapping("/{id}")
     public ResponseEntity<Airman> updateAirman(@Parameter(description = "Airman record ID to update", required = true) @PathVariable UUID id,
-            @Parameter(description = "Airman record data", required = true) @RequestBody Airman airman) {
+            @Parameter(description = "Airman record data", required = true) @Valid @RequestBody Airman airman) {
 
-        try {
-            Airman updatedAirman = airmanService.updateAirman(id, airman);
-            return new ResponseEntity<>(updatedAirman, HttpStatus.OK);
-        }
-        catch (InvalidRecordUpdateRequest ex) {
-            return new ResponseEntity<>(HttpStatus.CONFLICT);
-        }
-        catch (RecordNotFoundException ex) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        Airman updatedAirman = airmanService.updateAirman(id, airman);
+        return new ResponseEntity<>(updatedAirman, HttpStatus.OK);
     }
 
     @Operation(summary = "Deletes an airman record", description = "Removes an airman record from the database")
@@ -112,14 +99,8 @@ public class AirmanController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteAirman(@Parameter(description = "UUID id of the airman record to delete", required = true) @PathVariable UUID id) {
 
-        try {
-            airmanService.removeAirman(id);
-            return new ResponseEntity<>(HttpStatus.OK);
-        }
-        catch (RecordNotFoundException ex) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
+        airmanService.removeAirman(id);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
 }
