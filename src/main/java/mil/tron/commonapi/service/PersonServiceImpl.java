@@ -1,44 +1,63 @@
 package mil.tron.commonapi.service;
 
-import java.util.Collection;
-import java.util.HashMap;
+import java.lang.reflect.Parameter;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.repository.PersonRepository;
 
 @Service
 public class PersonServiceImpl implements PersonService {
-	private HashMap<UUID, Person> persons = new HashMap<>();
+	private PersonRepository repository;
+	
+	public PersonServiceImpl(PersonRepository repository) {
+		this.repository = repository;
+	}
 
 	@Override
 	public Person createPerson(Person person) {
-		persons.put(person.getId(), person);
-		
-		return person;
+		if (repository.existsById(person.getId())) 
+			throw new ResourceAlreadyExistsException("Person resource with the id: " + person.getId() + " already exists.");
+		else 
+			return repository.save(person);
 	}
 
 	@Override
 	public Person updatePerson(UUID id, Person person) {
-		Person replaced = persons.replace(id, person);
+		// Ensure the id given matches the id of the object given
+		if (!id.equals(person.getId()))
+			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, person.getId()));
 		
-		return replaced != null ? person : null;
+		// Check that the resource already exists
+		if (!repository.existsById(id))
+			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
+		
+		return repository.save(person);
 	}
 
 	@Override
 	public void deletePerson(UUID id) {
-		persons.remove(id);
+		if (repository.existsById(id)) {
+			repository.deleteById(id);
+		}
+		else {
+			throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
+		}
 	}
 
 	@Override
-	public Collection<Person> getPersons() {
-		return persons.values();
+	public Iterable<Person> getPersons() {
+		return repository.findAll();
 	}
 
 	@Override
 	public Person getPerson(UUID id) {
-		return persons.get(id);
+		return repository.findById(id).orElseThrow(() -> new RecordNotFoundException("Person resource with ID: " + id + " does not exist."));
 	}
 
 }

@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import mil.tron.commonapi.exception.RecordNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,22 +27,25 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import mil.tron.commonapi.organization.Organization;
 import mil.tron.commonapi.person.Person;
-import mil.tron.commonapi.service.PersonService;
+import mil.tron.commonapi.service.OrganizationService;
 
-@WebMvcTest(PersonController.class)
-public class PersonControllerTest {
-	private static final String ENDPOINT = "/v1/person/";
+@WebMvcTest(OrganizationController.class)
+public class OrganizationControllerTest {
+	private static final String ENDPOINT = "/v1/organization/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-	
+
 	@Autowired
 	private MockMvc mockMvc;
 	
 	@MockBean
-	private PersonService personService;
+	private OrganizationService organizationService;
 	
 	private Person testPerson;
-	private String testPersonJson;
+	private Person testLeaderPerson;
+	private Organization testOrg;
+	private String testOrgJsonString;
 	
 	@BeforeEach
 	public void beforeEachTest() throws JsonProcessingException {
@@ -54,30 +56,51 @@ public class PersonControllerTest {
 		testPerson.setTitle("Person Title");
 		testPerson.setEmail("test.person@mvc.com");
 		
-		testPersonJson = OBJECT_MAPPER.writeValueAsString(testPerson);
-	}
+		testLeaderPerson = new Person();
+		testLeaderPerson.setFirstName("Test");
+		testLeaderPerson.setLastName("Person");
+		testLeaderPerson.setMiddleName("Leader");
+		testLeaderPerson.setTitle("Leader Person");
+		testLeaderPerson.setEmail("test.leader@person.com");
 
+		testOrg = new Organization();
+		testOrg.setName("Test Org");
+		testOrg.setLeader(testLeaderPerson);
+		testOrg.addMember(testPerson);
+		
+		testOrgJsonString = OBJECT_MAPPER.writeValueAsString(testOrg);
+	}
+	
 	@Nested
 	class TestGet {
+
 		@Test
 		void testGetAll() throws Exception {
-			List<Person> persons = new ArrayList<>();
-			persons.add(testPerson);
+			List<Organization> orgs = new ArrayList<>();
+			orgs.add(testOrg);
 
-			Mockito.when(personService.getPersons()).thenReturn(persons);
+			Mockito.when(organizationService.getOrganizations()).thenReturn(orgs);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
-				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(persons)));
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
 		}
 		
 		@Test
 		void testGetById() throws Exception {
-			Mockito.when(personService.getPerson(Mockito.any(UUID.class))).thenReturn(testPerson);
+			Mockito.when(organizationService.getOrganization(Mockito.any(UUID.class))).thenReturn(testOrg);
 			
-			mockMvc.perform(get(ENDPOINT + "{id}", testPerson.getId()))
+			mockMvc.perform(get(ENDPOINT + "{id}", testOrg.getId()))
 				.andExpect(status().isOk())
-				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testOrgJsonString));
+		}
+		
+		@Test
+		void testGetByIdNotFound() throws Exception {
+			Mockito.when(organizationService.getOrganization(Mockito.any(UUID.class))).thenReturn(null);
+			
+			mockMvc.perform(get(ENDPOINT + "{id}", testOrg.getId()))
+				.andExpect(status().isNotFound());
 		}
 		
 		@Test
@@ -93,25 +116,33 @@ public class PersonControllerTest {
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
-			Mockito.when(personService.createPerson(Mockito.any(Person.class))).thenReturn(testPerson);
+			Mockito.when(organizationService.createOrganization(Mockito.any(Organization.class))).thenReturn(testOrg);
 			
 			mockMvc.perform(post(ENDPOINT)
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
-					.content(testPersonJson))
+					.content(testOrgJsonString))
 				.andExpect(status().isCreated())
-				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testOrgJsonString));
 		}
 		
 		@Test
 		void testPostInvalidJsonBody() throws Exception {
 			// Send empty string as bad json data
+			mockMvc.perform(post(ENDPOINT).accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON).content(""))
+				.andExpect(status().isBadRequest())
+				.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
+		}
+		
+		@Test
+		void testPostOrganizationWithIdAlreadyExists() throws Exception {
+			Mockito.when(organizationService.createOrganization(Mockito.any(Organization.class))).thenReturn(null);
+			
 			mockMvc.perform(post(ENDPOINT)
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
-					.content(""))
-				.andExpect(status().isBadRequest())
-				.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
+					.content(testOrgJsonString))
+				.andExpect(status().isBadRequest());
 		}
 	}
 	
@@ -119,20 +150,20 @@ public class PersonControllerTest {
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
-			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(Person.class))).thenReturn(testPerson);
+			Mockito.when(organizationService.updateOrganization(Mockito.any(UUID.class), Mockito.any(Organization.class))).thenReturn(testOrg);
 			
-			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
+			mockMvc.perform(put(ENDPOINT + "{id}", testOrg.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
-					.content(testPersonJson))
+					.content(testOrgJsonString))
 				.andExpect(status().isOk())
-				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testOrgJsonString));
 		}
 		
 		@Test
 		void testPutInvalidJsonBody() throws Exception {
 			// Send empty string as bad json data
-			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
+			mockMvc.perform(put(ENDPOINT + "{id}", testOrg.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(""))
@@ -150,12 +181,12 @@ public class PersonControllerTest {
 		
 		@Test
 		void testPutResourceDoesNotExist() throws Exception {
-			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(Person.class))).thenThrow(new RecordNotFoundException("Record not found"));
+			Mockito.when(organizationService.updateOrganization(Mockito.any(UUID.class), Mockito.any(Organization.class))).thenReturn(null);
 			
-			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
+			mockMvc.perform(put(ENDPOINT + "{id}", testOrg.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
-					.content(testPersonJson))
+					.content(testOrgJsonString))
 				.andExpect(status().isNotFound());
 		}
 	}
@@ -164,16 +195,12 @@ public class PersonControllerTest {
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {
-			Mockito.doNothing().when(personService).deletePerson(testPerson.getId());
-			
-			mockMvc.perform(delete(ENDPOINT + "{id}", testPerson.getId()))
+			mockMvc.perform(delete(ENDPOINT + "{id}", testOrg.getId()))
 				.andExpect(status().isNoContent());
 		}
 		
 		@Test
 		void testDeleteBadPathVariable() throws Exception {
-			Mockito.doNothing().when(personService).deletePerson(testPerson.getId());
-			
 			mockMvc.perform(delete(ENDPOINT + "{id}", "asdf1234"))
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
