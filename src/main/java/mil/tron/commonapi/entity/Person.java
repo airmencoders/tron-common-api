@@ -1,4 +1,4 @@
-package mil.tron.commonapi.person;
+package mil.tron.commonapi.entity;
 
 import lombok.*;
 

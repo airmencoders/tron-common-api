@@ -4,7 +4,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.SquadronRepository;
-import mil.tron.commonapi.squadron.Squadron;
+import mil.tron.commonapi.entity.Squadron;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;

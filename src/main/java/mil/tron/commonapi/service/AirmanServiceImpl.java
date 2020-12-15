@@ -1,6 +1,6 @@
 package mil.tron.commonapi.service;
 
-import mil.tron.commonapi.airman.Airman;
+import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -8,7 +8,6 @@ import mil.tron.commonapi.repository.AirmanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Parameter;
 import java.util.UUID;
 
 @Service

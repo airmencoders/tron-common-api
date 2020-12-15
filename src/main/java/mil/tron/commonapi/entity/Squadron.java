@@ -1,10 +1,10 @@
-package mil.tron.commonapi.squadron;
+package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
-import mil.tron.commonapi.organization.Organization;
-import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.entity.Person;
 
 import javax.persistence.Entity;
 import javax.persistence.OneToOne;

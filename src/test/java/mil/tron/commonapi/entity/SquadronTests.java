@@ -1,6 +1,7 @@
-package mil.tron.commonapi.squadron;
+package mil.tron.commonapi.entity;
 
-import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.Squadron;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
