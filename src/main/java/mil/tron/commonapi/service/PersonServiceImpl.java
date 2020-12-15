@@ -1,9 +1,13 @@
 package mil.tron.commonapi.service;
 
+import java.lang.reflect.Parameter;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.person.Person;
 import mil.tron.commonapi.repository.PersonRepository;
 
@@ -17,21 +21,33 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public Person createPerson(Person person) {
-		return repository.existsById(person.getId()) ? null : repository.save(person);
+		if (repository.existsById(person.getId())) 
+			throw new ResourceAlreadyExistsException("Person resource with the id: " + person.getId() + " already exists.");
+		else 
+			return repository.save(person);
 	}
 
 	@Override
 	public Person updatePerson(UUID id, Person person) {
 		// Ensure the id given matches the id of the object given
-		if (!id.equals(person.getId()) || !repository.existsById(id))
-			return null;
+		if (!id.equals(person.getId()))
+			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, person.getId()));
+		
+		// Check that the resource already exists
+		if (!repository.existsById(id))
+			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
 		
 		return repository.save(person);
 	}
 
 	@Override
 	public void deletePerson(UUID id) {
-		repository.deleteById(id);
+		if (repository.existsById(id)) {
+			repository.deleteById(id);
+		}
+		else {
+			throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
+		}
 	}
 
 	@Override
@@ -41,7 +57,7 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public Person getPerson(UUID id) {
-		return repository.findById(id).orElse(null);
+		return repository.findById(id).orElseThrow(() -> new RecordNotFoundException("Person resource with ID: " + id + " does not exist."));
 	}
 
 }

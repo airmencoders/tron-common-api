@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -149,7 +150,7 @@ public class PersonControllerTest {
 		
 		@Test
 		void testPutResourceDoesNotExist() throws Exception {
-			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(Person.class))).thenReturn(null);
+			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(Person.class))).thenThrow(new RecordNotFoundException("Record not found"));
 			
 			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
 					.accept(MediaType.APPLICATION_JSON)

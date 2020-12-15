@@ -83,7 +83,7 @@ public class SquadronControllerTest {
         // this POST will fail since it'll detect UUID in db already exists
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(newSquadron)))
-                .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
+                .andExpect(status().is(HttpStatus.CONFLICT.value()));
 
     }
 
@@ -195,7 +195,7 @@ public class SquadronControllerTest {
         mockMvc.perform(put(ENDPOINT + realId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newUnit)))
-                .andExpect(status().is(HttpStatus.CONFLICT.value()));
+                .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
     }
 
     @Transactional

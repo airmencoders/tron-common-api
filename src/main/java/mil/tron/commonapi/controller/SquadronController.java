@@ -49,8 +49,7 @@ public class SquadronController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<Squadron> getSquadron(@Parameter(description = "UUID of the squadron record", required= true) @PathVariable UUID id) {
-        Squadron squadron = squadronService.getSquadron(id);
-        return squadron != null ? new ResponseEntity<>(squadron, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(squadronService.getSquadron(id), HttpStatus.OK);
     }
 
     @Operation(summary = "Adds a new squadron", description = "Adds a new squadron, ID field should be null")
@@ -64,13 +63,8 @@ public class SquadronController {
     })
     @PostMapping("")
     public ResponseEntity<Squadron> addSquadron(@Parameter(description = "Squadron record to add", required = true) @RequestBody Squadron squadron) {
-        Squadron newSquadron = squadronService.createSquadron(squadron);
-        if (newSquadron != null) {
-            return new ResponseEntity<>(newSquadron, HttpStatus.CREATED);
-        }
-        else {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
+        return new ResponseEntity<>(squadronService.createSquadron(squadron), HttpStatus.CREATED);
+
     }
 
     @Operation(summary = "Updates an existing squadron record", description = "Updates an existing squadron")
@@ -89,16 +83,8 @@ public class SquadronController {
     public ResponseEntity<Squadron> updateSquadron(@Parameter(description = "Squadron record ID to update", required = true) @PathVariable UUID id,
                                                @Parameter(description = "Squadron record data", required = true) @RequestBody Squadron squadron) {
 
-        try {
-            Squadron updatedSquadron = squadronService.updateSquadron(id, squadron);
-            return new ResponseEntity<>(updatedSquadron, HttpStatus.OK);
-        }
-        catch (InvalidRecordUpdateRequest ex) {
-            return new ResponseEntity<>(HttpStatus.CONFLICT);
-        }
-        catch (RecordNotFoundException ex) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        return new ResponseEntity<>(squadronService.updateSquadron(id, squadron), HttpStatus.OK);
+
     }
 
     @Operation(summary = "Deletes a squadron record", description = "Removes a squadron record from the database")
@@ -113,13 +99,7 @@ public class SquadronController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteSquadron(@Parameter(description = "UUID id of the squadron record", required = true) @PathVariable UUID id) {
 
-        try {
-            squadronService.removeSquadron(id);
-            return new ResponseEntity<>(HttpStatus.OK);
-        }
-        catch (RecordNotFoundException ex) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
+        squadronService.removeSquadron(id);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

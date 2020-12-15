@@ -1,5 +1,8 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.person.Person;
 import mil.tron.commonapi.repository.PersonRepository;
 
@@ -12,6 +15,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -43,21 +47,18 @@ class PersonServiceImplTest {
         
         // Test id already exists
         Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-        Person notCreatedPerson = personService.createPerson(testPerson);
-        assertThat(notCreatedPerson).isNull();
+        assertThrows(ResourceAlreadyExistsException.class, () -> personService.createPerson(testPerson));
     }
 
     @Test
     void updatePersonTest() {
         // Test id not matching person id
-    	Person idNotMatchingPersonId = personService.updatePerson(UUID.randomUUID(), testPerson);
-    	assertThat(idNotMatchingPersonId).isNull();
-    	
+    	assertThrows(InvalidRecordUpdateRequest.class, () -> personService.updatePerson(UUID.randomUUID(), testPerson));
+
     	// Test id not exist
     	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
-    	Person idNotExist = personService.updatePerson(testPerson.getId(), testPerson);
-    	assertThat(idNotExist).isNull();
-    	
+    	assertThrows(RecordNotFoundException.class, () -> personService.updatePerson(testPerson.getId(), testPerson));
+
     	// Successful update
     	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
     	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
@@ -67,6 +68,9 @@ class PersonServiceImplTest {
 
     @Test
     void deletePersonTest() {
+		assertThrows(RecordNotFoundException.class, () -> personService.deletePerson(testPerson.getId()));
+
+		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
         personService.deletePerson(testPerson.getId());
         Mockito.verify(repository, Mockito.times(1)).deleteById(testPerson.getId());    
     }
@@ -87,8 +91,7 @@ class PersonServiceImplTest {
     	
     	// Test person not exists
     	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.ofNullable(null));
-    	Person notExistsPerson = personService.getPerson(testPerson.getId());
-    	assertThat(notExistsPerson).isNull();
+    	assertThrows(RecordNotFoundException.class, () -> personService.getPerson(testPerson.getId()));
     }
     
 }

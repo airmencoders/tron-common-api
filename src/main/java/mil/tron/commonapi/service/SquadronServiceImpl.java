@@ -2,6 +2,7 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.squadron.Squadron;
 import org.springframework.stereotype.Service;
@@ -30,11 +31,11 @@ public class SquadronServiceImpl implements SquadronService {
             return squadronRepo.save(squadron);
         }
 
-        return null;
+        throw new ResourceAlreadyExistsException("Squadron with ID: " + squadron.getId().toString() + " already exists.");
     }
 
     @Override
-    public Squadron updateSquadron(UUID id, Squadron squadron) throws InvalidRecordUpdateRequest, RecordNotFoundException {
+    public Squadron updateSquadron(UUID id, Squadron squadron) {
         if (!squadronRepo.existsById(id)) {
             throw new RecordNotFoundException("Provided squadron UUID does not match any existing records");
         }
@@ -50,7 +51,7 @@ public class SquadronServiceImpl implements SquadronService {
     }
 
     @Override
-    public void removeSquadron(UUID id) throws RecordNotFoundException {
+    public void removeSquadron(UUID id) {
         if (squadronRepo.existsById(id)) {
             squadronRepo.deleteById(id);
         }
@@ -66,6 +67,6 @@ public class SquadronServiceImpl implements SquadronService {
 
     @Override
     public Squadron getSquadron(UUID id) {
-        return squadronRepo.findById(id).orElse(null);
+        return squadronRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Squadron with ID: " + id.toString() + " does not exist."));
     }
 }

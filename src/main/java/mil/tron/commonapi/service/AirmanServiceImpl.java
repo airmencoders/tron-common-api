@@ -3,6 +3,7 @@ package mil.tron.commonapi.service;
 import mil.tron.commonapi.airman.Airman;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,11 +27,10 @@ public class AirmanServiceImpl implements AirmanService {
         }
         // the record with this 'id' shouldn't already exist...
         if (!airmanRepo.existsById(airman.getId())) {
-
             return airmanRepo.save(airman);
         }
 
-        return null;
+        throw new ResourceAlreadyExistsException("Airman with the id: " + airman.getId() + " already exists.");
     }
 
     @Override
@@ -55,7 +55,7 @@ public class AirmanServiceImpl implements AirmanService {
             airmanRepo.deleteById(id);
         }
         else {
-            throw new RecordNotFoundException("Airman record with provided UUID does not exist");
+            throw new RecordNotFoundException("Airman record with UUID: " + id.toString() + " does not exist");
         }
     }
 
@@ -66,6 +66,6 @@ public class AirmanServiceImpl implements AirmanService {
 
     @Override
     public Airman getAirman(UUID id) {
-        return airmanRepo.findById(id).orElse(null);
+        return airmanRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Airman with resource ID: " + id.toString() + " does not exist."));
     }
 }
