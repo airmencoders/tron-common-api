@@ -41,8 +41,8 @@ public class Person {
     @Getter
     @Setter
     private String title;
-    
-    @Email
+
+    @Email(message="Malformed email address")
     @Getter
     @Setter
     private String email;
