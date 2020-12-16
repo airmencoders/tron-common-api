@@ -3,7 +3,7 @@ package mil.tron.commonapi.logging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.MockToken;
-import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.entity.Person;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.reflect.SourceLocation;

@@ -2,7 +2,7 @@ package mil.tron.commonapi.service;
 
 import java.util.UUID;
 
-import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.entity.Person;
 
 public interface PersonService {
 	Person createPerson(Person person);

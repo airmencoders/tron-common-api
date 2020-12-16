@@ -1,10 +1,11 @@
-package mil.tron.commonapi.organization;
+package mil.tron.commonapi.entity;
 
+import mil.tron.commonapi.entity.Organization;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.entity.Person;
 
 import java.util.UUID;
 

@@ -1,4 +1,4 @@
-package mil.tron.commonapi.organization;
+package mil.tron.commonapi.entity;
 
 import lombok.*;
 
@@ -10,8 +10,6 @@ import java.util.Set;
 
 import java.util.HashSet;
 import java.util.UUID;
-
-import mil.tron.commonapi.person.Person;
 
 @AllArgsConstructor
 @NoArgsConstructor

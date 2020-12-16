@@ -4,7 +4,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import mil.tron.commonapi.organization.Organization;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.repository.OrganizationRepository;
 
 @Service
