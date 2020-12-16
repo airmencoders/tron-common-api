@@ -102,4 +102,12 @@ public class SquadronController {
         squadronService.removeSquadron(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    @PatchMapping("/{squadronId}/leader/{airmanId}")
+    public ResponseEntity<Object> modifyLeader(@Parameter(description = "UUID id of the squadron to modify", required = true) @PathVariable UUID squadronId,
+                                               @Parameter(description = "UUID id of the new leader", required = true) @PathVariable UUID airmanId) {
+
+        Squadron sq = squadronService.modifyLeader(squadronId, airmanId);
+        return new ResponseEntity<>(sq, HttpStatus.OK);
+    }
 }

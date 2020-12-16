@@ -1,6 +1,7 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.airman.Airman;
 import mil.tron.commonapi.squadron.Squadron;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,9 +17,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class SquadronControllerTest {
     private static final String ENDPOINT = "/v1/squadron/";
+    private static final String AIRMAN_ENDPOINT = "/v1/airman/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -232,5 +237,47 @@ public class SquadronControllerTest {
 
         // assert we have one less in the db
         assertEquals(totalRecs - 1, newAllSquadronRecs.length);
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void testPatchLeader() throws Exception {
+
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(squadron)))
+                .andExpect(status().is(HttpStatus.CREATED.value()))
+                .andReturn();
+
+        Squadron newUnit = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+        assertNull(newUnit.getLeader());
+
+        UUID id = newUnit.getId();
+
+        Airman airman = new Airman();
+        airman.setFirstName("John");
+        airman.setMiddleName("Hero");
+        airman.setLastName("Public");
+        airman.setEmail("john@test.com");
+        airman.setTitle("Capt");
+        airman.setAfsc("17D");
+        airman.setPtDate(new Date(2020-1900, Calendar.OCTOBER, 1));
+        airman.setEtsDate(new Date(2021-1900, Calendar.JUNE, 29));
+
+        MvcResult newAirman = mockMvc.perform(post(AIRMAN_ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(airman)))
+                .andExpect(status().is(HttpStatus.CREATED.value()))
+                .andReturn();
+        UUID airmanId = OBJECT_MAPPER.readValue(newAirman.getResponse().getContentAsString(), Airman.class).getId();
+
+        MvcResult newResponse = mockMvc.perform(patch(ENDPOINT + id.toString() + "/leader/" + airmanId))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Squadron newUnitMod = OBJECT_MAPPER.readValue(newResponse.getResponse().getContentAsString(), Squadron.class);
+        assertEquals(airmanId.toString(), newUnitMod.getLeader().getId().toString());
+
     }
 }

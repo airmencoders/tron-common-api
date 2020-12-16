@@ -1,8 +1,10 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.airman.Airman;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.squadron.Squadron;
 import org.springframework.stereotype.Service;
@@ -13,9 +15,11 @@ import java.util.UUID;
 public class SquadronServiceImpl implements SquadronService {
 
     private SquadronRepository squadronRepo;
+    private AirmanRepository airmanRepo;
 
-    public SquadronServiceImpl(SquadronRepository squadronRepo) {
+    public SquadronServiceImpl(SquadronRepository squadronRepo, AirmanRepository airmanRepo) {
         this.squadronRepo = squadronRepo;
+        this.airmanRepo = airmanRepo;
     }
 
     @Override
@@ -68,5 +72,19 @@ public class SquadronServiceImpl implements SquadronService {
     @Override
     public Squadron getSquadron(UUID id) {
         return squadronRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Squadron with ID: " + id.toString() + " does not exist."));
+    }
+
+    @Override
+    public Squadron modifyLeader(UUID squadronId, UUID airmanId) {
+
+        Squadron squadron = squadronRepo.findById(squadronId).orElseThrow(
+                () -> new RecordNotFoundException("Provided squadron UUID does not match any existing records"));
+
+        Airman airman = airmanRepo.findById(airmanId).orElseThrow(
+                () -> new RecordNotFoundException("Provided airman UUID does not match any existing records"));
+
+        squadron.setLeader(airman);
+        squadronRepo.save(squadron);
+        return squadron;
     }
 }

@@ -10,4 +10,6 @@ public interface SquadronService {
     void removeSquadron(UUID id);
     Iterable<Squadron> getAllSquadrons();
     Squadron getSquadron(UUID id);
+
+    Squadron modifyLeader(UUID squadronId, UUID airmanId);
 }
