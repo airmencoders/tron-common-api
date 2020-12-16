@@ -1,6 +1,6 @@
 package mil.tron.commonapi.service;
 
-import mil.tron.commonapi.squadron.Squadron;
+import mil.tron.commonapi.entity.Squadron;
 
 import java.util.UUID;
 

@@ -1,6 +1,5 @@
 package mil.tron.commonapi.service;
 
-import java.lang.reflect.Parameter;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -8,7 +7,7 @@ import org.springframework.stereotype.Service;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.repository.PersonRepository;
 
 @Service

@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.service.PersonService;
 
 @RestController

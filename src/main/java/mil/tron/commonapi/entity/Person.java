@@ -1,9 +1,11 @@
-package mil.tron.commonapi.person;
+package mil.tron.commonapi.entity;
 
 import lombok.*;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.UUID;
 
@@ -39,8 +41,8 @@ public class Person {
     @Getter
     @Setter
     private String title;
-    
-    @Email
+
+    @Email(message="Malformed email address")
     @Getter
     @Setter
     private String email;
@@ -58,6 +60,8 @@ public class Person {
             return false;
         }
     }
+    
+    @JsonIgnore
     public String getFullName() {
         return String.format("%s %s", firstName, lastName);
     }

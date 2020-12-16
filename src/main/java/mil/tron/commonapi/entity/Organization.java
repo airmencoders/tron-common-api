@@ -1,7 +1,9 @@
-package mil.tron.commonapi.organization;
+package mil.tron.commonapi.entity;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
-
 import javax.persistence.*;
 
 import java.util.Set;
@@ -9,13 +11,12 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.UUID;
 
-import mil.tron.commonapi.person.Person;
-
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
+@JsonIdentityInfo(generator= ObjectIdGenerators.PropertyGenerator.class, property="id")
 public class Organization {
 
     @Id
@@ -23,8 +24,8 @@ public class Organization {
     @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
-    
-    
+
+
     @Getter
     @Setter
     private String name;
@@ -38,18 +39,19 @@ public class Organization {
     @Setter
     @ManyToOne
     private Person leader;
-    
+
     @Getter
     @Setter
     @ManyToOne
     private Organization parentOrganization;
-    
+
     @Getter
     @Builder.Default
     @OneToMany
+    @JsonIgnore
     private Set<Organization> subordinateOrganizations = new HashSet<Organization>();
- 
-    @Override  
+
+    @Override
     public boolean equals(Object other) {
         if (other instanceof Organization) {
             Organization otherOrg = (Organization) other;
@@ -58,28 +60,29 @@ public class Organization {
             return false;
         }
     }
-    
+
     public void addSubordinateOrganization(Organization subOrg) {
         this.subordinateOrganizations.add(subOrg);
     }
-    
+
     public boolean removeSubordinateOrganization(Organization subOrg) {
         return this.subordinateOrganizations.remove(subOrg);
     }
-    
+
+    @JsonIgnore
     public void setLeaderAndUpdateMembers(Person leader) {
         this.members.remove(this.leader);
         this.leader = leader;
         this.members.add(leader);
     }
-    
-    
+
+
     public void addMember(Person member) {
         this.members.add(member);
     }
-    
+
     public boolean removeMember(Person member) {
         return this.members.remove(member);
     }
-    
+
 }

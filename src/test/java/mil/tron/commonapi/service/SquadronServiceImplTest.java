@@ -3,7 +3,7 @@ package mil.tron.commonapi.service;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.SquadronRepository;
-import mil.tron.commonapi.squadron.Squadron;
+import mil.tron.commonapi.entity.Squadron;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -2,7 +2,7 @@ package mil.tron.commonapi.service;
 
 import java.util.UUID;
 
-import mil.tron.commonapi.organization.Organization;
+import mil.tron.commonapi.entity.Organization;
 
 public interface OrganizationService {
 	Organization createOrganization(Organization organization);

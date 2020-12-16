@@ -14,7 +14,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import mil.tron.commonapi.organization.Organization;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.repository.OrganizationRepository;
 
 @ExtendWith(MockitoExtension.class)

@@ -1,5 +1,6 @@
-package mil.tron.commonapi.airman;
+package mil.tron.commonapi.entity;
 
+import mil.tron.commonapi.entity.Airman;
 import org.junit.jupiter.api.Test;
 
 import java.util.Calendar;
