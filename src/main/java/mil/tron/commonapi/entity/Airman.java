@@ -1,10 +1,9 @@
-package mil.tron.commonapi.airman;
+package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
-import mil.tron.commonapi.person.Person;
 
 import javax.persistence.Entity;
 import java.util.Date;

@@ -27,8 +27,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import mil.tron.commonapi.organization.Organization;
-import mil.tron.commonapi.person.Person;
+import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.service.OrganizationService;
 
 @WebMvcTest(OrganizationController.class)

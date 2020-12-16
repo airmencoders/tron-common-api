@@ -1,6 +1,6 @@
 package mil.tron.commonapi.repository;
 
-import mil.tron.commonapi.airman.Airman;
+import mil.tron.commonapi.entity.Airman;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.UUID;

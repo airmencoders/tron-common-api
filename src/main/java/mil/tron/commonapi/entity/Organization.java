@@ -1,11 +1,9 @@
-package mil.tron.commonapi.organization;
+package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
-import mil.tron.commonapi.person.Person;
-
 import javax.persistence.*;
 
 import java.util.Set;

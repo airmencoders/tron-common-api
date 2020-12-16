@@ -1,7 +1,7 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mil.tron.commonapi.squadron.Squadron;
+import mil.tron.commonapi.entity.Squadron;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
