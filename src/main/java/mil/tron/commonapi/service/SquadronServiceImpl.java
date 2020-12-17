@@ -157,12 +157,13 @@ public class SquadronServiceImpl implements SquadronService {
 
     private void setMajorCommand(Squadron squadron, Map<String, String> attributes) {
         // update major command if present
-        if (attributes.containsKey("majorCommand")) {
-            if (attributes.get("majorCommand") == null) {
+        final String MAJ_COM = "majorCommand";
+        if (attributes.containsKey(MAJ_COM)) {
+            if (attributes.get(MAJ_COM) == null) {
                 squadron.setMajorCommand(null);
             }
             else {
-                squadron.setMajorCommand(attributes.get("majorCommand"));
+                squadron.setMajorCommand(attributes.get(MAJ_COM));
             }
         }
     }
