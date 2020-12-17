@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -95,17 +96,26 @@ public class SquadronController {
                     content = @Content)
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> deleteSquadron(@Parameter(description = "UUID id of the squadron record", required = true) @PathVariable UUID id) {
+    public ResponseEntity<Object> deleteSquadron(@Parameter(description = "UUID of the squadron record", required = true) @PathVariable UUID id) {
 
         squadronService.removeSquadron(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @PatchMapping("/{squadronId}/leader/{airmanId}")
-    public ResponseEntity<Object> modifyLeader(@Parameter(description = "UUID id of the squadron to modify", required = true) @PathVariable UUID squadronId,
-                                               @Parameter(description = "UUID id of the new leader", required = true) @PathVariable UUID airmanId) {
+    @Operation(summary = "Modifies a squadron's attributes", description = "Allows the squadron's attributes to be changed/cleared")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation / Request Performed",
+                    content = @Content),
+            @ApiResponse(responseCode = "404",
+                    description = "Provided UUID(s) did not match any existing records (squadron UUID, airman's ID, etc)",
+                    content = @Content)
+    })
+    @PatchMapping("/{squadronId}")
+    public ResponseEntity<Object> modifySquadronAttribs(@Parameter(description = "UUID of the squadron to modify", required = true) @PathVariable UUID squadronId,
+                                               @Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> airmanData) {
 
-        Squadron sq = squadronService.modifyLeader(squadronId, airmanId);
-        return new ResponseEntity<>(sq, HttpStatus.OK);
+        return new ResponseEntity<>(squadronService.modifySquadronAttribs(squadronId, airmanData), HttpStatus.OK);
     }
+
 }

@@ -1,6 +1,6 @@
 package mil.tron.commonapi.service;
 
-import mil.tron.commonapi.airman.Airman;
+import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -9,6 +9,7 @@ import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.entity.Squadron;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -75,16 +76,70 @@ public class SquadronServiceImpl implements SquadronService {
     }
 
     @Override
-    public Squadron modifyLeader(UUID squadronId, UUID airmanId) {
-
+    public Squadron modifySquadronAttribs(UUID squadronId, Map<String, String> attributes) {
         Squadron squadron = squadronRepo.findById(squadronId).orElseThrow(
                 () -> new RecordNotFoundException("Provided squadron UUID does not match any existing records"));
 
-        Airman airman = airmanRepo.findById(airmanId).orElseThrow(
-                () -> new RecordNotFoundException("Provided airman UUID does not match any existing records"));
 
-        squadron.setLeader(airman);
-        squadronRepo.save(squadron);
-        return squadron;
+        // update leader if present
+        if (attributes.containsKey("leader")) {
+            if (attributes.get("leader") == null) {
+                squadron.setLeader(null);
+            }
+            else {
+                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get("leader")))
+                        .orElseThrow(() -> new RecordNotFoundException("Provided leader UUID does not match any existing records"));
+
+                squadron.setLeader(airman);
+            }
+        }
+
+        // update director if present
+        if (attributes.containsKey("operationsDirector")) {
+            if (attributes.get("operationsDirector") == null) {
+                squadron.setOperationsDirector(null);
+            }
+            else {
+                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get("operationsDirector")))
+                        .orElseThrow(() -> new RecordNotFoundException("Provided director UUID does not match any existing records"));
+
+                squadron.setOperationsDirector(airman);
+            }
+        }
+
+        // update chief if present
+        if (attributes.containsKey("chief")) {
+            if (attributes.get("chief") == null) {
+                squadron.setChief(null);
+            }
+            else {
+                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get("chief")))
+                        .orElseThrow(() -> new RecordNotFoundException("Provided chief UUID does not match any existing records"));
+
+                squadron.setChief(airman);
+            }
+        }
+
+        // update base name if present
+        if (attributes.containsKey("baseName")) {
+            if (attributes.get("baseName") == null) {
+                squadron.setBaseName(null);
+            }
+            else {
+                squadron.setBaseName(attributes.get("baseName"));
+            }
+        }
+
+        // update major command if present
+        if (attributes.containsKey("majorCommand")) {
+            if (attributes.get("majorCommand") == null) {
+                squadron.setMajorCommand(null);
+            }
+            else {
+                squadron.setMajorCommand(attributes.get("majorCommand"));
+            }
+        }
+
+        return squadronRepo.save(squadron);
     }
 }

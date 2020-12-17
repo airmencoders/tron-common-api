@@ -1,5 +1,7 @@
 package mil.tron.commonapi.entity;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.*;
 
 import javax.persistence.*;
@@ -14,6 +16,10 @@ import java.util.UUID;
 @Builder
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value=Airman.class, name = "Airman")
+})
 public class Person {
 
     @Id
