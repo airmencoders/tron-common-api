@@ -1,5 +1,6 @@
 package mil.tron.commonapi.controller;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -111,13 +112,54 @@ public class OrganizationController {
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
+	@Operation(summary = "Deletes a member(s) from the organization", description = "Deletes a member(s) from an organization")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation",
+					content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "Provided organization UUID was invalid",
+					content = @Content),
+			@ApiResponse(responseCode = "409",
+					description = "Provided person UUID(s) was/were invalid",
+					content = @Content)
+	})
+	@DeleteMapping("/{id}/members")
+	public ResponseEntity<Object> deleteOrganizationMember(@Parameter(description = "UUID of the organization to modify", required = true) @PathVariable UUID id,
+													   @Parameter(description = "UUID(s) of the member(s) to remove", required = true) @RequestBody List<UUID> personId) {
+
+		return new ResponseEntity<>(organizationService.removeOrganizationMember(id, personId), HttpStatus.OK);
+	}
+
+	@Operation(summary = "Add member(s) to an organization", description = "Adds member(s) to an organization")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation",
+					content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "A organization UUID was invalid",
+					content = @Content),
+			@ApiResponse(responseCode = "409",
+					description = "Provided person UUID(s) was/were invalid",
+					content = @Content)
+	})
+	@PatchMapping("/{id}/members")
+	public ResponseEntity<Object> addOrganizationMember(@Parameter(description = "UUID of the organization record", required = true) @PathVariable UUID id,
+													@Parameter(description = "UUID(s) of the member(s) to add", required = true) @RequestBody List<UUID> personId) {
+
+		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId), HttpStatus.OK);
+	}
+
 	@Operation(summary = "Updates an existing organization's attributes", description = "Updates an existing organization's attributes")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = Organization.class))),
 			@ApiResponse(responseCode = "404",
-					description = "Resource not found",
+					description = "Organization resource not found",
+					content = @Content),
+			@ApiResponse(responseCode = "409",
+					description = "A provided person UUID was invalid",
 					content = @Content)
 	})
 	@PatchMapping(value = "/{id}")

@@ -16,9 +16,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import javax.transaction.Transactional;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -161,6 +159,28 @@ public class SquadronServiceImplTest {
                 squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
                         .getMajorCommand());
 
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void testAddRemoveMembers() {
+        Squadron savedSquadron = squadronService.createSquadron(squadron);
+        Airman savedAirman = airmanService.createAirman(new Airman());
+
+        assertEquals(1, squadronService.addSquadronMember(savedSquadron.getId(),
+                Lists.newArrayList(savedAirman.getId())).getMembers().size());
+
+        // croaks on adding an invalid airman UUID
+        assertThrows(InvalidRecordUpdateRequest.class,
+                () -> squadronService.addSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
+
+        assertEquals(0, squadronService.removeSquadronMember(savedSquadron.getId(),
+                Lists.newArrayList(savedAirman.getId())).getMembers().size());
+
+        // croaks on removing an invalid airman UUID
+        assertThrows(InvalidRecordUpdateRequest.class,
+                () -> squadronService.removeSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
     }
 }
 

@@ -328,6 +328,29 @@ public class SquadronControllerTest {
             }
         }
 
+        @Test
+        @Transactional
+        @Rollback
+        public void testAddRemoveMemberToSquadron() throws Exception {
+
+            MvcResult result = mockMvc.perform(patch(ENDPOINT + newSquadron.getId().toString() + "/members")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            Squadron modSquad = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron.class);
+            assertEquals(1, modSquad.getMembers().size());
+
+            MvcResult result2 = mockMvc.perform(delete(ENDPOINT + newSquadron.getId().toString() + "/members")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            Squadron modSquad2 = OBJECT_MAPPER.readValue(result2.getResponse().getContentAsString(), Squadron.class);
+            assertEquals(0, modSquad2.getMembers().size());
+        }
 
     }
 }

@@ -1,9 +1,11 @@
 package mil.tron.commonapi.service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.PersonRepository;
 import org.springframework.stereotype.Service;
@@ -49,6 +51,37 @@ public class OrganizationServiceImpl implements OrganizationService {
 		return repository.findById(id).orElse(null);
 	}
 
+	@Override
+	public Organization addOrganizationMember(UUID organizationId, List<UUID> personIds) {
+		Organization organization = repository.findById(organizationId).orElseThrow(
+				() -> new RecordNotFoundException("Provided organization UUID does not match any existing records"));
+
+		for (UUID id : personIds) {
+			Person person = personRepository.findById(id).orElseThrow(
+					() -> new InvalidRecordUpdateRequest("Provided person UUID does not exist"));
+
+			organization.addMember(person);
+		}
+
+
+		return repository.save(organization);
+	}
+
+	@Override
+	public Organization removeOrganizationMember(UUID organizationId, List<UUID> personIds) {
+		Organization organization = repository.findById(organizationId).orElseThrow(
+				() -> new RecordNotFoundException("Provided organization UUID does not match any existing records"));
+
+		for (UUID id : personIds) {
+			Person person = personRepository.findById(id).orElseThrow(
+					() -> new InvalidRecordUpdateRequest("A provided person UUID does not exist"));
+
+			organization.removeMember(person);
+		}
+
+		return repository.save(organization);
+	}
+
 	/**
 	 * Modifies an organization's attributes (except members) such as Leader, Parent Org, and Name
 	 * @param organizationId UUID of the organization to modify
@@ -67,7 +100,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 				organization.setLeader(null);
 			} else {
 				Person person = personRepository.findById(UUID.fromString(attribs.get(LEADER)))
-						.orElseThrow(() -> new RecordNotFoundException("Provided leader UUID does not match any existing records"));
+						.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided leader UUID does not match any existing records"));
 
 				organization.setLeader(person);
 			}
@@ -90,7 +123,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 				organization.setParentOrganization(null);
 			} else {
 				Organization parent = repository.findById(UUID.fromString(attribs.get(PARENT_ORG))).orElseThrow(
-						() -> new RecordNotFoundException("Provided org UUID does not match any existing records"));
+						() -> new InvalidRecordUpdateRequest("Provided org UUID does not match any existing records"));
 
 				organization.setParentOrganization(parent);
 			}

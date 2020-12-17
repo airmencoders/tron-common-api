@@ -10,6 +10,7 @@ import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.entity.Squadron;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -78,6 +79,32 @@ public class SquadronServiceImpl implements SquadronService {
         return squadronRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Squadron with ID: " + id.toString() + " does not exist."));
     }
 
+    @Override
+    public Squadron removeSquadronMember(UUID squadronId, List<UUID> airmanIds) {
+
+        Organization org = orgService.removeOrganizationMember(squadronId, airmanIds);
+
+        if (!(org instanceof Squadron)) {
+            throw new InvalidRecordUpdateRequest("Unable to modify squadron members");
+        }
+
+        Squadron squadron = (Squadron) org;
+        return squadronRepo.save(squadron);
+    }
+
+    @Override
+    public Squadron addSquadronMember(UUID squadronId, List<UUID> airmanIds) {
+
+        Organization org = orgService.addOrganizationMember(squadronId, airmanIds);
+
+        if (!(org instanceof Squadron)) {
+            throw new InvalidRecordUpdateRequest("Unable to modify squadron members");
+        }
+
+        Squadron squadron = (Squadron) org;
+        return squadronRepo.save(squadron);
+    }
+
     /**
      * Modifies a squadrons attributes except members.  This method calls the parent class to set any
      * provided fields at the org-level as well.
@@ -119,7 +146,7 @@ public class SquadronServiceImpl implements SquadronService {
             }
             else {
                 Airman airman = airmanRepo.findById(UUID.fromString(attributes.get(DIRECTOR)))
-                        .orElseThrow(() -> new RecordNotFoundException("Provided director UUID does not match any existing records"));
+                        .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided director UUID does not match any existing records"));
 
                 squadron.setOperationsDirector(airman);
             }
@@ -135,7 +162,7 @@ public class SquadronServiceImpl implements SquadronService {
             }
             else {
                 Airman airman = airmanRepo.findById(UUID.fromString(attributes.get(CHIEF)))
-                        .orElseThrow(() -> new RecordNotFoundException("Provided chief UUID does not match any existing records"));
+                        .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided chief UUID does not match any existing records"));
 
                 squadron.setChief(airman);
             }

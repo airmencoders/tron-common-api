@@ -2,6 +2,7 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.entity.Squadron;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -13,4 +14,6 @@ public interface SquadronService {
     Squadron getSquadron(UUID id);
 
     Squadron modifySquadronAttributes(UUID squadronId, Map<String, String> attributes);
+    Squadron removeSquadronMember(UUID squadronId, List<UUID> airmanIds);
+    Squadron addSquadronMember(UUID squadronId, List<UUID> airmanId);
 }

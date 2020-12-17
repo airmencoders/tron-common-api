@@ -12,11 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.*;
 
-import org.aspectj.weaver.ast.Or;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -229,6 +228,39 @@ public class OrganizationControllerTest {
 					.andReturn();
 
 			assertEquals("test org", OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Organization.class).getName());
+		}
+
+		@Test
+		void testAddRemoveMember() throws Exception {
+			Person p = new Person();
+
+			Organization newOrg = new Organization();
+			newOrg.setId(testOrg.getId());
+			newOrg.setName("test org");
+			newOrg.addMember(p);
+
+			Mockito.when(organizationService.addOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class))).thenReturn(newOrg);
+			MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}/members", testOrg.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(p.getId()))))
+					.andExpect(status().isOk())
+					.andReturn();
+
+			// test it "added" to org
+			assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Organization.class).getMembers().size());
+
+			newOrg.removeMember(p);
+			Mockito.when(organizationService.removeOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class))).thenReturn(newOrg);
+			MvcResult result2 = mockMvc.perform(patch(ENDPOINT + "{id}/members", testOrg.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(p.getId()))))
+					.andExpect(status().isOk())
+					.andReturn();
+
+			// test it "removed" from org
+			assertEquals(0, OBJECT_MAPPER.readValue(result2.getResponse().getContentAsString(), Organization.class).getMembers().size());
 		}
 	}
 }

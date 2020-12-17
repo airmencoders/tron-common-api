@@ -7,8 +7,10 @@ import java.util.*;
 
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Squadron;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.PersonRepository;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -148,5 +150,41 @@ class OrganizationServiceImplTest {
 		attribs.put("parentOrganization", new Organization().getId().toString());
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg)).thenThrow(new RecordNotFoundException("Not Found"));
 		assertThrows(RecordNotFoundException.class, () -> organizationService.modifyAttributes(testOrg.getId(), attribs));
+	}
+
+	@Test
+	void addRemoveMembers() {
+
+		Person p = new Person();
+		Squadron newUnit = new Squadron();
+		newUnit.setId(testOrg.getId());
+		newUnit.addMember(p);
+
+		Mockito.when(repository.findById(newUnit.getId()))
+				.thenReturn(Optional.of(testOrg))
+				.thenThrow(new InvalidRecordUpdateRequest("Not Found"))
+				.thenThrow(new InvalidRecordUpdateRequest("Not Found"))
+				.thenReturn(Optional.of(newUnit))
+				.thenThrow(new RecordNotFoundException("Not Found"));
+
+		Mockito.when(personRepository.findById(p.getId())).thenReturn(Optional.of(p));
+		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(newUnit);
+
+		Organization savedOrg = organizationService.addOrganizationMember(testOrg.getId(), Lists.newArrayList(p.getId()));
+		assertThat(savedOrg.getMembers().size()).isEqualTo(1);
+
+		// test fails to add bogus person
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.addOrganizationMember(newUnit.getId(), Lists.newArrayList(new Person().getId())));
+
+		// test fails to remove bogus person
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.removeOrganizationMember(newUnit.getId(), Lists.newArrayList(new Person().getId())));
+
+		// remove like normal
+		newUnit.removeMember(p);
+		savedOrg = organizationService.removeOrganizationMember(newUnit.getId(), Lists.newArrayList(p.getId()));
+		assertThat(savedOrg.getMembers().size()).isEqualTo(0);
+
+		// test bogus org Id
+		assertThrows(RecordNotFoundException.class, () -> organizationService.addOrganizationMember(new Organization().getId(), Lists.newArrayList(p.getId())));
 	}
 }
