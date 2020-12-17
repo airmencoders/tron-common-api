@@ -12,5 +12,5 @@ public interface SquadronService {
     Iterable<Squadron> getAllSquadrons();
     Squadron getSquadron(UUID id);
 
-    Squadron modifySquadronAttribs(UUID squadronId, Map<String, String> attributes);
+    Squadron modifySquadronAttributes(UUID squadronId, Map<String, String> attributes);
 }

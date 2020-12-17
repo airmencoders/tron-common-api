@@ -68,7 +68,7 @@ public class AirmanControllerTest {
     public void testAddNewAirmenWithNullId() throws Exception {
 
         // simulate request with id as null...
-        String strAirman = "{\"id\":null,\"firstName\":\"John\",\"middleName\":\"Hero\",\"lastName\":\"Public\",\"title\":\"Capt\",\"email\":\"john@test.com\",\"afsc\":\"17D\",\"etsDate\":\"2021-06-29\",\"ptDate\":\"2020-10-01\",\"fullName\":\"John Public\"}";
+        String strAirman = "{\"id\":null,\"personType\":\"Airman\",\"firstName\":\"John\",\"middleName\":\"Hero\",\"lastName\":\"Public\",\"title\":\"Capt\",\"email\":\"john@test.com\",\"afsc\":\"17D\",\"etsDate\":\"2021-06-29\",\"ptDate\":\"2020-10-01\",\"fullName\":\"John Public\"}";
 
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(strAirman))

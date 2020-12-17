@@ -115,7 +115,7 @@ public class SquadronController {
     public ResponseEntity<Object> modifySquadronAttribs(@Parameter(description = "UUID of the squadron to modify", required = true) @PathVariable UUID squadronId,
                                                @Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> airmanData) {
 
-        return new ResponseEntity<>(squadronService.modifySquadronAttribs(squadronId, airmanData), HttpStatus.OK);
+        return new ResponseEntity<>(squadronService.modifySquadronAttributes(squadronId, airmanData), HttpStatus.OK);
     }
 
 }

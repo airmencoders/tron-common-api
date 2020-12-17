@@ -1,20 +1,22 @@
 package mil.tron.commonapi.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
+import org.aspectj.weaver.ast.Or;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -22,6 +24,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -204,6 +207,28 @@ public class OrganizationControllerTest {
 			mockMvc.perform(delete(ENDPOINT + "{id}", "asdf1234"))
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
+		}
+	}
+
+	@Nested
+	class TestPatch {
+		@Test
+		void testChangeName() throws Exception {
+			Map<String, String> attribs = new HashMap<>();
+			attribs.put("name", "test org");
+			Organization newOrg = new Organization();
+			newOrg.setId(testOrg.getId());
+			newOrg.setName("test org");
+
+			Mockito.when(organizationService.modifyAttributes(Mockito.any(UUID.class), Mockito.any(Map.class))).thenReturn(newOrg);
+			MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", testOrg.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(attribs)))
+					.andExpect(status().isOk())
+					.andReturn();
+
+			assertEquals("test org", OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Organization.class).getName());
 		}
 	}
 }

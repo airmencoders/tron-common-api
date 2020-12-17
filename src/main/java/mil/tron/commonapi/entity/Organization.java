@@ -9,24 +9,15 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.UUID;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
-@JsonSubTypes({
-        @JsonSubTypes.Type(value=Squadron.class, name = "Squadron")
-})
 @JsonIdentityInfo(generator= ObjectIdGenerators.PropertyGenerator.class, property="id")
 public class Organization {
 
     @Id
     @Getter
     @Setter
-    @Builder.Default
     private UUID id = UUID.randomUUID();
-
 
     @Getter
     @Setter
@@ -52,6 +43,7 @@ public class Organization {
     @OneToMany
     @JsonIgnore
     private Set<Organization> subordinateOrganizations = new HashSet<Organization>();
+
 
     @Override
     public boolean equals(Object other) {

@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -15,12 +16,14 @@ import java.util.UUID;
 @Service
 public class SquadronServiceImpl implements SquadronService {
 
-    private SquadronRepository squadronRepo;
-    private AirmanRepository airmanRepo;
+    private final SquadronRepository squadronRepo;
+    private final AirmanRepository airmanRepo;
+    private final OrganizationService orgService;
 
-    public SquadronServiceImpl(SquadronRepository squadronRepo, AirmanRepository airmanRepo) {
+    public SquadronServiceImpl(SquadronRepository squadronRepo, AirmanRepository airmanRepo, OrganizationService orgService) {
         this.squadronRepo = squadronRepo;
         this.airmanRepo = airmanRepo;
+        this.orgService = orgService;
     }
 
     @Override
@@ -76,24 +79,43 @@ public class SquadronServiceImpl implements SquadronService {
     }
 
     @Override
-    public Squadron modifySquadronAttribs(UUID squadronId, Map<String, String> attributes) {
-        Squadron squadron = squadronRepo.findById(squadronId).orElseThrow(
-                () -> new RecordNotFoundException("Provided squadron UUID does not match any existing records"));
+    public Squadron modifySquadronAttributes(UUID squadronId, Map<String, String> attributes) {
 
+        // pass the squadron thru to the parent class to change org-only-level attributes if needed
+        Organization org = orgService.modifyAttributes(squadronId, attributes);
 
-        // update leader if present
-        if (attributes.containsKey("leader")) {
-            if (attributes.get("leader") == null) {
-                squadron.setLeader(null);
-            }
-            else {
-                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get("leader")))
-                        .orElseThrow(() -> new RecordNotFoundException("Provided leader UUID does not match any existing records"));
-
-                squadron.setLeader(airman);
-            }
+        if (!(org instanceof Squadron)) {
+            throw new InvalidRecordUpdateRequest("Unable to modify squadron attributes");
         }
 
+        Squadron squadron = (Squadron) org;
+
+        // change just squadron specific things
+        // these are broken out to avoid SonarQube 'complexity' violations
+        setLeader(squadron, attributes);
+        setDirector(squadron, attributes);
+        setChief(squadron, attributes);
+        setBaseName(squadron, attributes);
+        setMajorCommand(squadron, attributes);
+
+        // commit
+        return squadronRepo.save(squadron);
+
+    }
+
+    private void setLeader(Squadron squadron, Map<String, String> attributes) {
+        if (attributes.get("leader") == null) {
+            squadron.setLeader(null);
+        }
+        else {
+            Airman airman = airmanRepo.findById(UUID.fromString(attributes.get("leader")))
+                    .orElseThrow(() -> new RecordNotFoundException("Provided leader UUID does not match any existing records"));
+
+            squadron.setLeader(airman);
+        }
+    }
+
+    private void setDirector(Squadron squadron, Map<String, String> attributes) {
         // update director if present
         if (attributes.containsKey("operationsDirector")) {
             if (attributes.get("operationsDirector") == null) {
@@ -106,7 +128,9 @@ public class SquadronServiceImpl implements SquadronService {
                 squadron.setOperationsDirector(airman);
             }
         }
+    }
 
+    private void setChief(Squadron squadron, Map<String, String> attributes) {
         // update chief if present
         if (attributes.containsKey("chief")) {
             if (attributes.get("chief") == null) {
@@ -119,7 +143,9 @@ public class SquadronServiceImpl implements SquadronService {
                 squadron.setChief(airman);
             }
         }
+    }
 
+    private void setBaseName(Squadron squadron, Map<String, String> attributes) {
         // update base name if present
         if (attributes.containsKey("baseName")) {
             if (attributes.get("baseName") == null) {
@@ -129,7 +155,9 @@ public class SquadronServiceImpl implements SquadronService {
                 squadron.setBaseName(attributes.get("baseName"));
             }
         }
+    }
 
+    private void setMajorCommand(Squadron squadron, Map<String, String> attributes) {
         // update major command if present
         if (attributes.containsKey("majorCommand")) {
             if (attributes.get("majorCommand") == null) {
@@ -139,7 +167,5 @@ public class SquadronServiceImpl implements SquadronService {
                 squadron.setMajorCommand(attributes.get("majorCommand"));
             }
         }
-
-        return squadronRepo.save(squadron);
     }
 }

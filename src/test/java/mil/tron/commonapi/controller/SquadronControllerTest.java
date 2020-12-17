@@ -16,7 +16,6 @@ import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.yaml.snakeyaml.introspector.PropertyUtils;
 
 import javax.transaction.Transactional;
 import java.util.*;
@@ -55,7 +54,6 @@ public class SquadronControllerTest {
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(squadron)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
-
         assertEquals(OBJECT_MAPPER.writeValueAsString(squadron), response.getResponse().getContentAsString());
     }
 
@@ -65,7 +63,7 @@ public class SquadronControllerTest {
     public void testAddNewSquadronWithNullId() throws Exception {
 
         // simulate request with id as null...
-        String strSquadron = "{\"id\":null,\"firstName\":\"John\",\"middleName\":\"Hero\",\"lastName\":\"Public\",\"title\":\"Capt\",\"email\":\"john@test.com\",\"afsc\":\"17D\",\"etsDate\":\"2021-06-29\",\"ptDate\":\"2020-10-01\",\"fullName\":\"John Public\"}";
+        String strSquadron = "{\"id\":null,\"name\":\"TEST ORG\",\"members\":[],\"leader\":null,\"parentOrganization\":null,\"orgType\":\"Squadron\",\"operationsDirector\":null,\"chief\":null,\"baseName\":\"Travis AFB\",\"majorCommand\":\"ACC\"}";
 
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(strSquadron))
@@ -240,7 +238,7 @@ public class SquadronControllerTest {
     }
 
     @Nested
-    class TestAttributePatches {
+    class TestSquadronAttributeChanges {
 
         private Airman newAirman;
         private Squadron newSquadron;
@@ -248,7 +246,7 @@ public class SquadronControllerTest {
         @BeforeEach
         public void initAirmanAndSquadron() throws Exception {
 
-            // add an airman and squadron and commit them
+            // add an airman and squadron and POST them
             Airman airman = new Airman();
             airman.setFirstName("John");
             airman.setMiddleName("Hero");

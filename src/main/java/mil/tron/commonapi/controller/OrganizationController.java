@@ -1,17 +1,11 @@
 package mil.tron.commonapi.controller;
 
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -116,5 +110,21 @@ public class OrganizationController {
 		organizationService.deleteOrganization(organizationId);
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
-	
+
+	@Operation(summary = "Updates an existing organization's attributes", description = "Updates an existing organization's attributes")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = Organization.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content)
+	})
+	@PatchMapping(value = "/{id}")
+	public ResponseEntity<Organization> patchOrganization(
+			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
+			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
+
+			return new ResponseEntity<>(organizationService.modifyAttributes(organizationId, attribs), HttpStatus.OK);
+	}
 }
