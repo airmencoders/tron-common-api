@@ -78,6 +78,14 @@ public class SquadronServiceImpl implements SquadronService {
         return squadronRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Squadron with ID: " + id.toString() + " does not exist."));
     }
 
+    /**
+     * Modifies a squadrons attributes except members.  This method calls the parent class to set any
+     * provided fields at the org-level as well.
+     *
+     * @param squadronId UUID of the squadron
+     * @param attributes Hashmap of key/value pairs (strings) presenting the field(s) to change
+     * @return modified and persisted squadron entity
+     */
     @Override
     public Squadron modifySquadronAttributes(UUID squadronId, Map<String, String> attributes) {
 
@@ -92,7 +100,6 @@ public class SquadronServiceImpl implements SquadronService {
 
         // change just squadron specific things
         // these are broken out to avoid SonarQube 'complexity' violations
-        setLeader(squadron, attributes);
         setDirector(squadron, attributes);
         setChief(squadron, attributes);
         setBaseName(squadron, attributes);
@@ -103,26 +110,15 @@ public class SquadronServiceImpl implements SquadronService {
 
     }
 
-    private void setLeader(Squadron squadron, Map<String, String> attributes) {
-        if (attributes.get("leader") == null) {
-            squadron.setLeader(null);
-        }
-        else {
-            Airman airman = airmanRepo.findById(UUID.fromString(attributes.get("leader")))
-                    .orElseThrow(() -> new RecordNotFoundException("Provided leader UUID does not match any existing records"));
-
-            squadron.setLeader(airman);
-        }
-    }
-
     private void setDirector(Squadron squadron, Map<String, String> attributes) {
         // update director if present
-        if (attributes.containsKey("operationsDirector")) {
-            if (attributes.get("operationsDirector") == null) {
+        final String DIRECTOR = "operationsDirector";
+        if (attributes.containsKey(DIRECTOR)) {
+            if (attributes.get(DIRECTOR) == null) {
                 squadron.setOperationsDirector(null);
             }
             else {
-                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get("operationsDirector")))
+                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get(DIRECTOR)))
                         .orElseThrow(() -> new RecordNotFoundException("Provided director UUID does not match any existing records"));
 
                 squadron.setOperationsDirector(airman);
@@ -132,12 +128,13 @@ public class SquadronServiceImpl implements SquadronService {
 
     private void setChief(Squadron squadron, Map<String, String> attributes) {
         // update chief if present
-        if (attributes.containsKey("chief")) {
-            if (attributes.get("chief") == null) {
+        final String CHIEF = "chief";
+        if (attributes.containsKey(CHIEF)) {
+            if (attributes.get(CHIEF) == null) {
                 squadron.setChief(null);
             }
             else {
-                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get("chief")))
+                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get(CHIEF)))
                         .orElseThrow(() -> new RecordNotFoundException("Provided chief UUID does not match any existing records"));
 
                 squadron.setChief(airman);
@@ -147,12 +144,13 @@ public class SquadronServiceImpl implements SquadronService {
 
     private void setBaseName(Squadron squadron, Map<String, String> attributes) {
         // update base name if present
-        if (attributes.containsKey("baseName")) {
-            if (attributes.get("baseName") == null) {
+        final String BASE_NAME = "baseName";
+        if (attributes.containsKey(BASE_NAME)) {
+            if (attributes.get(BASE_NAME) == null) {
                 squadron.setBaseName(null);
             }
             else {
-                squadron.setBaseName(attributes.get("baseName"));
+                squadron.setBaseName(attributes.get(BASE_NAME));
             }
         }
     }

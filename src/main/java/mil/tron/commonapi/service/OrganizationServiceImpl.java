@@ -3,9 +3,7 @@ package mil.tron.commonapi.service;
 import java.util.Map;
 import java.util.UUID;
 
-import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.PersonRepository;
 import org.springframework.stereotype.Service;
@@ -63,11 +61,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 				() -> new RecordNotFoundException("Provided org UUID does not match any existing records"));
 
 		// change org's leader
-		if (attribs.containsKey("leader")) {
-			if (attribs.get("leader") == null) {
+		final String LEADER = "leader";
+		if (attribs.containsKey(LEADER)) {
+			if (attribs.get(LEADER) == null) {
 				organization.setLeader(null);
 			} else {
-				Person person = personRepository.findById(UUID.fromString(attribs.get("leader")))
+				Person person = personRepository.findById(UUID.fromString(attribs.get(LEADER)))
 						.orElseThrow(() -> new RecordNotFoundException("Provided leader UUID does not match any existing records"));
 
 				organization.setLeader(person);
@@ -75,20 +74,22 @@ public class OrganizationServiceImpl implements OrganizationService {
 		}
 
 		// change org's name
-		if (attribs.containsKey("name")) {
-			if (attribs.get("name") == null) {
+		final String ORG_NAME = "name";
+		if (attribs.containsKey(ORG_NAME)) {
+			if (attribs.get(ORG_NAME) == null) {
 				organization.setName(null);
 			} else {
-				organization.setName(attribs.get("name"));
+				organization.setName(attribs.get(ORG_NAME));
 			}
 		}
 
 		// change parent organization
-		if (attribs.containsKey("parentOrganization")) {
-			if (attribs.get("parentOrganization") == null) {
+		final String PARENT_ORG = "parentOrganization";
+		if (attribs.containsKey(PARENT_ORG)) {
+			if (attribs.get(PARENT_ORG) == null) {
 				organization.setParentOrganization(null);
 			} else {
-				Organization parent = repository.findById(UUID.fromString(attribs.get("parentOrganization"))).orElseThrow(
+				Organization parent = repository.findById(UUID.fromString(attribs.get(PARENT_ORG))).orElseThrow(
 						() -> new RecordNotFoundException("Provided org UUID does not match any existing records"));
 
 				organization.setParentOrganization(parent);

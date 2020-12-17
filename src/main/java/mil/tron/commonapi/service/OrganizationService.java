@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import mil.tron.commonapi.entity.Organization;
-import mil.tron.commonapi.entity.Person;
 
 public interface OrganizationService {
 	Organization createOrganization(Organization organization);
