@@ -46,14 +46,14 @@ public class SquadronServiceImpl implements SquadronService {
     @Override
     public Squadron updateSquadron(UUID id, Squadron squadron) {
         if (!squadronRepo.existsById(id)) {
-            throw new RecordNotFoundException("Provided squadron UUID does not match any existing records");
+            throw new RecordNotFoundException("Provided squadron UUID " + id.toString() + " does not match any existing records");
         }
 
         // the squadrons object's id better match the id given,
         //  otherwise hibernate will save under whatever id's inside the object
         if (!squadron.getId().equals(id)) {
             throw new InvalidRecordUpdateRequest(
-                    "Provided squadron UUID mismatched UUID in squadron object");
+                    "Provided squadron UUID mismatched UUID " + id.toString() + " in squadron object");
         }
 
         return squadronRepo.save(squadron);
@@ -65,7 +65,7 @@ public class SquadronServiceImpl implements SquadronService {
             squadronRepo.deleteById(id);
         }
         else {
-            throw new RecordNotFoundException("Squadron record with provided UUID does not exist");
+            throw new RecordNotFoundException("Squadron record with provided UUID " + id.toString() + " does not exist");
         }
     }
 
@@ -160,7 +160,7 @@ public class SquadronServiceImpl implements SquadronService {
             }
             else {
                 Airman airman = airmanRepo.findById(UUID.fromString(attributes.get(DIRECTOR)))
-                        .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided director UUID does not match any existing records"));
+                        .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided director UUID " + attributes.get(DIRECTOR) + " not match any existing records"));
 
                 squadron.setOperationsDirector(airman);
             }
@@ -176,7 +176,7 @@ public class SquadronServiceImpl implements SquadronService {
             }
             else {
                 Airman airman = airmanRepo.findById(UUID.fromString(attributes.get(CHIEF)))
-                        .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided chief UUID does not match any existing records"));
+                        .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided chief UUID " + attributes.get(CHIEF) + " does not match any existing records"));
 
                 squadron.setChief(airman);
             }

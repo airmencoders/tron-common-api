@@ -54,11 +54,11 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization addOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided organization UUID does not match any existing records"));
+				() -> new RecordNotFoundException("Provided organization UUID " + organizationId.toString() + " not match any existing records"));
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("Provided person UUID does not exist"));
+					() -> new InvalidRecordUpdateRequest("Provided person UUID " + id.toString() + " does not exist"));
 
 			organization.addMember(person);
 		}
@@ -70,11 +70,11 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization removeOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided organization UUID does not match any existing records"));
+				() -> new RecordNotFoundException("Provided organization UUID " + organizationId.toString() + "  does not match any existing records"));
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("A provided person UUID does not exist"));
+					() -> new InvalidRecordUpdateRequest("A provided person UUID " + id.toString() + " does not exist"));
 
 			organization.removeMember(person);
 		}
@@ -91,7 +91,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization modifyAttributes(UUID organizationId, Map<String, String> attribs) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided org UUID does not match any existing records"));
+				() -> new RecordNotFoundException("Provided org UUID " + organizationId.toString() + " does not match any existing records"));
 
 		// change org's leader
 		final String LEADER = "leader";
@@ -100,7 +100,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 				organization.setLeader(null);
 			} else {
 				Person person = personRepository.findById(UUID.fromString(attribs.get(LEADER)))
-						.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided leader UUID does not match any existing records"));
+						.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided leader UUID " + attribs.get(LEADER) + " does not match any existing records"));
 
 				organization.setLeader(person);
 			}
@@ -123,7 +123,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 				organization.setParentOrganization(null);
 			} else {
 				Organization parent = repository.findById(UUID.fromString(attribs.get(PARENT_ORG))).orElseThrow(
-						() -> new InvalidRecordUpdateRequest("Provided org UUID does not match any existing records"));
+						() -> new InvalidRecordUpdateRequest("Provided org UUID " + attribs.get(PARENT_ORG) + " does not match any existing records"));
 
 				organization.setParentOrganization(parent);
 			}
