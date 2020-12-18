@@ -111,7 +111,7 @@ public class SquadronController {
             @ApiResponse(responseCode = "404",
                     description = "Provided squadron UUID was invalid",
                     content = @Content),
-            @ApiResponse(responseCode = "409",
+            @ApiResponse(responseCode = "400",
                     description = "Provided airman UUID(s) was/were invalid",
                     content = @Content)
     })
@@ -130,7 +130,7 @@ public class SquadronController {
             @ApiResponse(responseCode = "404",
                     description = "Provided squadron UUID was invalid",
                     content = @Content),
-            @ApiResponse(responseCode = "409",
+            @ApiResponse(responseCode = "400",
                     description = "Provided airman UUID(s) was/were invalid",
                     content = @Content)
     })
@@ -149,7 +149,7 @@ public class SquadronController {
             @ApiResponse(responseCode = "404",
                     description = "Provided UUID did not match any existing squadrons",
                     content = @Content),
-            @ApiResponse(responseCode = "409",
+            @ApiResponse(responseCode = "400",
                     description = "A provided airman UUID was invalid",
                     content = @Content)
     })

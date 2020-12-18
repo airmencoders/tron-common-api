@@ -120,7 +120,7 @@ public class OrganizationController {
 			@ApiResponse(responseCode = "404",
 					description = "Provided organization UUID was invalid",
 					content = @Content),
-			@ApiResponse(responseCode = "409",
+			@ApiResponse(responseCode = "400",
 					description = "Provided person UUID(s) was/were invalid",
 					content = @Content)
 	})
@@ -139,7 +139,7 @@ public class OrganizationController {
 			@ApiResponse(responseCode = "404",
 					description = "A organization UUID was invalid",
 					content = @Content),
-			@ApiResponse(responseCode = "409",
+			@ApiResponse(responseCode = "400",
 					description = "Provided person UUID(s) was/were invalid",
 					content = @Content)
 	})
@@ -158,7 +158,7 @@ public class OrganizationController {
 			@ApiResponse(responseCode = "404",
 					description = "Organization resource not found",
 					content = @Content),
-			@ApiResponse(responseCode = "409",
+			@ApiResponse(responseCode = "400",
 					description = "A provided person UUID was invalid",
 					content = @Content)
 	})

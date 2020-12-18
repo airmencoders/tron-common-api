@@ -79,6 +79,13 @@ public class SquadronServiceImpl implements SquadronService {
         return squadronRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Squadron with ID: " + id.toString() + " does not exist."));
     }
 
+    /**
+     * Removes one or more airmen from the given squadron.
+     *
+     * @param squadronId UUID of the squadron from from which to remove members from
+     * @param airmanIds UUID(s) of the airmen to remove
+     * @return modified and persisted Squadron
+     */
     @Override
     public Squadron removeSquadronMember(UUID squadronId, List<UUID> airmanIds) {
 
@@ -92,6 +99,13 @@ public class SquadronServiceImpl implements SquadronService {
         return squadronRepo.save(squadron);
     }
 
+    /**
+     * Adds an array of 1 or more airmen to the given squadron.
+     *
+     * @param squadronId UUID of the squadron to add members to
+     * @param airmanIds UUID(s) of the airmen to add
+     * @return modified and persisted Squadron
+     */
     @Override
     public Squadron addSquadronMember(UUID squadronId, List<UUID> airmanIds) {
 
@@ -111,7 +125,7 @@ public class SquadronServiceImpl implements SquadronService {
      *
      * @param squadronId UUID of the squadron
      * @param attributes Hashmap of key/value pairs (strings) presenting the field(s) to change
-     * @return modified and persisted squadron entity
+     * @return modified and persisted Squadron
      */
     @Override
     public Squadron modifySquadronAttributes(UUID squadronId, Map<String, String> attributes) {

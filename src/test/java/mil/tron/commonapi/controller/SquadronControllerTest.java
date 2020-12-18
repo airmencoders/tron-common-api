@@ -333,6 +333,18 @@ public class SquadronControllerTest {
         @Rollback
         public void testAddRemoveMemberToSquadron() throws Exception {
 
+            // test the 404 - bad squadron uuid
+            mockMvc.perform(patch(ENDPOINT + newSquadron.getId().toString() + "/members")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { new Airman().getId() })))
+                    .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
+
+            // test the 400 - bad airmen uuid
+            mockMvc.perform(patch(ENDPOINT + new Squadron().getId().toString() + "/members")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { new Airman().getId() })))
+                    .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
+
             MvcResult result = mockMvc.perform(patch(ENDPOINT + newSquadron.getId().toString() + "/members")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
