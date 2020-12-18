@@ -57,8 +57,6 @@ public class Airman extends Person {
     /**
      * Rank field that returns/sets the base class (Person) 'title' field
      */
-    private String rank;
-
     public String getRank() {
         return this.getTitle();
     }
