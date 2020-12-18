@@ -47,6 +47,9 @@ public class Airman extends Person {
     // Putting DODID as a string since using a Long would require manually padding
     //  value in string output if the dodid had leading zeros, this was it stays literal
 
+    /**
+     * Integrated Maintenance Data System id
+     */
     @Getter
     @Setter
     private String imds;
@@ -89,10 +92,16 @@ public class Airman extends Person {
     @Setter
     private String squadron;
 
+    /**
+     * Work Center (Office Symbol)
+     */
     @Getter
     @Setter
     private String wc;
 
+    /**
+     * ID in the GO81 training requirements system
+     */
     @Getter
     @Setter
     private String go81;
