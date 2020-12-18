@@ -90,6 +90,13 @@
     </dependencies>
 
     <build>
+    	<resources>
+	        <resource>
+	            <directory>src/main/resources</directory>
+	            <filtering>true</filtering>
+	        </resource>
+	    </resources>
+    
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -164,8 +171,12 @@
     <profiles>
     	<profile>
     		<id>development</id>
+    		<activation>
+		      	<activeByDefault>true</activeByDefault>
+		    </activation>
     		<properties>
     			<build.profile.id>development</build.profile.id>
+    			<spring.profiles.active>development</spring.profiles.active>
     		</properties>
     	</profile>
     	
@@ -173,6 +184,7 @@
     		<id>production</id>
     		<properties>
     			<build.profile.id>production</build.profile.id>
+    			<spring.profiles.active>production</spring.profiles.active>
     		</properties>
     	</profile>
     </profiles>
