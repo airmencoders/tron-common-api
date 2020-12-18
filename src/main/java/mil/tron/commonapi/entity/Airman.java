@@ -1,22 +1,27 @@
 package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
-
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Transient;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Airman extends Person {
 
-    private enum Rank {
-        AB, AMN, A1C, SRA
-    }
+    @Transient
+    private final List<String> ranks = new ArrayList<>(Arrays.asList("AB", "AMN", "A1C", "SRA", "SSGT",
+            "TSGT", "MSGT", "SMGT", "CMSGT", "CMSGT", "CCMSGT", "CMSAF", "2LT", "1LT", "CAPT", "MAJ", "LTCOL", "COL",
+            "BG", "MG", "LTG", "GEN", "CIV", "CTR", "SES"));
 
     /**
      * An airman's Air Force Specialty Code.
@@ -68,7 +73,7 @@ public class Airman extends Person {
     }
 
     @Enumerated(EnumType.STRING)
-    public void setRank(Rank rank) {
+    public void setRank(String rank) {
         this.setTitle(rank.toString());
     }
 
