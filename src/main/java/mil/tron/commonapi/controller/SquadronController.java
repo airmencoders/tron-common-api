@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -95,9 +97,67 @@ public class SquadronController {
                     content = @Content)
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> deleteSquadron(@Parameter(description = "UUID id of the squadron record", required = true) @PathVariable UUID id) {
+    public ResponseEntity<Object> deleteSquadron(@Parameter(description = "UUID of the squadron record", required = true) @PathVariable UUID id) {
 
         squadronService.removeSquadron(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    @Operation(summary = "Deletes a member(s) from the squadron", description = "Deletes a member(s) from a squadron")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204",
+                    description = "Successful operation",
+                    content = @Content),
+            @ApiResponse(responseCode = "404",
+                    description = "Provided squadron UUID was invalid",
+                    content = @Content),
+            @ApiResponse(responseCode = "400",
+                    description = "Provided airman UUID(s) was/were invalid",
+                    content = @Content)
+    })
+    @DeleteMapping("/{id}/members")
+    public ResponseEntity<Object> deleteSquadronMember(@Parameter(description = "UUID of the squadron record", required = true) @PathVariable UUID id,
+                                                       @Parameter(description = "UUID(s) of the member(s) to remove", required = true) @RequestBody List<UUID> airmanId) {
+
+        return new ResponseEntity<>(squadronService.removeSquadronMember(id, airmanId), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Add member(s) to a squadron", description = "Adds member(s) to a squadron")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204",
+                    description = "Successful operation",
+                    content = @Content),
+            @ApiResponse(responseCode = "404",
+                    description = "Provided squadron UUID was invalid",
+                    content = @Content),
+            @ApiResponse(responseCode = "400",
+                    description = "Provided airman UUID(s) was/were invalid",
+                    content = @Content)
+    })
+    @PatchMapping("/{id}/members")
+    public ResponseEntity<Object> addSquadronMember(@Parameter(description = "UUID of the squadron record", required = true) @PathVariable UUID id,
+                                                       @Parameter(description = "UUID(s) of the member(s) to add", required = true) @RequestBody List<UUID> airmanId) {
+
+        return new ResponseEntity<>(squadronService.addSquadronMember(id, airmanId), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Modifies a squadron's attributes", description = "Allows the squadron's attributes to be changed/cleared")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation / Request Performed",
+                    content = @Content),
+            @ApiResponse(responseCode = "404",
+                    description = "Provided UUID did not match any existing squadrons",
+                    content = @Content),
+            @ApiResponse(responseCode = "400",
+                    description = "A provided airman UUID was invalid",
+                    content = @Content)
+    })
+    @PatchMapping("/{squadronId}")
+    public ResponseEntity<Object> modifySquadronAttribs(@Parameter(description = "UUID of the squadron to modify", required = true) @PathVariable UUID squadronId,
+                                               @Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> airmanData) {
+
+        return new ResponseEntity<>(squadronService.modifySquadronAttributes(squadronId, airmanData), HttpStatus.OK);
+    }
+
 }
