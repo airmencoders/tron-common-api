@@ -1,8 +1,10 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Squadron;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,9 +18,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class SquadronControllerTest {
     private static final String ENDPOINT = "/v1/squadron/";
+    private static final String AIRMAN_ENDPOINT = "/v1/airman/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -50,7 +54,6 @@ public class SquadronControllerTest {
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(squadron)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
-
         assertEquals(OBJECT_MAPPER.writeValueAsString(squadron), response.getResponse().getContentAsString());
     }
 
@@ -60,7 +63,7 @@ public class SquadronControllerTest {
     public void testAddNewSquadronWithNullId() throws Exception {
 
         // simulate request with id as null...
-        String strSquadron = "{\"id\":null,\"firstName\":\"John\",\"middleName\":\"Hero\",\"lastName\":\"Public\",\"title\":\"Capt\",\"email\":\"john@test.com\",\"afsc\":\"17D\",\"etsDate\":\"2021-06-29\",\"ptDate\":\"2020-10-01\",\"fullName\":\"John Public\"}";
+        String strSquadron = "{\"id\":null,\"name\":\"TEST ORG\",\"members\":[],\"leader\":null,\"parentOrganization\":null,\"orgType\":\"Squadron\",\"operationsDirector\":null,\"chief\":null,\"baseName\":\"Travis AFB\",\"majorCommand\":\"ACC\"}";
 
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(strSquadron))
@@ -232,5 +235,134 @@ public class SquadronControllerTest {
 
         // assert we have one less in the db
         assertEquals(totalRecs - 1, newAllSquadronRecs.length);
+    }
+
+    @Nested
+    class TestSquadronAttributeChanges {
+
+        private Airman newAirman;
+        private Squadron newSquadron;
+
+        @BeforeEach
+        public void initAirmanAndSquadron() throws Exception {
+
+            // add an airman and squadron and POST them
+            Airman airman = new Airman();
+            airman.setFirstName("John");
+            airman.setMiddleName("Hero");
+            airman.setLastName("Public");
+            airman.setEmail("john@test.com");
+            airman.setTitle("Capt");
+            airman.setAfsc("17D");
+            airman.setPtDate(new Date(2020-1900, Calendar.OCTOBER, 1));
+            airman.setEtsDate(new Date(2021-1900, Calendar.JUNE, 29));
+
+            MvcResult response = mockMvc.perform(post(ENDPOINT)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(squadron)))
+                    .andExpect(status().is(HttpStatus.CREATED.value()))
+                    .andReturn();
+
+            newSquadron = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+            assertNull(newSquadron.getLeader());
+
+            MvcResult response2 = mockMvc.perform(post(AIRMAN_ENDPOINT)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(airman)))
+                    .andExpect(status().is(HttpStatus.CREATED.value()))
+                    .andReturn();
+
+            newAirman = OBJECT_MAPPER.readValue(response2.getResponse().getContentAsString(), Airman.class);
+
+        }
+
+        @Transactional
+        @Rollback
+        @Test
+        public void testPatchAttributes() throws Exception {
+
+            Map<String, String> attribs = new HashMap<>();
+            attribs.put("leader", newAirman.getId().toString());
+            attribs.put("operationsDirector", newAirman.getId().toString());
+            attribs.put("chief", newAirman.getId().toString());
+            attribs.put("baseName", "Grissom AFB");
+            attribs.put("majorCommand", "ACC");
+
+
+            for (String attrib : attribs.keySet()) {
+                Map<String, String> data = new HashMap<>();
+
+                // set attribute
+                data.put(attrib, attribs.get(attrib));
+                MvcResult newResponse = mockMvc.perform(patch(ENDPOINT + newSquadron.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(data)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                Squadron newUnitMod = OBJECT_MAPPER.readValue(newResponse.getResponse().getContentAsString(), Squadron.class);
+
+                if (attrib.equals("leader")) assertEquals(attribs.get(attrib), newUnitMod.getLeader().getId().toString());
+                else if (attrib.equals("operationsDirector")) assertEquals(attribs.get(attrib), newUnitMod.getOperationsDirector().getId().toString());
+                else if (attrib.equals("chief")) assertEquals(attribs.get(attrib), newUnitMod.getChief().getId().toString());
+                else if (attrib.equals("baseName")) assertEquals(attribs.get(attrib), newUnitMod.getBaseName());
+                else if (attrib.equals("majorCommand")) assertEquals(attribs.get(attrib), newUnitMod.getMajorCommand());
+                else throw new Exception("Unknown attribute given");
+
+                // test we can null out the attribute
+                data.put(attrib, null);
+                MvcResult noLeaderResp = mockMvc.perform(patch(ENDPOINT + newSquadron.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(data)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                Squadron clearedUnit = OBJECT_MAPPER.readValue(noLeaderResp.getResponse().getContentAsString(), Squadron.class);
+
+                if (attrib.equals("leader")) assertNull(clearedUnit.getLeader());
+                else if (attrib.equals("operationsDirector")) assertNull(clearedUnit.getOperationsDirector());
+                else if (attrib.equals("chief")) assertNull(clearedUnit.getChief());
+                else if (attrib.equals("baseName")) assertNull(clearedUnit.getBaseName());
+                else if (attrib.equals("majorCommand")) assertNull(clearedUnit.getMajorCommand());
+                else throw new Exception("Unknown attribute given");
+            }
+        }
+
+        @Test
+        @Transactional
+        @Rollback
+        public void testAddRemoveMemberToSquadron() throws Exception {
+
+            // test the 404 - bad squadron uuid
+            mockMvc.perform(patch(ENDPOINT + newSquadron.getId().toString() + "/members")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { new Airman().getId() })))
+                    .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
+
+            // test the 400 - bad airmen uuid
+            mockMvc.perform(patch(ENDPOINT + new Squadron().getId().toString() + "/members")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { new Airman().getId() })))
+                    .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
+
+            MvcResult result = mockMvc.perform(patch(ENDPOINT + newSquadron.getId().toString() + "/members")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            Squadron modSquad = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron.class);
+            assertEquals(1, modSquad.getMembers().size());
+
+            MvcResult result2 = mockMvc.perform(delete(ENDPOINT + newSquadron.getId().toString() + "/members")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            Squadron modSquad2 = OBJECT_MAPPER.readValue(result2.getResponse().getContentAsString(), Squadron.class);
+            assertEquals(0, modSquad2.getMembers().size());
+        }
+
     }
 }

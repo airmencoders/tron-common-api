@@ -6,11 +6,17 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.util.Date;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Airman extends Person {
+
+    private enum Rank {
+        AB, AMN, A1C, SRA
+    }
 
     /**
      * An airman's Air Force Specialty Code.
@@ -61,8 +67,9 @@ public class Airman extends Person {
         return this.getTitle();
     }
 
-    public void setRank(String rank) {
-        this.setTitle(rank);
+    @Enumerated(EnumType.STRING)
+    public void setRank(Rank rank) {
+        this.setTitle(rank.toString());
     }
 
     @Getter

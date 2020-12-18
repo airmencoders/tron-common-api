@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.SquadronRepository;
@@ -15,7 +16,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import javax.transaction.Transactional;
 
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,6 +30,9 @@ public class SquadronServiceImplTest {
 
     @Autowired
     SquadronRepository squadronRepository;
+
+    @Autowired
+    AirmanService airmanService;
 
     private Squadron squadron;
 
@@ -105,6 +109,78 @@ public class SquadronServiceImplTest {
     public void getAllSquadronTest() throws Exception {
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         assertEquals(1, Lists.newArrayList(squadronService.getAllSquadrons()).size());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void testChangeSquadronAttributes() {
+        Squadron savedSquadron = squadronService.createSquadron(squadron);
+        Airman savedAirman = airmanService.createAirman(new Airman());
+        Map<String, String> attribs = new HashMap<>();
+
+        // test change to bogus squadron fails
+        assertThrows(RecordNotFoundException.class,
+                () -> squadronService.modifySquadronAttributes(new Squadron().getId(), attribs));
+
+        // test can change leader
+        attribs.put("leader", savedAirman.getId().toString());
+        assertEquals(savedAirman.getId().toString(),
+                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                        .getLeader()
+                        .getId()
+                        .toString());
+
+        // test can change director
+        attribs.put("operationsDirector", savedAirman.getId().toString());
+        assertEquals(savedAirman.getId().toString(),
+                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                        .getOperationsDirector()
+                        .getId()
+                        .toString());
+
+        // test can change chief
+        attribs.put("chief", savedAirman.getId().toString());
+        assertEquals(savedAirman.getId().toString(),
+                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                        .getChief()
+                        .getId()
+                        .toString());
+
+        // test can change base name
+        attribs.put("baseName", "Test");
+        assertEquals("Test",
+                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                        .getBaseName());
+
+        // test can change major command
+        attribs.put("majorCommand", "Test2");
+        assertEquals("Test2",
+                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                        .getMajorCommand());
+
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void testAddRemoveMembers() {
+        Squadron savedSquadron = squadronService.createSquadron(squadron);
+        Airman savedAirman = airmanService.createAirman(new Airman());
+
+        assertEquals(1, squadronService.addSquadronMember(savedSquadron.getId(),
+                Lists.newArrayList(savedAirman.getId())).getMembers().size());
+
+        // croaks on adding an invalid airman UUID
+        assertThrows(InvalidRecordUpdateRequest.class,
+                () -> squadronService.addSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
+
+        assertEquals(0, squadronService.removeSquadronMember(savedSquadron.getId(),
+                Lists.newArrayList(savedAirman.getId())).getMembers().size());
+
+        // croaks on removing an invalid airman UUID
+        assertThrows(InvalidRecordUpdateRequest.class,
+                () -> squadronService.removeSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
     }
 }
 
