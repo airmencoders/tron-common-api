@@ -1,5 +1,6 @@
 package mil.tron.commonapi.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import javax.validation.Valid;
@@ -111,6 +112,22 @@ public class PersonController {
 			@Parameter(description = "Person ID to delete", required = true) @PathVariable("id") UUID personId) {
 		personService.deletePerson(personId);
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Add one or more members to the database", description = "Adds one or more person entities - returns same array of input persons with their assigned UUIDs")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = Person.class))),
+			@ApiResponse(responseCode = "409",
+					description = "A person already exists with the id provided",
+					content = @Content)
+	})
+	@PostMapping("/persons")
+	public ResponseEntity<Object> addPersons(
+			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<Person> people) {
+
+		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
 	}
 
 }

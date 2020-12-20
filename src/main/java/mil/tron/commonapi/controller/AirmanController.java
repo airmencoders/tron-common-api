@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -99,6 +100,22 @@ public class AirmanController {
 
         airmanService.removeAirman(id);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Operation(summary = "Adds one or more airmen entities", description = "Adds one or more airmen entities - returns same array of input airmen with their assigned UUIDs")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = Airman.class))),
+            @ApiResponse(responseCode = "409",
+                    description = "Bad Request / One of the supplied airman contained a UUID that already exists",
+                    content = @Content)
+    })
+    @PostMapping("/airmen")
+    public ResponseEntity<Object> addAirmen(
+            @Parameter(description = "Array of Airman to add", required = true) @Valid @RequestBody List<Airman> airmen) {
+
+        return new ResponseEntity<>(airmanService.bulkAddAirmen(airmen), HttpStatus.CREATED);
     }
 
 }

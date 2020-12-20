@@ -8,6 +8,8 @@ import mil.tron.commonapi.repository.AirmanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -35,14 +37,14 @@ public class AirmanServiceImpl implements AirmanService {
     @Override
     public Airman updateAirman(UUID id, Airman airman) throws InvalidRecordUpdateRequest, RecordNotFoundException {
         if (!airmanRepo.existsById(id)) {
-            throw new RecordNotFoundException("Provided airman UUID does not match any existing records");
+            throw new RecordNotFoundException("Provided airman UUID: " + airman.getId().toString() + " does not match any existing records");
         }
 
         // the airman object's id better match the id given,
         //  otherwise hibernate will save under whatever id's inside the object
         if (!airman.getId().equals(id)) {
             throw new InvalidRecordUpdateRequest(
-                    "Provided airman UUID mismatched UUID in airman object");
+                    "Provided airman UUID " + airman.getId() + " mismatched UUID in airman object");
         }
 
         return airmanRepo.save(airman);
@@ -66,5 +68,13 @@ public class AirmanServiceImpl implements AirmanService {
     @Override
     public Airman getAirman(UUID id) {
         return airmanRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Airman with resource ID: " + id.toString() + " does not exist."));
+    }
+
+    public List<Airman> bulkAddAirmen(List<Airman> airmen) {
+        List<Airman> addedAirmen = new ArrayList<>();
+        for (Airman a : airmen) {
+            addedAirmen.add(this.createAirman(a));
+        }
+        return addedAirmen;
     }
 }
