@@ -102,11 +102,18 @@ public class AirmanController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @Operation(summary = "Adds one or more airmen entities", description = "Adds one or more airmen entities - returns same array of input airmen with their assigned UUIDs")
+    @Operation(summary = "Adds one or more airmen entities",
+            description = "Adds one or more airmen entities - returns that same array of input airmen with their assigned UUIDs. " +
+                            "If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
+                            "no new airmen will have been committed to the database (if one entity fails, the entire operation fails). " +
+                            "The return error message will list the offending UUID or other data that caused the error.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201",
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = Airman.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Bad data or validation error",
+                    content = @Content),
             @ApiResponse(responseCode = "409",
                     description = "Bad Request / One of the supplied airman contained a UUID that already exists",
                     content = @Content)

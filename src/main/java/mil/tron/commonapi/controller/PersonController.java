@@ -114,11 +114,18 @@ public class PersonController {
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
-	@Operation(summary = "Add one or more members to the database", description = "Adds one or more person entities - returns same array of input persons with their assigned UUIDs")
+	@Operation(summary = "Add one or more members to the database",
+			description = "Adds one or more person entities - returns that same array of input persons with their assigned UUIDs. " +
+					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
+					"no new persons will have been committed to the database (if one entity fails, the entire operation fails). " +
+					"The return error message will list the offending UUID or other data that caused the error.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = Person.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad data or validation error",
+					content = @Content),
 			@ApiResponse(responseCode = "409",
 					description = "A person already exists with the id provided",
 					content = @Content)
