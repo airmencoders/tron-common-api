@@ -1,13 +1,13 @@
 package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.Getter;
 import lombok.Setter;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.Transient;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,10 +18,14 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Airman extends Person {
 
+    /**
+     * List of valid USAF ranks plus contractor (CTR) and civilian (CIV)
+     */
     @Transient
-    private final List<String> ranks = new ArrayList<>(Arrays.asList("AB", "AMN", "A1C", "SRA", "SSGT",
-            "TSGT", "MSGT", "SMGT", "CMSGT", "CMSGT", "CCMSGT", "CMSAF", "2LT", "1LT", "CAPT", "MAJ", "LTCOL", "COL",
-            "BG", "MG", "LTG", "GEN", "CIV", "CTR", "SES"));
+    private static final List<String> ranks = new ArrayList<>(Arrays.asList(
+            "AB", "AMN", "A1C", "SRA", "SSGT", "TSGT", "MSGT", "SMGT", "CMSGT", "CMSGT",
+            "CCMSGT", "CMSAF", "2LT", "1LT", "CAPT", "MAJ", "LTCOL", "COL", "BG", "MG",
+            "LTG", "GEN", "CIV", "CTR", "SES"));
 
     /**
      * An airman's Air Force Specialty Code.
@@ -72,9 +76,13 @@ public class Airman extends Person {
         return this.getTitle();
     }
 
-    @Enumerated(EnumType.STRING)
     public void setRank(String rank) {
-        this.setTitle(rank.toString());
+        if (ranks.contains(rank.toUpperCase())) {
+            this.setTitle(rank.toUpperCase());
+        }
+        else {
+            throw new RuntimeException("Airman rank must be one of: " + String.join(", ", this.ranks));
+        }
     }
 
     @Getter

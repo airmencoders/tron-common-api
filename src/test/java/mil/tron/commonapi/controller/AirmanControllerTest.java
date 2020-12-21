@@ -43,7 +43,7 @@ public class AirmanControllerTest {
         airman.setMiddleName("Hero");
         airman.setLastName("Public");
         airman.setEmail("john@test.com");
-        airman.setTitle("Capt");
+        airman.setTitle("CAPT");
         airman.setAfsc("17D");
         airman.setPtDate(new Date(2020-1900, Calendar.OCTOBER, 1));
         airman.setEtsDate(new Date(2021-1900, Calendar.JUNE, 29));
@@ -144,7 +144,7 @@ public class AirmanControllerTest {
         Airman newGuy = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
         UUID id = newGuy.getId();
 
-        newGuy.setTitle("Maj");
+        newGuy.setTitle("MAJ");
 
         MvcResult response2 = mockMvc.perform(put(ENDPOINT + id.toString())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -242,4 +242,18 @@ public class AirmanControllerTest {
         assertEquals(totalRecs - 1, newAllAirmanRecs.length);
     }
 
+    @Transactional
+    @Rollback
+    @Test
+    public void testRankValidation() throws Exception {
+
+        String invalidStr = OBJECT_MAPPER.writeValueAsString(airman);
+        invalidStr = invalidStr.replace("CAPT", "TEST");
+
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidStr))
+                .andExpect(status().isBadRequest());
+
+    }
 }
