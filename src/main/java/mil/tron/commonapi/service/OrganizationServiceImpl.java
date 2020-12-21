@@ -17,6 +17,8 @@ import mil.tron.commonapi.repository.OrganizationRepository;
 public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationRepository repository;
 	private final PersonRepository personRepository;
+
+	private final String errorMsg = "Provided organization UUID %s does not match any existing records";
 	
 	public OrganizationServiceImpl(OrganizationRepository repository, PersonRepository personRepository) {
 		this.repository = repository;
@@ -54,7 +56,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization addOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided organization UUID " + organizationId.toString() + " not match any existing records"));
+				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
@@ -70,7 +72,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization removeOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided organization UUID " + organizationId.toString() + "  does not match any existing records"));
+				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
@@ -91,7 +93,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization modifyAttributes(UUID organizationId, Map<String, String> attribs) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided org UUID " + organizationId.toString() + " does not match any existing records"));
+				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
 
 		// change org's leader
 		final String LEADER = "leader";

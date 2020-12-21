@@ -6,6 +6,7 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.repository.PersonRepository;
 
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,8 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -93,5 +96,19 @@ class PersonServiceImplTest {
     	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.ofNullable(null));
     	assertThrows(RecordNotFoundException.class, () -> personService.getPerson(testPerson.getId()));
     }
+
+    @Test
+	void bulkCreatePersonTest() {
+		Mockito.when(repository.save(Mockito.any(Person.class))).then(returnsFirstArg());
+		List<Person> people = Lists.newArrayList(
+				new Person(),
+				new Person(),
+				new Person(),
+				new Person()
+		);
+
+		List<Person> createdPeople = personService.bulkAddPeople(people);
+		assertThat(people).isEqualTo(createdPeople);
+	}
     
 }

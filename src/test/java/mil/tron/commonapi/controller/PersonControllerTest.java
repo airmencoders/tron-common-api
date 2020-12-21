@@ -1,7 +1,9 @@
 package mil.tron.commonapi.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -112,6 +115,26 @@ public class PersonControllerTest {
 					.content(""))
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
+		}
+
+		@Test
+		void testBulkCreate() throws Exception {
+			List<Person> people = Lists.newArrayList(
+					new Person(),
+					new Person(),
+					new Person(),
+					new Person()
+			);
+
+			Mockito.when(personService.bulkAddPeople(Mockito.anyList())).then(returnsFirstArg());
+
+			mockMvc.perform(post(ENDPOINT + "/persons")
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(people)))
+					.andExpect(status().isCreated())
+					.andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(people), result.getResponse().getContentAsString()));
+
 		}
 	}
 	
