@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -144,21 +145,27 @@ public class SquadronServiceImpl implements SquadronService {
 
         attributes.forEach((k, v) -> {
             Field field = ReflectionUtils.findField(Squadron.class, k);
-            if (field != null) {
-                field.setAccessible(true);
-                if (v == null) {
-                    ReflectionUtils.setField(field, squadron, null);
-                } else if (field.getType().equals(Airman.class) || field.getType().equals(Person.class)) {
-                    Airman airman = airmanRepo.findById(UUID.fromString(v))
-                            .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided airman UUID " + v + " does not match any existing records"));
-                    ReflectionUtils.setField(field, squadron, airman);
-                } else if (field.getType().equals(Squadron.class)) {
-                    Squadron sqdn = squadronRepo.findById(UUID.fromString(v)).orElseThrow(
-                            () -> new InvalidRecordUpdateRequest("Provided squadron UUID " + v + " does not match any existing records"));
-                    ReflectionUtils.setField(field, squadron, sqdn);
-                } else {
-                    ReflectionUtils.setField(field, squadron, v);
+            try {
+                if (field != null) {
+                    String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
+                    Method setterMethod = squadron.getClass().getMethod(setterName, field.getType());
+                    if (v == null) {
+                        ReflectionUtils.invokeMethod(setterMethod, squadron, (Object) null);
+                    } else if (field.getType().equals(Airman.class) || field.getType().equals(Person.class)) {
+                        Airman airman = airmanRepo.findById(UUID.fromString(v))
+                                .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided airman UUID " + v + " does not match any existing records"));
+                        ReflectionUtils.invokeMethod(setterMethod, squadron, airman);
+                    } else if (field.getType().equals(Squadron.class)) {
+                        Squadron sqdn = squadronRepo.findById(UUID.fromString(v)).orElseThrow(
+                                () -> new InvalidRecordUpdateRequest("Provided squadron UUID " + v + " does not match any existing records"));
+                        ReflectionUtils.invokeMethod(setterMethod, squadron, sqdn);
+                    } else {
+                        ReflectionUtils.invokeMethod(setterMethod, squadron, v);
+                    }
                 }
+            }
+            catch (NoSuchMethodException e) {
+                throw new InvalidRecordUpdateRequest("Provided field: " + field.getName() + " is not settable");
             }
         });
 

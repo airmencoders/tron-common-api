@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -97,21 +98,27 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		attribs.forEach((k, v) -> {
 			Field field = ReflectionUtils.findField(Organization.class, k);
-			if (field != null) {
-				field.setAccessible(true);
-				if (v == null) {
-					ReflectionUtils.setField(field, organization, null);
-				} else if (field.getType().equals(Person.class)) {
-					Person person = personRepository.findById(UUID.fromString(v))
-							.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided person UUID " + v + " does not match any existing records"));
-					ReflectionUtils.setField(field, organization, person);
-				} else if (field.getType().equals(Organization.class)) {
-					Organization org = repository.findById(UUID.fromString(v)).orElseThrow(
-							() -> new InvalidRecordUpdateRequest("Provided org UUID " + v + " does not match any existing records"));
-					ReflectionUtils.setField(field, organization, org);
-				} else {
-					ReflectionUtils.setField(field, organization, v);
+			try {
+				if (field != null) {
+					String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
+					Method setterMethod = organization.getClass().getMethod(setterName, field.getType());
+					if (v == null) {
+						ReflectionUtils.invokeMethod(setterMethod, organization, (Object) null);
+					} else if (field.getType().equals(Person.class)) {
+						Person person = personRepository.findById(UUID.fromString(v))
+								.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided person UUID " + v + " does not match any existing records"));
+						ReflectionUtils.invokeMethod(setterMethod, organization, person);
+					} else if (field.getType().equals(Organization.class)) {
+						Organization org = repository.findById(UUID.fromString(v)).orElseThrow(
+								() -> new InvalidRecordUpdateRequest("Provided org UUID " + v + " does not match any existing records"));
+						ReflectionUtils.invokeMethod(setterMethod, organization, org);
+					} else {
+						ReflectionUtils.invokeMethod(setterMethod, organization, v);
+					}
 				}
+			}
+			catch (NoSuchMethodException e) {
+				throw new InvalidRecordUpdateRequest("Provided field: " + field.getName() + " is not settable");
 			}
 		});
 
