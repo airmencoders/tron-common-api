@@ -102,7 +102,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 				if (field != null) {
 					String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
 					Method setterMethod = organization.getClass().getMethod(setterName, field.getType());
-					if (v == null) {
+					if (k.equals("id")) {
+						throw new InvalidRecordUpdateRequest("Cannot set/modify this record ID field");
+					} else if (v == null) {
 						ReflectionUtils.invokeMethod(setterMethod, organization, (Object) null);
 					} else if (field.getType().equals(Person.class)) {
 						Person person = personRepository.findById(UUID.fromString(v))
@@ -112,9 +114,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 						Organization org = repository.findById(UUID.fromString(v)).orElseThrow(
 								() -> new InvalidRecordUpdateRequest("Provided org UUID " + v + " does not match any existing records"));
 						ReflectionUtils.invokeMethod(setterMethod, organization, org);
-					} else {
+					} else if (field.getType().equals(String.class)) {
 						ReflectionUtils.invokeMethod(setterMethod, organization, v);
+					} else {
+						throw new InvalidRecordUpdateRequest("Field: " + field.getName() + " is not of recognized type");
 					}
+
 				}
 			}
 			catch (NoSuchMethodException e) {

@@ -149,7 +149,9 @@ public class SquadronServiceImpl implements SquadronService {
                 if (field != null) {
                     String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
                     Method setterMethod = squadron.getClass().getMethod(setterName, field.getType());
-                    if (v == null) {
+                    if (k.equals("id")) {
+                        throw new InvalidRecordUpdateRequest("Cannot set/modify this record ID field");
+                    } else if (v == null) {
                         ReflectionUtils.invokeMethod(setterMethod, squadron, (Object) null);
                     } else if (field.getType().equals(Airman.class) || field.getType().equals(Person.class)) {
                         Airman airman = airmanRepo.findById(UUID.fromString(v))
@@ -159,8 +161,11 @@ public class SquadronServiceImpl implements SquadronService {
                         Squadron sqdn = squadronRepo.findById(UUID.fromString(v)).orElseThrow(
                                 () -> new InvalidRecordUpdateRequest("Provided squadron UUID " + v + " does not match any existing records"));
                         ReflectionUtils.invokeMethod(setterMethod, squadron, sqdn);
-                    } else {
+                    } else if (field.getType().equals(String.class)) {
                         ReflectionUtils.invokeMethod(setterMethod, squadron, v);
+                    }
+                    else {
+                        throw new InvalidRecordUpdateRequest("Field: " + field.getName() + " is not of recognized type");
                     }
                 }
             }
