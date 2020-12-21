@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
+import mil.tron.commonapi.exception.InvalidFieldValueException;
+
 import javax.persistence.Entity;
 import javax.persistence.Transient;
 import java.util.ArrayList;
@@ -19,7 +21,7 @@ public class Airman extends Person {
      * List of valid USAF ranks plus contractor (CTR) and civilian (CIV)
      */
     @Transient
-    private static final List<String> ranks = new ArrayList<>(Arrays.asList(
+    private final List<String> ranks = new ArrayList<>(Arrays.asList(
             "AB", "AMN", "A1C", "SRA", "SSGT", "TSGT", "MSGT", "SMGT", "CMSGT", "CMSGT",
             "CCMSGT", "CMSAF", "2LT", "1LT", "CAPT", "MAJ", "LTCOL", "COL", "BG", "MG",
             "LTG", "GEN", "CIV", "CTR", "SES"));
@@ -78,7 +80,7 @@ public class Airman extends Person {
             this.setTitle(rank.toUpperCase());
         }
         else {
-            throw new RuntimeException("Airman rank must be one of: " + String.join(", ", this.ranks));
+            throw new InvalidFieldValueException("Airman rank must be one of: " + String.join(", ", this.ranks));
         }
     }
 
