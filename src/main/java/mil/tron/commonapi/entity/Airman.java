@@ -8,10 +8,7 @@ import mil.tron.commonapi.exception.InvalidFieldValueException;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -21,7 +18,7 @@ public class Airman extends Person {
      * List of valid USAF ranks plus contractor (CTR) and civilian (CIV)
      */
     @Transient
-    private final List<String> ranks = new ArrayList<>(Arrays.asList(
+    private static final HashSet<String> ranks = new HashSet<>(Arrays.asList(
             "AB", "AMN", "A1C", "SRA", "SSGT", "TSGT", "MSGT", "SMGT", "CMSGT", "CMSGT",
             "CCMSGT", "CMSAF", "2LT", "1LT", "CAPT", "MAJ", "LTCOL", "COL", "BG", "MG",
             "LTG", "GEN", "CIV", "CTR", "SES"));
@@ -80,7 +77,7 @@ public class Airman extends Person {
             this.setTitle(rank.toUpperCase());
         }
         else {
-            throw new InvalidFieldValueException("Airman rank must be one of: " + String.join(", ", this.ranks));
+            throw new InvalidFieldValueException("Airman rank must be one of: " + String.join(", ", Airman.ranks));
         }
     }
 
