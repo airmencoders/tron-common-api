@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.repository.OrganizationRepository;
+import org.springframework.util.ReflectionUtils;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
@@ -93,41 +95,25 @@ public class OrganizationServiceImpl implements OrganizationService {
 		Organization organization = repository.findById(organizationId).orElseThrow(
 				() -> new RecordNotFoundException("Provided org UUID " + organizationId.toString() + " does not match any existing records"));
 
-		// change org's leader
-		final String LEADER = "leader";
-		if (attribs.containsKey(LEADER)) {
-			if (attribs.get(LEADER) == null) {
-				organization.setLeader(null);
-			} else {
-				Person person = personRepository.findById(UUID.fromString(attribs.get(LEADER)))
-						.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided leader UUID " + attribs.get(LEADER) + " does not match any existing records"));
-
-				organization.setLeader(person);
+		attribs.forEach((k, v) -> {
+			Field field = ReflectionUtils.findField(Organization.class, k);
+			if (field != null) {
+				field.setAccessible(true);
+				if (v == null) {
+					ReflectionUtils.setField(field, organization, null);
+				} else if (field.getType().equals(Person.class)) {
+					Person person = personRepository.findById(UUID.fromString(v))
+							.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided person UUID " + v + " does not match any existing records"));
+					ReflectionUtils.setField(field, organization, person);
+				} else if (field.getType().equals(Organization.class)) {
+					Organization org = repository.findById(UUID.fromString(v)).orElseThrow(
+							() -> new InvalidRecordUpdateRequest("Provided org UUID " + v + " does not match any existing records"));
+					ReflectionUtils.setField(field, organization, org);
+				} else {
+					ReflectionUtils.setField(field, organization, v);
+				}
 			}
-		}
-
-		// change org's name
-		final String ORG_NAME = "name";
-		if (attribs.containsKey(ORG_NAME)) {
-			if (attribs.get(ORG_NAME) == null) {
-				organization.setName(null);
-			} else {
-				organization.setName(attribs.get(ORG_NAME));
-			}
-		}
-
-		// change parent organization
-		final String PARENT_ORG = "parentOrganization";
-		if (attribs.containsKey(PARENT_ORG)) {
-			if (attribs.get(PARENT_ORG) == null) {
-				organization.setParentOrganization(null);
-			} else {
-				Organization parent = repository.findById(UUID.fromString(attribs.get(PARENT_ORG))).orElseThrow(
-						() -> new InvalidRecordUpdateRequest("Provided org UUID " + attribs.get(PARENT_ORG) + " does not match any existing records"));
-
-				organization.setParentOrganization(parent);
-			}
-		}
+		});
 
 		return repository.save(organization);
 	}
