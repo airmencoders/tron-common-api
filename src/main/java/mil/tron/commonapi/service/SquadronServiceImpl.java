@@ -2,6 +2,7 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -9,7 +10,10 @@ import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.entity.Squadron;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ReflectionUtils;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -139,73 +143,39 @@ public class SquadronServiceImpl implements SquadronService {
 
         Squadron squadron = (Squadron) org;
 
-        // change just squadron specific things
-        // these are broken out to avoid SonarQube 'complexity' violations
-        setDirector(squadron, attributes);
-        setChief(squadron, attributes);
-        setBaseName(squadron, attributes);
-        setMajorCommand(squadron, attributes);
+        attributes.forEach((k, v) -> {
+            Field field = ReflectionUtils.findField(Squadron.class, k);
+            try {
+                if (field != null) {
+                    String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
+                    Method setterMethod = squadron.getClass().getMethod(setterName, field.getType());
+                    if (k.equals("id")) {
+                        throw new InvalidRecordUpdateRequest("Cannot set/modify this record ID field");
+                    } else if (v == null) {
+                        ReflectionUtils.invokeMethod(setterMethod, squadron, (Object) null);
+                    } else if (field.getType().equals(Airman.class) || field.getType().equals(Person.class)) {
+                        Airman airman = airmanRepo.findById(UUID.fromString(v))
+                                .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided airman UUID " + v + " does not match any existing records"));
+                        ReflectionUtils.invokeMethod(setterMethod, squadron, airman);
+                    } else if (field.getType().equals(Squadron.class)) {
+                        Squadron sqdn = squadronRepo.findById(UUID.fromString(v)).orElseThrow(
+                                () -> new InvalidRecordUpdateRequest("Provided squadron UUID " + v + " does not match any existing records"));
+                        ReflectionUtils.invokeMethod(setterMethod, squadron, sqdn);
+                    } else if (field.getType().equals(String.class)) {
+                        ReflectionUtils.invokeMethod(setterMethod, squadron, v);
+                    }
+                    else {
+                        throw new InvalidRecordUpdateRequest("Field: " + field.getName() + " is not of recognized type");
+                    }
+                }
+            }
+            catch (NoSuchMethodException e) {
+                throw new InvalidRecordUpdateRequest("Provided field: " + field.getName() + " is not settable");
+            }
+        });
 
         // commit
         return squadronRepo.save(squadron);
 
-    }
-
-    private void setDirector(Squadron squadron, Map<String, String> attributes) {
-        // update director if present
-        final String DIRECTOR = "operationsDirector";
-        if (attributes.containsKey(DIRECTOR)) {
-            if (attributes.get(DIRECTOR) == null) {
-                squadron.setOperationsDirector(null);
-            }
-            else {
-                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get(DIRECTOR)))
-                        .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided director UUID " + attributes.get(DIRECTOR) + " not match any existing records"));
-
-                squadron.setOperationsDirector(airman);
-            }
-        }
-    }
-
-    private void setChief(Squadron squadron, Map<String, String> attributes) {
-        // update chief if present
-        final String CHIEF = "chief";
-        if (attributes.containsKey(CHIEF)) {
-            if (attributes.get(CHIEF) == null) {
-                squadron.setChief(null);
-            }
-            else {
-                Airman airman = airmanRepo.findById(UUID.fromString(attributes.get(CHIEF)))
-                        .orElseThrow(() -> new InvalidRecordUpdateRequest("Provided chief UUID " + attributes.get(CHIEF) + " does not match any existing records"));
-
-                squadron.setChief(airman);
-            }
-        }
-    }
-
-    private void setBaseName(Squadron squadron, Map<String, String> attributes) {
-        // update base name if present
-        final String BASE_NAME = "baseName";
-        if (attributes.containsKey(BASE_NAME)) {
-            if (attributes.get(BASE_NAME) == null) {
-                squadron.setBaseName(null);
-            }
-            else {
-                squadron.setBaseName(attributes.get(BASE_NAME));
-            }
-        }
-    }
-
-    private void setMajorCommand(Squadron squadron, Map<String, String> attributes) {
-        // update major command if present
-        final String MAJ_COM = "majorCommand";
-        if (attributes.containsKey(MAJ_COM)) {
-            if (attributes.get(MAJ_COM) == null) {
-                squadron.setMajorCommand(null);
-            }
-            else {
-                squadron.setMajorCommand(attributes.get(MAJ_COM));
-            }
-        }
     }
 }
