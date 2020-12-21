@@ -1,5 +1,7 @@
 package mil.tron.commonapi.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -59,4 +61,12 @@ public class PersonServiceImpl implements PersonService {
 		return repository.findById(id).orElseThrow(() -> new RecordNotFoundException("Person resource with ID: " + id + " does not exist."));
 	}
 
+	@Override
+	public List<Person> bulkAddPeople(List<Person> people) {
+		List<Person> addedPeople = new ArrayList<>();
+		for (Person p : people) {
+			addedPeople.add(this.createPerson(p));
+		}
+		return addedPeople;
+	}
 }

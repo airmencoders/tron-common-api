@@ -1,11 +1,10 @@
 package mil.tron.commonapi.entity;
 
+import com.fasterxml.jackson.annotation.*;
 import lombok.*;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.UUID;
 
@@ -14,12 +13,14 @@ import java.util.UUID;
 @Builder
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Person {
 
     @Id
     @Getter
     @Setter
     @Builder.Default
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID id = UUID.randomUUID();
 
     @Getter
@@ -46,7 +47,7 @@ public class Person {
     @Getter
     @Setter
     private String email;
-    
+
     @Override
     public boolean equals(Object other) {
         if (other == null) {

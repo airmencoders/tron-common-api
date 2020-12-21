@@ -17,8 +17,10 @@ import javax.transaction.Transactional;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
@@ -116,6 +118,21 @@ public class AirmanServiceImplTest {
     public void getAllAirmanTest() throws Exception {
         Airman savedAirman = airmanService.createAirman(airman);
         assertEquals(1, Lists.newArrayList(airmanService.getAllAirman()).size());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void bulkCreateAirmanTest() {
+        List<Airman> airmen = Lists.newArrayList(
+                new Airman(),
+                new Airman(),
+                new Airman(),
+                new Airman()
+        );
+
+        List<Airman> createdAirmen = airmanService.bulkAddAirmen(airmen);
+        assertThat(airmen).isEqualTo(createdAirmen);
     }
 
 }
