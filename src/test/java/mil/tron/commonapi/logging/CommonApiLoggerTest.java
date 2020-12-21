@@ -4,6 +4,8 @@ package mil.tron.commonapi.logging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.MockToken;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.service.PersonService;
+
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.reflect.SourceLocation;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,6 +40,9 @@ public class CommonApiLoggerTest {
 
     @Autowired
     private MockMvc mockMvc;
+    
+    @MockBean
+	private PersonService personService;
 
     private PrintStream originalSystemOut = System.out;
     private final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
