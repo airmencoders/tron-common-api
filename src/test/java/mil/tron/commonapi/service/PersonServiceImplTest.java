@@ -39,6 +39,7 @@ class PersonServiceImplTest {
 		testPerson = new Person();
 		testPerson.setFirstName("Test");
 		testPerson.setLastName("Person");
+		testPerson.setEmail("test@good.email");
 	}
 
     @Test
@@ -59,11 +60,14 @@ class PersonServiceImplTest {
     	assertThrows(InvalidRecordUpdateRequest.class, () -> personService.updatePerson(UUID.randomUUID(), testPerson));
 
     	// Test id not exist
-    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
     	assertThrows(RecordNotFoundException.class, () -> personService.updatePerson(testPerson.getId(), testPerson));
 
+    	// TODO add test for changing email to one that already exists in database
+//    	Mockito.when(repository.findByEmailIgnoreCase(Mockito.any(String.class))).thenReturn(Optional.ofNullable(null));
+    	
     	// Successful update
-    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
     	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
     	Person updatedPerson = personService.updatePerson(testPerson.getId(), testPerson);
     	assertThat(updatedPerson).isEqualTo(testPerson);
