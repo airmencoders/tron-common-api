@@ -4,8 +4,8 @@
         <createTable tableName="airman">
             <column name="afsc" type="VARCHAR(255)"/>
             <column name="dodid" type="VARCHAR(255)"/>
-            <column name="ets_date" type="TIMESTAMP"/>
-            <column name="pt_date" type="TIMESTAMP"/>
+            <column name="ets_date" type="TIMESTAMP WITHOUT TIME ZONE"/>
+            <column name="pt_date" type="TIMESTAMP WITHOUT TIME ZONE"/>
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="airmanPK"/>
             </column>
