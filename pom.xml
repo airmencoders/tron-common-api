@@ -82,9 +82,21 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
         </dependency>
+        <dependency>
+		  <groupId>org.liquibase</groupId>
+		  <artifactId>liquibase-core</artifactId>
+		  <version>4.2.2</version>
+		</dependency>
     </dependencies>
 
     <build>
+    	<resources>
+	        <resource>
+	            <directory>src/main/resources</directory>
+	            <filtering>true</filtering>
+	        </resource>
+	    </resources>
+    
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -128,6 +140,52 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+		        <groupId>org.liquibase</groupId>
+		        <artifactId>liquibase-maven-plugin</artifactId>
+		        <version>4.2.2</version>
+		        <configuration>                  
+		            <propertyFile>src/main/resources/db/liquibase-${build.profile.id}.properties</propertyFile>
+		        </configuration> 
+		        <dependencies>
+		            <dependency>
+					  <groupId>org.liquibase.ext</groupId>
+					  <artifactId>liquibase-hibernate5</artifactId>
+					  <version>4.2.2</version>
+					</dependency>
+		            <dependency>
+			            <groupId>org.springframework.boot</groupId>
+			            <artifactId>spring-boot-starter-data-jpa</artifactId>
+			            <version>2.3.0.RELEASE</version>
+			        </dependency>
+			        <dependency>
+					    <groupId>javax.validation</groupId>
+					    <artifactId>validation-api</artifactId>
+					    <version>2.0.1.Final</version>
+					</dependency>
+		        </dependencies>               
+		    </plugin> 
         </plugins>
     </build>
+    
+    <profiles>
+    	<profile>
+    		<id>development</id>
+    		<activation>
+		      	<activeByDefault>true</activeByDefault>
+		    </activation>
+    		<properties>
+    			<build.profile.id>development</build.profile.id>
+    			<spring.profiles.active>development</spring.profiles.active>
+    		</properties>
+    	</profile>
+    	
+    	<profile>
+    		<id>production</id>
+    		<properties>
+    			<build.profile.id>production</build.profile.id>
+    			<spring.profiles.active>production</spring.profiles.active>
+    		</properties>
+    	</profile>
+    </profiles>
 </project>
