@@ -2,6 +2,7 @@ package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Airman;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import javax.transaction.Transactional;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -1,5 +1,7 @@
 package mil.tron.commonapi.service;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -12,11 +14,14 @@ import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.repository.OrganizationRepository;
+import org.springframework.util.ReflectionUtils;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationRepository repository;
 	private final PersonRepository personRepository;
+
+	private final String errorMsg = "Provided organization UUID %s does not match any existing records";
 	
 	public OrganizationServiceImpl(OrganizationRepository repository, PersonRepository personRepository) {
 		this.repository = repository;
@@ -54,7 +59,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization addOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided organization UUID " + organizationId.toString() + " not match any existing records"));
+				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
@@ -70,7 +75,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization removeOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided organization UUID " + organizationId.toString() + "  does not match any existing records"));
+				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
@@ -91,43 +96,38 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization modifyAttributes(UUID organizationId, Map<String, String> attribs) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException("Provided org UUID " + organizationId.toString() + " does not match any existing records"));
+				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
 
-		// change org's leader
-		final String LEADER = "leader";
-		if (attribs.containsKey(LEADER)) {
-			if (attribs.get(LEADER) == null) {
-				organization.setLeader(null);
-			} else {
-				Person person = personRepository.findById(UUID.fromString(attribs.get(LEADER)))
-						.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided leader UUID " + attribs.get(LEADER) + " does not match any existing records"));
+		attribs.forEach((k, v) -> {
+			Field field = ReflectionUtils.findField(Organization.class, k);
+			try {
+				if (field != null) {
+					String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
+					Method setterMethod = organization.getClass().getMethod(setterName, field.getType());
+					if (k.equals("id")) {
+						throw new InvalidRecordUpdateRequest("Cannot set/modify this record ID field");
+					} else if (v == null) {
+						ReflectionUtils.invokeMethod(setterMethod, organization, (Object) null);
+					} else if (field.getType().equals(Person.class)) {
+						Person person = personRepository.findById(UUID.fromString(v))
+								.orElseThrow(() -> new InvalidRecordUpdateRequest("Provided person UUID " + v + " does not match any existing records"));
+						ReflectionUtils.invokeMethod(setterMethod, organization, person);
+					} else if (field.getType().equals(Organization.class)) {
+						Organization org = repository.findById(UUID.fromString(v)).orElseThrow(
+								() -> new InvalidRecordUpdateRequest("Provided org UUID " + v + " does not match any existing records"));
+						ReflectionUtils.invokeMethod(setterMethod, organization, org);
+					} else if (field.getType().equals(String.class)) {
+						ReflectionUtils.invokeMethod(setterMethod, organization, v);
+					} else {
+						throw new InvalidRecordUpdateRequest("Field: " + field.getName() + " is not of recognized type");
+					}
 
-				organization.setLeader(person);
+				}
 			}
-		}
-
-		// change org's name
-		final String ORG_NAME = "name";
-		if (attribs.containsKey(ORG_NAME)) {
-			if (attribs.get(ORG_NAME) == null) {
-				organization.setName(null);
-			} else {
-				organization.setName(attribs.get(ORG_NAME));
+			catch (NoSuchMethodException e) {
+				throw new InvalidRecordUpdateRequest("Provided field: " + field.getName() + " is not settable");
 			}
-		}
-
-		// change parent organization
-		final String PARENT_ORG = "parentOrganization";
-		if (attribs.containsKey(PARENT_ORG)) {
-			if (attribs.get(PARENT_ORG) == null) {
-				organization.setParentOrganization(null);
-			} else {
-				Organization parent = repository.findById(UUID.fromString(attribs.get(PARENT_ORG))).orElseThrow(
-						() -> new InvalidRecordUpdateRequest("Provided org UUID " + attribs.get(PARENT_ORG) + " does not match any existing records"));
-
-				organization.setParentOrganization(parent);
-			}
-		}
+		});
 
 		return repository.save(organization);
 	}
