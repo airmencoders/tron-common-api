@@ -2,27 +2,32 @@ package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.service.AirmanService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import javax.transaction.Transactional;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,6 +40,9 @@ public class AirmanControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private AirmanService airmanService;
 
     private Airman airman;
 
@@ -51,10 +59,10 @@ public class AirmanControllerTest {
         airman.setEtsDate(new Date(2021-1900, Calendar.JUNE, 29));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testAddNewAirmen() throws Exception {
+
+        Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
 
         MvcResult response = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
@@ -64,67 +72,21 @@ public class AirmanControllerTest {
         assertEquals(OBJECT_MAPPER.writeValueAsString(airman), response.getResponse().getContentAsString());
     }
 
-    @Transactional
-    @Rollback
-    @Test
-    public void testAddNewAirmenWithNullId() throws Exception {
-
-        // simulate request with id as null...
-        String strAirman = "{\"id\":null,\"personType\":\"Airman\",\"firstName\":\"John\",\"middleName\":\"Hero\",\"lastName\":\"Public\",\"title\":\"Capt\",\"email\":\"john@test.com\",\"afsc\":\"17D\",\"etsDate\":\"2021-06-29\",\"ptDate\":\"2020-10-01\",\"fullName\":\"John Public\"}";
-
-        mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON).content(strAirman))
-                .andExpect(status().is(HttpStatus.CREATED.value()));
-
-    }
-
-    @Transactional
-    @Rollback
-    @Test
-    public void testAddNewAirmenOverwriteExistingFails() throws Exception {
-
-        MvcResult response = mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
-                .andExpect(status().is(HttpStatus.CREATED.value()))
-                .andReturn();
-
-        Airman newAirman = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
-
-        // this POST will fail since it'll detect UUID in db already exists
-        mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(newAirman)))
-                .andExpect(status().is(HttpStatus.CONFLICT.value()));
-
-    }
-
-    @Transactional
-    @Rollback
     @Test
     public void testGetAirman() throws Exception {
 
-        MvcResult response = mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
-                .andExpect(status().is(HttpStatus.CREATED.value()))
-                .andReturn();
+        Mockito.when(airmanService.getAirman(Mockito.any(UUID.class))).thenReturn(airman);
 
-        Airman newGuy = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
-        UUID id = newGuy.getId();
-
-        MvcResult response2 = mockMvc.perform(get(ENDPOINT + id.toString()))
+        mockMvc.perform(get(ENDPOINT + airman.getId().toString()))
                 .andExpect(status().isOk())
-                .andReturn();
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(airman)));
 
-        assertEquals(OBJECT_MAPPER.writeValueAsString(newGuy), response2.getResponse().getContentAsString());
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testGetBogusAirmanFails() throws Exception {
 
-        mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(airman)))
-                .andExpect(status().is(HttpStatus.CREATED.value()));
+        Mockito.when(airmanService.getAirman(Mockito.any(UUID.class))).thenThrow(new RecordNotFoundException("Record not found"));
 
         UUID id = UUID.randomUUID();
 
@@ -132,130 +94,79 @@ public class AirmanControllerTest {
                 .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testUpdateAirman() throws Exception {
+        airman.setTitle("MAJ");
 
-        MvcResult response = mockMvc.perform(post(ENDPOINT)
+        Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class)))
+                .thenReturn(airman);
+
+        MvcResult result = mockMvc.perform(put(ENDPOINT + airman.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(airman)))
-                .andExpect(status().is(HttpStatus.CREATED.value()))
-                .andReturn();
-
-        Airman newGuy = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
-        UUID id = newGuy.getId();
-
-        newGuy.setTitle("MAJ");
-
-        MvcResult response2 = mockMvc.perform(put(ENDPOINT + id.toString())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(newGuy)))
-                .andExpect(status().is(HttpStatus.OK.value()))
-                .andReturn();
-
-        assertEquals(OBJECT_MAPPER.writeValueAsString(newGuy), response2.getResponse().getContentAsString());
-
-        MvcResult response3 = mockMvc.perform(get(ENDPOINT + id.toString()))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        assertEquals(OBJECT_MAPPER.writeValueAsString(newGuy), response3.getResponse().getContentAsString());
+        assertEquals(OBJECT_MAPPER.writeValueAsString(airman), result.getResponse().getContentAsString());
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testUpdateBogusAirmanFails() throws Exception {
 
-        MvcResult response = mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(airman)))
-                .andExpect(status().is(HttpStatus.CREATED.value()))
-                .andReturn();
+        Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class)))
+                .thenThrow(new RecordNotFoundException("Not found"));
 
-        Airman newGuy = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
-        UUID id = UUID.randomUUID();
+        Airman newGuy = new Airman();
+        newGuy.setRank("MAJ");
 
-        newGuy.setTitle("Maj");
-
-        mockMvc.perform(put(ENDPOINT + id.toString())
+        mockMvc.perform(put(ENDPOINT + newGuy.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newGuy)))
                 .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testUpdateAirmanDifferingIdsFails() throws Exception {
 
-        MvcResult response = mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(airman)))
-                .andExpect(status().is(HttpStatus.CREATED.value()))
-                .andReturn();
+        Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class)))
+                .thenThrow(new InvalidRecordUpdateRequest("IDs don't match"));
 
-        Airman newGuy = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
+        Airman newGuy = new Airman();
         newGuy.setTitle("Maj");
-        UUID realId = newGuy.getId();
-        newGuy.setId(UUID.randomUUID());
+
 
         // now inject a random UUID for the id, so that it and the one in the request body will be different...
-        mockMvc.perform(put(ENDPOINT + realId)
+        mockMvc.perform(put(ENDPOINT + airman.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newGuy)))
                 .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testDeleteAirman() throws Exception {
 
-        MvcResult response = mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(airman)))
-                .andExpect(status().is(HttpStatus.CREATED.value()))
-                .andReturn();
-
-        Airman newGuy = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Airman.class);
-        UUID id = newGuy.getId();
-
-        // see how many recs are in there now
-        MvcResult allRecs = mockMvc.perform(get(ENDPOINT))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        Airman[] allAirmanRecs = OBJECT_MAPPER.readValue(allRecs.getResponse().getContentAsString(), Airman[].class);
-        int totalRecs = allAirmanRecs.length;
+        Mockito.doNothing().when(airmanService).removeAirman(airman.getId());
 
         // delete the record
-        mockMvc.perform(delete(ENDPOINT + id.toString())).andExpect(status().is(HttpStatus.OK.value()));
+        mockMvc.perform(delete(ENDPOINT + airman.getId().toString()))
+                .andExpect(status().is(HttpStatus.OK.value()));
 
-        // refetch all recs
-        MvcResult modRecs = mockMvc.perform(get(ENDPOINT))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        Airman[] newAllAirmanRecs = OBJECT_MAPPER.readValue(modRecs.getResponse().getContentAsString(), Airman[].class);
-
-        // assert we have one less in the db
-        assertEquals(totalRecs - 1, newAllAirmanRecs.length);
+        // delete the record bad UUID
+        mockMvc.perform(delete(ENDPOINT + "aaaadddd1122"))
+                .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
     }
 
-    @Transactional
-    @Rollback
     @Test
-    public void testRankValidation() throws Exception {
+    public void testBulkAddAirmen() throws Exception {
 
-        String invalidStr = OBJECT_MAPPER.writeValueAsString(airman);
-        invalidStr = invalidStr.replace("CAPT", "TEST");
+        Mockito.when(airmanService.bulkAddAirmen(Mockito.anyList())).then(returnsFirstArg());
 
-        mockMvc.perform(post(ENDPOINT)
+
+        // delete the record
+        mockMvc.perform(post(ENDPOINT + "airmen")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(invalidStr))
-                .andExpect(status().isBadRequest());
+                .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(airman))))
+                .andExpect(status().is(HttpStatus.CREATED.value()));
 
     }
 }
