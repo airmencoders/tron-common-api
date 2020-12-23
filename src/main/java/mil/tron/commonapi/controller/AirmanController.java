@@ -51,7 +51,7 @@ public class AirmanController {
         return new ResponseEntity<>( airmanService.getAirman(id), HttpStatus.OK);
     }
 
-    @Operation(summary = "Adds a new airman", description = "Adds a new airman, ID field should be null")
+    @Operation(summary = "Adds a new airman", description = "Adds a new airman, ID field should be null for a new addition.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201",
                     description = "Successful operation",
