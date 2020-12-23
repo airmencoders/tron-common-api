@@ -4,11 +4,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.PersonRepository;
 import org.springframework.stereotype.Service;
 
@@ -30,13 +32,39 @@ public class OrganizationServiceImpl implements OrganizationService {
 		
 	@Override
 	public Organization createOrganization(Organization organization) {
-		return repository.existsById(organization.getId()) ? null : repository.save(organization);
+		if (repository.existsById(organization.getId()))
+			throw new ResourceAlreadyExistsException(String.format("Resource with the ID: %s already exists.", organization.getId()));
+		
+		/**
+		 * Unique Name Constraint
+		 */
+		if (repository.findByNameIgnoreCase(organization.getName()).isPresent())
+			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", organization.getName()));
+		
+		return repository.save(organization);
 	}
 
 	@Override
 	public Organization updateOrganization(UUID id, Organization organization) {
-		if (!id.equals(organization.getId()) || !repository.existsById(id))
-			return null;
+		if (!id.equals(organization.getId()))
+			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, organization.getId()));
+		
+		Optional<Organization> dbOrg = repository.findById(id);
+		
+		if (dbOrg.isEmpty())
+			throw new RecordNotFoundException(String.format("Resource with the ID: %s does not exist.", id));
+		
+		/**
+		 * Unique Name Check
+		 * 
+		 * First check if there is a name change update.
+		 * If there is a name change, look in the database
+		 * for any organization that is using the new name.
+		 * Throw exception if an organization with the new name
+		 * already exists.
+		 */
+		if (!dbOrg.get().getName().equalsIgnoreCase(organization.getName()) && repository.findByNameIgnoreCase(organization.getName()).isPresent())
+			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", organization.getName()));
 		
 		return repository.save(organization);
 	}

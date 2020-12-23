@@ -1,5 +1,6 @@
 package mil.tron.commonapi.repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.repository.CrudRepository;
@@ -9,5 +10,5 @@ import mil.tron.commonapi.entity.Organization;
 
 @Repository
 public interface OrganizationRepository extends CrudRepository<Organization, UUID> {
-
+	Optional<Organization> findByNameIgnoreCase(String name);
 }
