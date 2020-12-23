@@ -2,7 +2,6 @@ package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.*;
 import lombok.*;
-import mil.tron.commonapi.annotation.UniqueEmailConstraint;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
@@ -46,7 +45,6 @@ public class Person {
     private String title;
 
     @Email(message="Malformed email address")
-//    @UniqueEmailConstraint
     @Getter
     private String email;
     

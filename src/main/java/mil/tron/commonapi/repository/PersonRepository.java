@@ -10,6 +10,5 @@ import mil.tron.commonapi.entity.Person;
 
 @Repository
 public interface PersonRepository extends CrudRepository<Person, UUID> {
-	public Optional<Person> findByEmailAsLower(String email);
 	public Optional<Person> findByEmailIgnoreCase(String email);
 }
