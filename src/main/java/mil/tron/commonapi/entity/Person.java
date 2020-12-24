@@ -46,6 +46,7 @@ public class Person {
 
     @Email(message="Malformed email address")
     @Getter
+    @Setter
     private String email;
     
     /**
@@ -55,9 +56,14 @@ public class Person {
     @JsonIgnore
     private String emailAsLower;
     
-    public void setEmail(String email) {
-    	this.email = email;
-    	this.emailAsLower = email == null ? null : email.toLowerCase();
+    @PreUpdate
+    @PrePersist
+    public void emailCheck() {
+    	if (email != null && email.isBlank()) {
+    		this.email = null;
+    	}
+    	
+    	emailAsLower = email == null ? null : email.toLowerCase();
     }
     
     @Override
