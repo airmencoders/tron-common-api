@@ -56,9 +56,23 @@ public class Person {
     @JsonIgnore
     private String emailAsLower;
     
+    /**
+     * This method will be performed before database operations.
+     * 
+     * It ensures that blank emails are set to null.
+     * 
+     * It will set {@link Person#email} to null if an empty string
+     * or a string of one or more whitespaces is provided. It will then
+     * set {@link Person#emailAsLower} to a lowercase variant of
+     * {@link Person#email} if it exists, else null.
+     * 
+     * This method is needed to provide the unique constraint on
+     * emails because this field may be optional and blank strings
+     * will be considered to be null emails when saved to the database.
+     */
     @PreUpdate
     @PrePersist
-    public void emailCheck() {
+    public void sanitizeEmailForUniqueConstraint() {
     	if (email != null && email.isBlank()) {
     		this.email = null;
     	}
