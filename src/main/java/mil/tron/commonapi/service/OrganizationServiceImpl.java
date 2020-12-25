@@ -24,6 +24,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final PersonRepository personRepository;
 
 	private final String errorMsg = "Provided organization UUID %s does not match any existing records";
+	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	
 	public OrganizationServiceImpl(OrganizationRepository repository, PersonRepository personRepository) {
 		this.repository = repository;
@@ -52,7 +53,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		Optional<Organization> dbOrg = repository.findById(id);
 		
 		if (dbOrg.isEmpty())
-			throw new RecordNotFoundException(String.format("Resource with the ID: %s does not exist.", id));
+			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
 		
 		/**
 		 * Unique Name Check
@@ -72,7 +73,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	@Override
 	public void deleteOrganization(UUID id) {
-		repository.deleteById(id);
+		if (repository.existsById(id))
+			repository.deleteById(id);
+		else
+			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
 	}
 
 	@Override
@@ -82,7 +86,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	@Override
 	public Organization getOrganization(UUID id) {
-		return repository.findById(id).orElse(null);
+		return repository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 	}
 
 	@Override

@@ -130,11 +130,23 @@ class OrganizationServiceImplTest {
 		}
 	}
 	
-
-	@Test
-	 void deleteOrganizationTest() {
-		organizationService.deleteOrganization(testOrg.getId());
-		Mockito.verify(repository, Mockito.times(1)).deleteById(testOrg.getId());
+	@Nested
+	class DeleteOrganizationTest {
+		@Test
+		 void successfulDelete() {
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+			organizationService.deleteOrganization(testOrg.getId());
+			Mockito.verify(repository, Mockito.times(1)).deleteById(testOrg.getId());
+		}
+		
+		@Test
+		void deleteIdNotExist() {
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+			
+			assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+				organizationService.deleteOrganization(testOrg.getId());
+			});
+		}
 	}
 
 	@Test
@@ -154,9 +166,10 @@ class OrganizationServiceImplTest {
     	
     	// Test organization not exists
     	Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.ofNullable(null));
-    	Organization notExistsOrganization = organizationService.getOrganization(testOrg.getId());
-    	assertThat(notExistsOrganization).isNull();
-
+    	
+    	assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+    		organizationService.getOrganization(testOrg.getId());
+    	});
 	}
 
 	@Test

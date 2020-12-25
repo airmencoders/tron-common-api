@@ -53,10 +53,7 @@ public class OrganizationController {
 			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId) {
 		Organization org = organizationService.getOrganization(organizationId);
 		
-		if (org != null)
-			return new ResponseEntity<>(org, HttpStatus.OK);
-		else
-			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		return new ResponseEntity<>(org, HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Adds an organization", description = "Adds an organization")
@@ -64,19 +61,16 @@ public class OrganizationController {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = Organization.class))),
-			@ApiResponse(responseCode = "400",
-					description = "Bad request",
+			@ApiResponse(responseCode = "409",
+					description = "Resource already exists with the id provided",
 					content = @Content)
 	})
 	@PostMapping
 	public ResponseEntity<Organization> createOrganization(
 			@Parameter(description = "Organization to create", required = true) @Valid @RequestBody Organization organization) {
 		Organization createdOrg = organizationService.createOrganization(organization);
-		
-		if (createdOrg != null)
-			return new ResponseEntity<>(createdOrg, HttpStatus.CREATED);
-		else
-			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+
+		return new ResponseEntity<>(createdOrg, HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Updates an existing organization", description = "Updates an existing organization")
@@ -86,6 +80,9 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = Organization.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
+					content = @Content),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
 					content = @Content)
 	})
 	@PutMapping(value = "/{id}")
@@ -105,6 +102,9 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204",
 					description = "Successful operation",
+					content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
 					content = @Content)
 	})
 	@DeleteMapping(value = "/{id}")
