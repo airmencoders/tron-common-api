@@ -3,6 +3,7 @@ package mil.tron.commonapi.entity;
 import com.fasterxml.jackson.annotation.*;
 import lombok.*;
 import javax.persistence.*;
+import javax.validation.constraints.NotBlank;
 
 import java.util.Set;
 
@@ -12,6 +13,7 @@ import java.util.UUID;
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 @JsonIdentityInfo(generator= ObjectIdGenerators.PropertyGenerator.class, property="id")
+@Table(uniqueConstraints = { @UniqueConstraint(columnNames = "nameAsLower") })
 public class Organization {
 
     @Id
@@ -21,7 +23,16 @@ public class Organization {
 
     @Getter
     @Setter
+    @NotBlank
     private String name;
+    
+    /**
+     * Converted value of {@link Organization#name} to lowercase. 
+     * This is used for a unique constraint in the 
+     * database for {@link Organization#name}.
+     */
+    @JsonIgnore
+    private String nameAsLower;
 
     @Getter
     @Builder.Default
@@ -44,6 +55,22 @@ public class Organization {
     @JsonIgnore
     private Set<Organization> subordinateOrganizations = new HashSet<Organization>();
 
+    /**
+     * This method will be performed before database operations.
+     * 
+     * Converts {@link Organization#name} to lowercase and sets it
+     * to {@link Organization#nameAsLower}. This is needed for the
+     * unique constraint in the database.
+     */
+    @PreUpdate
+    @PrePersist
+    public void sanitizeNameForUniqueConstraint() {
+    	if (name != null && name.isBlank()) {
+    		this.name = null;
+    	}
+    	
+    	nameAsLower = name == null ? null : name.toLowerCase();
+    }
 
     @Override
     public boolean equals(Object other) {

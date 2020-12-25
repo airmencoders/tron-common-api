@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.*;
@@ -9,9 +10,11 @@ import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.PersonRepository;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,37 +44,92 @@ class OrganizationServiceImplTest {
 		testOrg.setName("Some Organization");
 	}
 	
-	@Test
-	void createOrganizationTest() {
-		// Test successful save
-		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
-		Organization createdOrg = organizationService.createOrganization(testOrg);
-		assertThat(createdOrg).isEqualTo(testOrg);
+	@Nested
+	class CreateOrganizationTest {
+		@Test
+		void successfulSave() {
+			// Test successful save
+			Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
+			Organization createdOrg = organizationService.createOrganization(testOrg);
+			assertThat(createdOrg).isEqualTo(testOrg);
+		}
 		
-		// Test id already exists
-		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-		Organization notCreatedOrg = organizationService.createOrganization(testOrg);
-		assertThat(notCreatedOrg).isNull();
+		@Test
+		void idAlreadyExists() {
+			// Test id already exists
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+			assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
+				organizationService.createOrganization(testOrg);
+			});
+		}
+		
+		@Test
+		void testUniqueName() {
+			Organization existingOrgWithSameName = new Organization();
+			existingOrgWithSameName.setName(testOrg.getName());
+			
+			Mockito.when(repository.findByNameIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(existingOrgWithSameName));
+			
+			assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
+				organizationService.createOrganization(testOrg);
+			});
+		}
 	}
-
-	@Test
-	void updateOrganizationTest() {
-		// Test id not matching person id
-    	Organization idNotMatchingOrganizationId = organizationService.updateOrganization(UUID.randomUUID(), testOrg);
-    	assertThat(idNotMatchingOrganizationId).isNull();
-    	
-    	// Test id not exist
-    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
-    	Organization idNotExist = organizationService.updateOrganization(testOrg.getId(), testOrg);
-    	assertThat(idNotExist).isNull();
-    	
-    	// Successful update
-    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-    	Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
-    	Organization updatedOrganization = organizationService.updateOrganization(testOrg.getId(), testOrg);
-    	assertThat(updatedOrganization).isEqualTo(testOrg);
-
+	
+	@Nested
+	class UpdateOrganizationTest {
+		@Test
+		void testIdNotMatch() {
+			UUID idNotMatch = UUID.randomUUID();
+			// Test id not matching person id
+			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+				organizationService.updateOrganization(idNotMatch, testOrg);
+			});
+		}
+		
+		@Test
+		void testIdNotExist() {
+			// Test id not exist
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
+	    	UUID testOrgId = testOrg.getId();
+	    	assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+				organizationService.updateOrganization(testOrgId, testOrg);
+			});
+		}
+		
+		@Test
+		void testNameAlreadyExists() {
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
+			
+			String sameName = "Same Org";
+			
+			// Mock an updated org object
+			Organization testOrgWithUpdatedName = new Organization();
+			testOrgWithUpdatedName.setId(testOrg.getId());
+			testOrgWithUpdatedName.setName(sameName);
+			
+			// Mock org with the same name as the updating org
+			Organization existingOrgWithSameName = new Organization();
+			existingOrgWithSameName.setName(sameName);
+			Mockito.when(repository.findByNameIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(existingOrgWithSameName));
+			
+			UUID testOrgId = testOrgWithUpdatedName.getId();
+			
+			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+				organizationService.updateOrganization(testOrgId, testOrgWithUpdatedName);
+			});
+		}
+		
+		@Test
+		void successfulUpdate() {
+			// Successful update
+	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
+	    	Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
+	    	Organization updatedOrganization = organizationService.updateOrganization(testOrg.getId(), testOrg);
+	    	assertThat(updatedOrganization).isEqualTo(testOrg);
+		}
 	}
+	
 
 	@Test
 	 void deleteOrganizationTest() {

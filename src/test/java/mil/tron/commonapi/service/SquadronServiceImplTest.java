@@ -76,9 +76,9 @@ public class SquadronServiceImplTest {
     @Test
     public void updateSquadronDifferentIdTest() throws Exception {
         Squadron sq2 = new Squadron();
-        squadron.setName("TEST2 ORG");
-        squadron.setMajorCommand("AETC");
-        squadron.setBaseName("Hanscom AFB");
+        sq2.setName("TEST2 ORG");
+        sq2.setMajorCommand("AETC");
+        sq2.setBaseName("Hanscom AFB");
 
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         Squadron savedSquadron2 = squadronService.createSquadron(sq2);

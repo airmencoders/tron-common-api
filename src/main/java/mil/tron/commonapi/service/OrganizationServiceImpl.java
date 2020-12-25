@@ -38,7 +38,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		/**
 		 * Unique Name Constraint
 		 */
-		if (repository.findByNameIgnoreCase(organization.getName()).isPresent())
+		if (organization.getName() != null && repository.findByNameIgnoreCase(organization.getName()).isPresent())
 			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", organization.getName()));
 		
 		return repository.save(organization);
@@ -63,8 +63,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 		 * Throw exception if an organization with the new name
 		 * already exists.
 		 */
-		if (!dbOrg.get().getName().equalsIgnoreCase(organization.getName()) && repository.findByNameIgnoreCase(organization.getName()).isPresent())
-			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", organization.getName()));
+		String orgName = organization.getName();
+		if (orgName != null && !orgName.equalsIgnoreCase(dbOrg.get().getName()) && repository.findByNameIgnoreCase(orgName).isPresent())
+			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", orgName));
 		
 		return repository.save(organization);
 	}

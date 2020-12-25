@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -68,7 +70,7 @@ public class OrganizationController {
 	})
 	@PostMapping
 	public ResponseEntity<Organization> createOrganization(
-			@Parameter(description = "Organization to create", required = true) @RequestBody Organization organization) {
+			@Parameter(description = "Organization to create", required = true) @Valid @RequestBody Organization organization) {
 		Organization createdOrg = organizationService.createOrganization(organization);
 		
 		if (createdOrg != null)
@@ -89,7 +91,7 @@ public class OrganizationController {
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<Organization> updateOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
-			@Parameter(description = "Updated organization", required = true) @RequestBody Organization organization) {
+			@Parameter(description = "Updated organization", required = true) @Valid @RequestBody Organization organization) {
 		
 		Organization org = organizationService.updateOrganization(organizationId, organization);
 		
