@@ -9,6 +9,9 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.UUID;
 
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 @JsonIdentityInfo(generator= ObjectIdGenerators.PropertyGenerator.class, property="id")
