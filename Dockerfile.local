@@ -2,4 +2,5 @@ FROM adoptopenjdk/openjdk11:centos
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} /app/commonapi.jar
 EXPOSE 8080
+ENV CONTEXTS DEV
 ENTRYPOINT ["java","-jar","/app/commonapi.jar"]

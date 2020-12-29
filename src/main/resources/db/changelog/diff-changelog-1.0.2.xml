@@ -8,4 +8,18 @@
     <changeSet author="Dylan (generated)" id="1608848891023-2">
         <addUniqueConstraint columnNames="name_as_lower" constraintName="UKgr7bo3kbeekg6pujbmtw37rnd" tableName="organization"/>
     </changeSet>
+    <changeSet context="test" author="Brandon Swenson" id="seed-1">
+        <loadData
+            file="../seed/person.csv"
+            tableName="person"
+            relativeToChangelogFile="true"
+        >
+        </loadData>
+        <loadData
+            file="../seed/airman.csv"
+            tableName="airman"
+            relativeToChangelogFile="true"
+        >
+        </loadData>
+    </changeSet>
 </databaseChangeLog>
