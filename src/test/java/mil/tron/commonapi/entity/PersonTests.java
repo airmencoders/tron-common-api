@@ -1,15 +1,16 @@
 package mil.tron.commonapi.entity;
 
-import mil.tron.commonapi.entity.Person;
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.UUID;
 
-public class PersonTests {
+class PersonTests {
 
     @Test
-    public void getFullName() {
+    void getFullName() {
         Person testPerson = new Person();
         testPerson.setFirstName("Dude");
         testPerson.setLastName("Duder");
@@ -19,7 +20,7 @@ public class PersonTests {
     }
 
     @Test
-    public void checkUniquenessOnID() {
+    void checkUniquenessOnID() {
         Person testPerson = new Person();
         UUID firstUUID = testPerson.getId();
         Person secondTestPerson = new Person();
@@ -29,11 +30,31 @@ public class PersonTests {
     }
 
     @Test
-    public void shouldNotEqualNull() {
+    void shouldNotEqualNull() {
         Person testPerson = new Person();
         assertEquals(false, testPerson.equals(null));
         assertEquals(true, testPerson.equals(testPerson));
         assertEquals(false, testPerson.equals(new Object()));
         assertEquals(false, testPerson.equals(new Person()));
+    }
+    
+    @Test
+    void testEmptyAndBlankEmails() {
+    	Person testPerson = new Person();
+    	
+    	// Test empty string
+    	testPerson.setEmail("");
+    	testPerson.sanitizeEmailForUniqueConstraint();
+    	assertThat(testPerson.getEmail()).isNull();
+    	
+    	// Test one whitespace
+    	testPerson.setEmail(" ");
+    	testPerson.sanitizeEmailForUniqueConstraint();
+    	assertThat(testPerson.getEmail()).isNull();
+    	
+    	// Test multiple whitespace
+    	testPerson.setEmail("     ");
+    	testPerson.sanitizeEmailForUniqueConstraint();
+    	assertThat(testPerson.getEmail()).isNull();
     }
 }

@@ -1,19 +1,18 @@
 package mil.tron.commonapi.entity;
 
-import mil.tron.commonapi.entity.Organization;
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.springframework.boot.test.context.SpringBootTest;
-
-import mil.tron.commonapi.entity.Person;
 
 import java.util.UUID;
 
 @SpringBootTest
-public class OrganizationTest {
+class OrganizationTest {
 
     @Test
-    public void checkUniquenessOnID() {
+    void checkUniquenessOnID() {
         Organization testOrganization = new Organization();
         UUID firstUUID = testOrganization.getId();
         Organization secondTestPerson = new Organization();
@@ -23,7 +22,7 @@ public class OrganizationTest {
     }
 
     @Test
-    public void canAddAndRemoveSubordinateOrganization() {
+    void canAddAndRemoveSubordinateOrganization() {
         Organization testOrg = new Organization();
         Organization subOrg = new Organization();
         testOrg.addSubordinateOrganization(subOrg);
@@ -35,7 +34,7 @@ public class OrganizationTest {
     }
 
     @Test
-    public void canAddAndRemoveMembers() {
+    void canAddAndRemoveMembers() {
         Organization testOrg = new Organization();
         Person testPerson = new Person();
         testOrg.addMember(testPerson);
@@ -46,7 +45,7 @@ public class OrganizationTest {
     }
 
     @Test
-    public void canAddAndRemoveLeaders() {
+    void canAddAndRemoveLeaders() {
         Organization testOrg = new Organization();
         Person testPerson1 = new Person();
         Person testPerson2 = new Person();
@@ -58,7 +57,7 @@ public class OrganizationTest {
     }
 
     @Test
-    public void testEquals() {
+    void testEquals() {
         Organization testOrg = new Organization();
         Organization testOrg2 = new Organization();
         Object testObj = new Object();
@@ -66,6 +65,19 @@ public class OrganizationTest {
         assertEquals(false, testOrg.equals(testObj));
         assertEquals(true, testOrg.equals(testOrg));
         assertEquals(false, testOrg.equals(testOrg2));
+    }
+    
+    @Test
+    void testNameSanitization() {
+    	Organization testOrg = new Organization();
+    	
+    	testOrg.setName("Test Org");
+    	testOrg.sanitizeNameForUniqueConstraint();
+    	assertThat(testOrg.getName()).isNotNull();
+    	
+    	testOrg.setName("");
+    	testOrg.sanitizeNameForUniqueConstraint();
+    	assertThat(testOrg.getName()).isNull();
     }
     
 }

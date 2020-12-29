@@ -57,8 +57,11 @@ public class AirmanController {
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = Airman.class))),
             @ApiResponse(responseCode = "400",
-                    description = "Bad Request / Airman with this UUID already exists",
-                    content = @Content)
+                    description = "Bad Request",
+                    content = @Content),
+            @ApiResponse(responseCode = "409",
+				description = "Resource already exists with the provided UUID",
+				content = @Content),
     })
     @PostMapping("")
     public ResponseEntity<Airman> addAirman(@Parameter(description = "Airman record to add", required = true) @Valid @RequestBody Airman airman) {
@@ -74,7 +77,7 @@ public class AirmanController {
             @ApiResponse(responseCode = "404",
                     description = "Record not found / Attempt to update airman record with provided UUID does not exist",
                     content = @Content),
-            @ApiResponse(responseCode = "409",
+            @ApiResponse(responseCode = "400",
                     description = "Invalid update request - provided UUID didn't exist or did not match UUID in provided record",
                     content = @Content)
     })

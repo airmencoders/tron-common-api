@@ -4,11 +4,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.PersonRepository;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final PersonRepository personRepository;
 
 	private final String errorMsg = "Provided organization UUID %s does not match any existing records";
+	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	
 	public OrganizationServiceImpl(OrganizationRepository repository, PersonRepository personRepository) {
 		this.repository = repository;
@@ -30,20 +33,50 @@ public class OrganizationServiceImpl implements OrganizationService {
 		
 	@Override
 	public Organization createOrganization(Organization organization) {
-		return repository.existsById(organization.getId()) ? null : repository.save(organization);
+		if (repository.existsById(organization.getId()))
+			throw new ResourceAlreadyExistsException(String.format("Resource with the ID: %s already exists.", organization.getId()));
+		
+		/**
+		 * Unique Name Constraint
+		 */
+		if (organization.getName() != null && repository.findByNameIgnoreCase(organization.getName()).isPresent())
+			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", organization.getName()));
+		
+		return repository.save(organization);
 	}
 
 	@Override
 	public Organization updateOrganization(UUID id, Organization organization) {
-		if (!id.equals(organization.getId()) || !repository.existsById(id))
-			return null;
+		if (!id.equals(organization.getId()))
+			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, organization.getId()));
+		
+		Optional<Organization> dbOrg = repository.findById(id);
+		
+		if (dbOrg.isEmpty())
+			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
+		
+		/**
+		 * Unique Name Check
+		 * 
+		 * First check if there is a name change update.
+		 * If there is a name change, look in the database
+		 * for any organization that is using the new name.
+		 * Throw exception if an organization with the new name
+		 * already exists.
+		 */
+		String orgName = organization.getName();
+		if (orgName != null && !orgName.equalsIgnoreCase(dbOrg.get().getName()) && repository.findByNameIgnoreCase(orgName).isPresent())
+			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", orgName));
 		
 		return repository.save(organization);
 	}
 
 	@Override
 	public void deleteOrganization(UUID id) {
-		repository.deleteById(id);
+		if (repository.existsById(id))
+			repository.deleteById(id);
+		else
+			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
 	}
 
 	@Override
@@ -53,7 +86,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	@Override
 	public Organization getOrganization(UUID id) {
-		return repository.findById(id).orElse(null);
+		return repository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 	}
 
 	@Override

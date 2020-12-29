@@ -31,6 +31,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.OrganizationService;
 
 @WebMvcTest(OrganizationController.class)
@@ -99,7 +101,7 @@ public class OrganizationControllerTest {
 		
 		@Test
 		void testGetByIdNotFound() throws Exception {
-			Mockito.when(organizationService.getOrganization(Mockito.any(UUID.class))).thenReturn(null);
+			Mockito.when(organizationService.getOrganization(Mockito.any(UUID.class))).thenThrow(RecordNotFoundException.class);
 			
 			mockMvc.perform(get(ENDPOINT + "{id}", testOrg.getId()))
 				.andExpect(status().isNotFound());
@@ -138,13 +140,13 @@ public class OrganizationControllerTest {
 		
 		@Test
 		void testPostOrganizationWithIdAlreadyExists() throws Exception {
-			Mockito.when(organizationService.createOrganization(Mockito.any(Organization.class))).thenReturn(null);
+			Mockito.when(organizationService.createOrganization(Mockito.any(Organization.class))).thenThrow(ResourceAlreadyExistsException.class);
 			
 			mockMvc.perform(post(ENDPOINT)
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(testOrgJsonString))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isConflict());
 		}
 	}
 	

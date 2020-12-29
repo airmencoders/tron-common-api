@@ -1,38 +1,49 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
-import mil.tron.commonapi.entity.Squadron;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import javax.transaction.Transactional;
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.Mockito.doNothing;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class SquadronServiceImplTest {
 
-    @Autowired
-    SquadronService squadronService;
+    @InjectMocks
+    SquadronServiceImpl squadronService;
 
-    @Autowired
+    @Mock
     SquadronRepository squadronRepository;
 
-    @Autowired
-    AirmanService airmanService;
+    @Mock
+    AirmanServiceImpl airmanService;
+
+    @Mock
+    OrganizationServiceImpl orgService;
+
+    @Mock
+    AirmanRepository airmanRepo;
 
     private Squadron squadron;
 
@@ -44,41 +55,65 @@ public class SquadronServiceImplTest {
         squadron.setBaseName("Travis AFB");
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void createSquadronTest() throws Exception {
+        Mockito.when(squadronRepository.findAll())
+                .thenReturn(Lists.newArrayList())
+                .thenReturn(Lists.newArrayList(squadron));
+
         int initialLength = Lists.newArrayList(squadronRepository.findAll()).size();
         squadronService.createSquadron(squadron);
         assertEquals(initialLength + 1, Lists.newArrayList(squadronRepository.findAll()).size());
     }
 
-    @Transactional
-    @Rollback
+    @Test
+    public void createSquadronTestNullId() throws Exception {
+        Mockito.when(squadronRepository.findAll())
+                .thenReturn(Lists.newArrayList())
+                .thenReturn(Lists.newArrayList(squadron));
+
+        int initialLength = Lists.newArrayList(squadronRepository.findAll()).size();
+        squadron.setId(null);
+        squadronService.createSquadron(squadron);
+        assertEquals(initialLength + 1, Lists.newArrayList(squadronRepository.findAll()).size());
+    }
+
     @Test
     public void updateSquadronTest() throws Exception {
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
+                .thenReturn(false)
+                .thenReturn(true);
+
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         savedSquadron.setBaseName("Grissom AFB");
         Squadron updatedSquadron = squadronService.updateSquadron(savedSquadron.getId(), savedSquadron);
         assertEquals("Grissom AFB", updatedSquadron.getBaseName());
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void updateSquadronBadIdTest() throws Exception {
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
+                .thenReturn(false)
+                .thenReturn(false);
+
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         assertThrows(RecordNotFoundException.class, () -> squadronService.updateSquadron(UUID.randomUUID(), savedSquadron));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void updateSquadronDifferentIdTest() throws Exception {
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
+                .thenReturn(false)
+                .thenReturn(false)
+                .thenReturn(true);
+
         Squadron sq2 = new Squadron();
-        squadron.setName("TEST2 ORG");
-        squadron.setMajorCommand("AETC");
-        squadron.setBaseName("Hanscom AFB");
+        sq2.setName("TEST2 ORG");
+        sq2.setMajorCommand("AETC");
+        sq2.setBaseName("Hanscom AFB");
 
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         Squadron savedSquadron2 = squadronService.createSquadron(sq2);
@@ -86,38 +121,67 @@ public class SquadronServiceImplTest {
         assertThrows(InvalidRecordUpdateRequest.class, () -> squadronService.updateSquadron(savedSquadron2.getId(), savedSquadron));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void removeSquadronTest() throws Exception {
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
+                .thenReturn(false)
+                .thenReturn(true)
+                .thenReturn(false);
+        doNothing().when(squadronRepository).deleteById(Mockito.any(UUID.class));
+        Mockito.when(squadronRepository.findAll()).thenReturn(Lists.newArrayList());
+
         squadronService.createSquadron(squadron);
         squadronService.removeSquadron(squadron.getId());
         assertEquals(0, Lists.newArrayList(squadronRepository.findAll()).size());
+        assertThrows(RecordNotFoundException.class, () -> squadronService.removeSquadron(squadron.getId()));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void getSquadronByIdTest() throws Exception {
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
+                .thenReturn(false)
+                .thenReturn(true);
+        Mockito.when(squadronRepository.findById(squadron.getId())).thenReturn(Optional.of(squadron));
+
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         assertEquals(savedSquadron.getId(), squadronService.getSquadron(squadron.getId()).getId());
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void getAllSquadronTest() throws Exception {
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronRepository.findAll()).thenReturn(Lists.newArrayList(squadron));
+
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         assertEquals(1, Lists.newArrayList(squadronService.getAllSquadrons()).size());
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testChangeSquadronAttributes() {
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
+                .thenReturn(false)
+                .thenReturn(true)
+                .thenThrow(new RecordNotFoundException("Not found"))
+                .thenReturn(true);
+        Mockito.when(orgService.modifyAttributes(Mockito.any(UUID.class), Mockito.anyMap()))
+                .thenReturn(null)
+                .thenThrow(new RecordNotFoundException("Not found"))
+                .thenReturn(squadron);
+
+        Airman airman = new Airman();
+        Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
+        Mockito.when(airmanRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(airman));
+
         Squadron savedSquadron = squadronService.createSquadron(squadron);
-        Airman savedAirman = airmanService.createAirman(new Airman());
+        Airman savedAirman = airmanService.createAirman(airman);
         Map<String, String> attribs = new HashMap<>();
+
+        // test Parent class returns null
+        assertThrows(InvalidRecordUpdateRequest.class,
+                () -> squadronService.modifySquadronAttributes(new Squadron().getId(), attribs));
 
         // test change to bogus squadron fails
         assertThrows(RecordNotFoundException.class,
@@ -161,26 +225,57 @@ public class SquadronServiceImplTest {
 
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testAddRemoveMembers() {
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
+                .thenReturn(false)
+                .thenReturn(true);
+
+        Mockito.when(orgService.addOrganizationMember(Mockito.any(UUID.class), Mockito.anyList()))
+                .thenReturn(squadron)
+                .thenThrow(new InvalidRecordUpdateRequest("Invalid UUID"))
+                .thenReturn(null);
+
+        Mockito.when(orgService.removeOrganizationMember(Mockito.any(UUID.class), Mockito.anyList()))
+                .thenReturn(squadron)
+                .thenThrow(new InvalidRecordUpdateRequest("Invalid UUID"))
+                .thenReturn(null);
+
+        Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
+
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         Airman savedAirman = airmanService.createAirman(new Airman());
 
-        assertEquals(1, squadronService.addSquadronMember(savedSquadron.getId(),
-                Lists.newArrayList(savedAirman.getId())).getMembers().size());
+        squadron.addMember(savedAirman);  // mock the member that got added
+        assertEquals(1, squadronService
+                .addSquadronMember(savedSquadron.getId(), Lists.newArrayList(savedAirman.getId()))
+                .getMembers()
+                .size());
 
         // croaks on adding an invalid airman UUID
         assertThrows(InvalidRecordUpdateRequest.class,
                 () -> squadronService.addSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
 
-        assertEquals(0, squadronService.removeSquadronMember(savedSquadron.getId(),
-                Lists.newArrayList(savedAirman.getId())).getMembers().size());
+        // croaks when Parent class returns null
+        assertThrows(InvalidRecordUpdateRequest.class,
+                () -> squadronService.addSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
+
+        squadron.removeMember(savedAirman);  // mock removal
+
+        assertEquals(0, squadronService
+                .removeSquadronMember(savedSquadron.getId(), Lists.newArrayList(savedAirman.getId()))
+                .getMembers()
+                .size());
 
         // croaks on removing an invalid airman UUID
         assertThrows(InvalidRecordUpdateRequest.class,
                 () -> squadronService.removeSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
+
+        // croaks when Parent class returns null
+        assertThrows(InvalidRecordUpdateRequest.class,
+                () -> squadronService.removeSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
+
     }
 }
 
