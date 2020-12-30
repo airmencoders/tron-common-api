@@ -1,0 +1,4 @@
+id,afsc,dodid,ets_date,pt_date,admin,approved,deros,dor,duty_phone,duty_title,flt_chief,go81,gp,imds,man_number,phone,squadron,unit,wc,wing
+bae5e52c-bfc4-49c4-a383-448f1ddb3636,1N371G,XXX01,2020-11-06 00:00:00,2020-02-15 0:00:00,true,false,2020-11-06 00:00:00,2018-05-001 00:00:00,123-456-7890,NCOIC Software Development,MSgt Gardiner,unsure,692 ISRG,what,this,112-345-6789,324 IS,324 IS,uh,480 ISRW
+ba941af3-9d17-4cf9-816a-04b22609cd30,1N471,XXX02,NULL,NULL,true,false,NULL,2012-05-001 00:00:00,133-456-7890,Superintendent Combatives Training,SMSgt Dudebro,unsure,691 ISRG,what,this,102-345-6889,322 IS,322 IS,uh,489 ISRW
+67822f21-6cb5-4381-a433-8a2d48e1b9d9,1N091,XXX03,2010-11-06 00:00:00,2010-11-06 00:00:00,true,false,2010-11-06 00:00:00,2012-05-001 00:00:00,999-999-9999,Superintendent Operations,CMSgt Chadbrochill,unsure,691 ISRG,what,this,999-999-9999,322 IS,322 IS,uh,489 ISRW
