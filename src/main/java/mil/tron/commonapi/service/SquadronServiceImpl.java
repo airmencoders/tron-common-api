@@ -14,6 +14,7 @@ import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,6 +41,12 @@ public class SquadronServiceImpl implements SquadronService {
             squadron.setId(UUID.randomUUID());
         }
 
+        /**
+         * Unique Name Constraint... borrows from parent class, need to fold into one validation method...
+         */
+        if (squadron.getName() != null && squadronRepo.findByNameIgnoreCase(squadron.getName()).isPresent())
+            throw new ResourceAlreadyExistsException(String.format("Squadron with the Name: %s already exists.", squadron.getName()));
+
         // the record with this 'id' shouldn't already exist...
         if (!squadronRepo.existsById(squadron.getId())) {
             return squadronRepo.save(squadron);
@@ -50,9 +57,9 @@ public class SquadronServiceImpl implements SquadronService {
 
     @Override
     public Squadron updateSquadron(UUID id, Squadron squadron) {
-        if (!squadronRepo.existsById(id)) {
-            throw new RecordNotFoundException(String.format(this.squadronNotFoundErr, "squadron", id.toString()));
-        }
+
+        Squadron dbSquadron = squadronRepo.findById(id).orElseThrow(() ->
+            new RecordNotFoundException(String.format(this.squadronNotFoundErr, "squadron", id.toString())));
 
         // the squadrons object's id better match the id given,
         //  otherwise hibernate will save under whatever id's inside the object
@@ -60,6 +67,14 @@ public class SquadronServiceImpl implements SquadronService {
             throw new InvalidRecordUpdateRequest(
                     "Provided squadron UUID mismatched UUID " + id.toString() + " in squadron object");
         }
+
+        /**
+         * Unique squadron name check... borrowed from parent class
+         */
+        String sqdName = squadron.getName();
+        if (sqdName != null && !sqdName.equalsIgnoreCase(dbSquadron.getName()) && squadronRepo.findByNameIgnoreCase(sqdName).isPresent())
+            throw new InvalidRecordUpdateRequest(String.format("Squadron Name: %s is already in use.", sqdName));
+
 
         return squadronRepo.save(squadron);
     }
@@ -178,5 +193,15 @@ public class SquadronServiceImpl implements SquadronService {
         // commit
         return squadronRepo.save(squadron);
 
+    }
+
+    @Override
+    public List<Squadron> bulkAddSquadrons(List<Squadron> newSquadrons) {
+        List<Squadron> addedSquadrons = new ArrayList<>();
+        for (Squadron s : newSquadrons) {
+            addedSquadrons.add(this.createSquadron(s));
+        }
+
+        return addedSquadrons;
     }
 }

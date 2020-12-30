@@ -4,6 +4,7 @@ import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
 import org.assertj.core.util.Lists;
@@ -16,10 +17,7 @@ import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -64,6 +62,11 @@ public class SquadronServiceImplTest {
         int initialLength = Lists.newArrayList(squadronRepository.findAll()).size();
         squadronService.createSquadron(squadron);
         assertEquals(initialLength + 1, Lists.newArrayList(squadronRepository.findAll()).size());
+
+        // test squadron with same UUID throws
+        squadron.setName(null);
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        assertThrows(ResourceAlreadyExistsException.class, () -> squadronService.createSquadron(squadron));
     }
 
     @Test
@@ -82,13 +85,24 @@ public class SquadronServiceImplTest {
     public void updateSquadronTest() throws Exception {
         Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
         Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
-                .thenReturn(false)
-                .thenReturn(true);
+                .thenReturn(false);
+
+        Mockito.when(squadronRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(squadron));
 
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         savedSquadron.setBaseName("Grissom AFB");
         Squadron updatedSquadron = squadronService.updateSquadron(savedSquadron.getId(), savedSquadron);
         assertEquals("Grissom AFB", updatedSquadron.getBaseName());
+
+        // test updating a squadron with a name that already exists fails
+        Squadron newSquadron = new Squadron();
+        Mockito.when(squadronRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(newSquadron));
+        squadron.setId(newSquadron.getId());
+        newSquadron.setName("test");  // we'll mock this name already exists
+        Mockito.when(squadronRepository.findByNameIgnoreCase(Mockito.any(String.class)))
+                .thenReturn(Optional.of(newSquadron));
+        assertThrows(InvalidRecordUpdateRequest.class, () ->
+                squadronService.updateSquadron(newSquadron.getId(), squadron));
     }
 
     @Test
@@ -107,8 +121,10 @@ public class SquadronServiceImplTest {
         Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
         Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
                 .thenReturn(false)
-                .thenReturn(false)
-                .thenReturn(true);
+                .thenReturn(false);
+
+        Mockito.when(squadronRepository.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(squadron));
 
         Squadron sq2 = new Squadron();
         sq2.setName("TEST2 ORG");
@@ -276,6 +292,25 @@ public class SquadronServiceImplTest {
         assertThrows(InvalidRecordUpdateRequest.class,
                 () -> squadronService.removeSquadronMember(savedSquadron.getId(), Lists.newArrayList(new Airman().getId())));
 
+    }
+
+    @Test
+    void testBulkAddSquadrons() {
+        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+        Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        List<Squadron> newSquads = Lists.newArrayList(
+                squadron,
+                new Squadron(),
+                new Squadron()
+        );
+
+        List<Squadron> addedSquads = squadronService.bulkAddSquadrons(newSquads);
+        assertEquals(newSquads, addedSquads);
+
+        // test fails on adding a squadron with a duplicate name
+        Mockito.when(squadronRepository.findByNameIgnoreCase(squadron.getName())).thenReturn(Optional.of(squadron));
+        List<Squadron> moreSquads = Lists.newArrayList(squadron);
+        assertThrows(ResourceAlreadyExistsException.class, () -> squadronService.bulkAddSquadrons(moreSquads));
     }
 }
 

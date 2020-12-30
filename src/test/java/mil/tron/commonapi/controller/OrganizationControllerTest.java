@@ -1,17 +1,12 @@
 package mil.tron.commonapi.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.*;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.service.OrganizationService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -26,14 +21,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
 
-import mil.tron.commonapi.entity.Organization;
-import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.service.OrganizationService;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(OrganizationController.class)
 public class OrganizationControllerTest {
@@ -147,6 +142,26 @@ public class OrganizationControllerTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(testOrgJsonString))
 				.andExpect(status().isConflict());
+		}
+
+		@Test
+		void testBulkCreate() throws Exception {
+			List<Organization> newOrgs = Lists.newArrayList(
+					new Organization(),
+					new Organization(),
+					new Organization(),
+					new Organization()
+			);
+
+			Mockito.when(organizationService.bulkAddOrgs(Mockito.anyList())).then(returnsFirstArg());
+
+			mockMvc.perform(post(ENDPOINT + "/organizations")
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(newOrgs)))
+					.andExpect(status().isCreated())
+					.andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(newOrgs), result.getResponse().getContentAsString()));
+
 		}
 	}
 	

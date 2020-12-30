@@ -2,7 +2,9 @@ package mil.tron.commonapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 
 import java.util.*;
 
@@ -257,5 +259,17 @@ class OrganizationServiceImplTest {
 
 		// test bogus org Id
 		assertThrows(RecordNotFoundException.class, () -> organizationService.addOrganizationMember(new Organization().getId(), Lists.newArrayList(p.getId())));
+	}
+
+	@Test
+	void testBulkAddOrgs() {
+		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
+		List<Organization> newOrgs = Lists.newArrayList(
+				new Organization(),
+				new Organization()
+		);
+
+		List<Organization> addedOrgs = organizationService.bulkAddOrgs(newOrgs);
+		assertEquals(newOrgs, addedOrgs);
 	}
 }

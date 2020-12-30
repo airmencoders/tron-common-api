@@ -3,6 +3,7 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Squadron;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -363,6 +364,40 @@ public class SquadronIntegrationTest {
             Squadron modSquad2 = OBJECT_MAPPER.readValue(result2.getResponse().getContentAsString(), Squadron.class);
             assertEquals(0, modSquad2.getMembers().size());
         }
+
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testBulkAddSquadrons() throws Exception {
+
+        Squadron s2 = new Squadron();
+        s2.setName("TEST2");
+
+        Squadron s3 = new Squadron();
+        s3.setName("TEST3");
+
+        List<Squadron> newSquadrons = Lists.newArrayList(
+                squadron,
+                s2,
+                s3
+        );
+
+        // test go path for controller to db for adding build squadrons, add 3 get back 3
+        mockMvc.perform(post(ENDPOINT + "squadrons")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newSquadrons)))
+            .andExpect(status().isCreated())
+            .andExpect(result -> assertEquals(3, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron[].class).length));
+
+        // now try to add again one that already has an existing name
+        Squadron s4 = new Squadron();
+        s4.setName(squadron.getName());
+        mockMvc.perform(post(ENDPOINT + "squadrons")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(s4))))
+                .andExpect(status().isConflict());
 
     }
 }

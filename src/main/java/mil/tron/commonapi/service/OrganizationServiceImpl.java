@@ -2,10 +2,7 @@ package mil.tron.commonapi.service;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -163,6 +160,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 		});
 
 		return repository.save(organization);
+	}
+
+	@Override
+	public List<Organization> bulkAddOrgs(List<Organization> newOrgs) {
+		List<Organization> addedOrgs = new ArrayList<>();
+		for (Organization org : newOrgs) {
+			addedOrgs.add(this.createOrganization(org));
+		}
+
+		return addedOrgs;
 	}
 
 }
