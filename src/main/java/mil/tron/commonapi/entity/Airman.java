@@ -5,9 +5,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
 import mil.tron.commonapi.exception.InvalidFieldValueException;
+import mil.tron.commonapi.validations.ValidDodId;
+import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
+import javax.validation.Valid;
 import java.util.*;
 
 @Entity
@@ -53,6 +56,7 @@ public class Airman extends Person {
      */
     @Getter
     @Setter
+    @ValidDodId
     private String dodid;
     //
     // Putting DODID as a string since using a Long would require manually padding
@@ -165,6 +169,7 @@ public class Airman extends Person {
 
     @Getter
     @Setter
+    @ValidPhoneNumber
     private String dutyPhone;
 
     /**
