@@ -10,8 +10,9 @@ import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
-import javax.validation.Valid;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
