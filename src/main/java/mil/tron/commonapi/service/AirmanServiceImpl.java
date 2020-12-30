@@ -26,6 +26,13 @@ public class AirmanServiceImpl implements AirmanService {
             //  serial ID but rather an UUID for Person entity...
             airman.setId(UUID.randomUUID());
         }
+
+        /**
+         * Borrows check from Person service...
+         */
+        if(airman.getEmail() != null && airmanRepo.findByEmailIgnoreCase(airman.getEmail()).isPresent())
+            throw new ResourceAlreadyExistsException(String.format("Airman with the email: %s already exists", airman.getEmail()));
+
         // the record with this 'id' shouldn't already exist...
         if (!airmanRepo.existsById(airman.getId())) {
             return airmanRepo.save(airman);
@@ -36,9 +43,10 @@ public class AirmanServiceImpl implements AirmanService {
 
     @Override
     public Airman updateAirman(UUID id, Airman airman) throws InvalidRecordUpdateRequest, RecordNotFoundException {
-        if (!airmanRepo.existsById(id)) {
-            throw new RecordNotFoundException("Provided airman UUID: " + airman.getId().toString() + " does not match any existing records");
-        }
+
+        Airman dbAirman = airmanRepo.findById(id).orElseThrow(() ->
+                new RecordNotFoundException("Provided airman UUID: " + id.toString() + " does not match any existing records")
+        );
 
         // the airman object's id better match the id given,
         //  otherwise hibernate will save under whatever id's inside the object
@@ -46,6 +54,14 @@ public class AirmanServiceImpl implements AirmanService {
             throw new InvalidRecordUpdateRequest(
                     "Provided airman UUID " + airman.getId() + " mismatched UUID in airman object");
         }
+
+        /**
+         * Borrows check from Person service...
+         */
+        String dbAirmanEmail = dbAirman.getEmail();
+        String airmanEmail = airman.getEmail();
+        if (airmanEmail != null && !airmanEmail.equalsIgnoreCase(dbAirmanEmail) && airmanRepo.findByEmailIgnoreCase(airmanEmail).isPresent())
+            throw new InvalidRecordUpdateRequest(String.format("Airman Email: %s is already in use.", airman.getEmail()));
 
         return airmanRepo.save(airman);
     }
@@ -70,6 +86,7 @@ public class AirmanServiceImpl implements AirmanService {
         return airmanRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Airman with resource ID: " + id.toString() + " does not exist."));
     }
 
+    @Override
     public List<Airman> bulkAddAirmen(List<Airman> airmen) {
         List<Airman> addedAirmen = new ArrayList<>();
         for (Airman a : airmen) {
