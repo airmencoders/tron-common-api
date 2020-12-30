@@ -2,6 +2,7 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Airman;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import javax.transaction.Transactional;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -255,5 +257,36 @@ public class AirmanIntegrationTest {
                 .content(invalidStr))
                 .andExpect(status().isBadRequest());
 
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void testBulkAddAirman() throws Exception {
+
+        Airman a2 = new Airman();
+        a2.setEmail("test1@test.com");
+        a2.setTitle("SSGT");
+
+        List<Airman> newAirman = Lists.newArrayList(
+                airman,
+                a2
+        );
+
+        mockMvc.perform(post(ENDPOINT + "airmen")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newAirman)))
+                .andExpect(status().isCreated())
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Airman[].class).length));
+
+        Airman a3 = new Airman();
+        a3.setEmail("test1@test.com");
+        a3.setTitle("SSGT");
+
+        // test that we can't add someone with a dup email
+        mockMvc.perform(post(ENDPOINT + "airmen")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(a3))))
+                .andExpect(status().isConflict());
     }
 }
