@@ -78,7 +78,7 @@ public class AirmanController {
                     description = "Record not found / Attempt to update airman record with provided UUID does not exist",
                     content = @Content),
             @ApiResponse(responseCode = "400",
-                    description = "Invalid update request - provided UUID didn't exist or did not match UUID in provided record",
+                    description = "Invalid update request - provided UUID didn't exist or did not match UUID in provided record or failed to validate data",
                     content = @Content)
     })
     @PutMapping("/{id}")

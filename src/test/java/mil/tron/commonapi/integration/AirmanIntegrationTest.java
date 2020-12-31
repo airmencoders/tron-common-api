@@ -256,4 +256,46 @@ public class AirmanIntegrationTest {
                 .andExpect(status().isBadRequest());
 
     }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void testDodIdValidation() throws Exception {
+        // test validator actually in use with real request
+
+        airman.setDodid("11");
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(airman)))
+                .andExpect(status().isBadRequest());
+
+        airman.setDodid("1234567890");
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(airman)))
+                .andExpect(status().isCreated());
+
+
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void testPhoneNumberValidation() throws Exception {
+        // test validator actually in use with real request
+
+        airman.setDutyPhone("(555) 867-5309");
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(airman)))
+                .andExpect(status().isCreated());
+
+        airman.setDodid("555.867.5309");
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(airman)))
+                .andExpect(status().isBadRequest());
+
+
+    }
 }

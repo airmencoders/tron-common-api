@@ -20,9 +20,9 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -388,8 +388,8 @@ public class SquadronIntegrationTest {
         mockMvc.perform(post(ENDPOINT + "squadrons")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newSquadrons)))
-            .andExpect(status().isCreated())
-            .andExpect(result -> assertEquals(3, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron[].class).length));
+                .andExpect(status().isCreated())
+                .andExpect(result -> assertEquals(3, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron[].class).length));
 
         // now try to add again one that already has an existing name
         Squadron s4 = new Squadron();
@@ -398,6 +398,88 @@ public class SquadronIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(s4))))
                 .andExpect(status().isConflict());
+    }
 
+    @Transactional
+    @Rollback
+    @Test
+    public void testAddMemberToMultipleOrgs() throws Exception {
+
+        // add the first squadron
+        MvcResult response = mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(squadron)))
+                .andExpect(status().is(HttpStatus.CREATED.value()))
+                .andReturn();
+
+        Squadron newUnit1 = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+
+        Squadron s2 = new Squadron();
+        s2.setName("Squad2");
+
+        // add the second squadron
+        MvcResult response2 = mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(s2)))
+                .andExpect(status().is(HttpStatus.CREATED.value()))
+                .andReturn();
+
+        Squadron newUnit2 = OBJECT_MAPPER.readValue(response2.getResponse().getContentAsString(), Squadron.class);
+
+        Airman airman = new Airman();
+        airman.setFirstName("John");
+        airman.setMiddleName("Hero");
+        airman.setLastName("Public");
+        airman.setEmail("john@test.com");
+        airman.setTitle("Capt");
+        airman.setAfsc("17D");
+        airman.setPtDate(new Date(2020-1900, Calendar.OCTOBER, 1));
+        airman.setEtsDate(new Date(2021-1900, Calendar.JUNE, 29));
+
+        // add an airman
+        MvcResult response3 = mockMvc.perform(post(AIRMAN_ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(airman)))
+                .andExpect(status().is(HttpStatus.CREATED.value()))
+                .andReturn();
+
+        Airman newAirman = OBJECT_MAPPER.readValue(response3.getResponse().getContentAsString(), Airman.class);
+
+        // assign the airman to both squadrons
+        mockMvc.perform(patch(ENDPOINT + newUnit1.getId() + "/members")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
+                .andExpect(status().is(HttpStatus.OK.value()))
+                .andExpect(result -> assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron.class)
+                                        .getMembers()
+                                        .stream()
+                                        .filter(member -> member.getId().equals(newAirman.getId()))
+                                        .collect(Collectors.toList())
+                                        .size()));
+
+        mockMvc.perform(patch(ENDPOINT + newUnit2.getId() + "/members")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
+                .andExpect(status().is(HttpStatus.OK.value()))
+                .andExpect(result -> assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron.class)
+                        .getMembers()
+                        .stream()
+                        .filter(member -> member.getId().equals(newAirman.getId()))
+                        .collect(Collectors.toList())
+                        .size()));
+
+
+        // cant add the same member more than one to the same org though....
+        // add, rejects silently in that the newAirman's UUID is still only present once in the organization
+        mockMvc.perform(patch(ENDPOINT + newUnit2.getId() + "/members")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
+                .andExpect(status().is(HttpStatus.OK.value()))
+                .andExpect(result -> assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron.class)
+                        .getMembers()
+                        .stream()
+                        .filter(member -> member.getId().equals(newAirman.getId()))
+                        .collect(Collectors.toList())
+                        .size()));
     }
 }
