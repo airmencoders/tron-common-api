@@ -39,7 +39,7 @@ public class Organization {
 
     @Getter
     @Builder.Default
-    @OneToMany
+    @ManyToMany
     private Set<Person> members = new HashSet<Person>();
 
     @Getter
