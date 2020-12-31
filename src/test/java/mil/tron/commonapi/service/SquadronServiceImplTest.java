@@ -92,9 +92,11 @@ public class SquadronServiceImplTest {
     public void updateSquadronTest() throws Exception {
         Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
         Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
-                .thenReturn(false);
+                .thenReturn(false)
+                .thenReturn(true);
 
-        Mockito.when(squadronRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(squadron));
+        Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Squadron.class)))
+                .thenReturn(true);
 
         Squadron savedSquadron = squadronService.createSquadron(squadron);
         savedSquadron.setBaseName("Grissom AFB");
@@ -103,7 +105,6 @@ public class SquadronServiceImplTest {
 
         // test updating a squadron with a name that already exists fails
         Squadron newSquadron = new Squadron();
-        Mockito.when(squadronRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(newSquadron));
         squadron.setId(newSquadron.getId());
         newSquadron.setName("test");  // we'll mock this name already exists
         Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Squadron.class)))
@@ -128,10 +129,9 @@ public class SquadronServiceImplTest {
         Mockito.when(squadronRepository.save(Mockito.any(Squadron.class))).then(returnsFirstArg());
         Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class)))
                 .thenReturn(false)
-                .thenReturn(false);
+                .thenReturn(false)
+                .thenReturn(true);
 
-        Mockito.when(squadronRepository.findById(Mockito.any(UUID.class)))
-                .thenReturn(Optional.of(squadron));
 
         Squadron sq2 = new Squadron();
         sq2.setName("TEST2 ORG");

@@ -64,8 +64,9 @@ public class SquadronServiceImpl implements SquadronService {
     @Override
     public Squadron updateSquadron(UUID id, Squadron squadron) {
 
-        Squadron dbSquadron = squadronRepo.findById(id).orElseThrow(() ->
-            new RecordNotFoundException(String.format(this.squadronNotFoundErr, "squadron", id.toString())));
+        if (!squadronRepo.existsById(id)) {
+            throw new RecordNotFoundException(String.format(this.squadronNotFoundErr, "squadron", id.toString()));
+        }
 
         // the squadrons object's id better match the id given,
         //  otherwise hibernate will save under whatever id's inside the object
