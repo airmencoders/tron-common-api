@@ -7,6 +7,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.SquadronService;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -243,6 +244,27 @@ public class SquadronControllerTest {
                     .andExpect(status().isOk());
 
         }
+
+    }
+
+    @Test
+    void testBulkCreateSquadrons() throws Exception {
+        List<Squadron> newSquads = Lists.newArrayList(
+                new Squadron(),
+                new Squadron(),
+                new Squadron(),
+                new Squadron()
+        );
+
+        Mockito.when(squadronService.bulkAddSquadrons(Mockito.anyList())).then(returnsFirstArg());
+
+        mockMvc.perform(post(ENDPOINT + "/squadrons")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newSquads)))
+                .andExpect(status().isCreated())
+                .andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(newSquads), result.getResponse().getContentAsString()));
+
 
     }
 }

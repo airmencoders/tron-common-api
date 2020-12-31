@@ -1,15 +1,5 @@
 package mil.tron.commonapi.controller;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import javax.validation.Valid;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,6 +8,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.service.OrganizationService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/organization")
@@ -170,5 +168,26 @@ public class OrganizationController {
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
 
 			return new ResponseEntity<>(organizationService.modifyAttributes(organizationId, attribs), HttpStatus.OK);
+	}
+
+	@Operation(summary = "Adds one or more organization entities",
+			description = "Adds one or more organization entities - returns that same array of input organizations with their assigned UUIDs. " +
+					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
+					"any new organizations up to that organization that caused the failure will have been committed (but none thereafter)" +
+					"The return error message will list the offending UUID or other data that caused the error.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = Organization.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad data or validation error",
+					content = @Content),
+			@ApiResponse(responseCode = "409",
+					description = "Bad Request / One of the supplied organizations contained a UUID that already exists or other duplicate data",
+					content = @Content)
+	})
+	@PostMapping(value = "/organizations")
+	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<Organization> orgs) {
+		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
 	}
 }

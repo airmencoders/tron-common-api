@@ -160,4 +160,26 @@ public class SquadronController {
         return new ResponseEntity<>(squadronService.modifySquadronAttributes(squadronId, airmanData), HttpStatus.OK);
     }
 
+
+    @Operation(summary = "Adds one or more squadron entities",
+            description = "Adds one or more squadron entities - returns that same array of input squadrons with their assigned UUIDs. " +
+                    "If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
+                    "any new squadrons up to the organization that caused the failure will have been committed (but none thereafter)" +
+                    "The return error message will list the offending UUID or other data that caused the error.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = Squadron.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Bad data or validation error",
+                    content = @Content),
+            @ApiResponse(responseCode = "409",
+                    description = "Bad Request / One of the supplied squadrons contained a UUID that already exists or other duplicate data",
+                    content = @Content)
+    })
+    @PostMapping(value = "/squadrons")
+    public ResponseEntity<Object> addNewSquadrons(@RequestBody List<Squadron> squads) {
+        return new ResponseEntity<>(squadronService.bulkAddSquadrons(squads), HttpStatus.CREATED);
+    }
+
 }
