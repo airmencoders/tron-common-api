@@ -7,7 +7,6 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
-import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;

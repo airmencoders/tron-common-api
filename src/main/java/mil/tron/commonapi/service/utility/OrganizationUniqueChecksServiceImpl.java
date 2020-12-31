@@ -1,7 +1,6 @@
 package mil.tron.commonapi.service.utility;
 
 import mil.tron.commonapi.entity.Organization;
-import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import org.springframework.stereotype.Service;

@@ -22,7 +22,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final PersonRepository personRepository;
 	private final OrganizationUniqueChecksService orgChecksService;
 
-	private final String errorMsg = "Provided organization UUID %s does not match any existing records";
+	private static final String errorMsg = "Provided organization UUID %s does not match any existing records";
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	
 	public OrganizationServiceImpl(

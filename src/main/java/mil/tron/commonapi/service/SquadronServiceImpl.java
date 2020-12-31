@@ -27,7 +27,7 @@ public class SquadronServiceImpl implements SquadronService {
     private final AirmanRepository airmanRepo;
     private final OrganizationService orgService;
     private final OrganizationUniqueChecksService orgChecksService;
-    private final String squadronNotFoundErr = "Provided %s UUID: %s does not match any existing records";
+    private static final String squadronNotFoundErr = "Provided %s UUID: %s does not match any existing records";
 
     public SquadronServiceImpl(
             SquadronRepository squadronRepo,
