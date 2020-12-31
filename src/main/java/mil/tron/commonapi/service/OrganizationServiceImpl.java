@@ -9,6 +9,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.entity.Organization;
@@ -19,24 +20,27 @@ import org.springframework.util.ReflectionUtils;
 public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationRepository repository;
 	private final PersonRepository personRepository;
+	private final OrganizationUniqueChecksService orgChecksService;
 
 	private final String errorMsg = "Provided organization UUID %s does not match any existing records";
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	
-	public OrganizationServiceImpl(OrganizationRepository repository, PersonRepository personRepository) {
+	public OrganizationServiceImpl(
+			OrganizationRepository repository,
+			PersonRepository personRepository,
+			OrganizationUniqueChecksService orgChecksService) {
+
 		this.repository = repository;
 		this.personRepository = personRepository;
+		this.orgChecksService = orgChecksService;
 	}
 		
 	@Override
 	public Organization createOrganization(Organization organization) {
 		if (repository.existsById(organization.getId()))
 			throw new ResourceAlreadyExistsException(String.format("Resource with the ID: %s already exists.", organization.getId()));
-		
-		/**
-		 * Unique Name Constraint
-		 */
-		if (organization.getName() != null && repository.findByNameIgnoreCase(organization.getName()).isPresent())
+
+		if (!orgChecksService.orgNameIsUnique(organization))
 			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", organization.getName()));
 		
 		return repository.save(organization);
@@ -52,18 +56,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (dbOrg.isEmpty())
 			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
 		
-		/**
-		 * Unique Name Check
-		 * 
-		 * First check if there is a name change update.
-		 * If there is a name change, look in the database
-		 * for any organization that is using the new name.
-		 * Throw exception if an organization with the new name
-		 * already exists.
-		 */
-		String orgName = organization.getName();
-		if (orgName != null && !orgName.equalsIgnoreCase(dbOrg.get().getName()) && repository.findByNameIgnoreCase(orgName).isPresent())
-			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", orgName));
+		if (!orgChecksService.orgNameIsUnique(organization))
+			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", organization.getName()));
 		
 		return repository.save(organization);
 	}

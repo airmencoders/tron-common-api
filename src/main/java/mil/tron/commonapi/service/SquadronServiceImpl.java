@@ -9,6 +9,7 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.entity.Squadron;
+import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -25,12 +26,19 @@ public class SquadronServiceImpl implements SquadronService {
     private final SquadronRepository squadronRepo;
     private final AirmanRepository airmanRepo;
     private final OrganizationService orgService;
+    private final OrganizationUniqueChecksService orgChecksService;
     private final String squadronNotFoundErr = "Provided %s UUID: %s does not match any existing records";
 
-    public SquadronServiceImpl(SquadronRepository squadronRepo, AirmanRepository airmanRepo, OrganizationService orgService) {
+    public SquadronServiceImpl(
+            SquadronRepository squadronRepo,
+            AirmanRepository airmanRepo,
+            OrganizationService orgService,
+            OrganizationUniqueChecksService orgChecksService) {
+
         this.squadronRepo = squadronRepo;
         this.airmanRepo = airmanRepo;
         this.orgService = orgService;
+        this.orgChecksService = orgChecksService;
     }
 
     @Override
@@ -41,11 +49,9 @@ public class SquadronServiceImpl implements SquadronService {
             squadron.setId(UUID.randomUUID());
         }
 
-        /**
-         * Unique Name Constraint... borrows from parent class, need to fold into one validation method...
-         */
-        if (squadron.getName() != null && squadronRepo.findByNameIgnoreCase(squadron.getName()).isPresent())
+        if (!orgChecksService.orgNameIsUnique(squadron)) {
             throw new ResourceAlreadyExistsException(String.format("Squadron with the Name: %s already exists.", squadron.getName()));
+        }
 
         // the record with this 'id' shouldn't already exist...
         if (!squadronRepo.existsById(squadron.getId())) {
@@ -68,13 +74,9 @@ public class SquadronServiceImpl implements SquadronService {
                     "Provided squadron UUID mismatched UUID " + id.toString() + " in squadron object");
         }
 
-        /**
-         * Unique squadron name check... borrowed from parent class
-         */
-        String sqdName = squadron.getName();
-        if (sqdName != null && !sqdName.equalsIgnoreCase(dbSquadron.getName()) && squadronRepo.findByNameIgnoreCase(sqdName).isPresent())
-            throw new InvalidRecordUpdateRequest(String.format("Squadron Name: %s is already in use.", sqdName));
-
+        if (!orgChecksService.orgNameIsUnique(squadron)) {
+            throw new InvalidRecordUpdateRequest(String.format("Squadron Name: %s is already in use.", squadron.getName()));
+        }
 
         return squadronRepo.save(squadron);
     }

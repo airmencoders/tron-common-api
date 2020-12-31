@@ -7,6 +7,8 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
+import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
+import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,9 @@ public class SquadronServiceImplTest {
     @Mock
     AirmanRepository airmanRepo;
 
+    @Mock
+    OrganizationUniqueChecksServiceImpl uniqueService;
+
     private Squadron squadron;
 
     @BeforeEach
@@ -51,6 +56,8 @@ public class SquadronServiceImplTest {
         squadron.setName("TEST ORG");
         squadron.setMajorCommand("ACC");
         squadron.setBaseName("Travis AFB");
+
+        Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Squadron.class))).thenReturn(true);
     }
 
     @Test
@@ -99,8 +106,8 @@ public class SquadronServiceImplTest {
         Mockito.when(squadronRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(newSquadron));
         squadron.setId(newSquadron.getId());
         newSquadron.setName("test");  // we'll mock this name already exists
-        Mockito.when(squadronRepository.findByNameIgnoreCase(Mockito.any(String.class)))
-                .thenReturn(Optional.of(newSquadron));
+        Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Squadron.class)))
+                .thenReturn(false);
         assertThrows(InvalidRecordUpdateRequest.class, () ->
                 squadronService.updateSquadron(newSquadron.getId(), squadron));
     }
@@ -308,7 +315,7 @@ public class SquadronServiceImplTest {
         assertEquals(newSquads, addedSquads);
 
         // test fails on adding a squadron with a duplicate name
-        Mockito.when(squadronRepository.findByNameIgnoreCase(squadron.getName())).thenReturn(Optional.of(squadron));
+        Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Squadron.class))).thenReturn(false);
         List<Squadron> moreSquads = Lists.newArrayList(squadron);
         assertThrows(ResourceAlreadyExistsException.class, () -> squadronService.bulkAddSquadrons(moreSquads));
     }
