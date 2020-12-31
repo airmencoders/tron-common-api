@@ -22,7 +22,6 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final PersonRepository personRepository;
 	private final OrganizationUniqueChecksService orgChecksService;
 
-	private static final String errorMsg = "Provided organization UUID %s does not match any existing records";
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	
 	public OrganizationServiceImpl(
@@ -83,7 +82,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization addOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
+				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
@@ -99,7 +98,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization removeOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
+				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
@@ -120,7 +119,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Organization modifyAttributes(UUID organizationId, Map<String, String> attribs) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
-				() -> new RecordNotFoundException(String.format(errorMsg, organizationId.toString())));
+				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
 
 		attribs.forEach((k, v) -> {
 			Field field = ReflectionUtils.findField(Organization.class, k);

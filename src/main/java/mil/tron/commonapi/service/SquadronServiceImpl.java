@@ -27,7 +27,7 @@ public class SquadronServiceImpl implements SquadronService {
     private final AirmanRepository airmanRepo;
     private final OrganizationService orgService;
     private final OrganizationUniqueChecksService orgChecksService;
-    private static final String squadronNotFoundErr = "Provided %s UUID: %s does not match any existing records";
+    private static final String RESOURCE_NOT_FOUND_MSG = "Squadron Resource with the ID: %s does not exist.";
 
     public SquadronServiceImpl(
             SquadronRepository squadronRepo,
@@ -65,7 +65,7 @@ public class SquadronServiceImpl implements SquadronService {
     public Squadron updateSquadron(UUID id, Squadron squadron) {
 
         if (!squadronRepo.existsById(id)) {
-            throw new RecordNotFoundException(String.format(this.squadronNotFoundErr, "squadron", id.toString()));
+            throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, "squadron", id.toString()));
         }
 
         // the squadrons object's id better match the id given,
@@ -174,11 +174,11 @@ public class SquadronServiceImpl implements SquadronService {
                         ReflectionUtils.invokeMethod(setterMethod, squadron, (Object) null);
                     } else if (field.getType().equals(Airman.class) || field.getType().equals(Person.class)) {
                         Airman airman = airmanRepo.findById(UUID.fromString(v))
-                                .orElseThrow(() -> new InvalidRecordUpdateRequest(String.format(this.squadronNotFoundErr, "airman", v)));
+                                .orElseThrow(() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, "airman")));
                         ReflectionUtils.invokeMethod(setterMethod, squadron, airman);
                     } else if (field.getType().equals(Squadron.class)) {
                         Squadron sqdn = squadronRepo.findById(UUID.fromString(v)).orElseThrow(
-                                () -> new InvalidRecordUpdateRequest(String.format(this.squadronNotFoundErr, "squadron", v)));
+                                () -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, "squadron")));
                         ReflectionUtils.invokeMethod(setterMethod, squadron, sqdn);
                     } else if (field.getType().equals(String.class)) {
                         ReflectionUtils.invokeMethod(setterMethod, squadron, v);
