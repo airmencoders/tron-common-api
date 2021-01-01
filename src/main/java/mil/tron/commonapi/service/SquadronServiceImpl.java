@@ -9,11 +9,13 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.entity.Squadron;
+import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,12 +26,19 @@ public class SquadronServiceImpl implements SquadronService {
     private final SquadronRepository squadronRepo;
     private final AirmanRepository airmanRepo;
     private final OrganizationService orgService;
-    private final String squadronNotFoundErr = "Provided %s UUID: %s does not match any existing records";
+    private final OrganizationUniqueChecksService orgChecksService;
+    private static final String RESOURCE_NOT_FOUND_MSG = "Squadron Resource with the ID: %s does not exist.";
 
-    public SquadronServiceImpl(SquadronRepository squadronRepo, AirmanRepository airmanRepo, OrganizationService orgService) {
+    public SquadronServiceImpl(
+            SquadronRepository squadronRepo,
+            AirmanRepository airmanRepo,
+            OrganizationService orgService,
+            OrganizationUniqueChecksService orgChecksService) {
+
         this.squadronRepo = squadronRepo;
         this.airmanRepo = airmanRepo;
         this.orgService = orgService;
+        this.orgChecksService = orgChecksService;
     }
 
     @Override
@@ -38,6 +47,10 @@ public class SquadronServiceImpl implements SquadronService {
             // we have to generate an ID manually since we're not using normal
             //  serial ID but rather an UUID for Person entity...
             squadron.setId(UUID.randomUUID());
+        }
+
+        if (!orgChecksService.orgNameIsUnique(squadron)) {
+            throw new ResourceAlreadyExistsException(String.format("Squadron with the Name: %s already exists.", squadron.getName()));
         }
 
         // the record with this 'id' shouldn't already exist...
@@ -50,8 +63,9 @@ public class SquadronServiceImpl implements SquadronService {
 
     @Override
     public Squadron updateSquadron(UUID id, Squadron squadron) {
+
         if (!squadronRepo.existsById(id)) {
-            throw new RecordNotFoundException(String.format(this.squadronNotFoundErr, "squadron", id.toString()));
+            throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, "squadron", id.toString()));
         }
 
         // the squadrons object's id better match the id given,
@@ -59,6 +73,10 @@ public class SquadronServiceImpl implements SquadronService {
         if (!squadron.getId().equals(id)) {
             throw new InvalidRecordUpdateRequest(
                     "Provided squadron UUID mismatched UUID " + id.toString() + " in squadron object");
+        }
+
+        if (!orgChecksService.orgNameIsUnique(squadron)) {
+            throw new InvalidRecordUpdateRequest(String.format("Squadron Name: %s is already in use.", squadron.getName()));
         }
 
         return squadronRepo.save(squadron);
@@ -156,11 +174,11 @@ public class SquadronServiceImpl implements SquadronService {
                         ReflectionUtils.invokeMethod(setterMethod, squadron, (Object) null);
                     } else if (field.getType().equals(Airman.class) || field.getType().equals(Person.class)) {
                         Airman airman = airmanRepo.findById(UUID.fromString(v))
-                                .orElseThrow(() -> new InvalidRecordUpdateRequest(String.format(this.squadronNotFoundErr, "airman", v)));
+                                .orElseThrow(() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, "airman")));
                         ReflectionUtils.invokeMethod(setterMethod, squadron, airman);
                     } else if (field.getType().equals(Squadron.class)) {
                         Squadron sqdn = squadronRepo.findById(UUID.fromString(v)).orElseThrow(
-                                () -> new InvalidRecordUpdateRequest(String.format(this.squadronNotFoundErr, "squadron", v)));
+                                () -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, "squadron")));
                         ReflectionUtils.invokeMethod(setterMethod, squadron, sqdn);
                     } else if (field.getType().equals(String.class)) {
                         ReflectionUtils.invokeMethod(setterMethod, squadron, v);
@@ -178,5 +196,15 @@ public class SquadronServiceImpl implements SquadronService {
         // commit
         return squadronRepo.save(squadron);
 
+    }
+
+    @Override
+    public List<Squadron> bulkAddSquadrons(List<Squadron> newSquadrons) {
+        List<Squadron> addedSquadrons = new ArrayList<>();
+        for (Squadron s : newSquadrons) {
+            addedSquadrons.add(this.createSquadron(s));
+        }
+
+        return addedSquadrons;
     }
 }
