@@ -7,5 +7,5 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface AirmanRepository extends CrudRepository<Airman, UUID> {
-    public Optional<Airman> findByEmailIgnoreCase(String email);
+
 }
