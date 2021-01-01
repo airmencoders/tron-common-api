@@ -16,4 +16,6 @@ public interface OrganizationService {
 	Organization modifyAttributes(UUID organizationId, Map<String, String> attribs);
 	Organization removeOrganizationMember(UUID organizationId, List<UUID> personIds);
 	Organization addOrganizationMember(UUID organizationId, List<UUID> personIds);
+
+	List<Organization> bulkAddOrgs(List<Organization> newOrgs);
 }

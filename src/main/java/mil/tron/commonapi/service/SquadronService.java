@@ -16,4 +16,6 @@ public interface SquadronService {
     Squadron modifySquadronAttributes(UUID squadronId, Map<String, String> attributes);
     Squadron removeSquadronMember(UUID squadronId, List<UUID> airmanIds);
     Squadron addSquadronMember(UUID squadronId, List<UUID> airmanId);
+
+    List<Squadron> bulkAddSquadrons(List<Squadron> newSquadrons);
 }
