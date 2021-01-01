@@ -1,7 +1,6 @@
 package mil.tron.commonapi.service.utility;
 
 import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.PersonRepository;
 import org.springframework.stereotype.Service;
