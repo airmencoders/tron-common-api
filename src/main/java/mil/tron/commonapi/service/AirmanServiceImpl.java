@@ -5,6 +5,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
+import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +16,13 @@ import java.util.UUID;
 @Service
 public class AirmanServiceImpl implements AirmanService {
 
-    @Autowired
     private AirmanRepository airmanRepo;
+    private PersonUniqueChecksService personChecksService;
+
+    public AirmanServiceImpl(AirmanRepository airmanRepo, PersonUniqueChecksService personChecksService) {
+        this.personChecksService = personChecksService;
+        this.airmanRepo = airmanRepo;
+    }
 
     @Override
     public Airman createAirman(Airman airman) {
@@ -27,10 +33,7 @@ public class AirmanServiceImpl implements AirmanService {
             airman.setId(UUID.randomUUID());
         }
 
-        /**
-         * Borrows check from Person service...
-         */
-        if(airman.getEmail() != null && airmanRepo.findByEmailIgnoreCase(airman.getEmail()).isPresent())
+        if (!personChecksService.personEmailIsUnique(airman))
             throw new ResourceAlreadyExistsException(String.format("Airman with the email: %s already exists", airman.getEmail()));
 
         // the record with this 'id' shouldn't already exist...
@@ -44,9 +47,9 @@ public class AirmanServiceImpl implements AirmanService {
     @Override
     public Airman updateAirman(UUID id, Airman airman) throws InvalidRecordUpdateRequest, RecordNotFoundException {
 
-        Airman dbAirman = airmanRepo.findById(id).orElseThrow(() ->
-                new RecordNotFoundException("Provided airman UUID: " + id.toString() + " does not match any existing records")
-        );
+        if(!airmanRepo.existsById(id)) {
+            throw new RecordNotFoundException("Provided airman UUID: " + id.toString() + " does not match any existing records");
+        }
 
         // the airman object's id better match the id given,
         //  otherwise hibernate will save under whatever id's inside the object
@@ -55,12 +58,7 @@ public class AirmanServiceImpl implements AirmanService {
                     "Provided airman UUID " + airman.getId() + " mismatched UUID in airman object");
         }
 
-        /**
-         * Borrows check from Person service...
-         */
-        String dbAirmanEmail = dbAirman.getEmail();
-        String airmanEmail = airman.getEmail();
-        if (airmanEmail != null && !airmanEmail.equalsIgnoreCase(dbAirmanEmail) && airmanRepo.findByEmailIgnoreCase(airmanEmail).isPresent())
+        if (!personChecksService.personEmailIsUnique(airman))
             throw new InvalidRecordUpdateRequest(String.format("Airman Email: %s is already in use.", airman.getEmail()));
 
         return airmanRepo.save(airman);

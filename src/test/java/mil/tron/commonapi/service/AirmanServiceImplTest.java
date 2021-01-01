@@ -5,6 +5,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
+import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,9 @@ public class AirmanServiceImplTest {
     AirmanServiceImpl airmanService;
 
     @Mock
+    PersonUniqueChecksServiceImpl uniqueChecksService;
+
+    @Mock
     AirmanRepository airmanRepo;
 
     private Airman airman;
@@ -48,6 +52,8 @@ public class AirmanServiceImplTest {
         airman.setAfsc("17D");
         airman.setPtDate(new Date(2020 - 1900, Calendar.OCTOBER, 1));
         airman.setEtsDate(new Date(2021 - 1900, Calendar.JUNE, 29));
+
+        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Airman.class))).thenReturn(true);
     }
 
     @Test
@@ -90,10 +96,8 @@ public class AirmanServiceImplTest {
 
         Mockito.when(airmanRepo.save(Mockito.any(Airman.class))).then(returnsFirstArg());
         Mockito.when(airmanRepo.existsById(Mockito.any(UUID.class)))
-                .thenReturn(false);
-
-        Mockito.when(airmanRepo.findById(Mockito.any(UUID.class)))
-                .thenReturn(Optional.of(airman));
+                .thenReturn(false)
+                .thenReturn(true);
 
         Airman savedAirman = airmanService.createAirman(airman);
 
@@ -108,8 +112,8 @@ public class AirmanServiceImplTest {
                 .thenReturn(Optional.of(newAirman));
         airman.setId(newAirman.getId());
         newAirman.setEmail("other@test.com"); // we'll mock one of this address already exists
-        Mockito.when(airmanRepo.findByEmailIgnoreCase(Mockito.any(String.class)))
-                .thenReturn(Optional.of(newAirman));
+        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Airman.class)))
+                .thenReturn(false);
         assertThrows(InvalidRecordUpdateRequest.class, () -> airmanService.updateAirman(newAirman.getId(), airman));
     }
 
@@ -129,10 +133,8 @@ public class AirmanServiceImplTest {
         Mockito.when(airmanRepo.save(Mockito.any(Airman.class))).then(returnsFirstArg());
         Mockito.when(airmanRepo.existsById(Mockito.any(UUID.class)))
                 .thenReturn(false)
-                .thenReturn(false);
-
-        Mockito.when(airmanRepo.findById(Mockito.any(UUID.class)))
-                .thenReturn(Optional.of(airman));
+                .thenReturn(false)
+                .thenReturn(true);
 
         Airman airman2 = new Airman();
         airman2.setFirstName("Jim");
@@ -203,7 +205,7 @@ public class AirmanServiceImplTest {
         assertThat(airmen).isEqualTo(createdAirmen);
 
         // test fails on adding someone with duplicate email
-        Mockito.when(airmanRepo.findByEmailIgnoreCase(airman.getEmail())).thenReturn(Optional.of(airman));
+        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Airman.class))).thenReturn(false);
         List<Airman> moreAirmen = Lists.newArrayList(airman);
         assertThrows(ResourceAlreadyExistsException.class, () -> airmanService.bulkAddAirmen(moreAirmen));
 
