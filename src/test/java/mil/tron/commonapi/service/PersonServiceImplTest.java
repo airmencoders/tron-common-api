@@ -6,6 +6,7 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.repository.PersonRepository;
 
+import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -30,6 +31,9 @@ import java.util.UUID;
 class PersonServiceImplTest {
 	@Mock
 	private PersonRepository repository;
+
+	@Mock
+	private PersonUniqueChecksServiceImpl uniqueChecksService;
 	
 	@InjectMocks
 	private PersonServiceImpl personService;
@@ -50,6 +54,8 @@ class PersonServiceImplTest {
 	    void successfulCreate() {
 	    	// Test successful save
 	        Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
+	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+	        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 	        Person createdPerson = personService.createPerson(testPerson);
 	        assertThat(createdPerson).isEqualTo(testPerson);
 	    }
@@ -68,7 +74,7 @@ class PersonServiceImplTest {
 	    	existingPersonWithEmail.setEmail(testPerson.getEmail());
 	    	
 	    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
-	    	Mockito.when(repository.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(existingPersonWithEmail));
+	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
 	    	assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
 	    		personService.createPerson(testPerson);
 	    	});
@@ -104,7 +110,7 @@ class PersonServiceImplTest {
 	    	existingPersonWithEmail.setEmail(newPerson.getEmail());
 	    	
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
-	    	Mockito.when(repository.findByEmailIgnoreCase(Mockito.any(String.class))).thenReturn(Optional.of(existingPersonWithEmail));
+	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
 	    	assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
 	    		personService.updatePerson(testId, newPerson);
 	    	});
@@ -114,6 +120,7 @@ class PersonServiceImplTest {
 		void successfulUpdate() {
 			// Successful update
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
+	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 	    	Person updatedPerson = personService.updatePerson(testPerson.getId(), testPerson);
 	    	assertThat(updatedPerson).isEqualTo(testPerson);
@@ -151,6 +158,8 @@ class PersonServiceImplTest {
     @Test
 	void bulkCreatePersonTest() {
 		Mockito.when(repository.save(Mockito.any(Person.class))).then(returnsFirstArg());
+		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+		Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 		List<Person> people = Lists.newArrayList(
 				new Person(),
 				new Person(),

@@ -10,6 +10,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,8 +26,8 @@ public class OrganizationUniqueChecksServiceImplTest {
 
     @Test
     void testUniqueNameCheck() {
-        Organization testOrg = Organization.builder().name("Test").build();
-
+        Organization testOrg = Organization.builder().id(UUID.randomUUID()).name("Test").build();
+        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
         Mockito.when(repository.findByNameIgnoreCase(Mockito.any(String.class))).thenReturn(Optional.of(testOrg));
         assertFalse(uniqueService.orgNameIsUnique(testOrg));
 
@@ -38,5 +39,12 @@ public class OrganizationUniqueChecksServiceImplTest {
         testOrg.setName("test");
         Mockito.when(repository.findByNameIgnoreCase(Mockito.any(String.class))).thenReturn(Optional.empty());
         assertTrue(uniqueService.orgNameIsUnique(testOrg));
+
+        // switch to existing record (update with a non-unique name)
+        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(new Organization()));
+        Mockito.when(repository.findByNameIgnoreCase(Mockito.any(String.class))).thenReturn(Optional.of(testOrg));
+        assertFalse(uniqueService.orgNameIsUnique(testOrg));
+
     }
 }

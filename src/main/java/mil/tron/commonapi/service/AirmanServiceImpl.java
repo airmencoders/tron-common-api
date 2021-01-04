@@ -5,7 +5,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -15,8 +15,13 @@ import java.util.UUID;
 @Service
 public class AirmanServiceImpl implements AirmanService {
 
-    @Autowired
     private AirmanRepository airmanRepo;
+    private PersonUniqueChecksService personChecksService;
+
+    public AirmanServiceImpl(AirmanRepository airmanRepo, PersonUniqueChecksService personChecksService) {
+        this.personChecksService = personChecksService;
+        this.airmanRepo = airmanRepo;
+    }
 
     @Override
     public Airman createAirman(Airman airman) {
@@ -26,6 +31,10 @@ public class AirmanServiceImpl implements AirmanService {
             //  serial ID but rather an UUID for Person entity...
             airman.setId(UUID.randomUUID());
         }
+
+        if (!personChecksService.personEmailIsUnique(airman))
+            throw new ResourceAlreadyExistsException(String.format("Airman with the email: %s already exists", airman.getEmail()));
+
         // the record with this 'id' shouldn't already exist...
         if (!airmanRepo.existsById(airman.getId())) {
             return airmanRepo.save(airman);
@@ -36,8 +45,9 @@ public class AirmanServiceImpl implements AirmanService {
 
     @Override
     public Airman updateAirman(UUID id, Airman airman) throws InvalidRecordUpdateRequest, RecordNotFoundException {
-        if (!airmanRepo.existsById(id)) {
-            throw new RecordNotFoundException("Provided airman UUID: " + airman.getId().toString() + " does not match any existing records");
+
+        if(!airmanRepo.existsById(id)) {
+            throw new RecordNotFoundException("Provided airman UUID: " + id.toString() + " does not match any existing records");
         }
 
         // the airman object's id better match the id given,
@@ -46,6 +56,9 @@ public class AirmanServiceImpl implements AirmanService {
             throw new InvalidRecordUpdateRequest(
                     "Provided airman UUID " + airman.getId() + " mismatched UUID in airman object");
         }
+
+        if (!personChecksService.personEmailIsUnique(airman))
+            throw new InvalidRecordUpdateRequest(String.format("Airman Email: %s is already in use.", airman.getEmail()));
 
         return airmanRepo.save(airman);
     }
@@ -70,6 +83,7 @@ public class AirmanServiceImpl implements AirmanService {
         return airmanRepo.findById(id).orElseThrow(() -> new RecordNotFoundException("Airman with resource ID: " + id.toString() + " does not exist."));
     }
 
+    @Override
     public List<Airman> bulkAddAirmen(List<Airman> airmen) {
         List<Airman> addedAirmen = new ArrayList<>();
         for (Airman a : airmen) {
