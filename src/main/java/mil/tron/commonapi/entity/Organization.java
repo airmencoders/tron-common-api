@@ -3,12 +3,12 @@ package mil.tron.commonapi.entity;
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.*;
+import mil.tron.commonapi.entity.deserializers.PersonDeserializer;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
-
-import java.util.Set;
-
 import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -41,7 +41,7 @@ public class Organization {
     /**
      * Disallow setting directly of this field, so only org members can be PATCH'd in
      */
-    //@JsonIgnore
+    @JsonIgnore
     @Builder.Default
     @ManyToMany
     @JsonDeserialize(contentUsing = PersonDeserializer.class)

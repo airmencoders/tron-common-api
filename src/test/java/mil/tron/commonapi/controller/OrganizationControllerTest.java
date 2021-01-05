@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.entity.PersonDeserializer;
+import mil.tron.commonapi.entity.deserializers.PersonDeserializer;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.OrganizationService;
