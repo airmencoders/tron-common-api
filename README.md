@@ -19,7 +19,7 @@ then Common API will look to connect to a postgres db using the following ENV VA
 
 `${PGHOST}` => defines the database hostname
 
-`${PGPORT}` => port using by the database (normally is 5432)
+`${PGPORT}` => port used by the database (normally is 5432)
 
 `${PG_DATABASE}` => the database name
 
@@ -29,7 +29,7 @@ then Common API will look to connect to a postgres db using the following ENV VA
 
 
 ## Maven CLI w/ env variables & profile
-mvn spring-boot:run -Dspring-boot.run.arguments="--DB_HOST_URL=host:port --DB_NAME=database_name --DB_PASSWORD=database_password --DB_USERNAME=database_user" -Pproduction
+mvn spring-boot:run -Dspring-boot.run.arguments="--PGHOST=host --PGPORT=port --PG_DATABASE=database_name --APP_DB_ADMIN__PASSWORD=database_password --PG_USER=database_user" -Pproduction
 
 ## Seeded Data
 
