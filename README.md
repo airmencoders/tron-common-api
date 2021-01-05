@@ -12,8 +12,24 @@ http://localhost:8080/api/h2-console/
 ### Connection String
 jdbc:h2:mem:testdb
 
+## Postgres DB Usage
+
+When the `production` profile is used (either with `-Pproduction` with Maven) or setting ENV VAR `spring_profiles_active` to `production` (as is done in the pipeline), 
+then Common API will look to connect to a postgres db using the following ENV VARS:
+
+`${PGHOST}` => defines the database hostname
+
+`${PGPORT}` => port used by the database (normally is 5432)
+
+`${PG_DATABASE}` => the database name
+
+`${PG_USER}` => admin username to access the database
+
+`${APP_DB_ADMIN_PASSWORD}` => admin password for the database
+
+
 ## Maven CLI w/ env variables & profile
-mvn spring-boot:run -Dspring-boot.run.arguments="--DB_HOST_URL=host:port --DB_NAME=database_name --DB_PASSWORD=database_password --DB_USERNAME=database_user" -Pproduction
+mvn spring-boot:run -Dspring-boot.run.arguments="--PGHOST=host --PGPORT=port --PG_DATABASE=database_name --APP_DB_ADMIN__PASSWORD=database_password --PG_USER=database_user" -Pproduction
 
 ## Seeded Data
 
