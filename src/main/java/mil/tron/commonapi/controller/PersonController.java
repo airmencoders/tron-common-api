@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.PersonService;
 
 @RestController
@@ -53,10 +54,10 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = Person.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad request",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<Person> getPerson(
@@ -73,10 +74,10 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = Person.class))),
 			@ApiResponse(responseCode = "409",
 					description = "Resource already exists with the id provided",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad request",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping
 	public ResponseEntity<Person> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody Person person) {
@@ -90,7 +91,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = Person.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<Person> updatePerson(
@@ -105,7 +106,10 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204",
 					description = "Successful operation",
-					content = @Content)
+					content = @Content),
+			@ApiResponse(responseCode = "404",
+				description = "Resource not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@DeleteMapping(value = "/{id}")
 	public ResponseEntity<Object> deletePerson(
@@ -125,10 +129,10 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = Person.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad data or validation error",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "409",
 					description = "A person already exists with the id provided",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping("/persons")
 	public ResponseEntity<Object> addPersons(
