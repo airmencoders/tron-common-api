@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.PersonDeserializer;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.OrganizationService;
@@ -11,6 +12,7 @@ import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -40,12 +42,15 @@ public class OrganizationControllerTest {
 	
 	@MockBean
 	private OrganizationService organizationService;
+
+	@Mock
+	private PersonDeserializer deserializer;
 	
 	private Person testPerson;
 	private Person testLeaderPerson;
 	private Organization testOrg;
 	private String testOrgJsonString;
-	
+
 	@BeforeEach
 	public void beforeEachTest() throws JsonProcessingException {
 		testPerson = new Person();
@@ -201,7 +206,7 @@ public class OrganizationControllerTest {
 		@Test
 		void testPutResourceDoesNotExist() throws Exception {
 			Mockito.when(organizationService.updateOrganization(Mockito.any(UUID.class), Mockito.any(Organization.class))).thenReturn(null);
-			
+
 			mockMvc.perform(put(ENDPOINT + "{id}", testOrg.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
