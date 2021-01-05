@@ -40,11 +40,15 @@ public class Organization {
     @Getter
     @Builder.Default
     @ManyToMany
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+    @JsonIdentityReference(alwaysAsId = true)
     private Set<Person> members = new HashSet<Person>();
 
     @Getter
     @Setter
     @ManyToOne
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+    @JsonIdentityReference(alwaysAsId = true)
     private Person leader;
 
     @Getter
@@ -55,7 +59,6 @@ public class Organization {
     @Getter
     @Builder.Default
     @OneToMany
-    @JsonIgnore
     private Set<Organization> subordinateOrganizations = new HashSet<Organization>();
 
     /**
