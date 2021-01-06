@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.AirmanService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,7 +45,7 @@ public class AirmanController {
                     content = @Content(schema = @Schema(implementation = Airman.class))),
             @ApiResponse(responseCode = "404",
                     description = "Resource not found",
-                    content = @Content)
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @GetMapping("/{id}")
     public ResponseEntity<Airman> getAirman(@Parameter(description = "UUID of the airman record", required= true) @PathVariable UUID id) {
@@ -58,10 +59,10 @@ public class AirmanController {
                     content = @Content(schema = @Schema(implementation = Airman.class))),
             @ApiResponse(responseCode = "400",
                     description = "Bad Request",
-                    content = @Content),
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "409",
 				description = "Resource already exists with the provided UUID",
-				content = @Content),
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
     @PostMapping("")
     public ResponseEntity<Airman> addAirman(@Parameter(description = "Airman record to add", required = true) @Valid @RequestBody Airman airman) {
@@ -76,10 +77,10 @@ public class AirmanController {
                     content = @Content(schema = @Schema(implementation = Airman.class))),
             @ApiResponse(responseCode = "404",
                     description = "Record not found / Attempt to update airman record with provided UUID does not exist",
-                    content = @Content),
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "400",
                     description = "Invalid update request - provided UUID didn't exist or did not match UUID in provided record or failed to validate data",
-                    content = @Content)
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PutMapping("/{id}")
     public ResponseEntity<Airman> updateAirman(@Parameter(description = "Airman record ID to update", required = true) @PathVariable UUID id,
@@ -96,7 +97,7 @@ public class AirmanController {
                     content = @Content),
             @ApiResponse(responseCode = "404",
                     description = "Record to delete does not exist",
-                    content = @Content)
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteAirman(@Parameter(description = "UUID id of the airman record to delete", required = true) @PathVariable UUID id) {
@@ -116,10 +117,10 @@ public class AirmanController {
                     content = @Content(schema = @Schema(implementation = Airman.class))),
             @ApiResponse(responseCode = "400",
                     description = "Bad data or validation error",
-                    content = @Content),
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "409",
                     description = "Bad Request / One of the supplied airman contained a UUID that already exists",
-                    content = @Content)
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PostMapping("/airmen")
     public ResponseEntity<Object> addAirmen(
