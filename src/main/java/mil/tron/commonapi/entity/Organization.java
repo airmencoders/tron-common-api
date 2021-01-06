@@ -1,13 +1,14 @@
 package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.*;
+import mil.tron.commonapi.entity.deserializers.PersonDeserializer;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
-
-import java.util.Set;
-
 import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -37,14 +38,32 @@ public class Organization {
     @JsonIgnore
     private String nameAsLower;
 
-    @Getter
+    /**
+     * Disallow setting directly of this field, so only org members can be PATCH'd in
+     */
+    @JsonIgnore
     @Builder.Default
     @ManyToMany
+    @JsonDeserialize(contentUsing = PersonDeserializer.class)
     private Set<Person> members = new HashSet<Person>();
 
+    /**
+     * Allow org members to always be serialized in JSON output (using only their UUID)
+     */
+    @JsonProperty
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+    @JsonIdentityReference(alwaysAsId = true)
+    public Set<Person> getMembers() { return this.members; }
+
+    /**
+     * Only serialize by ID all the time for this field and use custom deserializer to allowed setting via UUID
+     */
     @Getter
     @Setter
     @ManyToOne
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+    @JsonIdentityReference(alwaysAsId = true)
+    @JsonDeserialize(using = PersonDeserializer.class)
     private Person leader;
 
     @Getter
@@ -55,7 +74,6 @@ public class Organization {
     @Getter
     @Builder.Default
     @OneToMany
-    @JsonIgnore
     private Set<Organization> subordinateOrganizations = new HashSet<Organization>();
 
     /**

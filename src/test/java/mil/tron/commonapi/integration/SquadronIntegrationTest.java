@@ -17,12 +17,14 @@ import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.client.RestTemplate;
 
 import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -288,8 +290,6 @@ public class SquadronIntegrationTest {
             attribs.put("chief", newAirman.getId().toString());
             attribs.put("baseName", "Grissom AFB");
             attribs.put("majorCommand", "ACC");
-
-
             for (String attrib : attribs.keySet()) {
                 Map<String, String> data = new HashMap<>();
 
