@@ -28,10 +28,10 @@ public class Organization {
     @Setter
     @NotBlank
     private String name;
-
+    
     /**
-     * Converted value of {@link Organization#name} to lowercase.
-     * This is used for a unique constraint in the
+     * Converted value of {@link Organization#name} to lowercase. 
+     * This is used for a unique constraint in the 
      * database for {@link Organization#name}.
      */
     @JsonIgnore
@@ -60,7 +60,7 @@ public class Organization {
 
     /**
      * This method will be performed before database operations.
-     *
+     * 
      * Converts {@link Organization#name} to lowercase and sets it
      * to {@link Organization#nameAsLower}. This is needed for the
      * unique constraint in the database.
@@ -68,11 +68,11 @@ public class Organization {
     @PreUpdate
     @PrePersist
     public void sanitizeNameForUniqueConstraint() {
-        if (name != null && name.isBlank()) {
-            this.name = null;
-        }
-
-        nameAsLower = name == null ? null : name.toLowerCase();
+    	if (name != null && name.isBlank()) {
+    		this.name = null;
+    	}
+    	
+    	nameAsLower = name == null ? null : name.toLowerCase();
     }
 
     @Override
