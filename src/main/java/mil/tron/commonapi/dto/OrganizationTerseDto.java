@@ -15,16 +15,27 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Getter
-@Setter
 @EqualsAndHashCode
 public class OrganizationTerseDto {
 
+    @Getter
+    @Setter
     private UUID id;
+
+    @Getter
     private UUID leader;
+
+    @Getter
     private Set<UUID> members = new HashSet<>();
+
+    @Getter
     private UUID parentOrganization;
+
+    @Getter
     private Set<UUID> subordinateOrganizations = new HashSet<>();
+
+    @Getter
+    @Setter
     private String name;
 
     public void setParentOrganization(Organization org) {

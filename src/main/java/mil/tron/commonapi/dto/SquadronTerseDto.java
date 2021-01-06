@@ -11,13 +11,20 @@ import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
 public class SquadronTerseDto extends OrganizationTerseDto {
 
+    @Getter
     private UUID operationsDirector;
+
+    @Getter
     private UUID chief;
+
+    @Getter
+    @Setter
     private String baseName;
+
+    @Getter
+    @Setter
     private String majorCommand;
 
     public void setOperationsDirector(Person p) {
