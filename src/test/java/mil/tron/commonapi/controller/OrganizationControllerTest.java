@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationTerseDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.entity.deserializers.PersonDeserializer;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.OrganizationService;
@@ -45,9 +44,6 @@ public class OrganizationControllerTest {
 	@MockBean
 	private OrganizationService organizationService;
 
-	@Mock
-	private PersonDeserializer deserializer;
-	
 	private Person testPerson;
 	private Person testLeaderPerson;
 	private Organization testOrg;

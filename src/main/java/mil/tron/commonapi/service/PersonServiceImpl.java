@@ -16,7 +16,7 @@ import mil.tron.commonapi.repository.PersonRepository;
 
 @Service
 public class PersonServiceImpl implements PersonService {
-	public static PersonRepository repository;
+	private PersonRepository repository;
 	private PersonUniqueChecksService personChecksService;
 
 	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService) {
