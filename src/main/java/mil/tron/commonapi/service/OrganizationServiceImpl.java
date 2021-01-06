@@ -4,12 +4,15 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 
+import mil.tron.commonapi.dto.OrganizationTerseDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
+import org.modelmapper.Conditions;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.entity.Organization;
@@ -21,7 +24,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationRepository repository;
 	private final PersonRepository personRepository;
 	private final OrganizationUniqueChecksService orgChecksService;
-
+	private final ModelMapper modelMapper;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	
 	public OrganizationServiceImpl(
@@ -32,6 +35,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		this.repository = repository;
 		this.personRepository = personRepository;
 		this.orgChecksService = orgChecksService;
+		this.modelMapper = new ModelMapper();
 	}
 		
 	@Override
@@ -163,6 +167,32 @@ public class OrganizationServiceImpl implements OrganizationService {
 		}
 
 		return addedOrgs;
+	}
+
+	/**
+	 * Converts an organization entity with all its nested entities into a more terse
+	 * structure with only UUID representations for types of Org/Person
+	 *
+	 * Using model mapper here allows mapping autonomously of most fields except for the
+	 * ones of custom type - where we have to explicitly grab out the UUID field since model
+	 * mapper has no clue
+	 * @param org
+	 * @return object of type OrganizationTerseDto
+	 */
+    @Override
+    public OrganizationTerseDto convertToDto(Organization org) {
+		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+		return modelMapper.map(org, OrganizationTerseDto.class);
+    }
+
+	/**
+	 *
+	 * @param dto
+	 * @return
+	 */
+	@Override
+	public Organization convertToEntity(OrganizationTerseDto dto) {
+		return null;
 	}
 
 }

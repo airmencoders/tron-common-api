@@ -2,6 +2,7 @@ package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.OrganizationTerseDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -108,6 +110,30 @@ public class OrganizationControllerTest {
 			mockMvc.perform(get(ENDPOINT + "{id}", "asdf1234"))
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
+		}
+
+		@Test
+		void testGetOrganizationsTerse() throws Exception {
+			ModelMapper mapper = new ModelMapper();
+			OrganizationTerseDto dto = mapper.map(testOrg, OrganizationTerseDto.class);
+			String dtoStr = OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(dto));
+			Mockito.when(organizationService.getOrganizations()).thenReturn(Lists.newArrayList(testOrg));
+			Mockito.when(organizationService.convertToDto(testOrg)).thenReturn(dto);
+			mockMvc.perform(get(ENDPOINT + "?onlyIds=true"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertEquals(dtoStr, result.getResponse().getContentAsString()));
+		}
+
+		@Test
+		void testGetOrganizationByIdTerse() throws Exception {
+			ModelMapper mapper = new ModelMapper();
+			OrganizationTerseDto dto = mapper.map(testOrg, OrganizationTerseDto.class);
+			String dtoStr = OBJECT_MAPPER.writeValueAsString(dto);
+			Mockito.when(organizationService.getOrganization(testOrg.getId())).thenReturn(testOrg);
+			Mockito.when(organizationService.convertToDto(testOrg)).thenReturn(dto);
+			mockMvc.perform(get(ENDPOINT + "/{id}?onlyIds=true", testOrg.getId()))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertEquals(dtoStr, result.getResponse().getContentAsString()));
 		}
 	}
 	

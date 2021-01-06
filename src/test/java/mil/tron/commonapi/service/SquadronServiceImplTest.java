@@ -1,6 +1,8 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.dto.SquadronTerseDto;
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.modelmapper.ModelMapper;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -317,6 +320,21 @@ public class SquadronServiceImplTest {
         Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Squadron.class))).thenReturn(false);
         List<Squadron> moreSquads = Lists.newArrayList(squadron);
         assertThrows(ResourceAlreadyExistsException.class, () -> squadronService.bulkAddSquadrons(moreSquads));
+    }
+
+    @Test
+    void testMapToDto() {
+        Person chief = new Person();
+        Squadron parent = new Squadron();
+        Squadron subord = new Squadron();
+        Squadron org = new Squadron();
+        org.setName("test");
+        org.setParentOrganization(parent);
+        org.addSubordinateOrganization(subord);
+        org.setChief(chief);
+
+        SquadronTerseDto dto = new ModelMapper().map(org, SquadronTerseDto.class);
+        assertEquals(dto, squadronService.convertToDto(org));
     }
 }
 

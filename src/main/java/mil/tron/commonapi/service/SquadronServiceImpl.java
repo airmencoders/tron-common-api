@@ -1,5 +1,7 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.dto.OrganizationTerseDto;
+import mil.tron.commonapi.dto.SquadronTerseDto;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
@@ -10,6 +12,8 @@ import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.SquadronRepository;
 import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
+import org.modelmapper.Conditions;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -27,6 +31,7 @@ public class SquadronServiceImpl implements SquadronService {
     private final AirmanRepository airmanRepo;
     private final OrganizationService orgService;
     private final OrganizationUniqueChecksService orgChecksService;
+    private final ModelMapper modelMapper;
     private static final String RESOURCE_NOT_FOUND_MSG = "Squadron Resource with the ID: %s does not exist.";
 
     public SquadronServiceImpl(
@@ -39,6 +44,7 @@ public class SquadronServiceImpl implements SquadronService {
         this.airmanRepo = airmanRepo;
         this.orgService = orgService;
         this.orgChecksService = orgChecksService;
+        this.modelMapper = new ModelMapper();
     }
 
     @Override
@@ -206,5 +212,21 @@ public class SquadronServiceImpl implements SquadronService {
         }
 
         return addedSquadrons;
+    }
+
+    /**
+     * Converts a squadron entity with all its nested entities into a more terse
+     * structure with only UUID representations for types of Org/Person
+     *
+     * Using model mapper here allows mapping autonomously of most fields except for the
+     * ones of custom type - where we have to explicitly grab out the UUID field since model
+     * mapper has no clue
+     * @param squadron
+     * @return object of type SquadronTerseDto
+     */
+    @Override
+    public SquadronTerseDto convertToDto(Squadron squadron) {
+        modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+        return modelMapper.map(squadron, SquadronTerseDto.class);
     }
 }

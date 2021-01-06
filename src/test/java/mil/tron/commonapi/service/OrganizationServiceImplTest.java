@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.dto.OrganizationTerseDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Squadron;
@@ -9,6 +10,7 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
+import org.aspectj.weaver.ast.Or;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -18,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 
 import java.util.*;
 
@@ -26,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.Mockito.doNothing;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceImplTest {
@@ -42,7 +46,7 @@ class OrganizationServiceImplTest {
 	private OrganizationServiceImpl organizationService;
 
 	private Organization testOrg;
-	
+
 	@BeforeEach
 	void beforeEachSetup() {
 		testOrg = new Organization();
@@ -278,5 +282,23 @@ class OrganizationServiceImplTest {
 		Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
 		List<Organization> addedOrgs = organizationService.bulkAddOrgs(newOrgs);
 		assertEquals(newOrgs, addedOrgs);
+	}
+
+	@Test
+	void testMapToDto() {
+		Person leader = new Person();
+		Organization parent = new Organization();
+		Organization subord = new Organization();
+		Organization org = Organization.builder()
+				.id(UUID.randomUUID())
+				.leader(leader)
+				.parentOrganization(parent)
+				.subordinateOrganizations(Set.of(subord))
+				.name("Test1")
+				.members(Set.of(leader))
+				.build();
+
+		OrganizationTerseDto dto = new ModelMapper().map(org, OrganizationTerseDto.class);
+		assertEquals(dto, organizationService.convertToDto(org));
 	}
 }

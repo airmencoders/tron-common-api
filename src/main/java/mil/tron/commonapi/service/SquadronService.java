@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.dto.SquadronTerseDto;
 import mil.tron.commonapi.entity.Squadron;
 
 import java.util.List;
@@ -18,4 +19,6 @@ public interface SquadronService {
     Squadron addSquadronMember(UUID squadronId, List<UUID> airmanId);
 
     List<Squadron> bulkAddSquadrons(List<Squadron> newSquadrons);
+
+    SquadronTerseDto convertToDto(Squadron squadron);
 }

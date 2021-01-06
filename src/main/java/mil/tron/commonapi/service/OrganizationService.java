@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import mil.tron.commonapi.dto.OrganizationTerseDto;
 import mil.tron.commonapi.entity.Organization;
 
 public interface OrganizationService {
@@ -18,4 +19,7 @@ public interface OrganizationService {
 	Organization addOrganizationMember(UUID organizationId, List<UUID> personIds);
 
 	List<Organization> bulkAddOrgs(List<Organization> newOrgs);
+
+	OrganizationTerseDto convertToDto(Organization org);
+	Organization convertToEntity(OrganizationTerseDto org);
 }

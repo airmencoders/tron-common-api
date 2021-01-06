@@ -7,12 +7,14 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.dto.SquadronTerseDto;
 import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.service.SquadronService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,7 +36,15 @@ public class SquadronController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Squadron.class))))
     })
     @GetMapping("")
-    public ResponseEntity<Iterable<Squadron>> getAllSquadrons() {
+    public ResponseEntity<Object> getAllSquadrons(
+            @Parameter(description = "Retrieves all squadrons, but only lists Entity types by their UUIDs", required = false)
+            @RequestParam(name="onlyIds", required = false, defaultValue = "false") Boolean onlyIds) {
+
+        if (onlyIds) {
+            List<SquadronTerseDto> slimmedOrgs = new ArrayList<>();
+            squadronService.getAllSquadrons().forEach(org -> slimmedOrgs.add(squadronService.convertToDto(org)));
+            return new ResponseEntity<>(slimmedOrgs, HttpStatus.OK);
+        }
         return new ResponseEntity<>(squadronService.getAllSquadrons(), HttpStatus.OK);
     }
 
@@ -45,10 +55,20 @@ public class SquadronController {
                     content = @Content(schema = @Schema(implementation = Squadron.class))),
             @ApiResponse(responseCode = "404",
                     description = "Resource not found",
+                    content = @Content),
+            @ApiResponse(responseCode = "400",
+                    description = "Bad Request or malformed UUID",
                     content = @Content)
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Squadron> getSquadron(@Parameter(description = "UUID of the squadron record", required= true) @PathVariable UUID id) {
+    public ResponseEntity<Object> getSquadron(@Parameter(description = "UUID of the squadron record", required= true) @PathVariable UUID id,
+            @Parameter(description = "Retrieves squadron but only shows UUIDS for person/org types", required = false)
+            @RequestParam(name="onlyIds", required = false, defaultValue = "false") Boolean onlyIds) {
+
+        if (onlyIds) {
+            return new ResponseEntity<>(squadronService.convertToDto(squadronService.getSquadron(id)), HttpStatus.OK);
+        }
+
         return new ResponseEntity<>(squadronService.getSquadron(id), HttpStatus.OK);
     }
 

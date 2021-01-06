@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.dto.OrganizationTerseDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,7 +35,16 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = Organization.class)))
 	})
 	@GetMapping
-	public ResponseEntity<Iterable<Organization>> getOrganizations() {
+	public ResponseEntity<Object> getOrganizations(
+			@Parameter(description = "Retrieves all persons, but only lists org/person types by their UUIDs", required = false)
+		    @RequestParam(name="onlyIds", required = false, defaultValue = "false") Boolean onlyIds) {
+
+		if (onlyIds) {
+			List<OrganizationTerseDto> slimmedOrgs = new ArrayList<>();
+			organizationService.getOrganizations().forEach(org -> slimmedOrgs.add(organizationService.convertToDto(org)));
+			return new ResponseEntity<>(slimmedOrgs, HttpStatus.OK);
+		}
+
 		return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
 	}
 	
@@ -44,13 +55,21 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = Organization.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
+					content = @Content),
+			@ApiResponse(responseCode = "400",
+					description = "Bad Request or malformed UUID",
 					content = @Content)
 	})
 	@GetMapping(value = "/{id}")
-	public ResponseEntity<Organization> getOrganization(
-			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId) {
+	public ResponseEntity<Object> getOrganization(
+			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId,
+			@Parameter(description = "Retrieves organization but only shows UUIDS for person/org types", required = false)
+			@RequestParam(name="onlyIds", required = false, defaultValue = "false") Boolean onlyIds) {
+
 		Organization org = organizationService.getOrganization(organizationId);
-		
+		if (onlyIds) {
+			return new ResponseEntity<>(organizationService.convertToDto(org), HttpStatus.OK);
+		}
 		return new ResponseEntity<>(org, HttpStatus.OK);
 	}
 	

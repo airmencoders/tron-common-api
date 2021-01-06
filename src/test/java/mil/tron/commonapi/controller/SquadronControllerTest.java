@@ -1,6 +1,7 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.SquadronTerseDto;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -266,5 +268,29 @@ public class SquadronControllerTest {
                 .andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(newSquads), result.getResponse().getContentAsString()));
 
 
+    }
+
+    @Test
+    void testGetSquadronsTerse() throws Exception {
+        ModelMapper mapper = new ModelMapper();
+        SquadronTerseDto dto = mapper.map(squadron, SquadronTerseDto.class);
+        String dtoStr = OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(dto));
+        Mockito.when(squadronService.getAllSquadrons()).thenReturn(Lists.newArrayList(squadron));
+        Mockito.when(squadronService.convertToDto(squadron)).thenReturn(dto);
+        mockMvc.perform(get(ENDPOINT + "?onlyIds=true"))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertEquals(dtoStr, result.getResponse().getContentAsString()));
+    }
+
+    @Test
+    void testGetSquadronByIdTerse() throws Exception {
+        ModelMapper mapper = new ModelMapper();
+        SquadronTerseDto dto = mapper.map(squadron, SquadronTerseDto.class);
+        String dtoStr = OBJECT_MAPPER.writeValueAsString(dto);
+        Mockito.when(squadronService.getSquadron(squadron.getId())).thenReturn(squadron);
+        Mockito.when(squadronService.convertToDto(squadron)).thenReturn(dto);
+        mockMvc.perform(get(ENDPOINT + "/{id}?onlyIds=true", squadron.getId()))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertEquals(dtoStr, result.getResponse().getContentAsString()));
     }
 }
