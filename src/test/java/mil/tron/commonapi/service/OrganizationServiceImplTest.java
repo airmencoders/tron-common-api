@@ -10,7 +10,6 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
-import org.aspectj.weaver.ast.Or;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -29,7 +28,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.Mockito.doNothing;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceImplTest {
