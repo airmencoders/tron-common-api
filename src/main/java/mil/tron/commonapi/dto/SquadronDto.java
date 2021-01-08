@@ -2,6 +2,7 @@ package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.*;
+import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Person;
 
 import java.util.UUID;
@@ -42,7 +43,7 @@ public class SquadronDto extends OrganizationDto {
      * @param id
      */
     @JsonSetter("chief")
-    public void setChief(UUID id) {
+    public void setChiefUUID(UUID id) {
         this.chief = id;
     }
 
