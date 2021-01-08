@@ -242,6 +242,17 @@ class OrganizationServiceImplTest {
 	}
 
 	@Test
+	void changeIdFails() {
+		Organization newUnit = new Organization();
+		Map<String, String> attribs = new HashMap<>();
+		attribs.put("id", newUnit.getId().toString());
+
+		// can't patch/change an org's ID
+		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.modifyAttributes(testOrgDto.getId(), attribs));
+	}
+
+	@Test
 	void addRemoveMembers() {
 
 		Person p = new Person();

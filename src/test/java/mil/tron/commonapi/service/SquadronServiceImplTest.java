@@ -45,6 +45,9 @@ public class SquadronServiceImplTest {
     OrganizationServiceImpl orgService;
 
     @Mock
+    PersonService personService;
+
+    @Mock
     AirmanRepository airmanRepo;
 
     @Mock
@@ -112,14 +115,16 @@ public class SquadronServiceImplTest {
         SquadronDto updatedSquadron = squadronService.updateSquadron(savedSquadron.getId(), savedSquadron);
         assertEquals("Grissom AFB", updatedSquadron.getBaseName());
 
-        // test updating a squadron with a name that already exists fails
+        // test updating squadron with different UUID vs UUID in the sqdn dto fails
         SquadronDto newSquadron = new SquadronDto();
-        squadron.setId(newSquadron.getId());
-        newSquadron.setName("test");  // we'll mock this name already exists
-        Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Squadron.class)))
-                .thenReturn(false);
         assertThrows(InvalidRecordUpdateRequest.class, () ->
                 squadronService.updateSquadron(newSquadron.getId(), squadronDto));
+
+        // test updating a squadron with a name that already exists fails
+        newSquadron.setName("test");  // we'll mock this name already exists
+        Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Squadron.class))).thenReturn(false);
+        assertThrows(InvalidRecordUpdateRequest.class, () ->
+                squadronService.updateSquadron(squadronDto.getId(), squadronDto));
     }
 
     @Test
@@ -208,9 +213,16 @@ public class SquadronServiceImplTest {
         Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
         Mockito.when(airmanRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(airman));
 
-        SquadronDto savedSquadron = squadronService.createSquadron(squadronDto);
+        SquadronDto savedSquadronDto = squadronService.createSquadron(squadronDto);
+        Mockito.when(orgService.modify(Mockito.any(UUID.class), Mockito.anyMap()))
+                .thenReturn(null)
+                .thenThrow(new RecordNotFoundException("Not found"))
+                .thenReturn(squadron);
+
+
         Airman savedAirman = airmanService.createAirman(airman);
         Map<String, String> attribs = new HashMap<>();
+        Mockito.when(personService.getPerson(Mockito.any(UUID.class))).thenReturn(savedAirman);
 
         // test Parent class returns null
         assertThrows(InvalidRecordUpdateRequest.class,
@@ -220,38 +232,33 @@ public class SquadronServiceImplTest {
         assertThrows(RecordNotFoundException.class,
                 () -> squadronService.modifySquadronAttributes(new Squadron().getId(), attribs));
 
-        // test can change leader
-        attribs.put("leader", savedAirman.getId().toString());
-        assertEquals(savedAirman.getId().toString(),
-                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
-                        .getLeader()
-                        .toString());
-
         // test can change director
         attribs.put("operationsDirector", savedAirman.getId().toString());
         assertEquals(savedAirman.getId().toString(),
-                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                squadronService.modifySquadronAttributes(savedSquadronDto.getId(), attribs)
                         .getOperationsDirector()
                         .toString());
 
         // test can change chief
         attribs.put("chief", savedAirman.getId().toString());
         assertEquals(savedAirman.getId().toString(),
-                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                squadronService.modifySquadronAttributes(savedSquadronDto.getId(), attribs)
                         .getChief()
                         .toString());
 
         // test can change base name
         attribs.put("baseName", "Test");
         assertEquals("Test",
-                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                squadronService.modifySquadronAttributes(savedSquadronDto.getId(), attribs)
                         .getBaseName());
 
         // test can change major command
         attribs.put("majorCommand", "Test2");
         assertEquals("Test2",
-                squadronService.modifySquadronAttributes(savedSquadron.getId(), attribs)
+                squadronService.modifySquadronAttributes(savedSquadronDto.getId(), attribs)
                         .getMajorCommand());
+
+        // test trying to change the id fails
 
     }
 
@@ -339,6 +346,29 @@ public class SquadronServiceImplTest {
 
         SquadronDto dto = new ModelMapper().map(org, SquadronDto.class);
         assertEquals(dto, squadronService.convertToDto(org));
+    }
+
+    @Test
+    void testDtoToSquadron() {
+        Person chief = new Person();
+        Squadron parent = new Squadron();
+        Squadron suborg = new Squadron();
+        Squadron org = new Squadron();
+        org.setParentOrganization(parent);
+        org.addSubordinateOrganization(suborg);
+        org.setChief(chief);
+
+        SquadronDto dto = new SquadronDto();
+        dto.setId(org.getId());
+        dto.setParentOrganizationUUID(parent.getId());
+        dto.setName(org.getName());
+        dto.setChief(org.getChief());
+        dto.setSubordinateOrganizations(org.getSubordinateOrganizations());
+
+        Mockito.when(orgService.findOrganization(dto.getId())).thenReturn(org);
+        Mockito.when(personService.getPerson(chief.getId())).thenReturn(chief);
+
+        assertEquals(org, squadronService.convertToEntity(dto));
     }
 }
 

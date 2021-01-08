@@ -50,9 +50,10 @@ public class SquadronDto extends OrganizationDto {
      * Used by model mapper during DTO conversion process
      * @param p
      */
-    public void setOperationsDirector(Person p) {
-        if (p != null) {
-            this.operationsDirector = p.getId();
+    public void setOperationsDirector(Object p) {
+        if (p instanceof Person) { // Object, so that this can work for all types of Persons
+            Person person = (Person) p;
+            this.operationsDirector = person.getId();
         }
     }
 
@@ -60,9 +61,10 @@ public class SquadronDto extends OrganizationDto {
      * Used by model mapper during DTO conversion process
      * @param p
      */
-    public void setChief(Person p) {
-        if (p != null) {
-            this.chief = p.getId();
+    public void setChief(Object p) { // Object, so that this can work for all types of Persons
+        if (p instanceof Person) {
+            Person person = (Person) p;
+            this.chief = person.getId();
         }
     }
 }

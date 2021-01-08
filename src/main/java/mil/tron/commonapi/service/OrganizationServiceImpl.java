@@ -108,6 +108,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 		return repository.save(organization);
 	}
 
+	/**
+	 * Modifies non collection type attributes of the organization
+	 * @param organizationId The UUID of the organization to modify
+	 * @param attribs A map of string key-values where keys are named of fields and values are the value to set to
+	 * @return The modified Organization entity object
+	 */
 	@Override
 	public Organization modify(UUID organizationId, Map<String, String> attribs) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
@@ -146,7 +152,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		return repository.save(organization);
 	}
-		
+
+	/**
+	 * Creates a new organization and returns the DTO representation of which
+	 * @param organization The DTO containing the new Org information with an optional UUID (one will be assigned if omitted)
+	 * @return The new organization in DTO form
+	 */
 	@Override
 	public OrganizationDto createOrganization(OrganizationDto organization) {
 		Organization org = this.convertToEntity(organization);
@@ -160,6 +171,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 		return this.convertToDto(repository.save(org));
 	}
 
+	/**
+	 * Updates an existing organization
+	 * @param id UUID of the existing organization
+	 * @param organization The organization information to overwrite the existing with (in DTO form)
+	 * @return The modified organization re-wrapped in a DTO object
+	 */
 	@Override
 	public OrganizationDto updateOrganization(UUID id, OrganizationDto organization) {
 		Organization org = this.convertToEntity(organization);
@@ -178,6 +195,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 		return this.convertToDto(repository.save(org));
 	}
 
+	/**
+	 * Deletes an organization by UUID (if it exists)
+	 * @param id
+	 */
 	@Override
 	public void deleteOrganization(UUID id) {
 		if (repository.existsById(id))
@@ -186,6 +207,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
 	}
 
+	/**
+	 * Gets all organizations in the database, and converts them to DTO form before returning
+	 * @return Iterable of OrganizationDTOs
+	 */
 	@Override
 	public Iterable<OrganizationDto> getOrganizations() {
 		return StreamSupport
@@ -194,6 +219,11 @@ public class OrganizationServiceImpl implements OrganizationService {
 				.collect(Collectors.toList());
 	}
 
+	/**
+	 * Gets a single Organization from the database by UUID
+	 * @param id UUID of the organization to get
+	 * @return The DTO representation of the organization
+	 */
 	@Override
 	public OrganizationDto getOrganization(UUID id) {
 		return this.convertToDto(this.findOrganization(id));
@@ -234,6 +264,11 @@ public class OrganizationServiceImpl implements OrganizationService {
 		return this.convertToDto(this.modify(organizationId, attribs));
 	}
 
+	/**
+	 * Adds a list of Org DTOs as new entities in the database
+	 * @param newOrgs List of Organization DTOs to add
+	 * @return Same list of input Org DTOs (if they were all successfully created)
+	 */
 	@Override
 	public List<OrganizationDto> bulkAddOrgs(List<OrganizationDto> newOrgs) {
 		List<OrganizationDto> addedOrgs = new ArrayList<>();

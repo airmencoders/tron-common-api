@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.SquadronDto;
 import mil.tron.commonapi.entity.Airman;
 import org.assertj.core.util.Lists;
+import org.assertj.core.util.Maps;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -328,6 +329,12 @@ public class SquadronIntegrationTest {
                 else if (attrib.equals("majorCommand")) assertNull(clearedUnit.getMajorCommand());
                 else throw new Exception("Unknown attribute given");
             }
+
+            // test can't change a squadron's existing id
+            mockMvc.perform(patch(ENDPOINT + newSquadron.getId().toString())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(Maps.newHashMap("id", UUID.randomUUID()))))
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
