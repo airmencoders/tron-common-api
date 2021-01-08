@@ -234,17 +234,15 @@ public class SquadronServiceImplTest {
 
         // test can change director
         attribs.put("operationsDirector", savedAirman.getId().toString());
-        assertEquals(savedAirman.getId().toString(),
+        assertEquals(savedAirman.getId(),
                 squadronService.modifySquadronAttributes(savedSquadronDto.getId(), attribs)
-                        .getOperationsDirector()
-                        .toString());
+                        .getOperationsDirector());
 
         // test can change chief
         attribs.put("chief", savedAirman.getId().toString());
-        assertEquals(savedAirman.getId().toString(),
+        assertEquals(savedAirman.getId(),
                 squadronService.modifySquadronAttributes(savedSquadronDto.getId(), attribs)
-                        .getChief()
-                        .toString());
+                        .getChief());
 
         // test can change base name
         attribs.put("baseName", "Test");
