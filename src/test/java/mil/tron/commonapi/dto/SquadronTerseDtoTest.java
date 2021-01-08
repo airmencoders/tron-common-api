@@ -18,7 +18,7 @@ public class SquadronTerseDtoTest {
 
         // check just fields we had to manually make a setter for, plus check
         //  we can get/set to the parent class too...
-        SquadronTerseDto dto = new SquadronTerseDto();
+        SquadronDto dto = new SquadronDto();
         dto.setChief(b);
         dto.setOperationsDirector(a);
         dto.setMembers(Set.of(a, b));

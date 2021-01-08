@@ -8,7 +8,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class OrganizationTerseDtoTest {
+public class OrganizationDtoTest {
 
     @Test
     void checkDtoFields() {
@@ -16,7 +16,7 @@ public class OrganizationTerseDtoTest {
         Organization o = new Organization();
 
         // just check the fields we had to manually make a setter for
-        OrganizationTerseDto dto = new OrganizationTerseDto();
+        OrganizationDto dto = new OrganizationDto();
         dto.setLeader(p);
         dto.setMembers(Set.of(p));
         dto.setParentOrganization(o);

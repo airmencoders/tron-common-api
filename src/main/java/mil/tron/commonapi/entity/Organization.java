@@ -42,6 +42,11 @@ public class Organization {
     @ManyToMany
     private Set<Person> members = new HashSet<Person>();
 
+    public void setMembers(Set<Person> members) {
+        this.members = members;
+    }
+
+
     @Getter
     @Setter
     @ManyToOne

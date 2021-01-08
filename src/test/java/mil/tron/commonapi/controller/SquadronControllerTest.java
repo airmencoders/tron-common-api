@@ -1,7 +1,7 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mil.tron.commonapi.dto.SquadronTerseDto;
+import mil.tron.commonapi.dto.SquadronDto;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -48,6 +48,7 @@ public class SquadronControllerTest {
     private SquadronService squadronService;
 
     private Squadron squadron;
+    private SquadronDto squadronDto;
 
     @BeforeEach
     public void insertSquadron() throws Exception {
@@ -55,29 +56,35 @@ public class SquadronControllerTest {
         squadron.setName("TEST ORG");
         squadron.setMajorCommand("ACC");
         squadron.setBaseName("Travis AFB");
+
+        squadronDto = new SquadronDto();
+        squadronDto.setId(squadron.getId());
+        squadronDto.setName(squadron.getName());
+        squadronDto.setMajorCommand(squadron.getMajorCommand());
+        squadronDto.setBaseName(squadron.getBaseName());
     }
 
     @Test
     public void testAddNewSquadron() throws Exception {
 
-        Mockito.when(squadronService.createSquadron(Mockito.any(Squadron.class))).then(returnsFirstArg());
+        Mockito.when(squadronService.createSquadron(Mockito.any(SquadronDto.class))).then(returnsFirstArg());
         MvcResult response = mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(squadron)))
+                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(squadronDto)))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
 
-        assertEquals(OBJECT_MAPPER.writeValueAsString(squadron), response.getResponse().getContentAsString());
+        assertEquals(OBJECT_MAPPER.writeValueAsString(squadronDto), response.getResponse().getContentAsString());
     }
 
     @Test
     public void testAddNewSquadronOverwriteExistingFails() throws Exception {
 
-        Mockito.when(squadronService.createSquadron(Mockito.any(Squadron.class)))
+        Mockito.when(squadronService.createSquadron(Mockito.any(SquadronDto.class)))
                 .thenThrow(new ResourceAlreadyExistsException("Record Already Exists"));
 
         // this POST will fail since it'll detect UUID in db already exists
         mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(squadron)))
+                .contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(squadronDto)))
                 .andExpect(status().is(HttpStatus.CONFLICT.value()));
 
     }
@@ -85,13 +92,13 @@ public class SquadronControllerTest {
     @Test
     public void testGetSquadron() throws Exception {
 
-        Mockito.when(squadronService.getSquadron(Mockito.any(UUID.class))).thenReturn(squadron);
+        Mockito.when(squadronService.getSquadron(Mockito.any(UUID.class))).thenReturn(squadronDto);
 
         MvcResult response = mockMvc.perform(get(ENDPOINT + squadron.getId().toString()))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        assertEquals(OBJECT_MAPPER.writeValueAsString(squadron), response.getResponse().getContentAsString());
+        assertEquals(OBJECT_MAPPER.writeValueAsString(squadronDto), response.getResponse().getContentAsString());
     }
 
     @Test
@@ -109,43 +116,43 @@ public class SquadronControllerTest {
     @Test
     public void testUpdateSquadron() throws Exception {
 
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(Squadron.class)))
-                .thenReturn(squadron);
+        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class)))
+                .thenReturn(squadronDto);
 
         squadron.setBaseName("Grissom AFB");
 
-        MvcResult response = mockMvc.perform(put(ENDPOINT + squadron.getId().toString())
+        MvcResult response = mockMvc.perform(put(ENDPOINT + squadronDto.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(squadron)))
+                .content(OBJECT_MAPPER.writeValueAsString(squadronDto)))
                 .andExpect(status().is(HttpStatus.OK.value()))
                 .andReturn();
 
-        assertEquals(OBJECT_MAPPER.writeValueAsString(squadron), response.getResponse().getContentAsString());
+        assertEquals(OBJECT_MAPPER.writeValueAsString(squadronDto), response.getResponse().getContentAsString());
     }
 
     @Test
     public void testUpdateBogusSquadronFails() throws Exception {
 
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(Squadron.class)))
+        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class)))
                 .thenThrow(new RecordNotFoundException("Record not found"));
 
         UUID id = UUID.randomUUID();
 
-        squadron.setBaseName("Grissom AFB");
+        squadronDto.setBaseName("Grissom AFB");
 
         mockMvc.perform(put(ENDPOINT + id.toString())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(squadron)))
+                .content(OBJECT_MAPPER.writeValueAsString(squadronDto)))
                 .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
     }
 
     @Test
     public void testUpdateSquadronDifferingIdsFails() throws Exception {
 
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(Squadron.class)))
+        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class)))
                 .thenThrow(new InvalidRecordUpdateRequest("IDs are different"));
 
-        Squadron newUnit = new Squadron();
+        SquadronDto newUnit = new SquadronDto();
         newUnit.setBaseName("Grissom AFB");
         UUID realId = newUnit.getId();
         newUnit.setId(UUID.randomUUID());
@@ -163,7 +170,7 @@ public class SquadronControllerTest {
         doNothing().when(squadronService).removeSquadron(Mockito.any(UUID.class));
 
         // delete the record
-        mockMvc.perform(delete(ENDPOINT + squadron.getId().toString()))
+        mockMvc.perform(delete(ENDPOINT + squadronDto.getId().toString()))
                 .andExpect(status().is(HttpStatus.OK.value()));
 
         doThrow(new RecordNotFoundException("Record not found"))
@@ -171,7 +178,7 @@ public class SquadronControllerTest {
                 .removeSquadron(Mockito.any(UUID.class));
 
         // delete the record with bad ID
-        mockMvc.perform(delete(ENDPOINT + squadron.getId().toString()))
+        mockMvc.perform(delete(ENDPOINT + squadronDto.getId().toString()))
                 .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
 
     }
@@ -207,14 +214,14 @@ public class SquadronControllerTest {
 
             Mockito.when(squadronService
                     .modifySquadronAttributes(Mockito.any(UUID.class), Mockito.anyMap()))
-                    .thenReturn(squadron);
+                    .thenReturn(squadronDto);
 
             for (String attrib : attribs.keySet()) {
                 Map<String, String> data = new HashMap<>();
 
                 // set attribute
                 data.put(attrib, attribs.get(attrib));
-                MvcResult newResponse = mockMvc.perform(patch(ENDPOINT + squadron.getId().toString())
+                MvcResult newResponse = mockMvc.perform(patch(ENDPOINT + squadronDto.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(data)))
                         .andExpect(status().isOk())
@@ -228,19 +235,19 @@ public class SquadronControllerTest {
 
             Mockito.when(squadronService
                     .addSquadronMember(Mockito.any(UUID.class), Mockito.anyList()))
-                    .thenReturn(squadron);
+                    .thenReturn(squadronDto);
 
             Mockito.when(squadronService
                     .removeSquadronMember(Mockito.any(UUID.class), Mockito.anyList()))
-                    .thenReturn(squadron);
+                    .thenReturn(squadronDto);
 
 
-            mockMvc.perform(patch(ENDPOINT + squadron.getId().toString() + "/members")
+            mockMvc.perform(patch(ENDPOINT + squadronDto.getId().toString() + "/members")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { new Airman().getId() })))
                     .andExpect(status().isOk());
 
-            mockMvc.perform(delete(ENDPOINT + squadron.getId().toString() + "/members")
+            mockMvc.perform(delete(ENDPOINT + squadronDto.getId().toString() + "/members")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { newAirman.getId() })))
                     .andExpect(status().isOk());
@@ -251,11 +258,11 @@ public class SquadronControllerTest {
 
     @Test
     void testBulkCreateSquadrons() throws Exception {
-        List<Squadron> newSquads = Lists.newArrayList(
-                new Squadron(),
-                new Squadron(),
-                new Squadron(),
-                new Squadron()
+        List<SquadronDto> newSquads = Lists.newArrayList(
+                squadronService.convertToDto(new Squadron()),
+                squadronService.convertToDto(new Squadron()),
+                squadronService.convertToDto(new Squadron()),
+                squadronService.convertToDto(new Squadron())
         );
 
         Mockito.when(squadronService.bulkAddSquadrons(Mockito.anyList())).then(returnsFirstArg());
@@ -273,11 +280,11 @@ public class SquadronControllerTest {
     @Test
     void testGetSquadronsTerse() throws Exception {
         ModelMapper mapper = new ModelMapper();
-        SquadronTerseDto dto = mapper.map(squadron, SquadronTerseDto.class);
+        SquadronDto dto = mapper.map(squadron, SquadronDto.class);
         String dtoStr = OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(dto));
-        Mockito.when(squadronService.getAllSquadrons()).thenReturn(Lists.newArrayList(squadron));
+        Mockito.when(squadronService.getAllSquadrons()).thenReturn(Lists.newArrayList(squadronDto));
         Mockito.when(squadronService.convertToDto(squadron)).thenReturn(dto);
-        mockMvc.perform(get(ENDPOINT + "?onlyIds=true"))
+        mockMvc.perform(get(ENDPOINT))
                 .andExpect(status().isOk())
                 .andExpect(result -> assertEquals(dtoStr, result.getResponse().getContentAsString()));
     }
@@ -285,11 +292,11 @@ public class SquadronControllerTest {
     @Test
     void testGetSquadronByIdTerse() throws Exception {
         ModelMapper mapper = new ModelMapper();
-        SquadronTerseDto dto = mapper.map(squadron, SquadronTerseDto.class);
+        SquadronDto dto = mapper.map(squadron, SquadronDto.class);
         String dtoStr = OBJECT_MAPPER.writeValueAsString(dto);
-        Mockito.when(squadronService.getSquadron(squadron.getId())).thenReturn(squadron);
+        Mockito.when(squadronService.getSquadron(squadron.getId())).thenReturn(squadronDto);
         Mockito.when(squadronService.convertToDto(squadron)).thenReturn(dto);
-        mockMvc.perform(get(ENDPOINT + "/{id}?onlyIds=true", squadron.getId()))
+        mockMvc.perform(get(ENDPOINT + "/{id}", squadron.getId()))
                 .andExpect(status().isOk())
                 .andExpect(result -> assertEquals(dtoStr, result.getResponse().getContentAsString()));
     }
