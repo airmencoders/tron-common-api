@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.SquadronDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
@@ -13,7 +14,6 @@ import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -33,7 +33,7 @@ public class SquadronServiceImpl implements SquadronService {
     private final PersonService personService;
     private final OrganizationService orgService;
     private final OrganizationUniqueChecksService orgChecksService;
-    private final ModelMapper modelMapper;
+    private final DtoMapper modelMapper;
     private static final String RESOURCE_NOT_FOUND_MSG = "Squadron Resource with the ID: %s does not exist.";
 
     public SquadronServiceImpl(
@@ -48,17 +48,7 @@ public class SquadronServiceImpl implements SquadronService {
         this.orgChecksService = orgChecksService;
 
         // allows us to not throw when source property is null, notably the objectId
-        this.modelMapper = new ModelMapper() {
-            @Override
-            public <D> D map(Object source, Class<D> destinationType) {
-                Object tmpSource = source;
-                if(source == null){
-                    tmpSource = new Object();
-                }
-
-                return super.map(tmpSource, destinationType);
-            }
-        };
+        this.modelMapper = new DtoMapper();
     }
 
     /**

@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -12,7 +13,6 @@ import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -28,7 +28,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final PersonService personService;
 	private final PersonRepository personRepository;
 	private final OrganizationUniqueChecksService orgChecksService;
-	private final ModelMapper modelMapper;
+	private final DtoMapper modelMapper;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	
 	public OrganizationServiceImpl(
@@ -41,18 +41,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		this.personRepository = personRepository;
 		this.personService = personService;
 		this.orgChecksService = orgChecksService;
-
-		this.modelMapper = new ModelMapper() {
-			@Override
-			public <D> D map(Object source, Class<D> destinationType) {
-				Object tmpSource = source;
-				if(source == null){
-					tmpSource = new Object();
-				}
-
-				return super.map(tmpSource, destinationType);
-			}
-		};
+		this.modelMapper = new DtoMapper();
 	}
 
 	/**
