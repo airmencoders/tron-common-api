@@ -3,7 +3,6 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.SquadronDto;
 import mil.tron.commonapi.entity.Airman;
-import mil.tron.commonapi.entity.Squadron;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -23,7 +22,8 @@ import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -83,7 +83,7 @@ public class SquadronIntegrationTest {
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
 
-        Squadron newSquadron = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+        SquadronDto newSquadron = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), SquadronDto.class);
 
         // this POST will fail since it'll detect UUID in db already exists
         mockMvc.perform(post(ENDPOINT)
@@ -169,7 +169,7 @@ public class SquadronIntegrationTest {
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
 
-        Squadron newUnit = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+        SquadronDto newUnit = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), SquadronDto.class);
         UUID id = UUID.randomUUID();
 
         newUnit.setBaseName("Grissom AFB");
@@ -191,7 +191,7 @@ public class SquadronIntegrationTest {
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
 
-        Squadron newUnit = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+        SquadronDto newUnit = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), SquadronDto.class);
         newUnit.setBaseName("Grissom AFB");
         UUID realId = newUnit.getId();
         newUnit.setId(UUID.randomUUID());
@@ -214,7 +214,7 @@ public class SquadronIntegrationTest {
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
 
-        Squadron newUnit = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+        SquadronDto newUnit = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), SquadronDto.class);
         UUID id = newUnit.getId();
 
         // see how many recs are in there now
@@ -222,7 +222,7 @@ public class SquadronIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        Squadron[] allSquadronRecs = OBJECT_MAPPER.readValue(allRecs.getResponse().getContentAsString(), Squadron[].class);
+        SquadronDto[] allSquadronRecs = OBJECT_MAPPER.readValue(allRecs.getResponse().getContentAsString(), SquadronDto[].class);
         int totalRecs = allSquadronRecs.length;
 
         // delete the record
@@ -233,7 +233,7 @@ public class SquadronIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        Squadron[] newAllSquadronRecs = OBJECT_MAPPER.readValue(modRecs.getResponse().getContentAsString(), Squadron[].class);
+        SquadronDto[] newAllSquadronRecs = OBJECT_MAPPER.readValue(modRecs.getResponse().getContentAsString(), SquadronDto[].class);
 
         // assert we have one less in the db
         assertEquals(totalRecs - 1, newAllSquadronRecs.length);
@@ -243,7 +243,7 @@ public class SquadronIntegrationTest {
     class TestSquadronAttributeChanges {
 
         private Airman newAirman;
-        private Squadron newSquadron;
+        private SquadronDto newSquadron;
 
         @BeforeEach
         public void initAirmanAndSquadron() throws Exception {
@@ -265,7 +265,7 @@ public class SquadronIntegrationTest {
                     .andExpect(status().is(HttpStatus.CREATED.value()))
                     .andReturn();
 
-            newSquadron = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+            newSquadron = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), SquadronDto.class);
             assertNull(newSquadron.getLeader());
 
             MvcResult response2 = mockMvc.perform(post(AIRMAN_ENDPOINT)
@@ -342,7 +342,7 @@ public class SquadronIntegrationTest {
                     .andExpect(status().is(HttpStatus.BAD_REQUEST.value()));
 
             // test the 400 - bad airmen uuid
-            mockMvc.perform(patch(ENDPOINT + new Squadron().getId().toString() + "/members")
+            mockMvc.perform(patch(ENDPOINT + new SquadronDto().getId().toString() + "/members")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(OBJECT_MAPPER.writeValueAsString(new UUID[] { new Airman().getId() })))
                     .andExpect(status().is(HttpStatus.NOT_FOUND.value()));
@@ -390,10 +390,10 @@ public class SquadronIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newSquadrons)))
                 .andExpect(status().isCreated())
-                .andExpect(result -> assertEquals(3, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Squadron[].class).length));
+                .andExpect(result -> assertEquals(3, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), SquadronDto[].class).length));
 
         // now try to add again one that already has an existing name
-        Squadron s4 = new Squadron();
+        SquadronDto s4 = new SquadronDto();
         s4.setName(squadron.getName());
         mockMvc.perform(post(ENDPOINT + "squadrons")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -413,9 +413,9 @@ public class SquadronIntegrationTest {
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
 
-        Squadron newUnit1 = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), Squadron.class);
+        SquadronDto newUnit1 = OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(), SquadronDto.class);
 
-        Squadron s2 = new Squadron();
+        SquadronDto s2 = new SquadronDto();
         s2.setName("Squad2");
 
         // add the second squadron
@@ -425,7 +425,7 @@ public class SquadronIntegrationTest {
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andReturn();
 
-        Squadron newUnit2 = OBJECT_MAPPER.readValue(response2.getResponse().getContentAsString(), Squadron.class);
+        SquadronDto newUnit2 = OBJECT_MAPPER.readValue(response2.getResponse().getContentAsString(), SquadronDto.class);
 
         Airman airman = new Airman();
         airman.setFirstName("John");
