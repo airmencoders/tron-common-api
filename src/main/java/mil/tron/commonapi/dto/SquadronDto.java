@@ -1,8 +1,10 @@
 package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
-import lombok.*;
-import mil.tron.commonapi.entity.Airman;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import mil.tron.commonapi.entity.Person;
 
 import java.util.UUID;
