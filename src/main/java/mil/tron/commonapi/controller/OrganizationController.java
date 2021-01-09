@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,7 +49,7 @@ public class OrganizationController {
 					content = @Content),
 			@ApiResponse(responseCode = "400",
 					description = "Bad Request or malformed UUID",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> getOrganization(
@@ -64,7 +65,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "409",
 					description = "Resource already exists with the id provided",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping
 	public ResponseEntity<OrganizationDto> createOrganization(
@@ -80,10 +81,10 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad request",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> updateOrganization(
@@ -105,7 +106,7 @@ public class OrganizationController {
 					content = @Content),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@DeleteMapping(value = "/{id}")
 	public ResponseEntity<Object> deleteOrganization(
@@ -121,10 +122,10 @@ public class OrganizationController {
 					content = @Content),
 			@ApiResponse(responseCode = "404",
 					description = "Provided organization UUID was invalid",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Provided person UUID(s) was/were invalid",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@DeleteMapping("/{id}/members")
 	public ResponseEntity<Object> deleteOrganizationMember(@Parameter(description = "UUID of the organization to modify", required = true) @PathVariable UUID id,
@@ -140,10 +141,10 @@ public class OrganizationController {
 					content = @Content),
 			@ApiResponse(responseCode = "404",
 					description = "A organization UUID was invalid",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Provided person UUID(s) was/were invalid",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PatchMapping("/{id}/members")
 	public ResponseEntity<Object> addOrganizationMember(@Parameter(description = "UUID of the organization record", required = true) @PathVariable UUID id,
@@ -159,10 +160,10 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Organization resource not found",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "400",
 					description = "A provided person UUID was invalid",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PatchMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> patchOrganization(
@@ -183,10 +184,10 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad data or validation error",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "409",
 					description = "Bad Request / One of the supplied organizations contained a UUID that already exists or other duplicate data",
-					content = @Content)
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping(value = "/organizations")
 	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
