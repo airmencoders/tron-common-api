@@ -1,7 +1,7 @@
 package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.dto.OrganizationDto;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,12 +32,13 @@ public class OrganizationIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private Organization organization;
+    private OrganizationDto organization;
 
     @BeforeEach
     public void insertSquadron() throws Exception {
-        organization = new Organization();
+        organization = new OrganizationDto();
         organization.setName("TEST ORG");
+        organization.setMembers(null);
     }
 
     @Test
@@ -45,13 +46,15 @@ public class OrganizationIntegrationTest {
     @Rollback
     void testBulkAddOrganizations() throws Exception {
 
-        Organization s2 = new Organization();
+        OrganizationDto s2 = new OrganizationDto();
         s2.setName("TEST2");
+        s2.setMembers(null);
 
-        Organization s3 = new Organization();
+        OrganizationDto s3 = new OrganizationDto();
         s3.setName("TEST3");
+        s3.setMembers(null);
 
-        List<Organization> newOrganizations = Lists.newArrayList(
+        List<OrganizationDto> newOrganizations = Lists.newArrayList(
                 organization,
                 s2,
                 s3
@@ -62,10 +65,10 @@ public class OrganizationIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newOrganizations)))
                 .andExpect(status().isCreated())
-                .andExpect(result -> assertEquals(3, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Organization[].class).length));
+                .andExpect(result -> assertEquals(3, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto[].class).length));
 
         // now try to add again one that already has an existing name
-        Organization s4 = new Organization();
+        OrganizationDto s4 = new OrganizationDto();
         s4.setName(organization.getName());
         mockMvc.perform(post(ENDPOINT + "organizations")
                 .contentType(MediaType.APPLICATION_JSON)

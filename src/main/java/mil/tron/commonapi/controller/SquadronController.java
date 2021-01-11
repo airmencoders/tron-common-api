@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.entity.Squadron;
+import mil.tron.commonapi.dto.SquadronDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.SquadronService;
 import org.springframework.http.HttpStatus;
@@ -32,10 +32,11 @@ public class SquadronController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Squadron.class))))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = SquadronDto.class))))
     })
     @GetMapping("")
-    public ResponseEntity<Iterable<Squadron>> getAllSquadrons() {
+    public ResponseEntity<Object> getAllSquadrons() {
+
         return new ResponseEntity<>(squadronService.getAllSquadrons(), HttpStatus.OK);
     }
 
@@ -43,13 +44,17 @@ public class SquadronController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Squadron.class))),
+                    content = @Content(schema = @Schema(implementation = SquadronDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Resource not found",
+                    content = @Content),
+            @ApiResponse(responseCode = "400",
+                    description = "Bad Request or malformed UUID",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Squadron> getSquadron(@Parameter(description = "UUID of the squadron record", required= true) @PathVariable UUID id) {
+    public ResponseEntity<Object> getSquadron(@Parameter(description = "UUID of the squadron record", required= true) @PathVariable UUID id) {
+
         return new ResponseEntity<>(squadronService.getSquadron(id), HttpStatus.OK);
     }
 
@@ -57,13 +62,13 @@ public class SquadronController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Squadron.class))),
+                    content = @Content(schema = @Schema(implementation = SquadronDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Bad Request / Squadron with this UUID already exists",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PostMapping("")
-    public ResponseEntity<Squadron> addSquadron(@Parameter(description = "Squadron record to add", required = true) @RequestBody Squadron squadron) {
+    public ResponseEntity<SquadronDto> addSquadron(@Parameter(description = "Squadron record to add", required = true) @RequestBody SquadronDto squadron) {
         return new ResponseEntity<>(squadronService.createSquadron(squadron), HttpStatus.CREATED);
 
     }
@@ -72,7 +77,7 @@ public class SquadronController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Squadron.class))),
+                    content = @Content(schema = @Schema(implementation = SquadronDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Record not found / Attempt to update squadron that does not exist with provided UUID",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -81,8 +86,8 @@ public class SquadronController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PutMapping("/{id}")
-    public ResponseEntity<Squadron> updateSquadron(@Parameter(description = "Squadron record ID to update", required = true) @PathVariable UUID id,
-                                               @Parameter(description = "Squadron record data", required = true) @RequestBody Squadron squadron) {
+    public ResponseEntity<SquadronDto> updateSquadron(@Parameter(description = "Squadron record ID to update", required = true) @PathVariable UUID id,
+                                               @Parameter(description = "Squadron record data", required = true) @RequestBody SquadronDto squadron) {
 
         return new ResponseEntity<>(squadronService.updateSquadron(id, squadron), HttpStatus.OK);
 
@@ -170,7 +175,7 @@ public class SquadronController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Squadron.class))),
+                    content = @Content(schema = @Schema(implementation = SquadronDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Bad data or validation error",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -179,7 +184,7 @@ public class SquadronController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PostMapping(value = "/squadrons")
-    public ResponseEntity<Object> addNewSquadrons(@RequestBody List<Squadron> squads) {
+    public ResponseEntity<Object> addNewSquadrons(@RequestBody List<SquadronDto> squads) {
         return new ResponseEntity<>(squadronService.bulkAddSquadrons(squads), HttpStatus.CREATED);
     }
 

@@ -40,7 +40,12 @@ public class Organization {
     @Getter
     @Builder.Default
     @ManyToMany
-    private Set<Person> members = new HashSet<Person>();
+    private Set<Person> members = new HashSet<>();
+
+    public void setMembers(Set<Person> members) {
+        this.members = members;
+    }
+
 
     @Getter
     @Setter
@@ -56,7 +61,7 @@ public class Organization {
     @Builder.Default
     @OneToMany
     @JsonIgnore
-    private Set<Organization> subordinateOrganizations = new HashSet<Organization>();
+    private Set<Organization> subordinateOrganizations = new HashSet<>();
 
     /**
      * This method will be performed before database operations.
@@ -83,6 +88,11 @@ public class Organization {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public int hashCode() {
+        return this.id.hashCode();
     }
 
     public void addSubordinateOrganization(Organization subOrg) {
