@@ -1,0 +1,536 @@
+[
+  {
+    "id": 2,
+    "name": "Marine Corps",
+    "enlistedRanks": [
+      {
+        "rankName": "Private",
+        "payGrade": "E-1",
+        "rankAbbr": "Pvt",
+        "rankStatus": "Enlisted",
+        "rankId": 23
+      },
+      {
+        "rankName": "Private First Class",
+        "payGrade": "E-2",
+        "rankAbbr": "PFC",
+        "rankStatus": "Enlisted",
+        "rankId": 24
+      },
+      {
+        "rankName": "Lance Corporal",
+        "payGrade": "E-3",
+        "rankAbbr": "LCpl",
+        "rankStatus": "Enlisted",
+        "rankId": 25
+      },
+      {
+        "rankName": "Corporal",
+        "payGrade": "E-4",
+        "rankAbbr": "Cpl",
+        "rankStatus": "Enlisted",
+        "rankId": 26
+      },
+      {
+        "rankName": "Sergeant",
+        "payGrade": "E-5",
+        "rankAbbr": "Sgt",
+        "rankStatus": "Enlisted",
+        "rankId": 27
+      },
+      {
+        "rankName": "Staff Sergeant",
+        "payGrade": "E-6",
+        "rankAbbr": "SSgt",
+        "rankStatus": "Enlisted",
+        "rankId": 28
+      },
+      {
+        "rankName": "Gunnery Sergeant",
+        "payGrade": "E-7",
+        "rankAbbr": "GySgt",
+        "rankStatus": "Enlisted",
+        "rankId": 29
+      },
+      {
+        "rankName": "Master Sergeant",
+        "payGrade": "E-8",
+        "rankAbbr": "MSgt",
+        "rankStatus": "Enlisted",
+        "rankId": 30
+      },
+      {
+        "rankName": "First Sergeant",
+        "payGrade": "E-9",
+        "rankAbbr": "1stSg",
+        "rankStatus": "Enlisted",
+        "rankId": 31
+      },
+      {
+        "rankName": "Master Gunnery Sergeant",
+        "payGrade": "E-9",
+        "rankAbbr": "MGySg",
+        "rankStatus": "Enlisted",
+        "rankId": 32
+      },
+      {
+        "rankName": "Sergeant Major",
+        "payGrade": "E-9",
+        "rankAbbr": "SgtMa",
+        "rankStatus": "Enlisted",
+        "rankId": 33
+      },
+      {
+        "rankName": "Sergeant Major Of The Marine Corps",
+        "payGrade": "E-9",
+        "rankAbbr": "sgtMa",
+        "rankStatus": "Enlisted",
+        "rankId": 34
+      }
+    ],
+    "officerRanks": [
+      {
+        "rankName": "Second Lieutenant",
+        "payGrade": "O-1",
+        "rankAbbr": "2ndLt",
+        "rankStatus": "Officer",
+        "rankId": 40
+      },
+      {
+        "rankName": "First Lieutenant",
+        "payGrade": "O-2",
+        "rankAbbr": "1stLt",
+        "rankStatus": "Officer",
+        "rankId": 41
+      },
+      {
+        "rankName": "Captain",
+        "payGrade": "O-3",
+        "rankAbbr": "Capt",
+        "rankStatus": "Officer",
+        "rankId": 42
+      },
+      {
+        "rankName": "Major",
+        "payGrade": "O-4",
+        "rankAbbr": "Maj",
+        "rankStatus": "Officer",
+        "rankId": 43
+      },
+      {
+        "rankName": "Lieutenant Colonel",
+        "payGrade": "O-5",
+        "rankAbbr": "LtCol",
+        "rankStatus": "Officer",
+        "rankId": 44
+      },
+      {
+        "rankName": "Colonel",
+        "payGrade": "O-6",
+        "rankAbbr": "Col",
+        "rankStatus": "Officer",
+        "rankId": 45
+      },
+      {
+        "rankName": "Brigadier General",
+        "payGrade": "O-7",
+        "rankAbbr": "BGen",
+        "rankStatus": "Officer",
+        "rankId": 46
+      },
+      {
+        "rankName": "Major General",
+        "payGrade": "O-8",
+        "rankAbbr": "MajGen",
+        "rankStatus": "Officer",
+        "rankId": 47
+      },
+      {
+        "rankName": "Lieutenant General",
+        "payGrade": "O-9",
+        "rankAbbr": "LtGen",
+        "rankStatus": "Officer",
+        "rankId": 48
+      },
+      {
+        "rankName": "General",
+        "payGrade": "O-10",
+        "rankAbbr": "Gen",
+        "rankStatus": "Officer",
+        "rankId": 49
+      }
+    ],
+    "warrantOfficerRanks": [
+      {
+        "rankName": "Warrant Officer 1",
+        "payGrade": "W-1",
+        "rankAbbr": "WO1",
+        "rankStatus": "Warrant Officer",
+        "rankId": 35
+      },
+      {
+        "rankName": "Chief Warrant Officer 2",
+        "payGrade": "W-2",
+        "rankAbbr": "CW2",
+        "rankStatus": "Warrant Officer",
+        "rankId": 36
+      },
+      {
+        "rankName": "Chief Warrant Officer 3",
+        "payGrade": "W-3",
+        "rankAbbr": "CW3",
+        "rankStatus": "Warrant Officer",
+        "rankId": 37
+      },
+      {
+        "rankName": "Chief Warrant Officer 4",
+        "payGrade": "W-4",
+        "rankAbbr": "CW4",
+        "rankStatus": "Warrant Officer",
+        "rankId": 38
+      },
+      {
+        "rankName": "Chief Warrant Officer 5",
+        "payGrade": "W-5",
+        "rankAbbr": "CW5",
+        "rankStatus": "Warrant Officer",
+        "rankId": 39
+      }
+    ],
+    "organizations": [
+      {
+        "classType": "Organization",
+        "organizationId": "e512a9f2-1304-42a8-8ad2-0ded5f084623",
+        "organizationName": "Tron Marine Parent Wing",
+        "organizationType": "Wing",
+        "isSchedulingUnit": false,
+        "classType": null,
+        "branchId": 2
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "d2265748-fde4-4ddc-bfda-72ca88d8a7f6",
+        "organizationName": "Tron Marine Demo Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 2
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Navy",
+    "enlistedRanks": [],
+    "officerRanks": [],
+    "warrantOfficerRanks": [],
+    "organizations": []
+  },
+  {
+    "id": 4,
+    "name": "Air Force",
+    "enlistedRanks": [
+      {
+        "rankName": "Airman Basic",
+        "payGrade": "E-1",
+        "rankAbbr": "AB",
+        "rankStatus": "Enlisted",
+        "rankId": 1
+      },
+      {
+        "rankName": "Airman",
+        "payGrade": "E-2",
+        "rankAbbr": "Amn",
+        "rankStatus": "Enlisted",
+        "rankId": 2
+      },
+      {
+        "rankName": "Airman First Class",
+        "payGrade": "E-3",
+        "rankAbbr": "A1C",
+        "rankStatus": "Enlisted",
+        "rankId": 3
+      },
+      {
+        "rankName": "Senior Airman",
+        "payGrade": "E-4",
+        "rankAbbr": "SrA",
+        "rankStatus": "Enlisted",
+        "rankId": 4
+      },
+      {
+        "rankName": "Staff Sergeant",
+        "payGrade": "E-5",
+        "rankAbbr": "SSgt",
+        "rankStatus": "Enlisted",
+        "rankId": 5
+      },
+      {
+        "rankName": "Technical Sergeant",
+        "payGrade": "E-6",
+        "rankAbbr": "TSgt",
+        "rankStatus": "Enlisted",
+        "rankId": 6
+      },
+      {
+        "rankName": "Master Sergeant",
+        "payGrade": "E-7",
+        "rankAbbr": "MSgt",
+        "rankStatus": "Enlisted",
+        "rankId": 7
+      },
+      {
+        "rankName": "Senior Master Sergeant",
+        "payGrade": "E-8",
+        "rankAbbr": "SMSgt",
+        "rankStatus": "Enlisted",
+        "rankId": 8
+      },
+      {
+        "rankName": "Chief Master Sergeant",
+        "payGrade": "E-9",
+        "rankAbbr": "CMSgt",
+        "rankStatus": "Enlisted",
+        "rankId": 9
+      },
+      {
+        "rankName": "Chief Master Sergeant Of The Air Force",
+        "payGrade": "E-9",
+        "rankAbbr": "CMSAF",
+        "rankStatus": "Enlisted",
+        "rankId": 10
+      },
+      {
+        "rankName": "Command Chief Master Sergeant",
+        "payGrade": "E-9",
+        "rankAbbr": "CCM",
+        "rankStatus": "Enlisted",
+        "rankId": 21
+      }
+    ],
+    "officerRanks": [
+      {
+        "rankName": "Second Lieutenant",
+        "payGrade": "O-1",
+        "rankAbbr": "2d Lt",
+        "rankStatus": "Officer",
+        "rankId": 11
+      },
+      {
+        "rankName": "First Lieutenant",
+        "payGrade": "O-2",
+        "rankAbbr": "1st Lt",
+        "rankStatus": "Officer",
+        "rankId": 12
+      },
+      {
+        "rankName": "Captain",
+        "payGrade": "O-3",
+        "rankAbbr": "Capt",
+        "rankStatus": "Officer",
+        "rankId": 13
+      },
+      {
+        "rankName": "Major",
+        "payGrade": "O-4",
+        "rankAbbr": "Maj",
+        "rankStatus": "Officer",
+        "rankId": 14
+      },
+      {
+        "rankName": "Lieutenant Colonel",
+        "payGrade": "O-5",
+        "rankAbbr": "Lt Col",
+        "rankStatus": "Officer",
+        "rankId": 15
+      },
+      {
+        "rankName": "Colonel",
+        "payGrade": "O-6",
+        "rankAbbr": "Col",
+        "rankStatus": "Officer",
+        "rankId": 16
+      },
+      {
+        "rankName": "Brigadier General",
+        "payGrade": "O-7",
+        "rankAbbr": "Brig Gen",
+        "rankStatus": "Officer",
+        "rankId": 17
+      },
+      {
+        "rankName": "Major General",
+        "payGrade": "O-8",
+        "rankAbbr": "Maj Gen",
+        "rankStatus": "Officer",
+        "rankId": 18
+      },
+      {
+        "rankName": "Lieutenant General",
+        "payGrade": "O-9",
+        "rankAbbr": "Lt Gen",
+        "rankStatus": "Officer",
+        "rankId": 19
+      },
+      {
+        "rankName": "General",
+        "payGrade": "O-10",
+        "rankAbbr": "Gen",
+        "rankStatus": "Officer",
+        "rankId": 20
+      },
+      {
+        "rankName": "General of the Air Force",
+        "payGrade": "O-10",
+        "rankAbbr": "GAF",
+        "rankStatus": "Officer",
+        "rankId": 22
+      }
+    ],
+    "warrantOfficerRanks": [],
+    "organizations": [
+      {
+        "classType": "Organization",
+        "organizationId": "b9b50e31-2269-480c-aae8-1c59c65d6cc2",
+        "organizationName": "15th Wing",
+        "organizationType": "Wing",
+        "isSchedulingUnit": false,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "4262c1ee-66fc-4f29-915b-958be4f94bbe",
+        "organizationName": "535th Airlift Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "f37669d5-d6df-49fe-9c8f-bc1a0f4ecc49",
+        "organizationName": "204th Airlift Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "d8549f9b-f785-4afb-a9c6-1884b6fc93b3",
+        "organizationName": "315th Airlift Wing",
+        "organizationType": "Wing",
+        "isSchedulingUnit": false,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "e265715d-c438-4b63-b14b-515c2f59f9cb",
+        "organizationName": "300th Airlift Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "e7bb0b0f-579b-4731-8847-c61a723bcd3d",
+        "organizationName": "317th Airlift Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "7556867b-24f1-4beb-8803-b8b8b48b58ef",
+        "organizationName": "701st Airlift Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "5e03e096-f88a-49ae-854e-56f1372a8917",
+        "organizationName": "437th Airlift Wing",
+        "organizationType": "Wing",
+        "isSchedulingUnit": false,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "dae15c2a-e3fa-4af2-8bc1-56aae9c81154",
+        "organizationName": "14th Airlift Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "34de042a-e8dd-43c5-9936-686d93be401e",
+        "organizationName": "15th Airlift Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "710b68b5-1786-4fa3-b51c-d91c6f9f9084",
+        "organizationName": "16th Airlift Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9a",
+        "organizationName": "Tron Parent Wing",
+        "organizationType": "Wing",
+        "isSchedulingUnit": false,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "organizationName": "Tron Demo Squadron",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      },
+      {
+        "classType": "Organization",
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "organizationName": "Tron Demo Squadron 2",
+        "organizationType": "Squadron",
+        "isSchedulingUnit": true,
+        "classType": null,
+        "branchId": 4
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Space Force",
+    "enlistedRanks": [],
+    "officerRanks": [],
+    "warrantOfficerRanks": [],
+    "organizations": []
+  },
+  {
+    "id": 6,
+    "name": "Coast Guard",
+    "enlistedRanks": [],
+    "officerRanks": [],
+    "warrantOfficerRanks": [],
+    "organizations": []
+  }
+]
