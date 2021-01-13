@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
+import mil.tron.commonapi.dto.SquadronDto;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -87,8 +88,8 @@ public class PuckboardExtractorServiceImplTest {
         Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
         Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
         Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class))).thenReturn(false);
-        Mockito.when(squadronService.createSquadron(Mockito.any(Squadron.class))).then(returnsFirstArg());
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(Squadron.class))).then(returnsSecondArg());
+        Mockito.when(squadronService.createSquadron(Mockito.any(SquadronDto.class))).then(returnsFirstArg());
+        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class))).then(returnsSecondArg());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
@@ -105,8 +106,8 @@ public class PuckboardExtractorServiceImplTest {
         Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
         Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
         Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-        Mockito.when(squadronService.createSquadron(Mockito.any(Squadron.class))).then(returnsFirstArg());
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(Squadron.class))).then(returnsSecondArg());
+        Mockito.when(squadronService.createSquadron(Mockito.any(SquadronDto.class))).then(returnsFirstArg());
+        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class))).then(returnsSecondArg());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
@@ -125,8 +126,8 @@ public class PuckboardExtractorServiceImplTest {
 
         Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
         Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-        Mockito.when(squadronService.createSquadron(Mockito.any(Squadron.class))).then(returnsFirstArg());
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(Squadron.class))).then(returnsSecondArg());
+        Mockito.when(squadronService.createSquadron(Mockito.any(SquadronDto.class))).then(returnsFirstArg());
+        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class))).then(returnsSecondArg());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 

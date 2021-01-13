@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.dto.SquadronDto;
 import mil.tron.commonapi.entity.Airman;
-import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
@@ -121,7 +121,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
             String name = node.get(ORG_NAME_FIELD).textValue();
             if (!sqdnRepo.existsById(id)) {
                 // make new squadron
-                Squadron s = new Squadron();
+                SquadronDto s = new SquadronDto();
                 s.setId(id);
                 s.setName(name);
 
