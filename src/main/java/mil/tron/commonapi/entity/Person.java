@@ -93,6 +93,11 @@ public class Person {
             return false;
         }
     }
+
+    @Override
+    public int hashCode() {
+        return this.id.hashCode();
+    }
     
     @JsonIgnore
     public String getFullName() {

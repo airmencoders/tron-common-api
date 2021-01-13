@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
@@ -31,52 +31,54 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Organization.class)))
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class)))
 	})
 	@GetMapping
-	public ResponseEntity<Iterable<Organization>> getOrganizations() {
-		return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
+	public ResponseEntity<Object> getOrganizations() {
+			return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
+
 	}
 	
 	@Operation(summary = "Retrieves an organization by ID", description = "Retrieves an organization by ID")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Organization.class))),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
+					content = @Content),
+			@ApiResponse(responseCode = "400",
+					description = "Bad Request or malformed UUID",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@GetMapping(value = "/{id}")
-	public ResponseEntity<Organization> getOrganization(
+	public ResponseEntity<OrganizationDto> getOrganization(
 			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId) {
-		Organization org = organizationService.getOrganization(organizationId);
-		
-		return new ResponseEntity<>(org, HttpStatus.OK);
+
+			return new ResponseEntity<>(organizationService.getOrganization(organizationId), HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Adds an organization", description = "Adds an organization")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Organization.class))),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "409",
 					description = "Resource already exists with the id provided",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping
-	public ResponseEntity<Organization> createOrganization(
-			@Parameter(description = "Organization to create", required = true) @Valid @RequestBody Organization organization) {
-		Organization createdOrg = organizationService.createOrganization(organization);
+	public ResponseEntity<OrganizationDto> createOrganization(
+			@Parameter(description = "Organization to create", required = true) @Valid @RequestBody OrganizationDto organization) {
 
-		return new ResponseEntity<>(createdOrg, HttpStatus.CREATED);
+		return new ResponseEntity<>(organizationService.createOrganization(organization), HttpStatus.CREATED);
 	}
-	
+
 	@Operation(summary = "Updates an existing organization", description = "Updates an existing organization")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Organization.class))),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -85,11 +87,11 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PutMapping(value = "/{id}")
-	public ResponseEntity<Organization> updateOrganization(
+	public ResponseEntity<OrganizationDto> updateOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
-			@Parameter(description = "Updated organization", required = true) @Valid @RequestBody Organization organization) {
-		
-		Organization org = organizationService.updateOrganization(organizationId, organization);
+			@Parameter(description = "Updated organization", required = true) @Valid @RequestBody OrganizationDto organization) {
+
+		OrganizationDto org = organizationService.updateOrganization(organizationId, organization);
 		
 		if (org != null)
 			return new ResponseEntity<>(org, HttpStatus.OK);
@@ -155,7 +157,7 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Organization.class))),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Organization resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -164,7 +166,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PatchMapping(value = "/{id}")
-	public ResponseEntity<Organization> patchOrganization(
+	public ResponseEntity<OrganizationDto> patchOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
 
@@ -179,7 +181,7 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Organization.class))),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad data or validation error",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -188,7 +190,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping(value = "/organizations")
-	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<Organization> orgs) {
+	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
 		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
 	}
 }
