@@ -1,0 +1,1034 @@
+[
+  {
+    "id": "064f9a36-8951-11e9-8bd7-c72ff4786fc4",
+    "roleAssignments": null,
+    "callSign": null,
+    "lastName": "Developer",
+    "firstName": "Tron",
+    "contactNumber": null,
+    "email": null,
+    "dodId": 123456789,
+    "rankId": null,
+    "organizationStatus": {
+      "d2265748-fde4-4ddc-bfda-72ca88d8a7f6": {
+        "active": true,
+        "organizationId": "d2265748-fde4-4ddc-bfda-72ca88d8a7f6",
+        "jobRoleId": 68
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 63
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4300a",
+    "roleAssignments": null,
+    "callSign": "Snoopy",
+    "lastName": "Freeman",
+    "firstName": "Lucy",
+    "contactNumber": "(808) 422-2222",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4301a",
+    "roleAssignments": null,
+    "callSign": "Battery",
+    "lastName": "Adams",
+    "firstName": "Allison",
+    "contactNumber": "(808) 221-1212",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4302a",
+    "roleAssignments": null,
+    "callSign": "Indy",
+    "lastName": "Tyrell",
+    "firstName": "Harrison",
+    "contactNumber": "(808) 777-6655",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4303a",
+    "roleAssignments": null,
+    "callSign": "Weatherboy",
+    "lastName": "Ryan",
+    "firstName": "Tom",
+    "contactNumber": "(808) 888-9000",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4304a",
+    "roleAssignments": null,
+    "callSign": "Erand",
+    "lastName": "Anderson",
+    "firstName": "Eric",
+    "contactNumber": "(808) 321-4321",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4305a",
+    "roleAssignments": null,
+    "callSign": "Hotwheels",
+    "lastName": "Wheeler",
+    "firstName": "Heidi",
+    "contactNumber": "(808) 989-8989",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4306a",
+    "roleAssignments": null,
+    "callSign": null,
+    "lastName": "Herrera",
+    "firstName": "Robin",
+    "contactNumber": "(808) 787-7878",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4307a",
+    "roleAssignments": null,
+    "callSign": null,
+    "lastName": "Clarke",
+    "firstName": "Anthony",
+    "contactNumber": "(808) 543-5432",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4308a",
+    "roleAssignments": null,
+    "callSign": null,
+    "lastName": "George",
+    "firstName": "Felix",
+    "contactNumber": "(808) 444-3322",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4309a",
+    "roleAssignments": null,
+    "callSign": null,
+    "lastName": "Evans",
+    "firstName": "Grace",
+    "contactNumber": "(808) 676-7676",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4310a",
+    "roleAssignments": null,
+    "callSign": null,
+    "lastName": "Cook",
+    "firstName": "Melanie",
+    "contactNumber": "(808) 945-6978",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4311a",
+    "roleAssignments": null,
+    "callSign": "Heat",
+    "lastName": "Summers",
+    "firstName": "Wendy",
+    "contactNumber": "(808) 269-7697",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": false,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": false,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4312a",
+    "roleAssignments": null,
+    "callSign": "Filburt",
+    "lastName": "Sloan",
+    "firstName": "Roscoe",
+    "contactNumber": "(808) 999-7777",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "ec315e44-a4ec-11e9-a6e2-e78603e4313a",
+    "roleAssignments": null,
+    "callSign": "Hammer",
+    "lastName": "Adler",
+    "firstName": "Ed",
+    "contactNumber": "(808) 985-7574",
+    "email": null,
+    "dodId": null,
+    "rankId": 5,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 49
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 50
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4300a",
+    "roleAssignments": null,
+    "callSign": "Peanut",
+    "lastName": "Ellis",
+    "firstName": "Everett",
+    "contactNumber": "(808) 789-0123",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4301a",
+    "roleAssignments": null,
+    "callSign": "Pickle",
+    "lastName": "Davis",
+    "firstName": "Rick",
+    "contactNumber": "(808) 890-1234",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4302a",
+    "roleAssignments": null,
+    "callSign": "Hollywood",
+    "lastName": "Lee",
+    "firstName": "Marisa",
+    "contactNumber": "(808) 901-2345",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4303a",
+    "roleAssignments": null,
+    "callSign": "Hef",
+    "lastName": "Nakamoto",
+    "firstName": "Hugh",
+    "contactNumber": "(808) 987-6543",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4304a",
+    "roleAssignments": null,
+    "callSign": "Wow",
+    "lastName": "Kamaka",
+    "firstName": "Owen",
+    "contactNumber": "(808) 876-5432",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4305a",
+    "roleAssignments": null,
+    "callSign": "Stathom",
+    "lastName": "Sims",
+    "firstName": "Jason",
+    "contactNumber": "(808) 765-4321",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4306a",
+    "roleAssignments": null,
+    "callSign": "Mavrick",
+    "lastName": "Mendez",
+    "firstName": "Luis",
+    "contactNumber": "(808) 765-5321",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4307a",
+    "roleAssignments": null,
+    "callSign": "Twitty",
+    "lastName": "Conway",
+    "firstName": "Martin",
+    "contactNumber": "(808) 465-4321",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4308a",
+    "roleAssignments": null,
+    "callSign": "Icy",
+    "lastName": "Frost",
+    "firstName": "Haley",
+    "contactNumber": "(808) 765-4371",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4309a",
+    "roleAssignments": null,
+    "callSign": "Speed",
+    "lastName": "Newel",
+    "firstName": "Reece",
+    "contactNumber": "(808) 735-4321",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4310a",
+    "roleAssignments": null,
+    "callSign": "Hope",
+    "lastName": "Jones",
+    "firstName": "Bob",
+    "contactNumber": "(808) 765-2321",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4311a",
+    "roleAssignments": null,
+    "callSign": "Fire",
+    "lastName": "Cash",
+    "firstName": "John",
+    "contactNumber": "(808) 762-4321",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4312a",
+    "roleAssignments": null,
+    "callSign": "Merry",
+    "lastName": "Drew",
+    "firstName": "Boyd",
+    "contactNumber": "(808) 765-4311",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4313a",
+    "roleAssignments": null,
+    "callSign": "Fray",
+    "lastName": "Sims",
+    "firstName": "Clarence",
+    "contactNumber": "(808) 365-4321",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4314a",
+    "roleAssignments": null,
+    "callSign": "Jones",
+    "lastName": "Davy",
+    "firstName": "Carmel",
+    "contactNumber": "(808) 735-2321",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "dc315e44-a4ec-11e9-a6e2-e78603e4315a",
+    "roleAssignments": null,
+    "callSign": "Aquaman",
+    "lastName": "Momoa",
+    "firstName": "Jason",
+    "contactNumber": "(808) 265-4121",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 35
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 36
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "cc315e44-a4ec-11e9-a6e2-e78603e4300a",
+    "roleAssignments": null,
+    "callSign": "Jack",
+    "lastName": "Wallace",
+    "firstName": "Nina",
+    "contactNumber": "(808) 456-7890",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 22
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "cc315e44-a4ec-11e9-a6e2-e78603e4301a",
+    "roleAssignments": null,
+    "callSign": "Free Willy",
+    "lastName": "Price",
+    "firstName": "Wilfred",
+    "contactNumber": "(808) 323-4567",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 22
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "cc315e44-a4ec-11e9-a6e2-e78603e4302a",
+    "roleAssignments": null,
+    "callSign": "Python",
+    "lastName": "Monty",
+    "firstName": "Carl",
+    "contactNumber": "(808) 264-5647",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 22
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "cc315e44-a4ec-11e9-a6e2-e78603e4303a",
+    "roleAssignments": null,
+    "callSign": "Squidbait",
+    "lastName": "Sherman",
+    "firstName": "Alexis",
+    "contactNumber": "(808) 234-5678",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 22
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "cc315e44-a4ec-11e9-a6e2-e78603e4304a",
+    "roleAssignments": null,
+    "callSign": "Founder",
+    "lastName": "Adams",
+    "firstName": "John",
+    "contactNumber": "(808) 345-6579",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 22
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "cc315e44-a4ec-11e9-a6e2-e78603e4305a",
+    "roleAssignments": null,
+    "callSign": "BobaFett",
+    "lastName": "Perez",
+    "firstName": "Jaime",
+    "contactNumber": "(808) 567-8901",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 22
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "cc315e44-a4ec-11e9-a6e2-e78603e4307a",
+    "roleAssignments": null,
+    "callSign": "Pain",
+    "lastName": "Wenifred",
+    "firstName": "Benson",
+    "contactNumber": "(231) 234-5478",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": false,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": false,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 22
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "cc315e44-a4ec-11e9-a6e2-e78603e4309a",
+    "roleAssignments": null,
+    "callSign": "Sunny",
+    "lastName": "Chahal",
+    "firstName": "Sunil",
+    "contactNumber": "(808) 999-9999",
+    "email": null,
+    "dodId": null,
+    "rankId": 13,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 21
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 22
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "45154ff3-96e2-4632-8787-3cae05d2a6c0",
+    "roleAssignments": null,
+    "callSign": "Trondude",
+    "lastName": "Smith",
+    "firstName": "Flynn",
+    "contactNumber": "(808) 422-2222",
+    "email": "somebody@us.af.mil",
+    "dodId": null,
+    "rankId": null,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 62
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 63
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "716dfeda-1e16-45cc-a9c9-cffa5b95eefc",
+    "roleAssignments": null,
+    "callSign": "Trondude2",
+    "lastName": "Smith",
+    "firstName": "Sam",
+    "contactNumber": "(808) 423-4567",
+    "email": "somebodyelse@us.af.mil",
+    "dodId": null,
+    "rankId": null,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 62
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 63
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "5260bf71-d611-438c-97cb-0b81b8c58713",
+    "roleAssignments": null,
+    "callSign": "Trondude3",
+    "lastName": "Smith",
+    "firstName": "Quorra",
+    "contactNumber": "(808) 234-5678",
+    "email": "somebody@us.af.mil",
+    "dodId": null,
+    "rankId": null,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9e": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+        "jobRoleId": 62
+      },
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 63
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  },
+  {
+    "id": "96f13071-edd7-492d-a0dd-fc5679af46d0",
+    "roleAssignments": null,
+    "callSign": "Trondude4",
+    "lastName": "Smith",
+    "firstName": "Tron",
+    "contactNumber": "(808) 345-6789",
+    "email": "somebody@us.af.mil",
+    "dodId": null,
+    "rankId": null,
+    "organizationStatus": {
+      "5240eead-3d09-43fd-91f9-c93227f42d9f": {
+        "active": true,
+        "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+        "jobRoleId": 63
+      }
+    },
+    "primaryOrganizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e"
+  }
+]
