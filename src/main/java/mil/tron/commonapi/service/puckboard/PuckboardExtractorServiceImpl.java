@@ -33,18 +33,18 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     @Autowired
     private AirmanService airmanService;
 
-    private final String ORG_ID_FIELD = "organizationId";
-    private final String ORG_TYPE_FIELD = "organizationType";
-    private final String ORG_NAME_FIELD = "organizationName";
-    private final String ORG_STATUS_FIELD = "organizationStatus";
+    private static final String ORG_ID_FIELD = "organizationId";
+    private static final String ORG_TYPE_FIELD = "organizationType";
+    private static final String ORG_NAME_FIELD = "organizationName";
+    private static final String ORG_STATUS_FIELD = "organizationStatus";
 
-    private final String PERSON_ID_FIELD = "id";
-    private final String PERSON_FIRST_NAME_FIELD = "firstName";
-    private final String PERSON_LAST_NAME_FIELD = "lastName";
-    private final String PERSON_EMAIL_FIELD = "email";
-    private final String PERSON_DODID_FIELD = "dodId";
-    private final String PERSON_PHONE_FIELD = "contactNumber";
-    private final String PERSON_RANK_FIELD = "rankId";
+    private static final String PERSON_ID_FIELD = "id";
+    private static final String PERSON_FIRST_NAME_FIELD = "firstName";
+    private static final String PERSON_LAST_NAME_FIELD = "lastName";
+    private static final String PERSON_EMAIL_FIELD = "email";
+    private static final String PERSON_DODID_FIELD = "dodId";
+    private static final String PERSON_PHONE_FIELD = "contactNumber";
+    private static final String PERSON_RANK_FIELD = "rankId";
 
     /**
      * Convert the JSON as given by the controller (as a JsonNode)
@@ -182,28 +182,22 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
                     airmanService.updateAirman(id, airman);
                     personIdStatus.put(id, "Updated - " + airman.getFullName());
                 }
-            }
-            catch (ResourceAlreadyExistsException | RecordNotFoundException | TransactionSystemException e) {
-                personIdStatus.put(id, "Problem - " + airman.getFullName() + " (" + e.getMessage() + ")");
-                continue;  // issue with this person, skip the rest...
-            }
 
-            // now go thru each puckboard org person was in - either add or remove depending on active status
-            List<String> personOrgIds = ImmutableList.copyOf(node.get(ORG_STATUS_FIELD).fieldNames());
-            for (String org : personOrgIds) {
-                JsonNode orgNode = node.get(ORG_STATUS_FIELD).get(org);
-                UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
+                // now go thru each puckboard org person was in - either add or remove depending on active status
+                List<String> personOrgIds = ImmutableList.copyOf(node.get(ORG_STATUS_FIELD).fieldNames());
+                for (String org : personOrgIds) {
+                    JsonNode orgNode = node.get(ORG_STATUS_FIELD).get(org);
+                    UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
 
-                try {
                     if (orgNode.get("active").booleanValue()) {
                         sqdnService.addSquadronMember(orgId, Lists.newArrayList(id));
                     } else {
                         sqdnService.removeSquadronMember(orgId, Lists.newArrayList(id));
                     }
                 }
-                catch (RecordNotFoundException e) {
-                    continue; // continue on error (like if member was being added to a Wing that we didn't add)
-                }
+            }
+            catch (ResourceAlreadyExistsException | RecordNotFoundException | TransactionSystemException e) {
+                personIdStatus.put(id, "Problem - " + airman.getFullName() + " (" + e.getMessage() + ")");
             }
         }
 
