@@ -45,6 +45,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private static final String PERSON_DODID_FIELD = "dodId";
     private static final String PERSON_PHONE_FIELD = "contactNumber";
     private static final String PERSON_RANK_FIELD = "rankId";
+    private static final String PERSON_RANK_ABBR_FIELD = "rankAbbr";
 
     /**
      * Convert the JSON as given by the controller (as a JsonNode)
@@ -82,7 +83,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
                 JsonNode rankSet = node.get(rankSetName);
                 for (int j = 0; j < rankSet.size(); j++) {
                     JsonNode rankNode = rankSet.get(j);
-                    allRanks.put(rankNode.get("rankId").asText(), rankNode.get("rankAbbr").textValue());
+                    allRanks.put(rankNode.get(PERSON_RANK_FIELD).asText(), rankNode.get(PERSON_RANK_ABBR_FIELD).textValue());
                 }
             }
         }
