@@ -14,6 +14,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.dto.UserInfoDto;
+import mil.tron.commonapi.exception.ExceptionResponse;
 
 @WebMvcTest(UserInfoController.class)
 class UserInfoControllerTest {
@@ -60,11 +61,13 @@ class UserInfoControllerTest {
 	void testGetFailNoAuthorizationHeader() throws Exception {
 		// No auth header
 		mockMvc.perform(get(ENDPOINT))
-			.andExpect(status().isBadRequest());
+			.andExpect(status().isBadRequest())
+			.andExpect(result -> result.getResponse().getContentAsString().contains("missing"));
 		
 		// Blank auth header
 		mockMvc.perform(get(ENDPOINT).header("authorization", " "))
-			.andExpect(status().isBadRequest());
+			.andExpect(status().isBadRequest())
+			.andExpect(result -> result.getResponse().getContentAsString().contains("blank"));
 	}
 	
 	@Test

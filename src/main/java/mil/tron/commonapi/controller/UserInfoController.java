@@ -41,27 +41,27 @@ public class UserInfoController {
 		
 		String authHeader = headers.get("authorization");
 		
-		if (authHeader != null && !authHeader.isBlank()) {
-			String[] splitToken = authHeader.split("Bearer ");
-			
-			if (splitToken.length != 2) {
-				throw new BadRequestException("Authorization header in request is malformed.");
-			}
-			
-			String token = splitToken[1];
-			DecodedJWT jwt = JWT.decode(token);
-			
-			UserInfoDto userInfo = new UserInfoDto();
-			userInfo.setGivenName(jwt.getClaim("given_name").asString());
-			userInfo.setFamilyName(jwt.getClaim("family_name").asString());
-			userInfo.setName(jwt.getClaim("name").asString());
-			userInfo.setPreferredUsername(jwt.getClaim("preferred_username").asString());
-			userInfo.setEmail(jwt.getClaim("email").asString());
-			userInfo.setOrganization(jwt.getClaim("organization").asString());
-			
-			return new ResponseEntity<>(userInfo, HttpStatus.OK);
-		} else {
+		if (authHeader == null || authHeader.isBlank()) {
 			throw new BadRequestException("Authorization header in request missing.");
 		}
+		
+		String[] splitToken = authHeader.split("Bearer ");
+		
+		if (splitToken.length != 2) {
+			throw new BadRequestException("Authorization header in request is malformed.");
+		}
+		
+		String token = splitToken[1];
+		DecodedJWT jwt = JWT.decode(token);
+		
+		UserInfoDto userInfo = new UserInfoDto();
+		userInfo.setGivenName(jwt.getClaim("given_name").asString());
+		userInfo.setFamilyName(jwt.getClaim("family_name").asString());
+		userInfo.setName(jwt.getClaim("name").asString());
+		userInfo.setPreferredUsername(jwt.getClaim("preferred_username").asString());
+		userInfo.setEmail(jwt.getClaim("email").asString());
+		userInfo.setOrganization(jwt.getClaim("organization").asString());
+		
+		return new ResponseEntity<>(userInfo, HttpStatus.OK);
 	}
 }
