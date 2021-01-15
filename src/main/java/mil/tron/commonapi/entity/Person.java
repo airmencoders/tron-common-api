@@ -59,7 +59,7 @@ public class Person {
     /**
      * This method will be performed before database operations.
      * 
-     * It ensures that blank emails are set to null.
+     * It ensures that blank emails are set to null and trims all strings.
      * 
      * It will set {@link Person#email} to null if an empty string
      * or a string of one or more whitespaces is provided. It will then
@@ -73,11 +73,22 @@ public class Person {
     @PreUpdate
     @PrePersist
     public void sanitizeEmailForUniqueConstraint() {
-    	if (email != null && email.isBlank()) {
-    		this.email = null;
-    	}
-    	
-    	emailAsLower = email == null ? null : email.toLowerCase();
+        if (email == null) {
+            emailAsLower = null;
+        }
+        else if (email != null && email.isBlank()) {
+            email = null;
+            emailAsLower = null;
+        }
+        else {
+            email = email.trim();
+            emailAsLower = email.toLowerCase();
+        }
+
+        firstName = (firstName == null) ? null : firstName.trim();
+        middleName = (middleName == null) ? null : middleName.trim();
+        lastName = (lastName == null) ? null : lastName.trim();
+        title = (title == null) ? null : title.trim();
     }
     
     @Override

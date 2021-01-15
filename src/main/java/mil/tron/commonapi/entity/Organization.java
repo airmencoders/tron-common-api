@@ -73,11 +73,17 @@ public class Organization {
     @PreUpdate
     @PrePersist
     public void sanitizeNameForUniqueConstraint() {
-    	if (name != null && name.isBlank()) {
-    		this.name = null;
+    	if (name == null) {
+            nameAsLower = null;
+        }
+        else if (name != null && name.isBlank()) {
+    		name = null;
+    		nameAsLower = null;
     	}
-    	
-    	nameAsLower = name == null ? null : name.toLowerCase();
+    	else {
+    	    name = name.trim();
+            nameAsLower = name.toLowerCase();
+        }
     }
 
     @Override
