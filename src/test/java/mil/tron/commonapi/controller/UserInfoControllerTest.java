@@ -14,7 +14,6 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.dto.UserInfoDto;
-import mil.tron.commonapi.exception.ExceptionResponse;
 
 @WebMvcTest(UserInfoController.class)
 class UserInfoControllerTest {
