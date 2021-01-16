@@ -44,17 +44,35 @@ class PersonTests {
     	
     	// Test empty string
     	testPerson.setEmail("");
-    	testPerson.sanitizeEmailForUniqueConstraint();
+    	testPerson.sanitizeEntity();
     	assertThat(testPerson.getEmail()).isNull();
     	
     	// Test one whitespace
     	testPerson.setEmail(" ");
-    	testPerson.sanitizeEmailForUniqueConstraint();
+    	testPerson.sanitizeEntity();
     	assertThat(testPerson.getEmail()).isNull();
     	
     	// Test multiple whitespace
     	testPerson.setEmail("     ");
-    	testPerson.sanitizeEmailForUniqueConstraint();
+    	testPerson.sanitizeEntity();
     	assertThat(testPerson.getEmail()).isNull();
+    }
+
+    @Test
+    void testStringTrims() {
+        Person testPerson = new Person();
+
+        // strings
+        testPerson.setEmail(" test@test.com ");
+        testPerson.setFirstName(" John ");
+        testPerson.setMiddleName(" Middle ");
+        testPerson.setLastName(" Doe ");
+        testPerson.setTitle(" no one ");
+        testPerson.sanitizeEntity();
+        assertEquals(testPerson.getEmail(), "test@test.com");
+        assertEquals(testPerson.getFirstName(), "John");
+        assertEquals(testPerson.getMiddleName(), "Middle");
+        assertEquals(testPerson.getLastName(), "Doe");
+        assertEquals(testPerson.getTitle(), "no one");
     }
 }

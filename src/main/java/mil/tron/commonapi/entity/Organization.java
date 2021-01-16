@@ -65,25 +65,32 @@ public class Organization {
 
     /**
      * This method will be performed before database operations.
+     *
+     * Entity parameters are formatted as needed
+     */
+    @PreUpdate
+    @PrePersist
+    public void sanitizeEntity() {
+        trimStrings();
+        sanitizeNameForUniqueConstraint();
+    }
+    /**
+     * This method will be performed before database operations.
      * 
      * Converts {@link Organization#name} to lowercase and sets it
      * to {@link Organization#nameAsLower}. This is needed for the
      * unique constraint in the database.
      */
-    @PreUpdate
-    @PrePersist
     public void sanitizeNameForUniqueConstraint() {
-    	if (name == null) {
-            nameAsLower = null;
+        if (name != null && name.isBlank()) {
+            this.name = null;
         }
-        else if (name != null && name.isBlank()) {
-    		name = null;
-    		nameAsLower = null;
-    	}
-    	else {
-    	    name = name.trim();
-            nameAsLower = name.toLowerCase();
-        }
+
+        nameAsLower = name == null ? null : name.toLowerCase();
+    }
+
+    public void trimStrings() {
+        name = name.trim();
     }
 
     @Override

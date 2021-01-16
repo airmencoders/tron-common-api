@@ -186,10 +186,14 @@ public class Airman extends Person {
     /**
      * This method will be performed before database operations.
      *
-     * Trims all necessary string member variables
+     * Entity parameters are formatted as needed
      */
     @PreUpdate
     @PrePersist
+    public void sanitizeEntity() {
+        trimStrings();
+    }
+
     public void trimStrings() {
         afsc = (afsc == null) ? null : afsc.trim();
         dodid = (dodid == null) ? null : dodid.trim();
