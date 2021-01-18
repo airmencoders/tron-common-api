@@ -8,13 +8,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/puckboard")
@@ -41,14 +42,26 @@ public class PuckboardEtlController {
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private HttpServletRequest request;
+
     @GetMapping("/extract")
     public ResponseEntity<Object> getPuckboardData() {
+
+        String bearerToken = request.getHeader("authorization");
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", bearerToken);
+        HttpEntity entity = new HttpEntity(headers);
 
         // grab puckboard organizations
         JsonNode orgs;
         try {
-            String orgsString = restTemplate.getForObject(this.puckboardUrl + "/organizations", String.class);
-            orgs = mapper.readTree(orgsString);
+            ResponseEntity<String> orgsString = restTemplate.exchange(
+                    this.puckboardUrl + "/organizations",
+                    HttpMethod.GET,
+                    entity,
+                    String.class);
+            orgs = mapper.readTree(orgsString.getBody());
         }
         catch (RestClientException | JsonProcessingException e) {
             return new ResponseEntity<>("Puckboard Organization Fetch error - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -57,8 +70,12 @@ public class PuckboardEtlController {
         // grab puckboard personnel
         JsonNode people;
         try {
-            String peopleString = restTemplate.getForObject(this.puckboardUrl + "/personnel", String.class);
-            people = mapper.readTree(peopleString);
+            ResponseEntity<String> peopleString = restTemplate.exchange(
+                    this.puckboardUrl + "/personnel",
+                    HttpMethod.GET,
+                    entity,
+                    String.class);
+            people = mapper.readTree(peopleString.getBody());
         }
         catch (RestClientException | JsonProcessingException e) {
             return new ResponseEntity<>("Puckboard Personnel Fetch error - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -67,8 +84,12 @@ public class PuckboardEtlController {
         // grab puckboard branch/rank info
         JsonNode branchInfo;
         try {
-            String branchString = restTemplate.getForObject(this.puckboardUrl + "/branch", String.class);
-            branchInfo = mapper.readTree(branchString);
+            ResponseEntity<String> branchString = restTemplate.exchange(
+                    this.puckboardUrl + "/branch",
+                    HttpMethod.GET,
+                    entity,
+                    String.class);
+            branchInfo = mapper.readTree(branchString.getBody());
         }
         catch (RestClientException | JsonProcessingException e) {
             return new ResponseEntity<>("Puckboard Branch Info Fetch error - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
