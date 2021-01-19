@@ -62,7 +62,6 @@ class PersonTests {
     void testStringTrims() {
         Person testPerson = new Person();
 
-        // strings
         testPerson.setEmail(" test@test.com ");
         testPerson.setFirstName(" John ");
         testPerson.setMiddleName(" Middle ");

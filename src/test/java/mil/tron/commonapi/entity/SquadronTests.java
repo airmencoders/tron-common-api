@@ -2,9 +2,8 @@ package mil.tron.commonapi.entity;
 
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Squadron;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 public class SquadronTests {
 
@@ -24,5 +23,16 @@ public class SquadronTests {
         assertEquals("dude@unit.com", s.getOperationsDirector().getEmail());
         assertEquals("Travis AFB", s.getBaseName());
         assertEquals("ACC", s.getMajorCommand());
+    }
+
+    @Test
+    void testStringTrims() {
+        Squadron testSquadron = new Squadron();
+
+        testSquadron.setBaseName(" Test AFB ");
+        testSquadron.setMajorCommand(" Test Command AFB ");
+        testSquadron.sanitizeEntity();
+        assertEquals(testSquadron.getBaseName(), "Test AFB");
+        assertEquals(testSquadron.getMajorCommand(), "Test Command AFB");
     }
 }
