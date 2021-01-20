@@ -5,15 +5,18 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
 import mil.tron.commonapi.exception.InvalidFieldValueException;
+import mil.tron.commonapi.pubsub.listeners.AirmanEntityListener;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 import javax.persistence.Transient;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 
+@EntityListeners(AirmanEntityListener.class)
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Airman extends Person {
