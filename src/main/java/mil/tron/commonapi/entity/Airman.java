@@ -81,7 +81,7 @@ public class Airman extends Person {
     }
 
     public void setRank(String rank) {
-        if (ranks.contains(rank.trim().toUpperCase())) {
+        if (rank != null && ranks.contains(rank.trim().toUpperCase())) {
             this.setTitle(rank.toUpperCase());
         }
         else {
