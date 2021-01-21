@@ -9,7 +9,10 @@ import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.persistence.Entity;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
+
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
@@ -78,7 +81,7 @@ public class Airman extends Person {
     }
 
     public void setRank(String rank) {
-        if (ranks.contains(rank.toUpperCase())) {
+        if (rank != null && ranks.contains(rank.trim().toUpperCase())) {
             this.setTitle(rank.toUpperCase());
         }
         else {
@@ -179,4 +182,33 @@ public class Airman extends Person {
     @Getter
     @Setter
     private String dutyTitle;
+
+    /**
+     * This method will be performed before database operations.
+     *
+     * Entity parameters are formatted as needed
+     */
+    @PreUpdate
+    @PrePersist
+    public void sanitizeEntity() {
+        trimStrings();
+    }
+
+    public void trimStrings() {
+        afsc = (afsc == null) ? null : afsc.trim();
+        dodid = (dodid == null) ? null : dodid.trim();
+        imds = (imds == null) ? null : imds.trim();
+        unit = (unit == null) ? null : unit.trim();
+        wing = (wing == null) ? null : wing.trim();
+        gp = (gp == null) ? null : gp.trim();
+        squadron = (squadron == null) ? null : squadron.trim();
+        wc = (wc == null) ? null : wc.trim();
+        go81 = (go81 == null) ? null : go81.trim();
+        deros = (deros == null) ? null : deros.trim();
+        phone = (phone == null) ? null : phone.trim();
+        address = (address == null) ? null : address.trim();
+        fltChief = (fltChief == null) ? null : fltChief.trim();
+        manNumber = (manNumber == null) ? null : manNumber.trim();
+        dutyTitle = (dutyTitle == null) ? null : dutyTitle.trim();
+    }
 }

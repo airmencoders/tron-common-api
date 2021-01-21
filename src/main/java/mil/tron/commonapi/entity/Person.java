@@ -56,29 +56,7 @@ public class Person {
     @JsonIgnore
     private String emailAsLower;
     
-    /**
-     * This method will be performed before database operations.
-     * 
-     * It ensures that blank emails are set to null.
-     * 
-     * It will set {@link Person#email} to null if an empty string
-     * or a string of one or more whitespaces is provided. It will then
-     * set {@link Person#emailAsLower} to a lowercase variant of
-     * {@link Person#email} if it exists, else null.
-     * 
-     * This method is needed to provide the unique constraint on
-     * emails because this field may be optional and blank strings
-     * will be considered to be null emails when saved to the database.
-     */
-    @PreUpdate
-    @PrePersist
-    public void sanitizeEmailForUniqueConstraint() {
-    	if (email != null && email.isBlank()) {
-    		this.email = null;
-    	}
-    	
-    	emailAsLower = email == null ? null : email.toLowerCase();
-    }
+
     
     @Override
     public boolean equals(Object other) {
@@ -103,5 +81,44 @@ public class Person {
     public String getFullName() {
         return String.format("%s %s", firstName, lastName);
     }
-    
+
+    /**
+     * This method will be performed before database operations.
+     *
+     * Entity parameters are formatted as needed
+     */
+    @PreUpdate
+    @PrePersist
+    public void sanitizeEntity() {
+        trimStrings();
+        sanitizeEmailForUniqueConstraint();
+    }
+
+    /**
+     * This method ensures that blank emails are set to null and trims all strings.
+     *
+     * It will set {@link Person#email} to null if an empty string
+     * or a string of one or more whitespaces is provided. It will then
+     * set {@link Person#emailAsLower} to a lowercase variant of
+     * {@link Person#email} if it exists, else null.
+     *
+     * This method is needed to provide the unique constraint on
+     * emails because this field may be optional and blank strings
+     * will be considered to be null emails when saved to the database.
+     */
+    private void sanitizeEmailForUniqueConstraint() {
+        if (email != null && email.isBlank()) {
+            this.email = null;
+        }
+
+        emailAsLower = email == null ? null : email.toLowerCase();
+    }
+
+    private void trimStrings() {
+        firstName = (firstName == null) ? null : firstName.trim();
+        middleName = (middleName == null) ? null : middleName.trim();
+        lastName = (lastName == null) ? null : lastName.trim();
+        title = (title == null) ? null : title.trim();
+        email = (email == null) ? null : email.trim();
+    }
 }

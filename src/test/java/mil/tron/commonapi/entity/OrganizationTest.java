@@ -79,5 +79,13 @@ class OrganizationTest {
     	testOrg.sanitizeNameForUniqueConstraint();
     	assertThat(testOrg.getName()).isNull();
     }
-    
+
+    @Test
+    void testStringTrims() {
+        Organization testOrg = new Organization();
+
+        testOrg.setName(" TestOrg ");
+        testOrg.sanitizeEntity();
+        assertEquals(testOrg.getName(), "TestOrg");
+    }
 }
