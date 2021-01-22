@@ -42,6 +42,7 @@ public class EventPublisher {
 
         Map<String, Object> messageDetails = new HashMap<>();
         messageDetails.put("event", type.toString());
+        messageDetails.put("type", className);
         messageDetails.put("message", message);
         messageDetails.put("data", data);
 
