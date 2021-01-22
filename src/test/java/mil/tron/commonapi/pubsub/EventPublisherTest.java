@@ -21,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.net.URI;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,8 +69,8 @@ public class EventPublisherTest {
                 .thenReturn(Lists.newArrayList(subscriber));
 
         Mockito.when(
-            publisherSender.postForEntity(Mockito.anyString(), Mockito.anyMap(), eq(String.class)))
-            .thenReturn(new ResponseEntity<>("message", HttpStatus.OK));
+            publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
+            .thenReturn(URI.create(subscriber.getSubscriberAddress()));
 
         publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Airman", new Airman());
 
@@ -83,7 +84,7 @@ public class EventPublisherTest {
                 .thenReturn(Lists.newArrayList(subscriber));
 
         Mockito.when(
-                publisherSender.postForEntity(Mockito.anyString(), Mockito.anyMap(), eq(String.class)))
+                publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
                 .thenThrow(new RestClientException("Exception"));
 
 

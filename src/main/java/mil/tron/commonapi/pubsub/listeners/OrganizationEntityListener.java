@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.persistence.PostPersist;
 import javax.persistence.PostRemove;
 import javax.persistence.PostUpdate;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Listens for changes to {@link Organization} entities
@@ -25,6 +27,16 @@ public class OrganizationEntityListener {
     private EventPublisher publisher;
 
     /**
+     * Removes members/subordinate organizations fields from the org entity
+     * @return Slimmed down Organizational entity with only Organizational ID
+     */
+    private Map<String, Object> stripOrganization(Organization org) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", org.getId());
+        return map;
+    }
+
+    /**
      * Fires off a request to the EventPublisher to tell subscribers that something changed with Organization
      * @param organization The {@link Organization} entity that was created
      */
@@ -35,7 +47,7 @@ public class OrganizationEntityListener {
                 EventType.ORGANIZATION_CREATE,
                 ORGANIZATION_CREATE_MSG,
                 organization.getClass().getName(),
-                organization
+                stripOrganization(organization)
         );
     }
 
@@ -50,7 +62,7 @@ public class OrganizationEntityListener {
                 EventType.ORGANIZATION_CHANGE,
                 ORGANIZATION_DATA_CHANGED,
                 organization.getClass().getName(),
-                organization
+                stripOrganization(organization)
         );
     }
 
@@ -65,6 +77,6 @@ public class OrganizationEntityListener {
                 EventType.ORGANIZATION_DELETE,
                 ORGANIZATION_DELETE_MSG,
                 organization.getClass().getName(),
-                organization);
+                stripOrganization(organization));
     }
 }

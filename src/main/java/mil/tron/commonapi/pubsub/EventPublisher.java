@@ -9,7 +9,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
@@ -18,7 +17,7 @@ import java.util.Map;
 
 /**
  * Service that fires off messages to subscribers for various events.  Entity listeners
- * call {@link EventPublisher#publishEvent(EventType, String)} to launch an asynchronous
+ * call {@link EventPublisher#publishEvent(EventType, String, String, Object)} to launch an asynchronous
  * broadcast to subscribers to the provided event type.
  */
 @Service
@@ -49,9 +48,9 @@ public class EventPublisher {
         for (Subscriber s : subscribers) {
             publisherLog.info("[PUBLISH BROADCAST] - Event: " + type.toString() + " Message: " + message + " to Subscriber: " + s.getSubscriberAddress());
             try {
-                publisherSender.postForEntity(s.getSubscriberAddress(), messageDetails, String.class);
+                publisherSender.postForLocation(s.getSubscriberAddress(), messageDetails);
             }
-            catch (RestClientException e) {
+            catch (Exception e) {
                 publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + s.getSubscriberAddress() + " failed.  Exception: " + e.getMessage());
             }
         }

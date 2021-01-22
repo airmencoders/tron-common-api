@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.persistence.PostPersist;
 import javax.persistence.PostRemove;
 import javax.persistence.PostUpdate;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Listens for changes to {@link Person} entities
@@ -26,6 +28,16 @@ public class PersonEntityListener {
     private EventPublisher publisher;
 
     /**
+     * Removes fields from the person entity, except for UUID
+     * @return Slimmed down Person entity with only Person's ID
+     */
+    private Map<String, Object> stripPerson(Person person) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", person.getId());
+        return map;
+    }
+
+    /**
      * Fires off a request to the EventPublisher to tell subscribers that something changed with Person
      * @param person The {@link Person} entity that was added
      */
@@ -36,7 +48,7 @@ public class PersonEntityListener {
                 EventType.PERSON_CREATE,
                 PERSON_CREATE_MSG, 
                 person.getClass().getName(),
-                person);
+                stripPerson(person));
     }
 
     /**
@@ -50,7 +62,7 @@ public class PersonEntityListener {
                 EventType.PERSON_CHANGE,
                 PERSON_CHANGE_MSG,
                 person.getClass().getName(),
-                person);
+                stripPerson(person));
     }
 
     /**
@@ -64,6 +76,6 @@ public class PersonEntityListener {
                 EventType.PERSON_DELETE, 
                 PERSON_DELETE_MSG,
                 person.getClass().getName(),
-                person);
+                stripPerson(person));
     }
 }

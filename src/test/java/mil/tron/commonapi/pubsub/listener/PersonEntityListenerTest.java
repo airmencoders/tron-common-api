@@ -26,8 +26,10 @@ public class PersonEntityListenerTest {
     @Test
     void testAirmanListener() {
         listener.afterAnyUpdate(new Airman());
+        listener.afterAnyCreation(new Airman());
+        listener.afterAnyRemoval(new Airman());
         Mockito
-            .verify(publisher, times(1))
-            .publishEvent(Mockito.any(EventType.class), Mockito.any(String.class), Mockito.any(String.class), Mockito.any(Person.class));
+            .verify(publisher, times(3))
+            .publishEvent(Mockito.any(EventType.class), Mockito.any(String.class), Mockito.any(String.class), Mockito.any(Object.class));
     }
 }
