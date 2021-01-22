@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.entity.pubsub.Subscriber;
-import mil.tron.commonapi.entity.pubsub.events.EventTypes;
+import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -37,7 +37,7 @@ public class SubscriberServiceImplTest {
         subscriber = Subscriber.builder()
                 .id(UUID.randomUUID())
                 .subscriberAddress("some.address")
-                .subscribedEvent(EventTypes.AIRMAN_CHANGE)
+                .subscribedEvent(EventType.PERSON_CHANGE)
                 .build();
 
 
@@ -62,7 +62,7 @@ public class SubscriberServiceImplTest {
     @Test
     void testCreateSubscription() {
         Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventTypes.class)))
+                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
                 .thenReturn(Optional.empty());
 
         Mockito.when(subscriberRepository.existsById(Mockito.any(UUID.class)))
@@ -74,13 +74,13 @@ public class SubscriberServiceImplTest {
         assertEquals(subscriber.getId(), subscriberService.createSubscription(subscriber).getId());
 
         Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventTypes.class)))
+                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
                 .thenReturn(Optional.of(subscriber));
 
         assertThrows(ResourceAlreadyExistsException.class, () -> subscriberService.createSubscription(subscriber));
 
         Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventTypes.class)))
+                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
                 .thenReturn(Optional.empty());
 
         Mockito.when(subscriberRepository.existsById(Mockito.any(UUID.class)))
@@ -96,12 +96,12 @@ public class SubscriberServiceImplTest {
 
         Mockito.when(subscriberRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventTypes.class)))
+                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
                 .thenReturn(Optional.of(subscriber));
         assertThrows(ResourceAlreadyExistsException.class, () -> subscriberService.updateSubscription(subscriber.getId(), subscriber));
 
         Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventTypes.class)))
+                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
                 .thenReturn(Optional.empty());
 
         assertThrows(InvalidRecordUpdateRequest.class, () -> subscriberService.updateSubscription(UUID.randomUUID(), subscriber));
@@ -122,10 +122,10 @@ public class SubscriberServiceImplTest {
 
     @Test
     void testGetSubscriptionsByEventType() {
-        Mockito.when(subscriberRepository.findAllBySubscribedEvent(Mockito.any(EventTypes.class)))
+        Mockito.when(subscriberRepository.findAllBySubscribedEvent(Mockito.any(EventType.class)))
                 .thenReturn(Lists.newArrayList(subscriber));
 
-        assertEquals(1, Lists.newArrayList(subscriberService.getSubscriptionsByEventType(EventTypes.AIRMAN_CHANGE)).size());
+        assertEquals(1, Lists.newArrayList(subscriberService.getSubscriptionsByEventType(EventType.PERSON_CHANGE)).size());
     }
 
 }

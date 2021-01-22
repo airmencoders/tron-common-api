@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.entity.pubsub.Subscriber;
-import mil.tron.commonapi.entity.pubsub.events.EventTypes;
+import mil.tron.commonapi.entity.pubsub.events.EventType;
 
 import java.util.UUID;
 
@@ -13,6 +13,6 @@ public interface SubscriberService {
     Subscriber updateSubscription(UUID id, Subscriber subscriber);
     void cancelSubscription(UUID id);
 
-    Iterable<Subscriber> getSubscriptionsByEventType(EventTypes type);
+    Iterable<Subscriber> getSubscriptionsByEventType(EventType type);
 
 }

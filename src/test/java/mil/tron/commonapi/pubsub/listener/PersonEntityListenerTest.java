@@ -1,9 +1,10 @@
 package mil.tron.commonapi.pubsub.listener;
 
 import mil.tron.commonapi.entity.Airman;
-import mil.tron.commonapi.entity.pubsub.events.EventTypes;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.pubsub.EventPublisher;
-import mil.tron.commonapi.pubsub.listeners.AirmanEntityListener;
+import mil.tron.commonapi.pubsub.listeners.PersonEntityListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,10 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
-public class AirmanEntityListenerTest {
+public class PersonEntityListenerTest {
 
     @InjectMocks
-    AirmanEntityListener listener;
+    PersonEntityListener listener;
 
     @Mock
     EventPublisher publisher;
@@ -27,6 +28,6 @@ public class AirmanEntityListenerTest {
         listener.afterAnyUpdate(new Airman());
         Mockito
             .verify(publisher, times(1))
-            .publishEvent(Mockito.any(EventTypes.class), Mockito.any(String.class));
+            .publishEvent(Mockito.any(EventType.class), Mockito.any(String.class), Mockito.any(String.class), Mockito.any(Person.class));
     }
 }

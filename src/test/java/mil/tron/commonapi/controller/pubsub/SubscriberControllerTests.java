@@ -3,7 +3,7 @@ package mil.tron.commonapi.controller.pubsub;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
-import mil.tron.commonapi.entity.pubsub.events.EventTypes;
+import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ public class SubscriberControllerTests {
                 .builder()
                 .id(UUID.randomUUID())
                 .subscriberAddress("http://localhost:8080/changed")
-                .subscribedEvent(EventTypes.AIRMAN_CHANGE)
+                .subscribedEvent(EventType.PERSON_CHANGE)
                 .build();
     }
 

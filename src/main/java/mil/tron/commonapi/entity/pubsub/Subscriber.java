@@ -1,9 +1,11 @@
 package mil.tron.commonapi.entity.pubsub;
 
 import lombok.*;
-import mil.tron.commonapi.entity.pubsub.events.EventTypes;
+import mil.tron.commonapi.entity.pubsub.events.EventType;
+import mil.tron.commonapi.validations.ValidSubscriberAddress;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
 import java.util.UUID;
 
 /**
@@ -25,12 +27,15 @@ public class Subscriber {
 
     @Getter
     @Setter
+    @NotNull
+    @ValidSubscriberAddress
     private String subscriberAddress;
 
     @Getter
     @Setter
+    @NotNull
     @Enumerated(EnumType.STRING)
-    private EventTypes subscribedEvent;
+    private EventType subscribedEvent;
 
     @Override
     public String toString() {

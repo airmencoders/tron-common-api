@@ -1,8 +1,9 @@
 package mil.tron.commonapi.pubsub;
 
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
-import mil.tron.commonapi.entity.pubsub.events.EventTypes;
+import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -47,7 +49,7 @@ public class EventPublisherTest {
 
         subscriber = Subscriber.builder()
                 .id(UUID.randomUUID())
-                .subscribedEvent(EventTypes.AIRMAN_CHANGE)
+                .subscribedEvent(EventType.PERSON_CHANGE)
                 .subscriberAddress("http://some.address/changed")
                 .build();
 
@@ -62,14 +64,14 @@ public class EventPublisherTest {
 
     @Test
     void testAsyncPublish() {
-        Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventTypes.class)))
+        Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventType.class)))
                 .thenReturn(Lists.newArrayList(subscriber));
 
         Mockito.when(
-            publisherSender.getForEntity(subscriber.getSubscriberAddress(), String.class))
+            publisherSender.postForEntity(Mockito.anyString(), Mockito.anyMap(), eq(String.class)))
             .thenReturn(new ResponseEntity<>("message", HttpStatus.OK));
 
-        publisher.publishEvent(EventTypes.AIRMAN_CHANGE, "message");
+        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Airman", new Airman());
 
         assertTrue(outputStreamCaptor.toString().contains("[PUBLISH BROADCAST]"));
         assertFalse(outputStreamCaptor.toString().contains("[PUBLISH ERROR]"));
@@ -77,15 +79,15 @@ public class EventPublisherTest {
 
     @Test
     void testAsyncPublishFails() {
-        Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventTypes.class)))
+        Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventType.class)))
                 .thenReturn(Lists.newArrayList(subscriber));
 
         Mockito.when(
-                publisherSender.getForEntity(subscriber.getSubscriberAddress(), String.class))
+                publisherSender.postForEntity(Mockito.anyString(), Mockito.anyMap(), eq(String.class)))
                 .thenThrow(new RestClientException("Exception"));
 
 
-        publisher.publishEvent(EventTypes.AIRMAN_CHANGE, "message");
+        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Airman", new Airman());
         assertTrue(outputStreamCaptor.toString().contains("[PUBLISH ERROR]"));
     }
 }

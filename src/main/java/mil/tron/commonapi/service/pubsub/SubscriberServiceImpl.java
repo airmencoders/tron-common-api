@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.entity.pubsub.Subscriber;
-import mil.tron.commonapi.entity.pubsub.events.EventTypes;
+import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -81,7 +81,7 @@ public class SubscriberServiceImpl implements SubscriberService {
     }
 
     @Override
-    public Iterable<Subscriber> getSubscriptionsByEventType(EventTypes type) {
+    public Iterable<Subscriber> getSubscriptionsByEventType(EventType type) {
         return subRepo.findAllBySubscribedEvent(type);
     }
 }
