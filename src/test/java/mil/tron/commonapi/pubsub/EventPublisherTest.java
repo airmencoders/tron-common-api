@@ -10,11 +10,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -26,19 +25,19 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class EventPublisherTest {
 
+    @Autowired
     @InjectMocks
     private EventPublisher publisher;
 
-    @Mock
+    @MockBean
     private SubscriberService subService;
 
-    @Mock
+    @MockBean(name="eventSender")
     private RestTemplate publisherSender;
 
     private Subscriber subscriber;
@@ -70,9 +69,13 @@ public class EventPublisherTest {
 
         Mockito.when(
             publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
-            .thenReturn(URI.create(subscriber.getSubscriberAddress()));
+                .thenReturn(URI.create(subscriber.getSubscriberAddress()));
 
         publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Airman", new Airman());
+
+        // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
+        // a race condition on the logging output getting captured
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
 
         assertTrue(outputStreamCaptor.toString().contains("[PUBLISH BROADCAST]"));
         assertFalse(outputStreamCaptor.toString().contains("[PUBLISH ERROR]"));
@@ -87,8 +90,12 @@ public class EventPublisherTest {
                 publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
                 .thenThrow(new RestClientException("Exception"));
 
-
         publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Airman", new Airman());
+
+        // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
+        // a race condition on the logging output getting capture
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+
         assertTrue(outputStreamCaptor.toString().contains("[PUBLISH ERROR]"));
     }
 }

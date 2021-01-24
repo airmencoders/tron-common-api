@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.service.puckboard.PuckboardExtractorService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
@@ -34,12 +35,13 @@ public class PuckboardEtlController {
      * @param builder
      * @return
      */
-    @Bean
+    @Bean("puckboardFetcher")
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
         return builder.build();
     }
 
     @Autowired
+    @Qualifier("puckboardFetcher")
     private RestTemplate restTemplate;
 
     @Autowired
