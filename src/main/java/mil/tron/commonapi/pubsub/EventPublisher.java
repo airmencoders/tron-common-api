@@ -67,7 +67,6 @@ public class EventPublisher {
         messageDetails.put("type", className);
         messageDetails.put("message", message);
         messageDetails.put("data", data);
-        System.out.println("TEST");
         for (Subscriber s : subscribers) {
             publisherLog.info("[PUBLISH BROADCAST] - Event: " + type.toString() + " Message: " + message + " to Subscriber: " + s.getSubscriberAddress());
             try {
