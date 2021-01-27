@@ -6,6 +6,8 @@ import lombok.Setter;
 
 import javax.persistence.Entity;
 import javax.persistence.OneToOne;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -28,4 +30,20 @@ public class Squadron extends Organization {
     @Getter
     @Setter
     private String majorCommand;
+
+    /**
+     * This method will be performed before database operations.
+     *
+     * Entity parameters are formatted as needed
+     */
+    @PreUpdate
+    @PrePersist
+    public void sanitizeEntity() {
+        trimStrings();
+    }
+
+    public void trimStrings() {
+        baseName = (baseName == null) ? null : baseName.trim();
+        majorCommand = (majorCommand == null) ? null : majorCommand.trim();
+    }
 }

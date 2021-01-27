@@ -1,15 +1,18 @@
 package mil.tron.commonapi.entity;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
+import mil.tron.commonapi.pubsub.listeners.OrganizationEntityListener;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
-
-import java.util.Set;
-
 import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
+@EntityListeners(OrganizationEntityListener.class)
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -65,19 +68,32 @@ public class Organization {
 
     /**
      * This method will be performed before database operations.
+     *
+     * Entity parameters are formatted as needed
+     */
+    @PreUpdate
+    @PrePersist
+    public void sanitizeEntity() {
+        trimStrings();
+        sanitizeNameForUniqueConstraint();
+    }
+    /**
+     * This method will be performed before database operations.
      * 
      * Converts {@link Organization#name} to lowercase and sets it
      * to {@link Organization#nameAsLower}. This is needed for the
      * unique constraint in the database.
      */
-    @PreUpdate
-    @PrePersist
     public void sanitizeNameForUniqueConstraint() {
-    	if (name != null && name.isBlank()) {
-    		this.name = null;
-    	}
-    	
-    	nameAsLower = name == null ? null : name.toLowerCase();
+        if (name != null && name.isBlank()) {
+            this.name = null;
+        }
+
+        nameAsLower = name == null ? null : name.toLowerCase();
+    }
+
+    public void trimStrings() {
+        name = name.trim();
     }
 
     @Override
