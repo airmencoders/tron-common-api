@@ -1,17 +1,19 @@
 package mil.tron.commonapi.entity;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.pubsub.listeners.OrganizationEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
-
-import java.util.Set;
-
 import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
+@EntityListeners(OrganizationEntityListener.class)
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder

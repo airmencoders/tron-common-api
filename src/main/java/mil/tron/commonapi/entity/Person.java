@@ -1,13 +1,16 @@
 package mil.tron.commonapi.entity;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import mil.tron.commonapi.pubsub.listeners.PersonEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
-
 import java.util.UUID;
 
+@EntityListeners(PersonEntityListener.class)
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
