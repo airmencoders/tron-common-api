@@ -153,6 +153,18 @@ public class OrganizationController {
 		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId), HttpStatus.OK);
 	}
 
+	// TODO : add swagger doc
+	@PatchMapping("/{id}/subordinates")
+	public ResponseEntity<Object> addSubordinateOrganization(@PathVariable UUID id, @RequestBody List<UUID> orgIds) {
+		return new ResponseEntity<>(organizationService.addSubordinateOrg(id, orgIds), HttpStatus.OK);
+	}
+
+	// TODO : add swagger doc
+	@DeleteMapping("/{id}/subordinates")
+	public ResponseEntity<Object> removeSubordinateOrganization(@PathVariable UUID id, @RequestBody List<UUID> orgIds) {
+		return new ResponseEntity<>(organizationService.removeSubordinateOrg(id, orgIds), HttpStatus.OK);
+	}
+
 	@Operation(summary = "Updates an existing organization's attributes", description = "Updates an existing organization's attributes")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",

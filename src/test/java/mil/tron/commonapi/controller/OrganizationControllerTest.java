@@ -302,7 +302,7 @@ public class OrganizationControllerTest {
 
 			newOrg.getMembers().remove(p.getId());
 			Mockito.when(organizationService.removeOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class))).thenReturn(newOrg);
-			MvcResult result2 = mockMvc.perform(patch(ENDPOINT + "{id}/members", testOrgDto.getId())
+			MvcResult result2 = mockMvc.perform(delete(ENDPOINT + "{id}/members", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(p.getId()))))
@@ -311,6 +311,30 @@ public class OrganizationControllerTest {
 
 			// test it "removed" from org
 			assertEquals(0, OBJECT_MAPPER.readValue(result2.getResponse().getContentAsString(), OrganizationDto.class).getMembers().size());
+		}
+
+		@Test
+		void testAddRemoveSubordinateOrgs() throws Exception {
+			Organization subOrg = new Organization();
+
+			OrganizationDto newOrg = new OrganizationDto();
+			newOrg.setId(testOrgDto.getId());
+			newOrg.setName("test org");
+			newOrg.getSubordinateOrganizations().add(subOrg.getId());
+
+			Mockito.when(organizationService.addSubordinateOrg(Mockito.any(UUID.class), Mockito.anyList())).thenReturn(newOrg);
+			mockMvc.perform(patch(ENDPOINT + "{id}/subordinates", testOrgDto.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(subOrg.getId()))))
+					.andExpect(status().isOk());
+
+			newOrg.getSubordinateOrganizations().remove(subOrg.getId());
+			mockMvc.perform(delete(ENDPOINT + "{id}/subordinates", testOrgDto.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(subOrg.getId()))))
+					.andExpect(status().isOk());
 		}
 	}
 }

@@ -2,6 +2,8 @@ package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.*;
 import lombok.*;
+import mil.tron.commonapi.entity.orgtypes.Unit;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 
@@ -62,6 +64,11 @@ public class Organization {
     @OneToMany
     @JsonIgnore
     private Set<Organization> subordinateOrganizations = new HashSet<>();
+
+    @Getter
+    @Setter
+    @Enumerated(value = EnumType.STRING)
+    private Unit orgType = Unit.ORGANIZATION;
 
     /**
      * This method will be performed before database operations.
