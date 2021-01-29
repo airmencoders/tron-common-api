@@ -3,6 +3,7 @@ package mil.tron.commonapi.service;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -355,6 +356,7 @@ class OrganizationServiceImplTest {
 				.name("Test1")
 				.members(Set.of(leader))
 				.orgType(Unit.ORGANIZATION)
+				.branchType(Branch.USAF)
 				.build();
 
 		OrganizationDto dto = new ModelMapper().map(org, OrganizationDto.class);

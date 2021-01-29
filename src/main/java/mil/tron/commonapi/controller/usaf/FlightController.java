@@ -1,6 +1,7 @@
 package mil.tron.commonapi.controller.usaf;
 
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -44,6 +45,7 @@ public class FlightController {
     @PostMapping("")
     public ResponseEntity<Object> createNewFlight(@RequestBody OrganizationDto org) {
         org.setOrgType(Unit.FLIGHT);  // force type to flight
+        org.setBranchType(Branch.USAF); // force branch to USAF
         return new ResponseEntity<>(organizationService.createOrganization(org), HttpStatus.CREATED);
     }
 

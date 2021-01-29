@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
@@ -27,16 +28,27 @@ public class OrganizationController {
 		this.organizationService = organizationService;
 	}
 	
-	@Operation(summary = "Retrieves all organizations", description = "Retrieves all organizations")
+	@Operation(summary = "Retrieves all organizations", description = "Retrieves all organizations.  Optionally can provide 'type' parameter (e.g. 'WING') to filter by Organization type")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad Request - likely due to invalid type specified",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class)))
 	})
 	@GetMapping
-	public ResponseEntity<Object> getOrganizations() {
-			return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
+	public ResponseEntity<Object> getOrganizations(@RequestParam(name = "type", required = false, defaultValue = "ORGANIZATION") Unit unitType) {
 
+		// return all types by default
+		if (unitType.equals(Unit.ORGANIZATION)) {
+			return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
+		}
+
+		// otherwise try to return the type specified
+		else {
+			return new ResponseEntity<>(organizationService.getOrganizationsByType(unitType), HttpStatus.OK);
+		}
 	}
 	
 	@Operation(summary = "Retrieves an organization by ID", description = "Retrieves an organization by ID")

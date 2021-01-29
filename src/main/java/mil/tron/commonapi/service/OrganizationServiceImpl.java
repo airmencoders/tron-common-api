@@ -324,7 +324,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 */
 	@Override
 	public OrganizationDto removeSubordinateOrg(UUID organizationId, List<UUID> orgIds) {
-		return this.convertToDto(this.addOrg(organizationId, orgIds));
+		return this.convertToDto(this.removeOrg(organizationId, orgIds));
 	}
 
 	/**

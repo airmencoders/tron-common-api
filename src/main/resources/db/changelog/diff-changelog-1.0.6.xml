@@ -4,5 +4,15 @@
         <addColumn tableName="organization">
             <column name="org_type" type="varchar(255)"/>
         </addColumn>
+        <addDefaultValue  columnName="org_type"
+                          defaultValue="ORGANIZATION"
+                          tableName="organization"/>
+
+        <addColumn tableName="organization">
+            <column name="branch_type" type="varchar(255)"/>
+        </addColumn>
+        <addDefaultValue  columnName="branch_type"
+                          defaultValue="OTHER"
+                          tableName="organization"/>
     </changeSet>
 </databaseChangeLog>

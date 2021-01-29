@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.OrganizationService;
@@ -74,6 +76,8 @@ public class OrganizationControllerTest {
 				.id(testOrg.getId())
 				.leader(testOrg.getLeader().getId())
 				.name(testOrg.getName())
+				.orgType(Unit.WING)
+				.branchType(Branch.USAF)
 				.members(testOrg.getMembers().stream().map(Person::getId).collect(Collectors.toSet()))
 				.build();
 
@@ -92,6 +96,18 @@ public class OrganizationControllerTest {
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
+		}
+
+		@Test
+		void testGetAllByType() throws Exception {
+			List<OrganizationDto> orgs = new ArrayList<>();
+			orgs.add(testOrgDto);
+
+			Mockito.when(organizationService.getOrganizationsByType(Unit.WING)).thenReturn(orgs);
+
+			mockMvc.perform(get(ENDPOINT + "?type=WING"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
 		}
 		
 		@Test
