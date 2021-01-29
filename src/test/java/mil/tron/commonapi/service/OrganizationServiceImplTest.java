@@ -54,10 +54,14 @@ class OrganizationServiceImplTest {
 	void beforeEachSetup() {
 		testOrg = new Organization();
 		testOrg.setName("Some Organization");
+		testOrg.setOrgType(Unit.SQUADRON);
+		testOrg.setBranchType(Branch.USAF);
 
 		testOrgDto = OrganizationDto.builder()
 				.id(testOrg.getId())
 				.name(testOrg.getName())
+				.orgType(Unit.SQUADRON)
+				.branchType(Branch.USAF)
 				.build();
 	}
 	
@@ -174,6 +178,29 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.findAll()).thenReturn(Lists.newArrayList(testOrg));
     	Iterable<OrganizationDto> persons = organizationService.getOrganizations();
     	assertThat(persons).hasSize(1);
+
+	}
+
+	@Test
+	void getOrganizationsByTypeAndServiceTest() {
+		Mockito.when(repository.findAll()).thenReturn(Lists.newArrayList(testOrg));
+		Iterable<OrganizationDto> persons = organizationService.getOrganizationsByTypeAndService(Unit.SQUADRON, Branch.USAF);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService(Unit.SQUADRON, null);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService(Unit.WING, null);
+		assertThat(persons).hasSize(0);
+
+		persons = organizationService.getOrganizationsByTypeAndService(null, null);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService(null, Branch.USAF);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService(Unit.SQUADRON, Branch.USMC);
+		assertThat(persons).hasSize(0);
 
 	}
 

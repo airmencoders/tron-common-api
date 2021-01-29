@@ -103,11 +103,37 @@ public class OrganizationControllerTest {
 			List<OrganizationDto> orgs = new ArrayList<>();
 			orgs.add(testOrgDto);
 
-			Mockito.when(organizationService.getOrganizationsByType(Unit.WING)).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Unit.WING, null)).thenReturn(orgs);
 
 			mockMvc.perform(get(ENDPOINT + "?type=WING"))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
+		}
+
+		@Test
+		void testGetAllByTypeAndService() throws Exception {
+			List<OrganizationDto> orgs = new ArrayList<>();
+			orgs.add(testOrgDto);
+
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Unit.WING, Branch.USAF)).thenReturn(orgs);
+
+			mockMvc.perform(get(ENDPOINT + "?type=WING&branch=USAF"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
+
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(null, null)).thenReturn(new ArrayList<>());
+			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=UNKNOWN"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(new ArrayList<>())));
+
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(null, Branch.USAF)).thenReturn(orgs);
+			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=USAF"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
+
+			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=BLAH"))
+					.andExpect(status().isBadRequest());
+
 		}
 		
 		@Test

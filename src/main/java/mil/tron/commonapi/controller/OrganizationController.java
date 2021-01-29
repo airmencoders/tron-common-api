@@ -7,7 +7,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
@@ -28,26 +30,42 @@ public class OrganizationController {
 		this.organizationService = organizationService;
 	}
 	
-	@Operation(summary = "Retrieves all organizations", description = "Retrieves all organizations.  Optionally can provide 'type' parameter (e.g. 'WING') to filter by Organization type")
+	@Operation(summary = "Retrieves all organizations",
+			description = "Retrieves all organizations.  Optionally can provide 'type' parameter (e.g. 'WING') to filter by Organization type " +
+						"and/or 'branch' parameter to filter by branch of service (e.g 'USAF'). If neither parameter is given, then no filters " +
+						"are applied and request returns all Organizations.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "400",
-					description = "Bad Request - likely due to invalid type specified",
+					description = "Bad Request - likely due to invalid unit type or branch of service specified",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class)))
 	})
 	@GetMapping
-	public ResponseEntity<Object> getOrganizations(@RequestParam(name = "type", required = false, defaultValue = "ORGANIZATION") Unit unitType) {
+	public ResponseEntity<Object> getOrganizations(
+			@RequestParam(name = "type", required = false, defaultValue = "UNKNOWN") String unitType,
+			@RequestParam(name = "branch", required = false, defaultValue = "UNKNOWN") String branchType) {
 
-		// return all types by default
-		if (unitType.equals(Unit.ORGANIZATION)) {
+		// return all types by default (if no query params given)
+		if (unitType.equals("UNKNOWN") && branchType.equals("UNKNOWN")) {
 			return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
 		}
-
-		// otherwise try to return the type specified
+		// otherwise try to return the types specified
 		else {
-			return new ResponseEntity<>(organizationService.getOrganizationsByType(unitType), HttpStatus.OK);
+			Unit unit;
+			Branch branch;
+
+			// coerce to enumerated value
+			try {
+				unit = unitType.equals("UNKNOWN") ? null : Unit.valueOf(unitType.toUpperCase());
+				branch = branchType.equals("UNKNOWN") ? null : Branch.valueOf(branchType.toUpperCase());
+			}
+			catch (IllegalArgumentException e) {
+				throw new BadRequestException("Invalid branch or service type given");
+			}
+
+			return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(unit, branch), HttpStatus.OK);
 		}
 	}
 	

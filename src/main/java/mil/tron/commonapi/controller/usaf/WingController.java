@@ -29,7 +29,7 @@ public class WingController {
     // TODO: add swagger doc
     @GetMapping("")
     public ResponseEntity<Object> getAllWingTypes() {
-        return new ResponseEntity<>(organizationService.getOrganizationsByType(Unit.WING), HttpStatus.OK);
+        return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(Unit.WING, Branch.USAF), HttpStatus.OK);
     }
 
     // TODO: add swagger doc

@@ -4,6 +4,7 @@ import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -187,18 +188,35 @@ public class OrganizationServiceImpl implements OrganizationService {
 		return repository.save(organization);
 	}
 
+	/**
+	 * Filters out organizations by type and branch.
+	 * @param type The unit type
+	 * @param branch The branch/service type (if null then ignores it)
+	 * @return filtered list of Organizations
+	 */
 	@Override
-	public Iterable<Organization> findOrganizationsByType(Unit type) {
+	public Iterable<Organization> findOrganizationsByTypeAndService(Unit type, Branch branch) {
 		return StreamSupport
 				.stream(repository.findAll().spliterator(), false)
-				.filter(item -> item.getOrgType().equals(type))
+				.filter(item -> {
+					if (type == null && branch == null) return true;
+					else if (branch == null) return item.getOrgType().equals(type);
+					else if (type == null) return item.getBranchType().equals(branch);
+					else return item.getOrgType().equals(type) && item.getBranchType().equals(branch);
+				})
 				.collect(Collectors.toList());
 	}
 
+	/**
+	 * Controller-facing method to filter out organizations by type and service
+	 * @param type The unit type
+	 * @param branch The branch service type (null to ignore)
+	 * @return The filtered list of organizations
+	 */
 	@Override
-	public Iterable<OrganizationDto> getOrganizationsByType(Unit type) {
+	public Iterable<OrganizationDto> getOrganizationsByTypeAndService(Unit type, Branch branch) {
 		return StreamSupport
-				.stream(this.findOrganizationsByType(type).spliterator(), false)
+				.stream(this.findOrganizationsByTypeAndService(type, branch).spliterator(), false)
 				.map(this::convertToDto)
 				.collect(Collectors.toList());
 	}

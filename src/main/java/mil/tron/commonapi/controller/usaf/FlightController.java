@@ -28,7 +28,7 @@ public class FlightController {
     // TODO: add swagger doc
     @GetMapping("")
     public ResponseEntity<Object> getAllFlightTypes() {
-        return new ResponseEntity<>(organizationService.getOrganizationsByType(Unit.FLIGHT), HttpStatus.OK);
+        return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(Unit.FLIGHT, Branch.USAF), HttpStatus.OK);
     }
 
     // TODO: add swagger doc

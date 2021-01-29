@@ -119,7 +119,10 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
                 OrganizationDto s = new OrganizationDto();
                 s.setId(id);
                 s.setName(name);
-                s.setBranchType(Branch.USAF);
+
+                // infer the service from name
+                if (node.get(ORG_NAME_FIELD).textValue().toLowerCase().contains("marine")) s.setBranchType(Branch.USMC);
+                else s.setBranchType(Branch.USAF);
 
                 // prefer 'type' field, but if null see if type can be inferred from name /squadron/i or /wing/i
                 Unit type = Unit.OTHER_USAF;

@@ -28,7 +28,7 @@ public class GroupController {
     // TODO: add swagger doc
     @GetMapping("")
     public ResponseEntity<Object> getAllGroupTypes() {
-        return new ResponseEntity<>(organizationService.getOrganizationsByType(Unit.GROUP), HttpStatus.OK);
+        return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(Unit.GROUP, Branch.USAF), HttpStatus.OK);
     }
 
     // TODO: add swagger doc

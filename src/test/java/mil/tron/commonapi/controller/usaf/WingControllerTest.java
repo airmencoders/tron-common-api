@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -90,7 +91,7 @@ public class WingControllerTest {
         void testGetAll() throws Exception {
             List<OrganizationDto> orgs = Lists.newArrayList(testOrgDto);
 
-            Mockito.when(organizationService.getOrganizationsByType(Unit.WING)).thenReturn(orgs);
+            Mockito.when(organizationService.getOrganizationsByTypeAndService(Unit.WING, Branch.USAF)).thenReturn(orgs);
 
             mockMvc.perform(get(ENDPOINT))
                     .andExpect(status().isOk())

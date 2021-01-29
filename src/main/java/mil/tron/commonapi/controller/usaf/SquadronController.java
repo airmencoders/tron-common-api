@@ -28,7 +28,7 @@ public class SquadronController {
     // TODO: add swagger doc
     @GetMapping("")
     public ResponseEntity<Object> getAllSquadronTypes() {
-        return new ResponseEntity<>(organizationService.getOrganizationsByType(Unit.SQUADRON), HttpStatus.OK);
+        return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(Unit.SQUADRON, Branch.USAF), HttpStatus.OK);
     }
 
     // TODO: add swagger doc
