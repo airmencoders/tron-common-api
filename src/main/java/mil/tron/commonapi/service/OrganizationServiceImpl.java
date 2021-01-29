@@ -195,9 +195,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return filtered list of Organizations
 	 */
 	@Override
-	public Iterable<Organization> findOrganizationsByTypeAndService(Unit type, Branch branch) {
+	public Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch) {
 		return StreamSupport
 				.stream(repository.findAll().spliterator(), false)
+				.filter(item -> item.getName().toLowerCase().contains(searchQuery.toLowerCase()))
 				.filter(item -> {
 					if (type == null && branch == null) return true;
 					else if (branch == null) return item.getOrgType().equals(type);
@@ -214,9 +215,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return The filtered list of organizations
 	 */
 	@Override
-	public Iterable<OrganizationDto> getOrganizationsByTypeAndService(Unit type, Branch branch) {
+	public Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch) {
 		return StreamSupport
-				.stream(this.findOrganizationsByTypeAndService(type, branch).spliterator(), false)
+				.stream(this.findOrganizationsByTypeAndService(searchQuery, type, branch).spliterator(), false)
 				.map(this::convertToDto)
 				.collect(Collectors.toList());
 	}
@@ -277,12 +278,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Gets all organizations in the database, and converts them to DTO form before returning
+	 * @param searchQuery String to search on the organization names
 	 * @return Iterable of OrganizationDTOs
 	 */
 	@Override
-	public Iterable<OrganizationDto> getOrganizations() {
+	public Iterable<OrganizationDto> getOrganizations(String searchQuery) {
 		return StreamSupport
 				.stream(repository.findAll().spliterator(), false)
+				.filter(item -> item.getName().toLowerCase().contains(searchQuery.toLowerCase()))
 				.map(this::convertToDto)
 				.collect(Collectors.toList());
 	}

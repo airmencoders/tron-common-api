@@ -92,7 +92,7 @@ public class SquadronControllerTest {
         void testGetAll() throws Exception {
             List<OrganizationDto> orgs = Lists.newArrayList(testOrgDto);
 
-            Mockito.when(organizationService.getOrganizationsByTypeAndService(Unit.SQUADRON, Branch.USAF)).thenReturn(orgs);
+            Mockito.when(organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USAF)).thenReturn(orgs);
 
             mockMvc.perform(get(ENDPOINT))
                     .andExpect(status().isOk())

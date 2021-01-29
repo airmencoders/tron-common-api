@@ -91,7 +91,7 @@ public class FlightControllerTest {
         void testGetAll() throws Exception {
             List<OrganizationDto> orgs = Lists.newArrayList(testOrgDto);
 
-            Mockito.when(organizationService.getOrganizationsByTypeAndService(Unit.FLIGHT, Branch.USAF)).thenReturn(orgs);
+            Mockito.when(organizationService.getOrganizationsByTypeAndService("", Unit.FLIGHT, Branch.USAF)).thenReturn(orgs);
 
             mockMvc.perform(get(ENDPOINT))
                     .andExpect(status().isOk())

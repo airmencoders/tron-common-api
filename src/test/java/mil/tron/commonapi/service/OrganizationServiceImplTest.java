@@ -176,7 +176,7 @@ class OrganizationServiceImplTest {
 	@Test
 	void getOrganizationsTest() {
 		Mockito.when(repository.findAll()).thenReturn(Lists.newArrayList(testOrg));
-    	Iterable<OrganizationDto> persons = organizationService.getOrganizations();
+    	Iterable<OrganizationDto> persons = organizationService.getOrganizations("");
     	assertThat(persons).hasSize(1);
 
 	}
@@ -184,22 +184,31 @@ class OrganizationServiceImplTest {
 	@Test
 	void getOrganizationsByTypeAndServiceTest() {
 		Mockito.when(repository.findAll()).thenReturn(Lists.newArrayList(testOrg));
-		Iterable<OrganizationDto> persons = organizationService.getOrganizationsByTypeAndService(Unit.SQUADRON, Branch.USAF);
+		Iterable<OrganizationDto> persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USAF);
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService(Unit.SQUADRON, null);
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, null);
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService(Unit.WING, null);
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.WING, null);
 		assertThat(persons).hasSize(0);
 
-		persons = organizationService.getOrganizationsByTypeAndService(null, null);
+		persons = organizationService.getOrganizationsByTypeAndService("", null, null);
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService(null, Branch.USAF);
+		persons = organizationService.getOrganizationsByTypeAndService("", null, Branch.USAF);
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService(Unit.SQUADRON, Branch.USMC);
+		persons = organizationService.getOrganizationsByTypeAndService("some org", null, Branch.USAF);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService("some org", null, null);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService("area 51", null, null);
+		assertThat(persons).hasSize(0);
+
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USMC);
 		assertThat(persons).hasSize(0);
 
 	}

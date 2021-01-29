@@ -13,7 +13,7 @@ public interface OrganizationService {
 
 	// entity methods (service <--> persistence)
 	Organization findOrganization(UUID id);
-	Iterable<Organization> findOrganizationsByTypeAndService(Unit type, Branch branch);
+	Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
 	Organization removeMember(UUID organizationId, List<UUID> personIds);
 	Organization addMember(UUID organizationId, List<UUID> personIds);
 	Organization modify(UUID organizationId, Map<String, String> attribs);
@@ -24,8 +24,8 @@ public interface OrganizationService {
 	OrganizationDto createOrganization(OrganizationDto organization);
 	OrganizationDto updateOrganization(UUID id, OrganizationDto organization);
 	void deleteOrganization(UUID id);
-	Iterable<OrganizationDto> getOrganizations();
-	Iterable<OrganizationDto> getOrganizationsByTypeAndService(Unit type, Branch branch);
+	Iterable<OrganizationDto> getOrganizations(String searchQuery);
+	Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
 	OrganizationDto getOrganization(UUID id);
 	OrganizationDto modifyAttributes(UUID organizationId, Map<String, String> attribs);
 	OrganizationDto removeOrganizationMember(UUID organizationId, List<UUID> personIds);

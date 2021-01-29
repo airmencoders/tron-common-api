@@ -33,7 +33,8 @@ public class OrganizationController {
 	@Operation(summary = "Retrieves all organizations",
 			description = "Retrieves all organizations.  Optionally can provide 'type' parameter (e.g. 'WING') to filter by Organization type " +
 						"and/or 'branch' parameter to filter by branch of service (e.g 'USAF'). If neither parameter is given, then no filters " +
-						"are applied and request returns all Organizations.")
+						"are applied and request returns all Organizations.  Optionally can also provide 'search' parameter to search on organization " +
+						"names within the result set (case in-sensitive).")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
@@ -45,11 +46,12 @@ public class OrganizationController {
 	@GetMapping
 	public ResponseEntity<Object> getOrganizations(
 			@RequestParam(name = "type", required = false, defaultValue = "UNKNOWN") String unitType,
-			@RequestParam(name = "branch", required = false, defaultValue = "UNKNOWN") String branchType) {
+			@RequestParam(name = "branch", required = false, defaultValue = "UNKNOWN") String branchType,
+			@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery) {
 
 		// return all types by default (if no query params given)
 		if (unitType.equals("UNKNOWN") && branchType.equals("UNKNOWN")) {
-			return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
+			return new ResponseEntity<>(organizationService.getOrganizations(searchQuery), HttpStatus.OK);
 		}
 		// otherwise try to return the types specified
 		else {
@@ -65,7 +67,7 @@ public class OrganizationController {
 				throw new BadRequestException("Invalid branch or service type given");
 			}
 
-			return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(unit, branch), HttpStatus.OK);
+			return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(searchQuery, unit, branch), HttpStatus.OK);
 		}
 	}
 	
@@ -183,15 +185,41 @@ public class OrganizationController {
 		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId), HttpStatus.OK);
 	}
 
-	// TODO : add swagger doc
+	@Operation(summary = "Add subordinate organizations to an organization", description = "Adds subordinate orgs to an organization")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation",
+					content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "Host organization UUID was invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Provided org UUID(s) was/were invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
 	@PatchMapping("/{id}/subordinates")
-	public ResponseEntity<Object> addSubordinateOrganization(@PathVariable UUID id, @RequestBody List<UUID> orgIds) {
+	public ResponseEntity<Object> addSubordinateOrganization(@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
+															 @Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
+
 		return new ResponseEntity<>(organizationService.addSubordinateOrg(id, orgIds), HttpStatus.OK);
 	}
 
-	// TODO : add swagger doc
+	@Operation(summary = "Remove subordinate organizations from an organization", description = "Removes subordinate orgs from an organization")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation",
+					content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "Host organization UUID was invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Provided org UUID(s) was/were invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
 	@DeleteMapping("/{id}/subordinates")
-	public ResponseEntity<Object> removeSubordinateOrganization(@PathVariable UUID id, @RequestBody List<UUID> orgIds) {
+	public ResponseEntity<Object> removeSubordinateOrganization(@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
+																@Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
+
 		return new ResponseEntity<>(organizationService.removeSubordinateOrg(id, orgIds), HttpStatus.OK);
 	}
 
