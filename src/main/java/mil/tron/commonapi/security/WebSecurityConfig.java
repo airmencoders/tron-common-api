@@ -16,23 +16,23 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	@Value("${api-prefix.v1}")
 	private String apiPrefix;
 	
-	private UserPreAuthenticatedService userService;
+	private AppClientUserPreAuthenticatedService appClientUserService;
 	
-	public WebSecurityConfig(UserPreAuthenticatedService userService) {
-		this.userService = userService;
+	public WebSecurityConfig(AppClientUserPreAuthenticatedService appClientUserService) {
+		this.appClientUserService = appClientUserService;
 	}
 	
 	@Override
 	public void configure(AuthenticationManagerBuilder auth) throws Exception {
     	PreAuthenticatedAuthenticationProvider preAuthenticatedAuthenticationProvider = new PreAuthenticatedAuthenticationProvider();
-    	preAuthenticatedAuthenticationProvider.setPreAuthenticatedUserDetailsService(userService);
+    	preAuthenticatedAuthenticationProvider.setPreAuthenticatedUserDetailsService(appClientUserService);
     	auth.authenticationProvider(preAuthenticatedAuthenticationProvider);
 	}
 	
 	@Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-        	.addFilter(preAuthFilter())
+        	.addFilter(appClientPreAuthFilter())
         	.authorizeRequests()
 //	            .antMatchers(String.format("/%s/person", apiPrefix)).hasAuthority("ADMIN")
 //	            .antMatchers(String.format("/%s/organization", apiPrefix)).hasAuthority("ORG")
@@ -45,8 +45,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	        	.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
     }
     
-	public PreAuthFilter preAuthFilter() throws Exception {
-		PreAuthFilter filter = new PreAuthFilter();
+	public AppClientPreAuthFilter appClientPreAuthFilter() throws Exception {
+		AppClientPreAuthFilter filter = new AppClientPreAuthFilter();
 		filter.setAuthenticationManager(authenticationManager());
 		return filter;
 	}

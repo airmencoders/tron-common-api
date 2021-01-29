@@ -23,8 +23,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name="user_account", uniqueConstraints = { @UniqueConstraint(columnNames = "nameAsLower", name = "user_nameAsLower_key") })
-public class User {
+@Table(name="app_client_user", uniqueConstraints = { @UniqueConstraint(columnNames = "nameAsLower", name = "appClientUser_nameAsLower_key") })
+public class AppClientUser {
 	@Id
     @Getter
     @Setter
@@ -46,7 +46,16 @@ public class User {
 	
 	@PrePersist 
 	@PreUpdate 
+	public void sanitize() {
+		trimStringFields();
+		sanitizeNameForUniqueConstraint();
+	}
+	
 	private void sanitizeNameForUniqueConstraint() {
         nameAsLower = name == null ? null : name.toLowerCase();
     }
+	
+	private void trimStringFields() {
+		name = name == null ? null : name.trim();
+	}
 }

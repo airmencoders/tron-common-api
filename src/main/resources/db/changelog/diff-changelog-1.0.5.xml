@@ -1,28 +1,20 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
-    <changeSet author="Dylan (generated)" id="1610446338021-1">
+    <changeSet author="Dylan (generated)" id="1611918500984-1">
         <createSequence incrementBy="1" sequenceName="hibernate_sequence" startValue="1"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1610446338021-2">
-        <createTable tableName="role">
-            <column autoIncrement="true" name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="rolePK"/>
-            </column>
-            <column name="name" type="VARCHAR(255)"/>
-        </createTable>
-    </changeSet>
-    <changeSet author="Dylan (generated)" id="1610446338021-3">
-        <createTable tableName="user_account">
+    <changeSet author="Dylan (generated)" id="1611918500984-2">
+        <createTable tableName="app_client_user">
             <column name="id" type="UUID">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="user_accountPK"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="app_client_userPK"/>
             </column>
             <column name="name" type="VARCHAR(255)"/>
             <column name="name_as_lower" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1610446338021-4">
-        <createTable tableName="user_account_roles">
-            <column name="user_id" type="UUID">
+    <changeSet author="Dylan (generated)" id="1611918500984-3">
+        <createTable tableName="app_client_user_roles">
+            <column name="app_client_user_id" type="UUID">
                 <constraints nullable="false" primaryKey="true"/>
             </column>
             <column name="roles_id" type="BIGINT">
@@ -30,16 +22,48 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1610446338021-5">
-        <addUniqueConstraint columnNames="name_as_lower" constraintName="user_nameAsLower_key" tableName="user_account"/>
+    <changeSet author="Dylan (generated)" id="1611918500984-4">
+        <createTable tableName="privilege">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="privilegePK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+        </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1610446338021-6">
-        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="user_account_roles" constraintName="FK2fcerdd36y5il9hbpouxdbxuy" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="user_account" validate="true"/>
+    <changeSet author="Dylan (generated)" id="1611918500984-5">
+        <createTable tableName="role">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="rolePK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+        </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1610446338021-7">
-        <addForeignKeyConstraint baseColumnNames="roles_id" baseTableName="user_account_roles" constraintName="FKhgw1hs27q8latvqis3h4u9hh0" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="role" validate="true"/>
+    <changeSet author="Dylan (generated)" id="1611918500984-6">
+        <createTable tableName="role_privileges">
+            <column name="role_id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="privileges_id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+        </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1610446338021-8">
+    <changeSet author="Dylan (generated)" id="1611918500984-7">
+        <addUniqueConstraint columnNames="name_as_lower" constraintName="appClientUser_nameAsLower_key" tableName="app_client_user"/>
+    </changeSet>
+    <changeSet author="Dylan (generated)" id="1611918500984-8">
+        <addForeignKeyConstraint baseColumnNames="privileges_id" baseTableName="role_privileges" constraintName="FKas5s9i1itvr8tgocse4xmtwox" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="privilege" validate="true"/>
+    </changeSet>
+    <changeSet author="Dylan (generated)" id="1611918500984-9">
+        <addForeignKeyConstraint baseColumnNames="role_id" baseTableName="role_privileges" constraintName="FKgelpp2j5e63axp7bcguwaqec5" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="role" validate="true"/>
+    </changeSet>
+    <changeSet author="Dylan (generated)" id="1611918500984-10">
+        <addForeignKeyConstraint baseColumnNames="roles_id" baseTableName="app_client_user_roles" constraintName="FKo88p8gl9fstutmvwx7q7otyao" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="role" validate="true"/>
+    </changeSet>
+    <changeSet author="Dylan (generated)" id="1611918500984-11">
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_client_user_roles" constraintName="FKoj96pd2dwoqq8bg2w2f5ui7vv" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_client_user" validate="true"/>
+    </changeSet>
+    <changeSet author="Dylan (generated)" id="1611918500984-12">
         <addForeignKeyConstraint baseColumnNames="members_id" baseTableName="organization_members" constraintName="FKsryhxbelv0adpllqsic7yd2t0" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="person" validate="true"/>
     </changeSet>
 </databaseChangeLog>

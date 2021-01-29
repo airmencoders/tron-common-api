@@ -15,12 +15,15 @@ import java.util.List;
 import java.util.UUID;
 
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.security.AppClientUserPreAuthenticatedService;
+
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.OverrideAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -44,6 +47,9 @@ public class PersonControllerTest {
 	
 	@MockBean
 	private PersonService personService;
+	
+	@MockBean
+	private AppClientUserPreAuthenticatedService appClientUserPreAuthenticatedService;
 	
 	private Person testPerson;
 	private String testPersonJson;
