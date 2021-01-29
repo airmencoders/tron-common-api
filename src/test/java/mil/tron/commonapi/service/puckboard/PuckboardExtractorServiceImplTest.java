@@ -52,7 +52,7 @@ public class PuckboardExtractorServiceImplTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     JsonNode branchNodes, orgNodes, peopleNodes;
-    int sqdnCount, peopleCount;
+    int unitCount, peopleCount;
 
     @BeforeEach
     void setup() throws IOException {
@@ -68,14 +68,12 @@ public class PuckboardExtractorServiceImplTest {
                 Resources.toString(
                         Resources.getResource("puckboard/mock-personnel.json"), StandardCharsets.UTF_8));
 
-        sqdnCount = 0;
+        unitCount = 0;
         peopleCount = peopleNodes.size();
 
         // determine number of squadrons we have head of time to compare with
-        List<JsonNode> squadrons = ImmutableList.copyOf(orgNodes.elements());
-        for (JsonNode node : squadrons) {
-            if (node.get("organizationType").textValue().equals("Squadron")) sqdnCount++;
-        }
+        List<JsonNode> units = ImmutableList.copyOf(orgNodes.elements());
+        unitCount = units.size();
 
     }
 
@@ -92,7 +90,7 @@ public class PuckboardExtractorServiceImplTest {
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
-        assertEquals(sqdnCount, result.get("orgs").size());
+        assertEquals(unitCount, result.get("orgs").size());
         assertEquals(peopleCount, result.get("people").size());
 
     }
@@ -110,7 +108,7 @@ public class PuckboardExtractorServiceImplTest {
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
-        assertEquals(sqdnCount, result.get("orgs").size());
+        assertEquals(unitCount, result.get("orgs").size());
         assertEquals(peopleCount, result.get("people").size());
     }
 
@@ -130,7 +128,7 @@ public class PuckboardExtractorServiceImplTest {
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
-        assertEquals(sqdnCount, result.get("orgs").size());
+        assertEquals(unitCount, result.get("orgs").size());
 
         // # people "created" should be one less since we threw exception on first item attempted to be created
         assertEquals(peopleCount-1, (int) result

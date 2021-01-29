@@ -6,6 +6,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
@@ -16,7 +18,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionSystemException;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class PuckboardExtractorServiceImpl implements PuckboardExtractorService {
@@ -34,7 +39,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private AirmanService airmanService;
 
     private static final String ORG_ID_FIELD = "organizationId";
-    private static final String ORG_TYPE_FIELD = "organizationType";
+    private static final String ORG_TYPE_FIELD = "type";
     private static final String ORG_NAME_FIELD = "organizationName";
     private static final String ORG_STATUS_FIELD = "organizationStatus";
 
@@ -93,10 +98,9 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
 
     /**
      * Processes Squadron information from a JsonNode structure that contains the organization dump from puckboard.
-     * Only units are filtered out (Wings are ignored).
-     * Resultant units are then quiered for existence in Common API by their UUID:
-     * If they don't exist, then they are added via the SqaudronService.  Only UUID and name are used for creation.
-     * If they do exist by UUID, the entity is modified/updated by updating the unit's name.
+     * Resultant units are then queried for existence in Common API by their UUID:
+     *  If they don't exist, then they are added via the OrganizationService.  Only UUID and name are used for creation.
+     *  If they do exist by UUID, the entity is modified/updated by updating the unit's name.
      *
      * Each unit is placed into a return Map with its UUID and if it was created/updated/or the error it caused.
      * @param orgInfo JsonNode dump of Puckboard's organizations
@@ -104,19 +108,10 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
      */
     private Map<UUID, String> processOrgInformation(JsonNode orgInfo) {
 
-        List<JsonNode> unitOrgs = new ArrayList<>();
         Map<UUID, String> unitIdStatus = new HashMap<>();
 
-        // filter out only the unit types
-        for (int i = 0; i < orgInfo.size(); i++) {
-            JsonNode node = orgInfo.get(i);
-            if (node.get(ORG_TYPE_FIELD).textValue().equals("Squadron")) {
-                unitOrgs.add(node);
-            }
-        }
-
         // go thru each unit and add/update to Common
-        for (JsonNode node : unitOrgs) {
+        for (JsonNode node : orgInfo) {
             UUID id = UUID.fromString(node.get(ORG_ID_FIELD).textValue());
             String name = node.get(ORG_NAME_FIELD).textValue();
             if (!orgRepo.existsById(id)) {
@@ -124,7 +119,25 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
                 OrganizationDto s = new OrganizationDto();
                 s.setId(id);
                 s.setName(name);
+                s.setBranchType(Branch.USAF);
 
+                // prefer 'type' field, but if null see if type can be inferred from name /squadron/i or /wing/i
+                Unit type = Unit.OTHER_USAF;
+                if (node.get(ORG_TYPE_FIELD) == null) {
+                    if (node.get(ORG_NAME_FIELD).textValue().toLowerCase().contains("squadron")) type = Unit.SQUADRON;
+                    else if (node.get(ORG_NAME_FIELD).textValue().toLowerCase().contains("wing")) type = Unit.WING;
+                }
+                else {
+                    try {
+                        type = Unit.valueOf(node.get(ORG_TYPE_FIELD).textValue());
+                    }
+                    catch (IllegalArgumentException e) {
+                        unitIdStatus.put(id, "Error creating org - " + name + " of type - " + node.get(ORG_TYPE_FIELD).textValue());
+                        continue;
+                    }
+                }
+
+                s.setOrgType(type);
                 orgService.createOrganization(s);
                 unitIdStatus.put(id, "Created - " + name);
             }
