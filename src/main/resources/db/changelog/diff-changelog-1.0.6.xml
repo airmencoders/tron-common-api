@@ -1,18 +1,24 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
     <changeSet author="christopherzell" id="1.0.6-1">
+
         <addColumn tableName="organization">
             <column name="org_type" type="varchar(255)"/>
         </addColumn>
         <addDefaultValue  columnName="org_type"
                           defaultValue="ORGANIZATION"
-                          tableName="organization"/>
+                          tableName="organization"
+        />
 
         <addColumn tableName="organization">
             <column name="branch_type" type="varchar(255)"/>
         </addColumn>
         <addDefaultValue  columnName="branch_type"
                           defaultValue="OTHER"
-                          tableName="organization"/>
+                          tableName="organization"
+        />
+
+        <dropTable tableName="squadron" cascadeConstraints="true" />
+
     </changeSet>
 </databaseChangeLog>
