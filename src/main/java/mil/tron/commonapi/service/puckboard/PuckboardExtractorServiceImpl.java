@@ -39,7 +39,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private AirmanService airmanService;
 
     private static final String ORG_ID_FIELD = "organizationId";
-    private static final String ORG_TYPE_FIELD = "type";
+    private static final String ORG_TYPE_FIELD = "branchId";
     private static final String ORG_NAME_FIELD = "organizationName";
     private static final String ORG_STATUS_FIELD = "organizationStatus";
 
@@ -51,6 +51,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private static final String PERSON_PHONE_FIELD = "contactNumber";
     private static final String PERSON_RANK_FIELD = "rankId";
     private static final String PERSON_RANK_ABBR_FIELD = "rankAbbr";
+
+    private static final int PB_MARINE_BRANCH = 2;
 
     /**
      * Convert the JSON as given by the controller (as a JsonNode)
@@ -96,6 +98,23 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
         return allRanks;
     }
 
+    // helper function to convert PB's branchId to service name
+    private Branch resolveServiceName(JsonNode name) {
+        // infer the service from name
+        if (name != null && name.intValue() == PB_MARINE_BRANCH) return Branch.USMC;
+        else return Branch.USAF;
+    }
+
+    // helper function to infer unit type by its name
+    private Unit resolveUnitType(JsonNode node) {
+        if (node != null) {
+            if (node.textValue().toLowerCase().contains("squadron")) return Unit.SQUADRON;
+            else if (node.textValue().toLowerCase().contains("wing")) return Unit.WING;
+        }
+
+        return Unit.OTHER_USAF;
+    }
+
     /**
      * Processes Squadron information from a JsonNode structure that contains the organization dump from puckboard.
      * Resultant units are then queried for existence in Common API by their UUID:
@@ -119,28 +138,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
                 OrganizationDto s = new OrganizationDto();
                 s.setId(id);
                 s.setName(name);
-
-                // infer the service from name
-                if (node.get(ORG_NAME_FIELD).textValue().toLowerCase().contains("marine")) s.setBranchType(Branch.USMC);
-                else s.setBranchType(Branch.USAF);
-
-                // prefer 'type' field, but if null see if type can be inferred from name /squadron/i or /wing/i
-                Unit type = Unit.OTHER_USAF;
-                if (node.get(ORG_TYPE_FIELD) == null) {
-                    if (node.get(ORG_NAME_FIELD).textValue().toLowerCase().contains("squadron")) type = Unit.SQUADRON;
-                    else if (node.get(ORG_NAME_FIELD).textValue().toLowerCase().contains("wing")) type = Unit.WING;
-                }
-                else {
-                    try {
-                        type = Unit.valueOf(node.get(ORG_TYPE_FIELD).textValue());
-                    }
-                    catch (IllegalArgumentException e) {
-                        unitIdStatus.put(id, "Error creating org - " + name + " of type - " + node.get(ORG_TYPE_FIELD).textValue());
-                        continue;
-                    }
-                }
-
-                s.setOrgType(type);
+                s.setBranchType(resolveServiceName(node.get(ORG_TYPE_FIELD)));
+                s.setOrgType(resolveUnitType(node.get(ORG_NAME_FIELD)));
                 orgService.createOrganization(s);
                 unitIdStatus.put(id, "Created - " + name);
             }

@@ -70,7 +70,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		for (UUID id : orgIds) {
 			Organization subordinate = repository.findById(id).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("Provided org UUID " + id.toString() + " does not exist"));
+					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
 			organization.addSubordinateOrganization(subordinate);
 		}
@@ -92,7 +92,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		for (UUID id : orgIds) {
 			Organization subordinate = repository.findById(id).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("Provided org UUID " + id.toString() + " does not exist"));
+					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
 			organization.removeSubordinateOrganization(subordinate);
 		}
@@ -113,7 +113,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("A provided person UUID " + id.toString() + " does not exist"));
+					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
 			organization.removeMember(person);
 		}

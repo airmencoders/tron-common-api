@@ -25,6 +25,7 @@ import java.util.UUID;
 @RequestMapping("${api-prefix.v1}/organization")
 public class OrganizationController {
 	private OrganizationService organizationService;
+	private static final String UNKNOWN_TYPE = "UNKNOWN";
 	
 	public OrganizationController (OrganizationService organizationService) {
 		this.organizationService = organizationService;
@@ -45,12 +46,12 @@ public class OrganizationController {
 	})
 	@GetMapping
 	public ResponseEntity<Object> getOrganizations(
-			@RequestParam(name = "type", required = false, defaultValue = "UNKNOWN") String unitType,
-			@RequestParam(name = "branch", required = false, defaultValue = "UNKNOWN") String branchType,
+			@RequestParam(name = "type", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String unitType,
+			@RequestParam(name = "branch", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String branchType,
 			@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery) {
 
 		// return all types by default (if no query params given)
-		if (unitType.equals("UNKNOWN") && branchType.equals("UNKNOWN")) {
+		if (unitType.equals(OrganizationController.UNKNOWN_TYPE) && branchType.equals(OrganizationController.UNKNOWN_TYPE)) {
 			return new ResponseEntity<>(organizationService.getOrganizations(searchQuery), HttpStatus.OK);
 		}
 		// otherwise try to return the types specified
@@ -60,8 +61,8 @@ public class OrganizationController {
 
 			// coerce to enumerated value
 			try {
-				unit = unitType.equals("UNKNOWN") ? null : Unit.valueOf(unitType.toUpperCase());
-				branch = branchType.equals("UNKNOWN") ? null : Branch.valueOf(branchType.toUpperCase());
+				unit = unitType.equals(OrganizationController.UNKNOWN_TYPE) ? null : Unit.valueOf(unitType.toUpperCase());
+				branch = branchType.equals(OrganizationController.UNKNOWN_TYPE) ? null : Branch.valueOf(branchType.toUpperCase());
 			}
 			catch (IllegalArgumentException e) {
 				throw new BadRequestException("Invalid branch or service type given");
