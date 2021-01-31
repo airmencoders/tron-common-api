@@ -7,12 +7,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
+import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.AirmanService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -34,7 +35,7 @@ public class AirmanController {
                     description = "Successful operation",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Airman.class))))
     })
-    @PreAuthorize("hasAuthority('READ')")
+    @PreAuthorizeRead
     @GetMapping("")
     public ResponseEntity<Iterable<Airman>> getAllAirman() {
         return new ResponseEntity<>(airmanService.getAllAirman(), HttpStatus.OK);
@@ -49,7 +50,7 @@ public class AirmanController {
                     description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @PreAuthorize("hasAuthority('READ')")
+    @PreAuthorizeRead
     @GetMapping("/{id}")
     public ResponseEntity<Airman> getAirman(@Parameter(description = "UUID of the airman record", required= true) @PathVariable UUID id) {
         return new ResponseEntity<>( airmanService.getAirman(id), HttpStatus.OK);
@@ -67,7 +68,7 @@ public class AirmanController {
 				description = "Resource already exists with the provided UUID",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
-    @PreAuthorize("hasAuthority('WRITE')")
+    @PreAuthorizeWrite
     @PostMapping("")
     public ResponseEntity<Airman> addAirman(@Parameter(description = "Airman record to add", required = true) @Valid @RequestBody Airman airman) {
         return new ResponseEntity<>(airmanService.createAirman(airman), HttpStatus.CREATED);
@@ -86,7 +87,7 @@ public class AirmanController {
                     description = "Invalid update request - provided UUID didn't exist or did not match UUID in provided record or failed to validate data",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @PreAuthorize("hasAuthority('WRITE')")
+    @PreAuthorizeWrite
     @PutMapping("/{id}")
     public ResponseEntity<Airman> updateAirman(@Parameter(description = "Airman record ID to update", required = true) @PathVariable UUID id,
             @Parameter(description = "Airman record data", required = true) @Valid @RequestBody Airman airman) {
@@ -104,7 +105,7 @@ public class AirmanController {
                     description = "Record to delete does not exist",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @PreAuthorize("hasAuthority('WRITE')")
+    @PreAuthorizeWrite
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteAirman(@Parameter(description = "UUID id of the airman record to delete", required = true) @PathVariable UUID id) {
 
@@ -128,7 +129,7 @@ public class AirmanController {
                     description = "Bad Request / One of the supplied airman contained a UUID that already exists",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @PreAuthorize("hasAuthority('WRITE')")
+    @PreAuthorizeWrite
     @PostMapping("/airmen")
     public ResponseEntity<Object> addAirmen(
             @Parameter(description = "Array of Airman to add", required = true) @Valid @RequestBody List<Airman> airmen) {

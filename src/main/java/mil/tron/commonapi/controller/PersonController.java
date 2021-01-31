@@ -7,7 +7,6 @@ import javax.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +23,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
+import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.PersonService;
@@ -43,7 +44,7 @@ public class PersonController {
 					description = "Successful operation", 
 						content = @Content(array = @ArraySchema(schema = @Schema(implementation = Person.class))))
 	})
-	@PreAuthorize("hasAuthority('READ')")
+	@PreAuthorizeRead
 	@GetMapping
 	public ResponseEntity<Iterable<Person>> getPersons() {
 		return new ResponseEntity<>(personService.getPersons(), HttpStatus.OK);
@@ -61,7 +62,7 @@ public class PersonController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorize("hasAuthority('READ')")
+	@PreAuthorizeRead
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<Person> getPerson(
 			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId) {
@@ -82,7 +83,7 @@ public class PersonController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorize("hasAuthority('WRITE')")
+	@PreAuthorizeWrite
 	@PostMapping
 	public ResponseEntity<Person> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody Person person) {
 		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
@@ -97,7 +98,7 @@ public class PersonController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorize("hasAuthority('WRITE')")
+	@PreAuthorizeWrite
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<Person> updatePerson(
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
@@ -116,7 +117,7 @@ public class PersonController {
 				description = "Resource not found",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorize("hasAuthority('WRITE')")
+	@PreAuthorizeWrite
 	@DeleteMapping(value = "/{id}")
 	public ResponseEntity<Object> deletePerson(
 			@Parameter(description = "Person ID to delete", required = true) @PathVariable("id") UUID personId) {
@@ -140,7 +141,7 @@ public class PersonController {
 					description = "A person already exists with the id provided",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorize("hasAuthority('WRITE')")
+	@PreAuthorizeWrite
 	@PostMapping("/persons")
 	public ResponseEntity<Object> addPersons(
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<Person> people) {
