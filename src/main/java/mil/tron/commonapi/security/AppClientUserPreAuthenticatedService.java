@@ -17,14 +17,14 @@ import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.AppClientUser;
-import mil.tron.commonapi.repository.AppCientUserRespository;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 
 @Service
 public class AppClientUserPreAuthenticatedService implements AuthenticationUserDetailsService<PreAuthenticatedAuthenticationToken> {
 	
-	private AppCientUserRespository repository;
+	private AppClientUserRespository repository;
 	
-	public AppClientUserPreAuthenticatedService(AppCientUserRespository repository) {
+	public AppClientUserPreAuthenticatedService(AppClientUserRespository repository) {
 		this.repository = repository;
 	}
 

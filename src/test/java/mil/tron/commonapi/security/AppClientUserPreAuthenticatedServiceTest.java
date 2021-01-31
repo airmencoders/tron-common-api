@@ -19,14 +19,14 @@ import org.springframework.security.web.authentication.preauth.PreAuthenticatedA
 
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.repository.AppCientUserRespository;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class AppClientUserPreAuthenticatedServiceTest {
 	@Mock
-	private AppCientUserRespository repository;
+	private AppClientUserRespository repository;
 	
 	@InjectMocks
 	private AppClientUserPreAuthenticatedService service;
