@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
 
+import mil.tron.commonapi.exception.AuthManagerException;
+
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
@@ -45,9 +47,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	        	.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
     }
     
-	public AppClientPreAuthFilter appClientPreAuthFilter() throws Exception {
+	public AppClientPreAuthFilter appClientPreAuthFilter() throws AuthManagerException {
 		AppClientPreAuthFilter filter = new AppClientPreAuthFilter();
-		filter.setAuthenticationManager(authenticationManager());
+		try {
+			filter.setAuthenticationManager(authenticationManager());
+		} catch (Exception ex) {
+			throw new AuthManagerException(ex.getLocalizedMessage());
+		}
 		return filter;
 	}
 }

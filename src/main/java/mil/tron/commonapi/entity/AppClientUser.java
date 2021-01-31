@@ -36,6 +36,7 @@ public class AppClientUser {
 	@NotBlank
 	private String name;
 	
+	@Getter
 	private String nameAsLower;
 	
 	@Getter
