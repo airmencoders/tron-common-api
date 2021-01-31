@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.security.annotation.WithMockReadWrite;
 import mil.tron.commonapi.service.AirmanService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockReadWrite
 public class AirmanControllerTest {
     private static final String ENDPOINT = "/v1/airman/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

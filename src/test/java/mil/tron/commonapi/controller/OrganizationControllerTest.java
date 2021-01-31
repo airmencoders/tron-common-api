@@ -6,6 +6,8 @@ import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.security.AppClientUserPreAuthenticatedService;
+import mil.tron.commonapi.security.annotation.WithMockReadWrite;
 import mil.tron.commonapi.service.OrganizationService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +43,9 @@ public class OrganizationControllerTest {
 	@MockBean
 	private OrganizationService organizationService;
 	
+	@MockBean
+	private AppClientUserPreAuthenticatedService appClientUserPreAuthenticatedService;
+	
 	private Person testPerson;
 	private Person testLeaderPerson;
 	private Organization testOrg;
@@ -71,6 +76,7 @@ public class OrganizationControllerTest {
 	}
 	
 	@Nested
+	@WithMockReadWrite
 	class TestGet {
 
 		@Test
@@ -112,6 +118,7 @@ public class OrganizationControllerTest {
 	}
 	
 	@Nested
+	@WithMockReadWrite
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
@@ -166,6 +173,7 @@ public class OrganizationControllerTest {
 	}
 	
 	@Nested
+	@WithMockReadWrite
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
@@ -211,6 +219,7 @@ public class OrganizationControllerTest {
 	}
 	
 	@Nested
+	@WithMockReadWrite
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {
@@ -227,6 +236,7 @@ public class OrganizationControllerTest {
 	}
 
 	@Nested
+	@WithMockReadWrite
 	class TestPatch {
 		@Test
 		void testChangeName() throws Exception {

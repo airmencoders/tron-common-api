@@ -4,6 +4,7 @@ package mil.tron.commonapi.logging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.MockToken;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.security.annotation.WithMockReadWrite;
 import mil.tron.commonapi.service.PersonService;
 
 import org.aspectj.lang.JoinPoint;
@@ -34,6 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockReadWrite
 public class CommonApiLoggerTest {
     private static final String ENDPOINT = "/v1/person/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();    

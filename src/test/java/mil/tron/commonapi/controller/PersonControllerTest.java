@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.security.AppClientUserPreAuthenticatedService;
+import mil.tron.commonapi.security.annotation.WithMockReadWrite;
 
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -67,6 +69,7 @@ public class PersonControllerTest {
 	}
 
 	@Nested
+	@WithMockReadWrite
 	class TestGet {
 		@Test
 		void testGetAll() throws Exception {
@@ -99,6 +102,7 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
+	@WithMockReadWrite
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
@@ -145,6 +149,7 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
+	@WithMockReadWrite
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
@@ -190,6 +195,7 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
+	@WithMockReadWrite
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {

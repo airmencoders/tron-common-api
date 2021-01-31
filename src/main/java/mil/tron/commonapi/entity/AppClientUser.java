@@ -42,7 +42,7 @@ public class AppClientUser {
 	@Setter
 	@Builder.Default
 	@ManyToMany
-	private Set<Role> roles = new HashSet<>();
+	private Set<Privilege> privileges = new HashSet<>();
 	
 	@PrePersist 
 	@PreUpdate 
