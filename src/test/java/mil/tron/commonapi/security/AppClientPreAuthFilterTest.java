@@ -11,38 +11,38 @@ import org.mockito.Mockito;
 class AppClientPreAuthFilterTest {
 	private static final String NAMESPACE = "testnamespacename";
 	private static final String XFCC_BY = "By=spiffe://cluster/ns/tron-common-api/sa/default";
-	private static final String XFCC_HASH = "Hash=12345252036c835ac9b174bbfaef9e4a07dbc5691ef3d295bb8b815762554321";
+	private static final String XFCC_H = "FAKE_H=12345";
 	private static final String XFCC_SUBJECT = "Subject=\\\"\\\";";
 	private static final String XFCC_HEADER = new StringBuilder()
 			.append(XFCC_BY)
-			.append(XFCC_HASH)
+			.append(XFCC_H)
 			.append(XFCC_SUBJECT)
 			.append("URI=spiffe://cluster.local/ns/" + NAMESPACE + "/sa/default")
 			.toString();
 	
 	private static final String XFCC_HEADER_MALFORMED = new StringBuilder()
 			.append(XFCC_BY)
-			.append(XFCC_HASH)
+			.append(XFCC_H)
 			.append(XFCC_SUBJECT)
 			.append("spiffe://cluster.local/ns/" + NAMESPACE + "/sa/default")
 			.toString();
 	
 	private static final String XFCC_HEADER_NO_URI = new StringBuilder()
 			.append(XFCC_BY)
-			.append(XFCC_HASH)
+			.append(XFCC_H)
 			.append(XFCC_SUBJECT)
 			.toString();
 	
 	private static final String XFCC_HEADER_BLANK_URI = new StringBuilder()
 			.append(XFCC_BY)
-			.append(XFCC_HASH)
+			.append(XFCC_H)
 			.append(XFCC_SUBJECT)
 			.append("URI=")
 			.toString();
 	
 	private static final String XFCC_HEADER_MALFORMED_URI = new StringBuilder()
 			.append(XFCC_BY)
-			.append(XFCC_HASH)
+			.append(XFCC_H)
 			.append(XFCC_SUBJECT)
 			.append("URI=spiffe://cluster.local/" + NAMESPACE + "/sa/default")
 			.toString();
