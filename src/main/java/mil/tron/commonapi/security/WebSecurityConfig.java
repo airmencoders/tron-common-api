@@ -36,11 +36,12 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http
         	.addFilter(appClientPreAuthFilter())
         	.authorizeRequests()
-//	            .antMatchers(String.format("/%s/person", apiPrefix)).hasAuthority("ADMIN")
-//	            .antMatchers(String.format("/%s/organization", apiPrefix)).hasAuthority("ORG")
+	            .antMatchers(String.format("/%s/app-client", apiPrefix)).hasAuthority(PRIVILEGE.DASHBOARD.name())
 	            .anyRequest()
 	            	.authenticated()
             .and()
+        	.cors()
+        	.and()
             .csrf()
         		.disable()
         	.sessionManagement()
@@ -56,4 +57,11 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 		}
 		return filter;
 	}
+	
+	private enum PRIVILEGE {
+		READ,
+		WRITE,
+		DASHBOARD
+	}
 }
+
