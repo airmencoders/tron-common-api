@@ -1,4 +1,4 @@
-package mil.tron.commonapi.security;
+package mil.tron.commonapi.service;
 
 import java.util.ArrayList;
 import java.util.List;

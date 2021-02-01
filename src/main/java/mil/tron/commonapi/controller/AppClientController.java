@@ -6,20 +6,20 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.service.AppClientUserService;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/app-client")
 public class AppClientController {
 	
-	AppClientUserRespository repository;
+	AppClientUserService userService;
 	
-	public AppClientController(AppClientUserRespository repository) {
-		this.repository = repository;
+	public AppClientController(AppClientUserService userService) {
+		this.userService = userService;
 	}
 	
 	@GetMapping
 	public ResponseEntity<Object> getHeaders() {
-		return new ResponseEntity<>(repository.findAll(), HttpStatus.OK);
+		return new ResponseEntity<>(userService.getAppClientUsers(), HttpStatus.OK);
 	}
 }

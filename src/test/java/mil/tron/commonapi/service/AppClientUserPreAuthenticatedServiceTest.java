@@ -1,4 +1,4 @@
-package mil.tron.commonapi.security;
+package mil.tron.commonapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -20,6 +20,7 @@ import org.springframework.security.web.authentication.preauth.PreAuthenticatedA
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.repository.AppClientUserRespository;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 

@@ -10,6 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
 
 import mil.tron.commonapi.exception.AuthManagerException;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 
 @Configuration
 @EnableWebSecurity
