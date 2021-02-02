@@ -24,11 +24,11 @@ public class AirmanTests {
         assertEquals("1234567890", a.getDodid());
     }
 
-    @Test
-    public void badRankTest() {
-        Airman a = new Airman();
-        assertThrows(InvalidFieldValueException.class, () -> a.setRank("test"));
-    }
+//    @Test
+//    public void badRankTest() {
+//        Airman a = new Airman();
+//        assertThrows(InvalidFieldValueException.class, () -> a.setRank("test"));
+//    }
 
     @Test
     void testStringTrims() {

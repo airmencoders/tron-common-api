@@ -2,8 +2,10 @@ package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Getter;
 import lombok.Setter;
+import mil.tron.commonapi.entity.ranks.AirmanRank;
 import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
@@ -20,15 +22,6 @@ import java.util.HashSet;
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Airman extends Person {
-
-    /**
-     * List of valid USAF ranks plus contractor (CTR) and civilian (CIV)
-     */
-    @Transient
-    private static final HashSet<String> ranks = new HashSet<>(Arrays.asList(
-            "AB", "AMN", "A1C", "SRA", "SSGT", "TSGT", "MSGT", "SMGT", "CMSGT", "CMSGT",
-            "CCMSGT", "CMSAF", "2LT", "1LT", "CAPT", "MAJ", "LTCOL", "COL", "BG", "MG",
-            "LTG", "GEN", "CIV", "CTR", "SES"));
 
     /**
      * An airman's Air Force Specialty Code.
@@ -73,21 +66,29 @@ public class Airman extends Person {
     @Setter
     private String imds;
 
-    /**
-     * Rank field that returns/sets the base class (Person) 'title' field
-     */
-    public String getRank() {
-        return this.getTitle();
-    }
+//    /**
+//     * Rank field that returns/sets the base class (Person) 'title' field
+//     */
+//    public String getRank() {
+//        return this.getTitle();
+//    }
+//
+//    public void setRank(String rank) {
+//        if (rank != null && ranks.contains(rank.trim().toUpperCase())) {
+//            this.setTitle(rank.toUpperCase());
+//        }
+//        else {
+//            throw new InvalidFieldValueException("Airman rank must be one of: " + String.join(", ", Airman.ranks));
+//        }
+//    }
 
-    public void setRank(String rank) {
-        if (rank != null && ranks.contains(rank.trim().toUpperCase())) {
-            this.setTitle(rank.toUpperCase());
-        }
-        else {
-            throw new InvalidFieldValueException("Airman rank must be one of: " + String.join(", ", Airman.ranks));
-        }
-    }
+    /**
+     * Rank of Airman service member
+     */
+    @Getter
+    @Setter
+    @JsonSetter("rank")
+    private AirmanRank rank;
 
     @Getter
     @Setter

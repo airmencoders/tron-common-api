@@ -2,6 +2,7 @@ package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.ranks.AirmanRank;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AirmanService;
@@ -116,7 +117,7 @@ public class AirmanControllerTest {
                 .thenThrow(new RecordNotFoundException("Not found"));
 
         Airman newGuy = new Airman();
-        newGuy.setRank("MAJ");
+        newGuy.setRank(AirmanRank.MAJ);
 
         mockMvc.perform(put(ENDPOINT + newGuy.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
