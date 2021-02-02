@@ -72,7 +72,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 			Organization subordinate = repository.findById(id).orElseThrow(
 					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
-			organization.addSubordinateOrganization(subordinate);
+			if (!orgIsInAncestryChain(subordinate.getId(), organization)) {
+				organization.addSubordinateOrganization(subordinate);
+			}
+			else {
+				throw new InvalidRecordUpdateRequest("Organization " + subordinate.getId() + " is already an ancestor to this org!");
+			}
 		}
 
 		return repository.save(organization);
@@ -238,6 +243,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", org.getName()));
+
+		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
+		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : org.getSubordinateOrganizations()) {
+				if (orgIsInAncestryChain(subOrg.getId(), org)) {
+					throw new InvalidRecordUpdateRequest("Organization " + subOrg.getId() + " is already an ancestor to this org!");
+				}
+			}
+		}
 		
 		return this.convertToDto(repository.save(org));
 	}
@@ -262,6 +276,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 		
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", org.getName()));
+
+		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
+		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : org.getSubordinateOrganizations()) {
+				if (orgIsInAncestryChain(subOrg.getId(), org)) {
+					throw new InvalidRecordUpdateRequest("Organization " + subOrg.getId() + " is already an ancestor to this org!");
+				}
+			}
+		}
 		
 		return this.convertToDto(repository.save(org));
 	}
@@ -419,6 +442,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 		modelMapper.addConverter(personDemapper);
 		modelMapper.addConverter(orgDemapper);
 		return modelMapper.map(dto, Organization.class);
+	}
+
+	@Override
+	public Boolean orgIsInAncestryChain(UUID id, Organization startingOrg) {
+
+		Organization parentOrg = startingOrg.getParentOrganization();
+		if (parentOrg == null) return false;
+		else if (parentOrg.getId().equals(id)) return true;
+		else return orgIsInAncestryChain(id, parentOrg);
+
 	}
 
 

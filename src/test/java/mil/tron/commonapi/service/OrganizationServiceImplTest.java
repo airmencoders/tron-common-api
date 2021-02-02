@@ -23,11 +23,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 
 @ExtendWith(MockitoExtension.class)
@@ -417,6 +417,32 @@ class OrganizationServiceImplTest {
 		Mockito.when(personService.getPerson(leader.getId())).thenReturn(leader);
 
 		assertEquals(org, organizationService.convertToEntity(dto));
+
+	}
+
+	@Test
+	void testThatOrgCantAssignSubordinateOrgThatsInItsAncestryChain() {
+
+		Organization greatGrandParent = new Organization();
+		Organization grandParent = new Organization();
+		Organization parent = new Organization();
+		Organization theOrg = new Organization();
+		Organization legitSubOrg = new Organization();
+
+		// build the family tree
+		theOrg.setParentOrganization(parent);
+		parent.addSubordinateOrganization(theOrg);
+		parent.setParentOrganization(grandParent);
+		grandParent.setParentOrganization(greatGrandParent);
+		grandParent.addSubordinateOrganization(parent);
+		greatGrandParent.addSubordinateOrganization(grandParent);
+
+
+		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
+		assertTrue(organizationService.orgIsInAncestryChain(greatGrandParent.getId(), theOrg));
+
+		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
+		assertFalse(organizationService.orgIsInAncestryChain(legitSubOrg.getId(), theOrg));
 
 	}
 }
