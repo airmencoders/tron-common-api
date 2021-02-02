@@ -190,6 +190,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Filters out organizations by type and branch.
+	 * @param searchQuery name of org to match on for filtering (case in-sensitve)
 	 * @param type The unit type
 	 * @param branch The branch/service type (if null then ignores it)
 	 * @return filtered list of Organizations
@@ -210,6 +211,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Controller-facing method to filter out organizations by type and service
+	 * @param searchQuery name of org to match on for filtering (case in-sensitve)
 	 * @param type The unit type
 	 * @param branch The branch service type (null to ignore)
 	 * @return The filtered list of organizations
