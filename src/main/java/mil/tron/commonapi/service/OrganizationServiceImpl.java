@@ -4,6 +4,8 @@ import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -55,6 +57,50 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
+	 * Adds a list of organizations as subordinate orgs to provided organization
+	 * @param organizationId organization ID to modify
+	 * @param orgIds list of orgs by their UUIDs to add as subordinate organizations
+	 * @return the persisted, modified organization
+	 */
+	@Override
+	public Organization addOrg(UUID organizationId, List<UUID> orgIds) {
+		Organization organization = repository.findById(organizationId)
+				.orElseThrow(() -> new RecordNotFoundException(
+						String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
+
+		for (UUID id : orgIds) {
+			Organization subordinate = repository.findById(id).orElseThrow(
+					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
+
+			organization.addSubordinateOrganization(subordinate);
+		}
+
+		return repository.save(organization);
+	}
+
+	/**
+	 * Removes a list of organizations as subordinate orgs from provided organization
+	 * @param organizationId organization ID to modify
+	 * @param orgIds list of orgs by their UUIDs to remove from subordinate organizations
+	 * @return the persisted, modified organization
+	 */
+	@Override
+	public Organization removeOrg(UUID organizationId, List<UUID> orgIds) {
+		Organization organization = repository.findById(organizationId)
+				.orElseThrow(() -> new RecordNotFoundException(
+						String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
+
+		for (UUID id : orgIds) {
+			Organization subordinate = repository.findById(id).orElseThrow(
+					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
+
+			organization.removeSubordinateOrganization(subordinate);
+		}
+
+		return repository.save(organization);
+	}
+
+	/**
 	 * Removes members from an organization and re-persists it to db.
 	 * @param organizationId UUID of the organization
 	 * @param personIds List of Person UUIDs to remove
@@ -67,7 +113,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("A provided person UUID " + id.toString() + " does not exist"));
+					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
 			organization.removeMember(person);
 		}
@@ -143,6 +189,42 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
+	 * Filters out organizations by type and branch.
+	 * @param searchQuery name of org to match on for filtering (case in-sensitve)
+	 * @param type The unit type
+	 * @param branch The branch/service type (if null then ignores it)
+	 * @return filtered list of Organizations
+	 */
+	@Override
+	public Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch) {
+		return StreamSupport
+				.stream(repository.findAll().spliterator(), false)
+				.filter(item -> item.getName().toLowerCase().contains(searchQuery.toLowerCase()))
+				.filter(item -> {
+					if (type == null && branch == null) return true;
+					else if (branch == null) return item.getOrgType().equals(type);
+					else if (type == null) return item.getBranchType().equals(branch);
+					else return item.getOrgType().equals(type) && item.getBranchType().equals(branch);
+				})
+				.collect(Collectors.toList());
+	}
+
+	/**
+	 * Controller-facing method to filter out organizations by type and service
+	 * @param searchQuery name of org to match on for filtering (case in-sensitve)
+	 * @param type The unit type
+	 * @param branch The branch service type (null to ignore)
+	 * @return The filtered list of organizations
+	 */
+	@Override
+	public Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch) {
+		return StreamSupport
+				.stream(this.findOrganizationsByTypeAndService(searchQuery, type, branch).spliterator(), false)
+				.map(this::convertToDto)
+				.collect(Collectors.toList());
+	}
+
+	/**
 	 * Creates a new organization and returns the DTO representation of which
 	 * @param organization The DTO containing the new Org information with an optional UUID (one will be assigned if omitted)
 	 * @return The new organization in DTO form
@@ -198,12 +280,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Gets all organizations in the database, and converts them to DTO form before returning
+	 * @param searchQuery String to search on the organization names
 	 * @return Iterable of OrganizationDTOs
 	 */
 	@Override
-	public Iterable<OrganizationDto> getOrganizations() {
+	public Iterable<OrganizationDto> getOrganizations(String searchQuery) {
 		return StreamSupport
 				.stream(repository.findAll().spliterator(), false)
+				.filter(item -> item.getName().toLowerCase().contains(searchQuery.toLowerCase()))
 				.map(this::convertToDto)
 				.collect(Collectors.toList());
 	}
@@ -240,6 +324,30 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public OrganizationDto removeOrganizationMember(UUID organizationId, List<UUID> personIds) {
 		return this.convertToDto(this.removeMember(organizationId, personIds));
+	}
+
+	/**
+	 * Adds one or more subordinate organizations from provided organization
+	 *
+	 * @param organizationId The UUID of the organization to perform the operation on
+	 * @param orgIds The list of UUIDs of type Organization to add as subordinates
+	 * @return The updated OrganizationDTO object
+	 */
+	@Override
+	public OrganizationDto addSubordinateOrg(UUID organizationId, List<UUID> orgIds) {
+		return this.convertToDto(this.addOrg(organizationId, orgIds));
+	}
+
+	/**
+	 * Removes one or more subordinate organizations from provided organization
+	 *
+	 * @param organizationId The UUID of the organization to perform the operation on
+	 * @param orgIds The list of UUIDs of type Organization to removes from subordinates
+	 * @return The updated OrganizationDTO object
+	 */
+	@Override
+	public OrganizationDto removeSubordinateOrg(UUID organizationId, List<UUID> orgIds) {
+		return this.convertToDto(this.removeOrg(organizationId, orgIds));
 	}
 
 	/**
@@ -312,5 +420,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		modelMapper.addConverter(orgDemapper);
 		return modelMapper.map(dto, Organization.class);
 	}
+
+
 
 }

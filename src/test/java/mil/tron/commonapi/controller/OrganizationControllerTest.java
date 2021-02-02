@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.OrganizationService;
@@ -74,6 +76,8 @@ public class OrganizationControllerTest {
 				.id(testOrg.getId())
 				.leader(testOrg.getLeader().getId())
 				.name(testOrg.getName())
+				.orgType(Unit.WING)
+				.branchType(Branch.USAF)
 				.members(testOrg.getMembers().stream().map(Person::getId).collect(Collectors.toSet()))
 				.build();
 
@@ -87,11 +91,49 @@ public class OrganizationControllerTest {
 			List<OrganizationDto> orgs = new ArrayList<>();
 			orgs.add(testOrgDto);
 
-			Mockito.when(organizationService.getOrganizations()).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizations("")).thenReturn(orgs);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
+		}
+
+		@Test
+		void testGetAllByType() throws Exception {
+			List<OrganizationDto> orgs = new ArrayList<>();
+			orgs.add(testOrgDto);
+
+			Mockito.when(organizationService.getOrganizationsByTypeAndService("", Unit.WING, null)).thenReturn(orgs);
+
+			mockMvc.perform(get(ENDPOINT + "?type=WING"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
+		}
+
+		@Test
+		void testGetAllByTypeAndService() throws Exception {
+			List<OrganizationDto> orgs = new ArrayList<>();
+			orgs.add(testOrgDto);
+
+			Mockito.when(organizationService.getOrganizationsByTypeAndService("", Unit.WING, Branch.USAF)).thenReturn(orgs);
+
+			mockMvc.perform(get(ENDPOINT + "?type=WING&branch=USAF"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
+
+			Mockito.when(organizationService.getOrganizationsByTypeAndService("", null, null)).thenReturn(new ArrayList<>());
+			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=UNKNOWN"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(new ArrayList<>())));
+
+			Mockito.when(organizationService.getOrganizationsByTypeAndService("", null, Branch.USAF)).thenReturn(orgs);
+			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=USAF"))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
+
+			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=BLAH"))
+					.andExpect(status().isBadRequest());
+
 		}
 		
 		@Test
@@ -124,7 +166,7 @@ public class OrganizationControllerTest {
 			ModelMapper mapper = new ModelMapper();
 			OrganizationDto dto = mapper.map(testOrgDto, OrganizationDto.class);
 			String dtoStr = OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(dto));
-			Mockito.when(organizationService.getOrganizations()).thenReturn(Lists.newArrayList(testOrgDto));
+			Mockito.when(organizationService.getOrganizations("")).thenReturn(Lists.newArrayList(testOrgDto));
 			Mockito.when(organizationService.convertToDto(testOrg)).thenReturn(dto);
 			mockMvc.perform(get(ENDPOINT + "?onlyIds=true"))
 					.andExpect(status().isOk())
@@ -302,7 +344,7 @@ public class OrganizationControllerTest {
 
 			newOrg.getMembers().remove(p.getId());
 			Mockito.when(organizationService.removeOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class))).thenReturn(newOrg);
-			MvcResult result2 = mockMvc.perform(patch(ENDPOINT + "{id}/members", testOrgDto.getId())
+			MvcResult result2 = mockMvc.perform(delete(ENDPOINT + "{id}/members", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(p.getId()))))
@@ -311,6 +353,51 @@ public class OrganizationControllerTest {
 
 			// test it "removed" from org
 			assertEquals(0, OBJECT_MAPPER.readValue(result2.getResponse().getContentAsString(), OrganizationDto.class).getMembers().size());
+		}
+
+		@Test
+		void testAddRemoveSubordinateOrgs() throws Exception {
+			Organization subOrg = new Organization();
+
+			OrganizationDto newOrg = new OrganizationDto();
+			newOrg.setId(testOrgDto.getId());
+			newOrg.setName("test org");
+			newOrg.getSubordinateOrganizations().add(subOrg.getId());
+
+			Mockito.when(organizationService.addSubordinateOrg(Mockito.any(UUID.class), Mockito.anyList())).thenReturn(newOrg);
+			mockMvc.perform(patch(ENDPOINT + "{id}/subordinates", testOrgDto.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(subOrg.getId()))))
+					.andExpect(status().isOk());
+
+			newOrg.getSubordinateOrganizations().remove(subOrg.getId());
+			mockMvc.perform(delete(ENDPOINT + "{id}/subordinates", testOrgDto.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(subOrg.getId()))))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		void testFlattenOrg() throws Exception {
+			OrganizationDto newOrg = new OrganizationDto();
+			newOrg.setId(UUID.randomUUID());
+			newOrg.setName("test org Child");
+
+			testOrgDto.setSubOrgsUUID(Set.of(newOrg.getId()));
+
+			Person p = new Person();
+			Person p2 = new Person();
+			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
+
+			Mockito.when(organizationService.getOrganization(newOrg.getId())).thenReturn(newOrg);
+			Mockito.when(organizationService.getOrganization(testOrgDto.getId())).thenReturn(testOrgDto);
+			mockMvc.perform(get(ENDPOINT + "{id}?flatten=true", testOrg.getId()))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getMembers().size()))
+					.andExpect(result -> assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getSubordinateOrganizations().size()));
+
 		}
 	}
 }

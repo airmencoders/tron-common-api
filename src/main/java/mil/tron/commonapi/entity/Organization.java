@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.pubsub.listeners.OrganizationEntityListener;
 
 import javax.persistence.*;
@@ -65,6 +67,16 @@ public class Organization {
     @OneToMany
     @JsonIgnore
     private Set<Organization> subordinateOrganizations = new HashSet<>();
+
+    @Getter
+    @Setter
+    @Enumerated(value = EnumType.STRING)
+    private Unit orgType = Unit.ORGANIZATION;
+
+    @Getter
+    @Setter
+    @Enumerated(value = EnumType.STRING)
+    protected Branch branchType = Branch.OTHER;
 
     /**
      * This method will be performed before database operations.

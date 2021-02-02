@@ -2,7 +2,10 @@
 # TRON Common API
 
 ## Swagger Docs
-http://localhost:8080/api/swagger-ui/index.html?configUrl=/api/v3/api-docs/swagger-config
+Navigate to the root of the API - `/api` and a redirect will go to the Swagger UI docs.
+
+Example:
+`http://localhost:8080/api/` or `https://tron-common-api.staging.dso.mi/api`
 
 ## H2 Test DB
 

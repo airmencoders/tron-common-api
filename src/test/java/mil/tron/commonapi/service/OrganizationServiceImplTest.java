@@ -3,6 +3,8 @@ package mil.tron.commonapi.service;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -52,10 +54,14 @@ class OrganizationServiceImplTest {
 	void beforeEachSetup() {
 		testOrg = new Organization();
 		testOrg.setName("Some Organization");
+		testOrg.setOrgType(Unit.SQUADRON);
+		testOrg.setBranchType(Branch.USAF);
 
 		testOrgDto = OrganizationDto.builder()
 				.id(testOrg.getId())
 				.name(testOrg.getName())
+				.orgType(Unit.SQUADRON)
+				.branchType(Branch.USAF)
 				.build();
 	}
 	
@@ -170,8 +176,40 @@ class OrganizationServiceImplTest {
 	@Test
 	void getOrganizationsTest() {
 		Mockito.when(repository.findAll()).thenReturn(Lists.newArrayList(testOrg));
-    	Iterable<OrganizationDto> persons = organizationService.getOrganizations();
+    	Iterable<OrganizationDto> persons = organizationService.getOrganizations("");
     	assertThat(persons).hasSize(1);
+
+	}
+
+	@Test
+	void getOrganizationsByTypeAndServiceTest() {
+		Mockito.when(repository.findAll()).thenReturn(Lists.newArrayList(testOrg));
+		Iterable<OrganizationDto> persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USAF);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, null);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.WING, null);
+		assertThat(persons).hasSize(0);
+
+		persons = organizationService.getOrganizationsByTypeAndService("", null, null);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService("", null, Branch.USAF);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService("some org", null, Branch.USAF);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService("some org", null, null);
+		assertThat(persons).hasSize(1);
+
+		persons = organizationService.getOrganizationsByTypeAndService("area 51", null, null);
+		assertThat(persons).hasSize(0);
+
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USMC);
+		assertThat(persons).hasSize(0);
 
 	}
 
@@ -289,6 +327,46 @@ class OrganizationServiceImplTest {
 	}
 
 	@Test
+	void addRemoveSubordinateOrgs() {
+		Organization subOrg = new Organization();
+
+		Organization newUnit = new Organization();
+		newUnit.setId(testOrgDto.getId());
+		newUnit.addSubordinateOrganization(subOrg);
+
+		Mockito.when(repository.findById(Mockito.any(UUID.class)))
+				.thenReturn(Optional.of(newUnit))
+				.thenReturn(Optional.of(subOrg))
+				.thenReturn(Optional.of(newUnit))
+				.thenThrow(new InvalidRecordUpdateRequest("Not Found"))
+				.thenReturn(Optional.of(newUnit))
+				.thenThrow(new InvalidRecordUpdateRequest("Not Found"))
+				.thenReturn(Optional.of(newUnit))
+				.thenReturn(Optional.of(subOrg))
+				.thenThrow(new RecordNotFoundException("Not Found"));
+
+		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(newUnit);
+
+		OrganizationDto savedOrg = organizationService.addSubordinateOrg(testOrgDto.getId(), Lists.newArrayList(subOrg.getId()));
+		assertThat(savedOrg.getSubordinateOrganizations().size()).isEqualTo(1);
+
+		// test fails to add bogus subordinate organization
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.addSubordinateOrg(newUnit.getId(), Lists.newArrayList(new Organization().getId())));
+
+		// test fails to remove bogus subordinate organization
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.removeSubordinateOrg(newUnit.getId(), Lists.newArrayList(new Organization().getId())));
+
+		// remove like normal
+		newUnit.removeSubordinateOrganization(subOrg);
+		savedOrg = organizationService.removeSubordinateOrg(newUnit.getId(), Lists.newArrayList(subOrg.getId()));
+		assertThat(savedOrg.getMembers().size()).isEqualTo(0);
+
+		// test bogus org Id
+		assertThrows(RecordNotFoundException.class, () -> organizationService.addSubordinateOrg(new Organization().getId(), Lists.newArrayList(subOrg.getId())));
+
+	}
+
+	@Test
 	void testBulkAddOrgs() {
 		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
 		List<OrganizationDto> newOrgs = Lists.newArrayList(
@@ -313,6 +391,8 @@ class OrganizationServiceImplTest {
 				.subordinateOrganizations(Set.of(subord))
 				.name("Test1")
 				.members(Set.of(leader))
+				.orgType(Unit.ORGANIZATION)
+				.branchType(Branch.USAF)
 				.build();
 
 		OrganizationDto dto = new ModelMapper().map(org, OrganizationDto.class);

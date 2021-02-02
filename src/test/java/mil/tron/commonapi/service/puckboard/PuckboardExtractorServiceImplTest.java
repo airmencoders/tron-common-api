@@ -4,14 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
-import mil.tron.commonapi.dto.SquadronDto;
+import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Airman;
-import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AirmanRepository;
-import mil.tron.commonapi.repository.SquadronRepository;
+import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.service.AirmanServiceImpl;
-import mil.tron.commonapi.service.SquadronServiceImpl;
+import mil.tron.commonapi.service.OrganizationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,10 +35,10 @@ import static org.mockito.AdditionalAnswers.returnsSecondArg;
 public class PuckboardExtractorServiceImplTest {
 
     @Mock
-    private SquadronRepository squadronRepository;
+    private OrganizationRepository orgRepo;
 
     @Mock
-    private SquadronServiceImpl squadronService;
+    private OrganizationServiceImpl orgService;
 
     @Mock
     private AirmanRepository airmanRepository;
@@ -53,7 +52,7 @@ public class PuckboardExtractorServiceImplTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     JsonNode branchNodes, orgNodes, peopleNodes;
-    int sqdnCount, peopleCount;
+    int unitCount, peopleCount;
 
     @BeforeEach
     void setup() throws IOException {
@@ -69,14 +68,12 @@ public class PuckboardExtractorServiceImplTest {
                 Resources.toString(
                         Resources.getResource("puckboard/mock-personnel.json"), StandardCharsets.UTF_8));
 
-        sqdnCount = 0;
+        unitCount = 0;
         peopleCount = peopleNodes.size();
 
         // determine number of squadrons we have head of time to compare with
-        List<JsonNode> squadrons = ImmutableList.copyOf(orgNodes.elements());
-        for (JsonNode node : squadrons) {
-            if (node.get("organizationType").textValue().equals("Squadron")) sqdnCount++;
-        }
+        List<JsonNode> units = ImmutableList.copyOf(orgNodes.elements());
+        unitCount = units.size();
 
     }
 
@@ -87,13 +84,13 @@ public class PuckboardExtractorServiceImplTest {
         Mockito.when(airmanRepository.existsById(Mockito.any(UUID.class))).thenReturn(false);
         Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
         Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
-        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class))).thenReturn(false);
-        Mockito.when(squadronService.createSquadron(Mockito.any(SquadronDto.class))).then(returnsFirstArg());
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class))).then(returnsSecondArg());
+        Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(false);
+        Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
+        Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
-        assertEquals(sqdnCount, result.get("orgs").size());
+        assertEquals(unitCount, result.get("orgs").size());
         assertEquals(peopleCount, result.get("people").size());
 
     }
@@ -105,13 +102,13 @@ public class PuckboardExtractorServiceImplTest {
         Mockito.when(airmanRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
         Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
-        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-        Mockito.when(squadronService.createSquadron(Mockito.any(SquadronDto.class))).then(returnsFirstArg());
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class))).then(returnsSecondArg());
+        Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
+        Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
-        assertEquals(sqdnCount, result.get("orgs").size());
+        assertEquals(unitCount, result.get("orgs").size());
         assertEquals(peopleCount, result.get("people").size());
     }
 
@@ -125,13 +122,13 @@ public class PuckboardExtractorServiceImplTest {
                 .then(returnsFirstArg());
 
         Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
-        Mockito.when(squadronRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-        Mockito.when(squadronService.createSquadron(Mockito.any(SquadronDto.class))).then(returnsFirstArg());
-        Mockito.when(squadronService.updateSquadron(Mockito.any(UUID.class), Mockito.any(SquadronDto.class))).then(returnsSecondArg());
+        Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
+        Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
-        assertEquals(sqdnCount, result.get("orgs").size());
+        assertEquals(unitCount, result.get("orgs").size());
 
         // # people "created" should be one less since we threw exception on first item attempted to be created
         assertEquals(peopleCount-1, (int) result
