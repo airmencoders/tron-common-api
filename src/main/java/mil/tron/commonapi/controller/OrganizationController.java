@@ -18,8 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/organization")
@@ -88,7 +86,7 @@ public class OrganizationController {
 	public ResponseEntity<OrganizationDto> getOrganization(
 			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Whether to flatten out all attached members and organizations contained therein", required = false)
-				@RequestParam(name = "flatten", required = false, defaultValue = "false") Boolean flatten) {
+				@RequestParam(name = "flatten", required = false, defaultValue = "false") boolean flatten) {
 
 		if (flatten) {
 			return new ResponseEntity<>(flattenOrg(organizationService.getOrganization(organizationId)), HttpStatus.OK);
@@ -290,11 +288,11 @@ public class OrganizationController {
 	// recursive helper function to dig deep on a units subordinates
 	private Set<UUID> harvestOrgSubordinateUnits(Set<UUID> orgIds, Set<UUID> accumulator) {
 
-		if (orgIds == null || orgIds.size() == 0) return accumulator;
+		if (orgIds == null || orgIds.isEmpty()) return accumulator;
 
 		for (UUID orgId : orgIds) {
 			accumulator.add(orgId);
-			Set<UUID> ids = harvestOrgSubordinateUnits(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<UUID>());
+			Set<UUID> ids = harvestOrgSubordinateUnits(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
 			accumulator.addAll(ids);
 		}
 
@@ -304,13 +302,13 @@ public class OrganizationController {
 	// recursive helper function to dig deep on a units subordinates
 	private Set<UUID> harvestOrgMembers(Set<UUID> orgIds, Set<UUID> accumulator) {
 
-		if (orgIds == null || orgIds.size() == 0) return accumulator;
+		if (orgIds == null || orgIds.isEmpty()) return accumulator;
 
 		for (UUID orgId : orgIds) {
 			OrganizationDto subOrg = organizationService.getOrganization(orgId);
 			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
 			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
-			Set<UUID> ids = harvestOrgMembers(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<UUID>());
+			Set<UUID> ids = harvestOrgMembers(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
 			accumulator.addAll(ids);
 		}
 
