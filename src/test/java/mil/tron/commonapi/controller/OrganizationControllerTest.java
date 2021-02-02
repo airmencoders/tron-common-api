@@ -378,5 +378,26 @@ public class OrganizationControllerTest {
 					.content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(subOrg.getId()))))
 					.andExpect(status().isOk());
 		}
+
+		@Test
+		void testFlattenOrg() throws Exception {
+			OrganizationDto newOrg = new OrganizationDto();
+			newOrg.setId(UUID.randomUUID());
+			newOrg.setName("test org Child");
+
+			testOrgDto.setSubOrgsUUID(Set.of(newOrg.getId()));
+
+			Person p = new Person();
+			Person p2 = new Person();
+			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
+
+			Mockito.when(organizationService.getOrganization(newOrg.getId())).thenReturn(newOrg);
+			Mockito.when(organizationService.getOrganization(testOrgDto.getId())).thenReturn(testOrgDto);
+			mockMvc.perform(get(ENDPOINT + "{id}?flatten=true", testOrg.getId()))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getMembers().size()))
+					.andExpect(result -> assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getSubordinateOrganizations().size()));
+
+		}
 	}
 }

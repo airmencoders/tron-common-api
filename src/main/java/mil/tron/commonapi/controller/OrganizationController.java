@@ -17,9 +17,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/organization")
@@ -86,9 +86,16 @@ public class OrganizationController {
 	})
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> getOrganization(
-			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId) {
+			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId,
+			@Parameter(description = "Whether to flatten out all attached members and organizations contained therein", required = false)
+				@RequestParam(name = "flatten", required = false, defaultValue = "false") Boolean flatten) {
 
+		if (flatten) {
+			return new ResponseEntity<>(flattenOrg(organizationService.getOrganization(organizationId)), HttpStatus.OK);
+		}
+		else {
 			return new ResponseEntity<>(organizationService.getOrganization(organizationId), HttpStatus.OK);
+		}
 	}
 	
 	@Operation(summary = "Adds an organization", description = "Adds an organization")
@@ -264,4 +271,50 @@ public class OrganizationController {
 	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
 		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
 	}
+
+	private OrganizationDto flattenOrg(OrganizationDto org) {
+		OrganizationDto flattenedOrg = new OrganizationDto();
+
+		// copy over the basic info first
+		flattenedOrg.setBranchType(org.getBranchType());
+		flattenedOrg.setOrgType(org.getOrgType());
+		flattenedOrg.setParentOrganizationUUID(org.getParentOrganization());
+		flattenedOrg.setId(org.getId());
+		flattenedOrg.setLeaderUUID(org.getId());
+		flattenedOrg.setName(org.getName());
+		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
+		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), new HashSet<>()));
+		return flattenedOrg;
+	}
+
+	// recursive helper function to dig deep on a units subordinates
+	private Set<UUID> harvestOrgSubordinateUnits(Set<UUID> orgIds, Set<UUID> accumulator) {
+
+		if (orgIds == null || orgIds.size() == 0) return accumulator;
+
+		for (UUID orgId : orgIds) {
+			accumulator.add(orgId);
+			Set<UUID> ids = harvestOrgSubordinateUnits(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<UUID>());
+			accumulator.addAll(ids);
+		}
+
+		return accumulator;
+	}
+
+	// recursive helper function to dig deep on a units subordinates
+	private Set<UUID> harvestOrgMembers(Set<UUID> orgIds, Set<UUID> accumulator) {
+
+		if (orgIds == null || orgIds.size() == 0) return accumulator;
+
+		for (UUID orgId : orgIds) {
+			OrganizationDto subOrg = organizationService.getOrganization(orgId);
+			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
+			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
+			Set<UUID> ids = harvestOrgMembers(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<UUID>());
+			accumulator.addAll(ids);
+		}
+
+		return accumulator;
+	}
+
 }
