@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.*;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -38,6 +40,18 @@ public class OrganizationDto {
     @Getter
     @Setter
     private String name;
+
+    @Getter
+    private Unit orgType = Unit.ORGANIZATION;
+
+    @Getter
+    private Branch branchType = Branch.OTHER;
+
+    @JsonSetter("orgType")
+    public void setOrgType(Unit type) { this.orgType = type; }
+
+    @JsonSetter("branchType")
+    public void setBranchType(Branch branch) { this.branchType = branch; }
 
     /**
      * Custom setter used by Jackson for leader field on JSON deserialization

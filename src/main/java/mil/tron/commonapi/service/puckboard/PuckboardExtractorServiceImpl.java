@@ -4,28 +4,33 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import mil.tron.commonapi.dto.SquadronDto;
+import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AirmanRepository;
-import mil.tron.commonapi.repository.SquadronRepository;
+import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.service.AirmanService;
-import mil.tron.commonapi.service.SquadronService;
+import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionSystemException;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class PuckboardExtractorServiceImpl implements PuckboardExtractorService {
 
     @Autowired
-    private SquadronService sqdnService;
+    private OrganizationService orgService;
 
     @Autowired
-    private SquadronRepository sqdnRepo;
+    private OrganizationRepository orgRepo;
 
     @Autowired
     private AirmanRepository airmanRepo;
@@ -34,7 +39,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private AirmanService airmanService;
 
     private static final String ORG_ID_FIELD = "organizationId";
-    private static final String ORG_TYPE_FIELD = "organizationType";
+    private static final String ORG_TYPE_FIELD = "branchId";
     private static final String ORG_NAME_FIELD = "organizationName";
     private static final String ORG_STATUS_FIELD = "organizationStatus";
 
@@ -46,6 +51,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private static final String PERSON_PHONE_FIELD = "contactNumber";
     private static final String PERSON_RANK_FIELD = "rankId";
     private static final String PERSON_RANK_ABBR_FIELD = "rankAbbr";
+
+    private static final int PB_MARINE_BRANCH = 2;
 
     /**
      * Convert the JSON as given by the controller (as a JsonNode)
@@ -91,46 +98,54 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
         return allRanks;
     }
 
+    // helper function to convert PB's branchId to service name
+    private Branch resolveServiceName(JsonNode name) {
+        // infer the service from name
+        if (name != null && name.intValue() == PB_MARINE_BRANCH) return Branch.USMC;
+        else return Branch.USAF;
+    }
+
+    // helper function to infer unit type by its name
+    private Unit resolveUnitType(JsonNode node) {
+        if (node != null) {
+            if (node.textValue().toLowerCase().contains("squadron")) return Unit.SQUADRON;
+            else if (node.textValue().toLowerCase().contains("wing")) return Unit.WING;
+        }
+
+        return Unit.OTHER_USAF;
+    }
+
     /**
      * Processes Squadron information from a JsonNode structure that contains the organization dump from puckboard.
-     * Only squadrons are filtered out (Wings are ignored).
-     * Resultant squadrons are then quiered for existence in Common API by their UUID:
-     * If they don't exist, then they are added via the SqaudronService.  Only UUID and name are used for creation.
-     * If they do exist by UUID, the entity is modified/updated by updating the unit's name.
+     * Resultant units are then queried for existence in Common API by their UUID:
+     *  If they don't exist, then they are added via the OrganizationService.  Only UUID and name are used for creation.
+     *  If they do exist by UUID, the entity is modified/updated by updating the unit's name.
      *
      * Each unit is placed into a return Map with its UUID and if it was created/updated/or the error it caused.
      * @param orgInfo JsonNode dump of Puckboard's organizations
-     * @return Map of squadrons added/updated to common API by UUID and its result (created/updated/error details)
+     * @return Map of units added/updated to common API by UUID and its result (created/updated/error details)
      */
-    private Map<UUID, String> processSquadronInfo(JsonNode orgInfo) {
+    private Map<UUID, String> processOrgInformation(JsonNode orgInfo) {
 
-        List<JsonNode> squadronOrgs = new ArrayList<>();
         Map<UUID, String> unitIdStatus = new HashMap<>();
 
-        // filter out only the squadron types
-        for (int i = 0; i < orgInfo.size(); i++) {
-            JsonNode node = orgInfo.get(i);
-            if (node.get(ORG_TYPE_FIELD).textValue().equals("Squadron")) {
-                squadronOrgs.add(node);
-            }
-        }
-
-        // go thru each squadron and add/update to Common
-        for (JsonNode node : squadronOrgs) {
+        // go thru each unit and add/update to Common
+        for (JsonNode node : orgInfo) {
             UUID id = UUID.fromString(node.get(ORG_ID_FIELD).textValue());
             String name = node.get(ORG_NAME_FIELD).textValue();
-            if (!sqdnRepo.existsById(id)) {
-                // make new squadron
-                SquadronDto s = new SquadronDto();
+            if (!orgRepo.existsById(id)) {
+                // make new unit
+                OrganizationDto s = new OrganizationDto();
                 s.setId(id);
                 s.setName(name);
-
-                sqdnService.createSquadron(s);
+                s.setBranchType(resolveServiceName(node.get(ORG_TYPE_FIELD)));
+                s.setOrgType(resolveUnitType(node.get(ORG_NAME_FIELD)));
+                orgService.createOrganization(s);
                 unitIdStatus.put(id, "Created - " + name);
             }
             else {
-                // squadron exists, just update the squadron name
-                sqdnService.modifySquadronAttributes(id,
+                // unit exists, just update the unit name
+                orgService.modifyAttributes(id,
                         new ImmutableMap
                                 .Builder<String, String>()
                                 .put("name", name)
@@ -191,9 +206,9 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
                     UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
 
                     if (orgNode.get("active").booleanValue()) {
-                        sqdnService.addSquadronMember(orgId, Lists.newArrayList(id));
+                        orgService.addOrganizationMember(orgId, Lists.newArrayList(id));
                     } else {
-                        sqdnService.removeSquadronMember(orgId, Lists.newArrayList(id));
+                        orgService.removeOrganizationMember(orgId, Lists.newArrayList(id));
                     }
                 }
             }
@@ -224,8 +239,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
         // process branch information into lookup hash
         Map<String, String> branchLookup = this.processBranchInfo(branchInfoJson);
 
-        // process squadron information
-        Map<UUID, String> orgStatus = this.processSquadronInfo(orgs);
+        // process unit information
+        Map<UUID, String> orgStatus = this.processOrgInformation(orgs);
 
         // process people information
         Map<UUID, String> peopleStatus = this.processPersonnelInfo(people, branchLookup);

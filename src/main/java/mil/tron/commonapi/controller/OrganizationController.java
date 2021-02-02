@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
@@ -14,29 +17,57 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/organization")
 public class OrganizationController {
 	private OrganizationService organizationService;
+	private static final String UNKNOWN_TYPE = "UNKNOWN";
 	
 	public OrganizationController (OrganizationService organizationService) {
 		this.organizationService = organizationService;
 	}
 	
-	@Operation(summary = "Retrieves all organizations", description = "Retrieves all organizations")
+	@Operation(summary = "Retrieves all organizations",
+			description = "Retrieves all organizations.  Optionally can provide 'type' parameter (e.g. 'WING') to filter by Organization type " +
+						"and/or 'branch' parameter to filter by branch of service (e.g 'USAF'). If neither parameter is given, then no filters " +
+						"are applied and request returns all Organizations.  Optionally can also provide 'search' parameter to search on organization " +
+						"names within the result set (case in-sensitive).")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad Request - likely due to invalid unit type or branch of service specified",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class)))
 	})
 	@GetMapping
-	public ResponseEntity<Object> getOrganizations() {
-			return new ResponseEntity<>(organizationService.getOrganizations(), HttpStatus.OK);
+	public ResponseEntity<Object> getOrganizations(
+			@RequestParam(name = "type", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String unitType,
+			@RequestParam(name = "branch", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String branchType,
+			@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery) {
 
+		// return all types by default (if no query params given)
+		if (unitType.equals(OrganizationController.UNKNOWN_TYPE) && branchType.equals(OrganizationController.UNKNOWN_TYPE)) {
+			return new ResponseEntity<>(organizationService.getOrganizations(searchQuery), HttpStatus.OK);
+		}
+		// otherwise try to return the types specified
+		else {
+			Unit unit;
+			Branch branch;
+
+			// coerce to enumerated value
+			try {
+				unit = unitType.equals(OrganizationController.UNKNOWN_TYPE) ? null : Unit.valueOf(unitType.toUpperCase());
+				branch = branchType.equals(OrganizationController.UNKNOWN_TYPE) ? null : Branch.valueOf(branchType.toUpperCase());
+			}
+			catch (IllegalArgumentException e) {
+				throw new BadRequestException("Invalid branch or service type given");
+			}
+
+			return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(searchQuery, unit, branch), HttpStatus.OK);
+		}
 	}
 	
 	@Operation(summary = "Retrieves an organization by ID", description = "Retrieves an organization by ID")
@@ -53,9 +84,16 @@ public class OrganizationController {
 	})
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> getOrganization(
-			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId) {
+			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId,
+			@Parameter(description = "Whether to flatten out all attached members and organizations contained therein", required = false)
+				@RequestParam(name = "flatten", required = false, defaultValue = "false") boolean flatten) {
 
+		if (flatten) {
+			return new ResponseEntity<>(flattenOrg(organizationService.getOrganization(organizationId)), HttpStatus.OK);
+		}
+		else {
 			return new ResponseEntity<>(organizationService.getOrganization(organizationId), HttpStatus.OK);
+		}
 	}
 	
 	@Operation(summary = "Adds an organization", description = "Adds an organization")
@@ -153,6 +191,44 @@ public class OrganizationController {
 		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId), HttpStatus.OK);
 	}
 
+	@Operation(summary = "Add subordinate organizations to an organization", description = "Adds subordinate orgs to an organization")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation",
+					content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "Host organization UUID was invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Provided org UUID(s) was/were invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PatchMapping("/{id}/subordinates")
+	public ResponseEntity<Object> addSubordinateOrganization(@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
+															 @Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
+
+		return new ResponseEntity<>(organizationService.addSubordinateOrg(id, orgIds), HttpStatus.OK);
+	}
+
+	@Operation(summary = "Remove subordinate organizations from an organization", description = "Removes subordinate orgs from an organization")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation",
+					content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "Host organization UUID was invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Provided org UUID(s) was/were invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@DeleteMapping("/{id}/subordinates")
+	public ResponseEntity<Object> removeSubordinateOrganization(@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
+																@Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
+
+		return new ResponseEntity<>(organizationService.removeSubordinateOrg(id, orgIds), HttpStatus.OK);
+	}
+
 	@Operation(summary = "Updates an existing organization's attributes", description = "Updates an existing organization's attributes")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
@@ -193,4 +269,50 @@ public class OrganizationController {
 	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
 		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
 	}
+
+	private OrganizationDto flattenOrg(OrganizationDto org) {
+		OrganizationDto flattenedOrg = new OrganizationDto();
+
+		// copy over the basic info first
+		flattenedOrg.setBranchType(org.getBranchType());
+		flattenedOrg.setOrgType(org.getOrgType());
+		flattenedOrg.setParentOrganizationUUID(org.getParentOrganization());
+		flattenedOrg.setId(org.getId());
+		flattenedOrg.setLeaderUUID(org.getId());
+		flattenedOrg.setName(org.getName());
+		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
+		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), new HashSet<>()));
+		return flattenedOrg;
+	}
+
+	// recursive helper function to dig deep on a units subordinates
+	private Set<UUID> harvestOrgSubordinateUnits(Set<UUID> orgIds, Set<UUID> accumulator) {
+
+		if (orgIds == null || orgIds.isEmpty()) return accumulator;
+
+		for (UUID orgId : orgIds) {
+			accumulator.add(orgId);
+			Set<UUID> ids = harvestOrgSubordinateUnits(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			accumulator.addAll(ids);
+		}
+
+		return accumulator;
+	}
+
+	// recursive helper function to dig deep on a units subordinates
+	private Set<UUID> harvestOrgMembers(Set<UUID> orgIds, Set<UUID> accumulator) {
+
+		if (orgIds == null || orgIds.isEmpty()) return accumulator;
+
+		for (UUID orgId : orgIds) {
+			OrganizationDto subOrg = organizationService.getOrganization(orgId);
+			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
+			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
+			Set<UUID> ids = harvestOrgMembers(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			accumulator.addAll(ids);
+		}
+
+		return accumulator;
+	}
+
 }
