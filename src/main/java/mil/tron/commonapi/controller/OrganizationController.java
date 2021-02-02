@@ -1,5 +1,6 @@
 package mil.tron.commonapi.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -313,6 +314,11 @@ public class OrganizationController {
 		}
 
 		return accumulator;
+	}
+
+	@GetMapping("/test/{id}")
+	public ResponseEntity<Object> testGrep(@PathVariable UUID id) {
+		return new ResponseEntity<>(organizationService.grepObject(organizationService.getOrganization(id)), HttpStatus.OK);
 	}
 
 }

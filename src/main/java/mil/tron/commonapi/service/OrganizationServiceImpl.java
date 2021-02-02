@@ -1,5 +1,12 @@
 package mil.tron.commonapi.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Organization;
@@ -422,5 +429,21 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 
+	@Override
+	public String grepObject(OrganizationDto dto) {
+		Organization org = findOrganization(dto.getId());
+		ObjectMapper mapper = new ObjectMapper();
+		FilterProvider filters = new SimpleFilterProvider()
+				.addFilter("myFilter", SimpleBeanPropertyFilter
+						.filterOutAllExcept(new HashSet<String>(Arrays
+								.asList("subordinateOrganizations", "name"))));
+
+		try {
+			return mapper.writer(filters).writeValueAsString(org);
+		} catch (JsonProcessingException e) {
+			return "NONE";
+
+		}
+	}
 
 }

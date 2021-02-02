@@ -37,4 +37,6 @@ public interface OrganizationService {
 	// conversion methods
 	OrganizationDto convertToDto(Organization org);
 	Organization convertToEntity(OrganizationDto org);
+
+	String grepObject(OrganizationDto dto);
 }
