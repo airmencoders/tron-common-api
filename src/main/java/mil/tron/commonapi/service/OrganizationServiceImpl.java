@@ -434,15 +434,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 		Organization org = findOrganization(dto.getId());
 		ObjectMapper mapper = new ObjectMapper();
 		FilterProvider filters = new SimpleFilterProvider()
-				.addFilter("myFilter", SimpleBeanPropertyFilter
+				.addFilter("subOrgFilter", SimpleBeanPropertyFilter
 						.filterOutAllExcept(new HashSet<String>(Arrays
-								.asList("subordinateOrganizations", "name"))));
+								.asList("subordinateOrganizations", "name"))))
+				.addFilter("parentFilter", SimpleBeanPropertyFilter
+						.filterOutAllExcept("parentOrganization", "name"));
 
 		try {
 			return mapper.writer(filters).writeValueAsString(org);
 		} catch (JsonProcessingException e) {
 			return "NONE";
-
 		}
 	}
 
