@@ -1,5 +1,9 @@
 package mil.tron.commonapi.entity.ranks;
 
+import java.util.HashMap;
+import java.util.Map;
+
+
 public enum AirmanRank {
     AB("AB"),
     AMN("AMN"),
@@ -27,6 +31,18 @@ public enum AirmanRank {
     SES("SES"),
     UNKNOWN("UNKNOWN");
 
+    private static final Map<String, AirmanRank> BY_STRING = new HashMap<>();
+    private static String RANK_LIST_STRING = "";
+
+    static {
+        for (AirmanRank rank: values()) {
+            RANK_LIST_STRING += rank.toString() + ", ";
+            BY_STRING.put(rank.toString(), rank);
+        }
+        // remove trailing comma of RANK_LIST_STRING
+        RANK_LIST_STRING = RANK_LIST_STRING.substring(0, RANK_LIST_STRING.length() - 2);
+    }
+
     private final String text;
 
     /**
@@ -42,6 +58,14 @@ public enum AirmanRank {
     @Override
     public String toString() {
         return text;
+    }
+
+    public static AirmanRank valueByString(String text) {
+        return BY_STRING.get(text);
+    }
+
+    public static String getValueString() {
+        return RANK_LIST_STRING;
     }
 
 }

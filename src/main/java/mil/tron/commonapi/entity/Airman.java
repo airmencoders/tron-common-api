@@ -1,10 +1,12 @@
 package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.val;
 import mil.tron.commonapi.entity.ranks.AirmanRank;
 import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.validations.ValidDodId;
@@ -13,15 +15,14 @@ import mil.tron.commonapi.validations.ValidPhoneNumber;
 import javax.persistence.Entity;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
-import javax.persistence.Transient;
 
-import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Airman extends Person {
+
+    private AirmanRank rank;
 
     /**
      * An airman's Air Force Specialty Code.
@@ -66,29 +67,32 @@ public class Airman extends Person {
     @Setter
     private String imds;
 
-//    /**
-//     * Rank field that returns/sets the base class (Person) 'title' field
-//     */
-//    public String getRank() {
-//        return this.getTitle();
-//    }
-//
-//    public void setRank(String rank) {
-//        if (rank != null && ranks.contains(rank.trim().toUpperCase())) {
-//            this.setTitle(rank.toUpperCase());
-//        }
-//        else {
-//            throw new InvalidFieldValueException("Airman rank must be one of: " + String.join(", ", Airman.ranks));
-//        }
-//    }
 
     /**
      * Rank of Airman service member
      */
-    @Getter
-    @Setter
+    @JsonGetter("rank")
+    public String getRank() {
+        if (this.rank == null) {
+            return null;
+        }
+        return this.rank.toString();
+    }
+
     @JsonSetter("rank")
-    private AirmanRank rank;
+    public void setRank(String rank) {
+        if (rank == null) {
+            this.rank = AirmanRank.UNKNOWN;
+        }
+        else {
+            val rankEnum = AirmanRank.valueByString(rank.toUpperCase());
+            if (rankEnum == null) {
+                throw new InvalidFieldValueException("Airman rank must be one of: " +
+                        AirmanRank.getValueString());
+            }
+            this.rank = rankEnum;
+        }
+    }
 
     @Getter
     @Setter
