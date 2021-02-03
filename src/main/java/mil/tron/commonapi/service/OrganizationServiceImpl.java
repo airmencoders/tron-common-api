@@ -9,10 +9,13 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.dto.mixins.CustomOrganizationDtoMixin;
+import mil.tron.commonapi.dto.mixins.CustomPersonDtoMixin;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -430,20 +433,81 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 
 	@Override
-	public String grepObject(OrganizationDto dto) {
-		Organization org = findOrganization(dto.getId());
+	public JsonNode customizeEntity(Map<String, String> fields, OrganizationDto dto) {
+
+		final String PARENT_ORG_FIELD = "parentOrganization";
+		final String MEMBERS_FIELD = "members";
+		final String LEADER_FIELD = "leader";
+		final String SUB_ORGS_FIELD = "subordinateOrganizations";
+
+
+		Organization org = convertToEntity(dto);
 		ObjectMapper mapper = new ObjectMapper();
+		mapper.addMixIn(Person.class, CustomPersonDtoMixin.class);
+		mapper.addMixIn(Organization.class, CustomOrganizationDtoMixin.class);
+
+
+		Set<String> mainEntityFilterFields = new HashSet<>();
+		mainEntityFilterFields.add(MEMBERS_FIELD);
+		mainEntityFilterFields.add(LEADER_FIELD);
+		mainEntityFilterFields.add(SUB_ORGS_FIELD);
+		mainEntityFilterFields.add(PARENT_ORG_FIELD);
 		FilterProvider filters = new SimpleFilterProvider()
-				.addFilter("subOrgFilter", SimpleBeanPropertyFilter
-						.filterOutAllExcept(new HashSet<String>(Arrays
-								.asList("subordinateOrganizations", "name"))))
-				.addFilter("parentFilter", SimpleBeanPropertyFilter
-						.filterOutAllExcept("parentOrganization", "name"));
+				.addFilter("orgFilter", SimpleBeanPropertyFilter
+						.serializeAllExcept(mainEntityFilterFields));
 
 		try {
-			return mapper.writer(filters).writeValueAsString(org);
+
+			// filter out the fields having objects, we want everything else but those
+			JsonNode mainNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org));
+
+			// condition the Person type fields the user gave
+			Set<String> personEntityFilterFields = Arrays.stream(fields.get("people")
+					.split(","))
+					.map(String::trim)
+					.collect(Collectors.toSet());
+
+			personEntityFilterFields.removeIf(s -> s.equals(""));
+			if (personEntityFilterFields.isEmpty()) {
+				personEntityFilterFields.add("id"); // add ID as the bare minimum like it would be on a regular DTO return
+			}
+
+			// condition the fields user gave
+			Set<String> subOrgEntityFilterFields = Arrays.stream(fields.get("orgs")
+					.split(","))
+					.map(String::trim)
+					.collect(Collectors.toSet());
+
+			subOrgEntityFilterFields.removeIf(s -> s.equals(""));
+			if (subOrgEntityFilterFields.isEmpty()) {
+				subOrgEntityFilterFields.add("id"); // add ID as the bare minimum like it would be on a regular DTO return
+			}
+			subOrgEntityFilterFields.remove(PARENT_ORG_FIELD);  // never allow parentOrg to be serialized on subordinate entities, might be infinite recursion
+			subOrgEntityFilterFields.remove(SUB_ORGS_FIELD);  // never allow subordinateOrgs to be serialized inside subordinateOrgs, might be infinite recursion
+
+			// add in the filters with the fields user gave to explicitly include
+			filters = new SimpleFilterProvider()
+					.addFilter("personFilter", SimpleBeanPropertyFilter
+							.filterOutAllExcept(personEntityFilterFields))
+					.addFilter("orgFilter", SimpleBeanPropertyFilter
+							.filterOutAllExcept(subOrgEntityFilterFields));
+
+			// json-ize the individual Person-type fields and Org-type fields
+			JsonNode usersNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getMembers()));
+			JsonNode leaderNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getLeader()));
+			JsonNode parentOrgNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getParentOrganization()));
+			JsonNode subOrgsNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getSubordinateOrganizations()));
+
+			// reassemble the object that user will get
+			((ObjectNode) mainNode).set(MEMBERS_FIELD, usersNode);
+			((ObjectNode) mainNode).set(LEADER_FIELD, leaderNode);
+			((ObjectNode) mainNode).set(PARENT_ORG_FIELD, parentOrgNode);
+			((ObjectNode) mainNode).set(SUB_ORGS_FIELD, subOrgsNode);
+
+			return mainNode;
+
 		} catch (JsonProcessingException e) {
-			return "NONE";
+			throw new BadRequestException("Could not compile custom organizational entity");
 		}
 	}
 
