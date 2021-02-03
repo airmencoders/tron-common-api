@@ -415,6 +415,7 @@ class OrganizationServiceImplTest {
 				.build();
 		OrganizationDto dto = new ModelMapper().map(org, OrganizationDto.class);
 		Mockito.when(repository.findById(parent.getId())).thenReturn(Optional.of(parent));
+		Mockito.when(repository.findById(subord.getId())).thenReturn(Optional.of(subord));
 		Mockito.when(personService.getPerson(leader.getId())).thenReturn(leader);
 
 		assertEquals(org, organizationService.convertToEntity(dto));
@@ -452,6 +453,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(personService.getPerson(leader.getId())).thenReturn(leader);
 		Mockito.when(personService.getPerson(member.getId())).thenReturn(member);
 		Mockito.when(repository.findById(parent.getId())).thenReturn(Optional.of(parent));
+		Mockito.when(repository.findById(subord.getId())).thenReturn(Optional.of(subord));
 
 		Map<String, String> fields = new HashMap<>();
 		fields.put("orgs", "id,name");
@@ -520,5 +522,30 @@ class OrganizationServiceImplTest {
 		assertTrue(node.get("parentOrganization").has("id"));
 		assertTrue(node.get("parentOrganization").has("name"));
 		assertFalse(node.get("parentOrganization").has("leader"));
+	}
+
+	void testThatOrgCantAssignSubordinateOrgThatsInItsAncestryChain() {
+
+		Organization greatGrandParent = new Organization();
+		Organization grandParent = new Organization();
+		Organization parent = new Organization();
+		Organization theOrg = new Organization();
+		Organization legitSubOrg = new Organization();
+
+		// build the family tree
+		theOrg.setParentOrganization(parent);
+		parent.addSubordinateOrganization(theOrg);
+		parent.setParentOrganization(grandParent);
+		grandParent.setParentOrganization(greatGrandParent);
+		grandParent.addSubordinateOrganization(parent);
+		greatGrandParent.addSubordinateOrganization(grandParent);
+
+
+		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
+		assertTrue(organizationService.orgIsInAncestryChain(greatGrandParent.getId(), theOrg));
+
+		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
+		assertFalse(organizationService.orgIsInAncestryChain(legitSubOrg.getId(), theOrg));
+
 	}
 }
