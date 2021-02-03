@@ -32,7 +32,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationUniqueChecksService orgChecksService;
 	private final DtoMapper modelMapper;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
-	
+	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
+
 	public OrganizationServiceImpl(
 			OrganizationRepository repository,
 			PersonRepository personRepository,
@@ -72,7 +73,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 			Organization subordinate = repository.findById(id).orElseThrow(
 					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
-			organization.addSubordinateOrganization(subordinate);
+			if (!orgIsInAncestryChain(subordinate.getId(), organization)) {
+				organization.addSubordinateOrganization(subordinate);
+			}
+			else {
+				throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subordinate.getId()));
+			}
 		}
 
 		return repository.save(organization);
@@ -238,6 +244,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", org.getName()));
+
+		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
+		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : org.getSubordinateOrganizations()) {
+				if (orgIsInAncestryChain(subOrg.getId(), org)) {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
+				}
+			}
+		}
 		
 		return this.convertToDto(repository.save(org));
 	}
@@ -262,6 +277,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 		
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", org.getName()));
+
+		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
+		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : org.getSubordinateOrganizations()) {
+				if (orgIsInAncestryChain(subOrg.getId(), org)) {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
+				}
+			}
+		}
 		
 		return this.convertToDto(repository.save(org));
 	}
@@ -415,12 +439,44 @@ public class OrganizationServiceImpl implements OrganizationService {
 				return findOrganization(uuid);
 			}
 		};
+
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 		modelMapper.addConverter(personDemapper);
 		modelMapper.addConverter(orgDemapper);
-		return modelMapper.map(dto, Organization.class);
+		Organization org = modelMapper.map(dto, Organization.class);
+
+		// since model mapper has trouble mapping over UUID <--> Org for the nested Set<> in the Entity
+		//  just iterate over and do the lookup manually
+		if (dto.getSubordinateOrganizations() != null) {
+			for (UUID id : dto.getSubordinateOrganizations()) {
+				org.addSubordinateOrganization(findOrganization(id));
+			}
+		}
+
+		// since model mapper has trouble mapping over UUID <--> Person for the nested Set<> in the Entity
+		//  just iterate over and do the lookup manually
+		if (dto.getMembers() != null) {
+			for (UUID id : dto.getMembers()) {
+				org.addMember(personService.getPerson(id));
+			}
+		}
+
+		return org;
 	}
 
+	/**
+	 * Helper function that checks if a given org id is in the parental ancestry chain
+	 * @param id the org to check/vet is not already in the parental ancestry chain
+	 * @param startingOrg the org to start the upward-search from
+	 * @return true/false if 'id' is in the ancestry chain
+	 */
+	@Override
+	public boolean orgIsInAncestryChain(UUID id, Organization startingOrg) {
 
+		Organization parentOrg = startingOrg.getParentOrganization();
+		if (parentOrg == null) return false;
+		else if (parentOrg.getId().equals(id)) return true;
+		else return orgIsInAncestryChain(id, parentOrg);
 
+	}
 }
