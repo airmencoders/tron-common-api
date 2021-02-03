@@ -19,6 +19,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Class that represents a Client User entity that is an Application
+ *
+ */
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor

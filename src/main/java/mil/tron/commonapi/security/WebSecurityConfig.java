@@ -37,7 +37,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http
         	.addFilter(appClientPreAuthFilter())
         	.authorizeRequests()
-	            .antMatchers(String.format("/%s/app-client", apiPrefix)).hasAuthority(PRIVILEGE.DASHBOARD.name())
 	            .anyRequest()
 	            	.authenticated()
             .and()
@@ -57,12 +56,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 			throw new AuthManagerException(ex.getLocalizedMessage());
 		}
 		return filter;
-	}
-	
-	private enum PRIVILEGE {
-		READ,
-		WRITE,
-		DASHBOARD
 	}
 }
 

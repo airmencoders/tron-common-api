@@ -6,10 +6,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.service.AppClientUserService;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/app-client")
+@PreAuthorizeDashboardAdmin
 public class AppClientController {
 	
 	AppClientUserService userService;
@@ -19,7 +21,7 @@ public class AppClientController {
 	}
 	
 	@GetMapping
-	public ResponseEntity<Object> getHeaders() {
+	public ResponseEntity<Object> getUsers() {
 		return new ResponseEntity<>(userService.getAppClientUsers(), HttpStatus.OK);
 	}
 }

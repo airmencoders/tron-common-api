@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import java.util.ArrayList;
+
 import java.util.List;
 import java.util.Set;
 
@@ -19,6 +20,10 @@ import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 
+/**
+ * PreAuthenticated service for use with Client Users that is an Application.
+ *
+ */
 @Service
 public class AppClientUserPreAuthenticatedService implements AuthenticationUserDetailsService<PreAuthenticatedAuthenticationToken> {
 	

@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("hasAuthority('READ')")
-public @interface PreAuthorizeRead {
+@PreAuthorize("hasAuthority('DASHBOARD_USER')")
+public @interface PreAuthorizeDashboardUser {
 
 }

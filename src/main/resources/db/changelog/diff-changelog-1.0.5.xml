@@ -34,10 +34,10 @@
         <addUniqueConstraint columnNames="name_as_lower" constraintName="appClientUser_nameAsLower_key" tableName="app_client_user"/>
     </changeSet>
     <changeSet author="Dylan (generated)" id="1612064068332-6">
-        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_client_user_privileges" constraintName="FKb0359mfinfxq2ia5f7y416oo9" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_client_user" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_client_user_privileges" constraintName="FKb0359mfinfxq2ia5f7y416oo9" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" referencedColumnNames="id" referencedTableName="app_client_user" validate="true"/>
     </changeSet>
     <changeSet author="Dylan (generated)" id="1612064068332-7">
-        <addForeignKeyConstraint baseColumnNames="privileges_id" baseTableName="app_client_user_privileges" constraintName="FKfmhs19ioxlp9xq0jto204dr7p" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="privilege" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="privileges_id" baseTableName="app_client_user_privileges" constraintName="FKfmhs19ioxlp9xq0jto204dr7p" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" referencedColumnNames="id" referencedTableName="privilege" validate="true"/>
     </changeSet>
     <changeSet author="Dylan (generated)" id="1612064068332-8">
         <addForeignKeyConstraint baseColumnNames="members_id" baseTableName="organization_members" constraintName="FKsryhxbelv0adpllqsic7yd2t0" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="person" validate="true"/>
