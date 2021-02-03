@@ -438,14 +438,39 @@ public class OrganizationServiceImpl implements OrganizationService {
 				return findOrganization(uuid);
 			}
 		};
+
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 		modelMapper.addConverter(personDemapper);
 		modelMapper.addConverter(orgDemapper);
-		return modelMapper.map(dto, Organization.class);
+		Organization org = modelMapper.map(dto, Organization.class);
+
+		// since model mapper has trouble mapping over UUID <--> Org for the nested Set<> in the Entity
+		//  just iterate over and do the lookup manually
+		if (dto.getSubordinateOrganizations() != null) {
+			for (UUID id : dto.getSubordinateOrganizations()) {
+				org.addSubordinateOrganization(findOrganization(id));
+			}
+		}
+
+		// since model mapper has trouble mapping over UUID <--> Person for the nested Set<> in the Entity
+		//  just iterate over and do the lookup manually
+		if (dto.getMembers() != null) {
+			for (UUID id : dto.getMembers()) {
+				org.addMember(personService.getPerson(id));
+			}
+		}
+
+		return org;
 	}
 
+	/**
+	 * Helper function that checks if a given org id is in the parental ancestry chain
+	 * @param id the org to check/vet is not already in the parental ancestry chain
+	 * @param startingOrg the org to start the upward-search from
+	 * @return true/false if 'id' is in the ancestry chain
+	 */
 	@Override
-	public Boolean orgIsInAncestryChain(UUID id, Organization startingOrg) {
+	public boolean orgIsInAncestryChain(UUID id, Organization startingOrg) {
 
 		Organization parentOrg = startingOrg.getParentOrganization();
 		if (parentOrg == null) return false;
@@ -453,7 +478,4 @@ public class OrganizationServiceImpl implements OrganizationService {
 		else return orgIsInAncestryChain(id, parentOrg);
 
 	}
-
-
-
 }

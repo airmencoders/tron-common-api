@@ -414,6 +414,7 @@ class OrganizationServiceImplTest {
 				.build();
 		OrganizationDto dto = new ModelMapper().map(org, OrganizationDto.class);
 		Mockito.when(repository.findById(parent.getId())).thenReturn(Optional.of(parent));
+		Mockito.when(repository.findById(subord.getId())).thenReturn(Optional.of(subord));
 		Mockito.when(personService.getPerson(leader.getId())).thenReturn(leader);
 
 		assertEquals(org, organizationService.convertToEntity(dto));

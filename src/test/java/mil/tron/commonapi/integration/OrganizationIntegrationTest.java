@@ -1,6 +1,7 @@
 package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import liquibase.pro.packaged.O;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.service.OrganizationService;
@@ -19,10 +20,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import javax.transaction.Transactional;
 import java.util.*;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(SpringExtension.class)
@@ -100,6 +101,11 @@ public class OrganizationIntegrationTest {
         OrganizationDto legitSubOrg = new OrganizationDto();
         legitSubOrg.setName("Grandson");
 
+        OrganizationDto messedUpOrg = new OrganizationDto();
+        messedUpOrg.setName("Messed up");
+        messedUpOrg.setParentOrganizationUUID(theOrg.getId());
+        messedUpOrg.setSubOrgsUUID(Set.of(grandParent.getId()));
+
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(greatGrandParent)))
@@ -160,5 +166,18 @@ public class OrganizationIntegrationTest {
                 .content(OBJECT_MAPPER.writeValueAsString(subOrgs)))
                 .andExpect(status().isOk());
 
+        // now try to do a whole new POST with a violation present already in the suborgs
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(messedUpOrg)))
+                .andExpect(status().isBadRequest());
+
+        // now do a PUT update to 'theOrg' with the grandparent pre-populated in the subOrgs, should reject
+        theOrg.setParentOrganizationUUID(parent.getId());
+        theOrg.setSubOrgsUUID(Set.of(grandParent.getId()));
+        mockMvc.perform(put(ENDPOINT + "{id}", theOrg.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(theOrg)))
+                .andExpect(status().isBadRequest());
     }
 }

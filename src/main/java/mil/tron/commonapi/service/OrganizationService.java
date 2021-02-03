@@ -34,7 +34,7 @@ public interface OrganizationService {
 	OrganizationDto removeSubordinateOrg(UUID organizationId, List<UUID> orgIds);
 	List<OrganizationDto> bulkAddOrgs(List<OrganizationDto> newOrgs);
 
-	Boolean orgIsInAncestryChain(UUID id, Organization startingOrg);
+	boolean orgIsInAncestryChain(UUID id, Organization startingOrg);
 
 	// conversion methods
 	OrganizationDto convertToDto(Organization org);
