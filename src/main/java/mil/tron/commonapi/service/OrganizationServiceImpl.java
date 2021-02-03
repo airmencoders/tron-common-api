@@ -32,7 +32,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationUniqueChecksService orgChecksService;
 	private final DtoMapper modelMapper;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
-	
+	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
+
 	public OrganizationServiceImpl(
 			OrganizationRepository repository,
 			PersonRepository personRepository,
@@ -76,7 +77,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 				organization.addSubordinateOrganization(subordinate);
 			}
 			else {
-				throw new InvalidRecordUpdateRequest("Organization " + subordinate.getId() + " is already an ancestor to this org!");
+				throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subordinate.getId()));
 			}
 		}
 
@@ -248,7 +249,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
 			for (Organization subOrg : org.getSubordinateOrganizations()) {
 				if (orgIsInAncestryChain(subOrg.getId(), org)) {
-					throw new InvalidRecordUpdateRequest("Organization " + subOrg.getId() + " is already an ancestor to this org!");
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
 				}
 			}
 		}
@@ -281,7 +282,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
 			for (Organization subOrg : org.getSubordinateOrganizations()) {
 				if (orgIsInAncestryChain(subOrg.getId(), org)) {
-					throw new InvalidRecordUpdateRequest("Organization " + subOrg.getId() + " is already an ancestor to this org!");
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
 				}
 			}
 		}
