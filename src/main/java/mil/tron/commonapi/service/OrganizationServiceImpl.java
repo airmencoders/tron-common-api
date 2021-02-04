@@ -488,6 +488,17 @@ public class OrganizationServiceImpl implements OrganizationService {
 		else return orgIsInAncestryChain(id, parentOrg);
 	}
 
+	/**
+	 * Customizes the returned org entity by accepting fields from Controller's query params.
+	 * Normally a user just gets a DTO back with UUIDs for nested members and orgs... this allows
+	 * to specify fields to include on top of the UUIDs.  Nested members and organizations are never
+	 * allowed to have their own subordinate organizations and members since this could be an infinite
+	 * recursion.
+	 * @param fields Map passed in from Controller with two keys - "people" and "orgs", each having a comma
+	 *               separated list of field names to include for those types
+	 * @param dto The DTO to perform customization on
+	 * @return The customized entity as a JsonNode blob to be returned by the controller
+	 */
 	@Override
 	public JsonNode customizeEntity(Map<String, String> fields, OrganizationDto dto) {
 

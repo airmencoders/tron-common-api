@@ -478,15 +478,22 @@ class OrganizationServiceImplTest {
 		assertTrue(node.get("parentOrganization").has("name"));
 		assertFalse(node.get("parentOrganization").has("leader"));
 
+		assertEquals(2, Lists.newArrayList(node.get("subordinateOrganizations").get(0).elements()).size());
+		assertTrue(node.get("subordinateOrganizations").get(0).has("id"));
+		assertTrue(node.get("subordinateOrganizations").get(0).has("name"));
+		assertFalse(node.get("subordinateOrganizations").get(0).has("leader"));
+
 		// check that we can't put that we want 'subordinateOrganizations' and 'parentOrganizations'
 		//  in the nested entities of the output
 		fields.put("orgs", "id,name,parentOrganization,subordinateOrganization");
 
+		// check nested members and orgs don't themselves have nested members and orgs
 		node = organizationService.customizeEntity(fields, dto);
 		assertEquals(2, Lists.newArrayList(node.get("parentOrganization").elements()).size());
 		assertTrue(node.get("parentOrganization").has("id"));
 		assertTrue(node.get("parentOrganization").has("name"));
 		assertFalse(node.get("parentOrganization").has("parentOrganization"));
+		assertFalse(node.get("parentOrganization").has("members"));
 		assertFalse(node.get("parentOrganization").has("subordinateOrganizations"));
 
 		// remove the people/org criteria, code should auto place 'id' at least
