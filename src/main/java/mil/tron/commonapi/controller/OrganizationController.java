@@ -4,21 +4,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.dto.OrganizationDto;
-import mil.tron.commonapi.entity.Airman;
-import mil.tron.commonapi.entity.Organization;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -66,15 +61,11 @@ public class OrganizationController {
 			Iterable<OrganizationDto> allOrgs = organizationService.getOrganizations(searchQuery);
 
 			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
-
-				// we have some customizations specified from the user...
-				Map<String, String> fields = new HashMap<>();
-				fields.put("people", peopleFields);
-				fields.put("orgs", orgFields);
-
 				// for each item, customize the entity
 				List<JsonNode> customizedList = new ArrayList<>();
-				allOrgs.forEach(item -> customizedList.add(organizationService.customizeEntity(fields, item)));
+				allOrgs.forEach(item -> customizedList.add(
+						organizationService.customizeEntity(
+								initCustomizationOptions(peopleFields, orgFields), item)));
 				return new ResponseEntity<>(customizedList, HttpStatus.OK);
 			}
 
@@ -98,15 +89,12 @@ public class OrganizationController {
 			Iterable<OrganizationDto> allFilteredOrgs = organizationService.getOrganizationsByTypeAndService(searchQuery, unit, branch);
 
 			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
-
-				// we have some customizations specified from the user...
-				Map<String, String> fields = new HashMap<>();
-				fields.put("people", peopleFields);
-				fields.put("orgs", orgFields);
-
 				// for each dto, customize it
 				List<JsonNode> customizedList = new ArrayList<>();
-				allFilteredOrgs.forEach(item -> customizedList.add(organizationService.customizeEntity(fields, item)));
+				allFilteredOrgs.forEach(
+						item -> customizedList.add(
+								organizationService.customizeEntity(
+										initCustomizationOptions(peopleFields, orgFields), item)));
 				return new ResponseEntity<>(customizedList, HttpStatus.OK);
 			}
 
@@ -142,14 +130,10 @@ public class OrganizationController {
 		if (flatten) {
 
 			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
-
-				// we have some customizations specified from the user...
-				Map<String, String> fields = new HashMap<>();
-				fields.put("people", peopleFields);
-				fields.put("orgs", orgFields);
-
 				// flatten first, then customize that entity
-				return new ResponseEntity<>(organizationService.customizeEntity(fields, flattenOrg(org)), HttpStatus.OK);
+				return new ResponseEntity<>(
+						organizationService.customizeEntity(
+								initCustomizationOptions(peopleFields, orgFields), flattenOrg(org)), HttpStatus.OK);
 			}
 
 			// otherwise return flattened org as a regular DTO
@@ -157,12 +141,9 @@ public class OrganizationController {
 		}
 		else {
 			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
-
-				// we have some customizations specified from the user...
-				Map<String, String> fields = new HashMap<>();
-				fields.put("people", peopleFields);
-				fields.put("orgs", orgFields);
-				return new ResponseEntity<>(organizationService.customizeEntity(fields, org), HttpStatus.OK);
+				return new ResponseEntity<>(
+						organizationService.customizeEntity(
+								initCustomizationOptions(peopleFields, orgFields), org), HttpStatus.OK);
 			}
 
 			// otherwise return org DTO as-is
@@ -387,5 +368,14 @@ public class OrganizationController {
 		}
 
 		return accumulator;
+	}
+
+	// helper to build the options map for customization of return DTOs
+	private Map<String, String> initCustomizationOptions(String peopleFields, String orgFields) {
+		// we have some customizations specified from the user...
+		Map<String, String> fields = new HashMap<>();
+		fields.put("people", peopleFields);
+		fields.put("orgs", orgFields);
+		return fields;
 	}
 }

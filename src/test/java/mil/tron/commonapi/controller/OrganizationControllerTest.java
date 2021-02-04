@@ -1,6 +1,7 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
@@ -32,6 +33,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -397,6 +400,64 @@ public class OrganizationControllerTest {
 					.andExpect(status().isOk())
 					.andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getMembers().size()))
 					.andExpect(result -> assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getSubordinateOrganizations().size()));
+
+		}
+
+		@Test
+		void testCustomizationOrgReturn() throws Exception {
+			OrganizationDto newOrg = new OrganizationDto();
+			newOrg.setId(UUID.randomUUID());
+			newOrg.setName("test org Child");
+
+			testOrgDto.setSubOrgsUUID(Set.of(newOrg.getId()));
+
+			Person p = Person.builder()
+					.id(UUID.randomUUID())
+					.firstName("Donny")
+					.middleName("Dont")
+					.lastName("Does")
+					.build();
+			Person p2 = Person.builder()
+					.id(UUID.randomUUID())
+					.firstName("John")
+					.middleName("Q")
+					.lastName("Public")
+					.build();
+
+			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
+
+			Mockito.when(organizationService.getOrganization(newOrg.getId())).thenReturn(newOrg);
+			Mockito.when(organizationService.getOrganization(testOrgDto.getId())).thenReturn(testOrgDto);
+
+			// mock out the customize entity - we're not testing that it "works" here, rather the code path
+			//  thru it is OK in the controller... so return any JsonNode.
+			Mockito.when(organizationService.customizeEntity(Mockito.anyMap(), Mockito.any(OrganizationDto.class)))
+					.thenReturn(OBJECT_MAPPER.readTree(OBJECT_MAPPER.writeValueAsString(newOrg)));
+
+			mockMvc.perform(get(ENDPOINT + "?people=id,firstName&organizations=id,name"))
+					.andExpect(status().isOk());
+
+			mockMvc.perform(get(ENDPOINT + "?people=id,firstName&organizations=id,name"))
+					.andExpect(status().isOk());
+
+			// ...get a single ORG, and do the motions again...
+
+			// but this time make sure the controller populated the options map correctly
+			Mockito.when(organizationService.customizeEntity(Mockito.anyMap(), Mockito.any(OrganizationDto.class)))
+					.thenAnswer(invocationOnMock -> {
+						Map<String, String> map = invocationOnMock.getArgument(0);
+						assertEquals("id,firstName", map.get("people"));
+						assertEquals("id,name", map.get("orgs"));
+						return OBJECT_MAPPER.readTree(OBJECT_MAPPER.writeValueAsString(newOrg));
+					});
+
+			// flatten, with customization
+			mockMvc.perform(get(ENDPOINT + "{id}?flatten=true&people=id,firstName&organizations=id,name", testOrg.getId()))
+					.andExpect(status().isOk());
+
+			// no flatten, with customization
+			mockMvc.perform(get(ENDPOINT + "{id}?flatten=false&people=id,firstName&organizations=id,name", testOrg.getId()))
+					.andExpect(status().isOk());
 
 		}
 	}
