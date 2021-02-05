@@ -4,6 +4,7 @@ import mil.tron.commonapi.exception.InvalidFieldValueException;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,7 +50,7 @@ public class PaginatorTests {
         Paginator pager = new Paginator();
         List<String> stuff = Lists.newArrayList("This", "is", "a", "very", "long", "list", "of", "stuff", "to", "show", "to", "the", "user");
 
-        assertNull(pager.paginate(null, 0L, 4L));
+        assertEquals(Collections.EMPTY_LIST, pager.paginate(null, 0L, 4L));
         assertEquals(stuff.size(), pager.paginate(stuff, null, null).size());
     }
 }

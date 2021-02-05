@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import mil.tron.commonapi.exception.InvalidFieldValueException;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,7 +19,7 @@ public class Paginator {
     public <T> List<T> paginate(Iterable<T> items, Long pageNumber, Long pageSize) {
 
         // check null condition
-        if (items == null) return null;
+        if (items == null) return new ArrayList<>();
 
         // check for null vals given from the controller
         if (pageNumber == null) pageNumber = 1L;
