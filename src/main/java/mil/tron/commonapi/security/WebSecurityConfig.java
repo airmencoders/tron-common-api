@@ -1,6 +1,7 @@
 package mil.tron.commonapi.security;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,6 +14,7 @@ import mil.tron.commonapi.exception.AuthManagerException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 
 @Configuration
+@ConditionalOnProperty(name = "security.enabled", havingValue="true")
 @EnableWebSecurity
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	
