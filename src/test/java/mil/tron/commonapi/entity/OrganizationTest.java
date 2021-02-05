@@ -1,9 +1,12 @@
 package mil.tron.commonapi.entity;
 
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
@@ -79,5 +82,27 @@ class OrganizationTest {
     	testOrg.sanitizeNameForUniqueConstraint();
     	assertThat(testOrg.getName()).isNull();
     }
-    
+
+    @Test
+    void testStringTrims() {
+        Organization testOrg = new Organization();
+
+        testOrg.setName(" TestOrg ");
+        testOrg.sanitizeEntity();
+        assertEquals(testOrg.getName(), "TestOrg");
+    }
+
+    @Test
+    void testCantAddSelfAsParent() {
+        Organization testOrg = new Organization();
+
+        assertThrows(InvalidRecordUpdateRequest.class, () -> testOrg.setParentOrganization(testOrg));
+    }
+
+    @Test
+    void testCantAddSelfAsSubordinate() {
+        Organization testOrg = new Organization();
+
+        assertThrows(InvalidRecordUpdateRequest.class, () -> testOrg.addSubordinateOrganization(testOrg));
+    }
 }

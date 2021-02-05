@@ -46,7 +46,7 @@ public class AirmanIntegrationTest {
         airman.setMiddleName("Hero");
         airman.setLastName("Public");
         airman.setEmail("john@test.com");
-        airman.setTitle("CAPT");
+        airman.setRank("CAPT");
         airman.setAfsc("17D");
         airman.setPtDate(new Date(2020-1900, Calendar.OCTOBER, 1));
         airman.setEtsDate(new Date(2021-1900, Calendar.JUNE, 29));

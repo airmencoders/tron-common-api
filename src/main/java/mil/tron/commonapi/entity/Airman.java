@@ -1,31 +1,28 @@
 package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.val;
+import mil.tron.commonapi.entity.ranks.AirmanRank;
 import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.persistence.Entity;
-import javax.persistence.Transient;
-import java.util.Arrays;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
+
 import java.util.Date;
-import java.util.HashSet;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Airman extends Person {
 
-    /**
-     * List of valid USAF ranks plus contractor (CTR) and civilian (CIV)
-     */
-    @Transient
-    private static final HashSet<String> ranks = new HashSet<>(Arrays.asList(
-            "AB", "AMN", "A1C", "SRA", "SSGT", "TSGT", "MSGT", "SMGT", "CMSGT", "CMSGT",
-            "CCMSGT", "CMSAF", "2LT", "1LT", "CAPT", "MAJ", "LTCOL", "COL", "BG", "MG",
-            "LTG", "GEN", "CIV", "CTR", "SES"));
+    private AirmanRank rank;
 
     /**
      * An airman's Air Force Specialty Code.
@@ -70,19 +67,30 @@ public class Airman extends Person {
     @Setter
     private String imds;
 
+
     /**
-     * Rank field that returns/sets the base class (Person) 'title' field
+     * Rank of Airman service member
      */
+    @JsonGetter("rank")
     public String getRank() {
-        return this.getTitle();
+        if (this.rank == null) {
+            return null;
+        }
+        return this.rank.toString();
     }
 
+    @JsonSetter("rank")
     public void setRank(String rank) {
-        if (ranks.contains(rank.toUpperCase())) {
-            this.setTitle(rank.toUpperCase());
+        if (rank == null) {
+            this.rank = AirmanRank.UNKNOWN;
         }
         else {
-            throw new InvalidFieldValueException("Airman rank must be one of: " + String.join(", ", Airman.ranks));
+            val rankEnum = AirmanRank.valueByString(rank.toUpperCase());
+            if (rankEnum == null) {
+                throw new InvalidFieldValueException("Airman rank must be one of: " +
+                        AirmanRank.getValueString());
+            }
+            this.rank = rankEnum;
         }
     }
 
@@ -179,4 +187,33 @@ public class Airman extends Person {
     @Getter
     @Setter
     private String dutyTitle;
+
+    /**
+     * This method will be performed before database operations.
+     *
+     * Entity parameters are formatted as needed
+     */
+    @PreUpdate
+    @PrePersist
+    public void sanitizeEntity() {
+        trimStrings();
+    }
+
+    public void trimStrings() {
+        afsc = (afsc == null) ? null : afsc.trim();
+        dodid = (dodid == null) ? null : dodid.trim();
+        imds = (imds == null) ? null : imds.trim();
+        unit = (unit == null) ? null : unit.trim();
+        wing = (wing == null) ? null : wing.trim();
+        gp = (gp == null) ? null : gp.trim();
+        squadron = (squadron == null) ? null : squadron.trim();
+        wc = (wc == null) ? null : wc.trim();
+        go81 = (go81 == null) ? null : go81.trim();
+        deros = (deros == null) ? null : deros.trim();
+        phone = (phone == null) ? null : phone.trim();
+        address = (address == null) ? null : address.trim();
+        fltChief = (fltChief == null) ? null : fltChief.trim();
+        manNumber = (manNumber == null) ? null : manNumber.trim();
+        dutyTitle = (dutyTitle == null) ? null : dutyTitle.trim();
+    }
 }
