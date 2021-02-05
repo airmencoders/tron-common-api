@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.exception.ExceptionResponse;
+import mil.tron.commonapi.pagination.Paginator;
 import mil.tron.commonapi.service.AirmanService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +23,11 @@ import java.util.UUID;
 @RequestMapping("${api-prefix.v1}/airman")
 public class AirmanController {
     private AirmanService airmanService;
+    private Paginator pager;
 
-    public AirmanController(AirmanService airmanService) {
+    public AirmanController(AirmanService airmanService, Paginator pager) {
         this.airmanService = airmanService;
+        this.pager = pager;
     }
 
     @Operation(summary = "Retrieves all airmen", description = "Retrieves all airmen records")
@@ -34,8 +37,13 @@ public class AirmanController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Airman.class))))
     })
     @GetMapping("")
-    public ResponseEntity<Iterable<Airman>> getAllAirman() {
-        return new ResponseEntity<>(airmanService.getAllAirman(), HttpStatus.OK);
+    public ResponseEntity<Iterable<Airman>> getAllAirman(
+            @Parameter(name = "page", description = "Page of content to retrieve", required = false)
+            @RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
+            @Parameter(name = "size", description = "Size of each page", required = false)
+            @RequestParam(name = "size", required = false) Long pageSize) {
+
+        return new ResponseEntity<>(pager.paginate(airmanService.getAllAirman(), pageNumber, pageSize), HttpStatus.OK);
     }
 
     @Operation(summary = "Retrieves a single airman by UUID", description = "Retrieves single airman record")

@@ -17,8 +17,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import javax.transaction.Transactional;
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(SpringExtension.class)
@@ -72,6 +75,15 @@ public class PersonIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(a3))))
                 .andExpect(status().isConflict());
+
+        // test pagination
+        mockMvc.perform(get(ENDPOINT + "?page=1&size=4"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)));
+
+        mockMvc.perform(get(ENDPOINT + "?page=2&size=1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
     }
 
 }

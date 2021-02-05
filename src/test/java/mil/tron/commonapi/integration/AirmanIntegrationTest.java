@@ -22,8 +22,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(SpringExtension.class)
@@ -62,6 +64,15 @@ public class AirmanIntegrationTest {
                 .andReturn();
 
         assertEquals(OBJECT_MAPPER.writeValueAsString(airman), response.getResponse().getContentAsString());
+
+        // test pagination
+        mockMvc.perform(get(ENDPOINT + "?page=1&size=4"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        mockMvc.perform(get(ENDPOINT + "?page=2&size=4"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Transactional

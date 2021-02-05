@@ -11,6 +11,7 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
+import mil.tron.commonapi.pagination.Paginator;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,10 +24,12 @@ import java.util.*;
 @RequestMapping("${api-prefix.v1}/organization")
 public class OrganizationController {
 	private OrganizationService organizationService;
+	private Paginator pager;
 	private static final String UNKNOWN_TYPE = "UNKNOWN";
 	
-	public OrganizationController (OrganizationService organizationService) {
+	public OrganizationController (OrganizationService organizationService, Paginator pager) {
 		this.organizationService = organizationService;
+		this.pager = pager;
 	}
 	
 	@Operation(summary = "Retrieves all organizations",
@@ -46,11 +49,17 @@ public class OrganizationController {
 	public ResponseEntity<Object> getOrganizations(
 			@RequestParam(name = "type", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String unitType,
 			@RequestParam(name = "branch", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String branchType,
-			@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery) {
+			@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery,
+			@Parameter(name = "page", description = "Page of content to retrieve", required = false)
+				@RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
+			@Parameter(name = "size", description = "Size of each page", required = false)
+				@RequestParam(name = "size", required = false) Long pageSize) {
 
 		// return all types by default (if no query params given)
 		if (unitType.equals(OrganizationController.UNKNOWN_TYPE) && branchType.equals(OrganizationController.UNKNOWN_TYPE)) {
-			return new ResponseEntity<>(organizationService.getOrganizations(searchQuery), HttpStatus.OK);
+			return new ResponseEntity<>(
+					pager.paginate(
+							organizationService.getOrganizations(searchQuery), pageNumber, pageSize), HttpStatus.OK);
 		}
 		// otherwise try to return the types specified
 		else {
@@ -66,7 +75,9 @@ public class OrganizationController {
 				throw new BadRequestException("Invalid branch or service type given");
 			}
 
-			return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(searchQuery, unit, branch), HttpStatus.OK);
+			return new ResponseEntity<>(
+					pager.paginate(
+							organizationService.getOrganizationsByTypeAndService(searchQuery, unit, branch), pageNumber, pageSize), HttpStatus.OK);
 		}
 	}
 	
