@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
+import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
@@ -42,6 +44,7 @@ public class OrganizationController {
 					description = "Bad Request - likely due to invalid unit type or branch of service specified",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class)))
 	})
+	@PreAuthorizeRead
 	@GetMapping
 	public ResponseEntity<Object> getOrganizations(
 			@RequestParam(name = "type", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String unitType,
@@ -82,6 +85,7 @@ public class OrganizationController {
 					description = "Bad Request or malformed UUID",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeRead
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> getOrganization(
 			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId,
@@ -105,6 +109,7 @@ public class OrganizationController {
 					description = "Resource already exists with the id provided",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeWrite
 	@PostMapping
 	public ResponseEntity<OrganizationDto> createOrganization(
 			@Parameter(description = "Organization to create", required = true) @Valid @RequestBody OrganizationDto organization) {
@@ -124,6 +129,7 @@ public class OrganizationController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeWrite
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> updateOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
@@ -146,6 +152,7 @@ public class OrganizationController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeWrite
 	@DeleteMapping(value = "/{id}")
 	public ResponseEntity<Object> deleteOrganization(
 			@Parameter(description = "Organization ID to delete", required = true) @PathVariable("id") UUID organizationId) {
@@ -165,6 +172,7 @@ public class OrganizationController {
 					description = "Provided person UUID(s) was/were invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeWrite
 	@DeleteMapping("/{id}/members")
 	public ResponseEntity<Object> deleteOrganizationMember(@Parameter(description = "UUID of the organization to modify", required = true) @PathVariable UUID id,
 													   @Parameter(description = "UUID(s) of the member(s) to remove", required = true) @RequestBody List<UUID> personId) {
@@ -184,6 +192,7 @@ public class OrganizationController {
 					description = "Provided person UUID(s) was/were invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeWrite
 	@PatchMapping("/{id}/members")
 	public ResponseEntity<Object> addOrganizationMember(@Parameter(description = "UUID of the organization record", required = true) @PathVariable UUID id,
 													@Parameter(description = "UUID(s) of the member(s) to add", required = true) @RequestBody List<UUID> personId) {
@@ -241,6 +250,7 @@ public class OrganizationController {
 					description = "A provided person UUID was invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeWrite
 	@PatchMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> patchOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
@@ -265,6 +275,7 @@ public class OrganizationController {
 					description = "Bad Request / One of the supplied organizations contained a UUID that already exists or other duplicate data",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeWrite
 	@PostMapping(value = "/organizations")
 	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
 		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);

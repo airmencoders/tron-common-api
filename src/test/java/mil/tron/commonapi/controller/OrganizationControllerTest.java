@@ -9,6 +9,7 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.OrganizationService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,11 +46,13 @@ public class OrganizationControllerTest {
 	
 	@MockBean
 	private OrganizationService organizationService;
-
 	private Person testPerson;
 	private Person testLeaderPerson;
 	private Organization testOrg;
 	private OrganizationDto testOrgDto;
+
+	@MockBean
+	private AppClientUserPreAuthenticatedService appClientUserPreAuthenticatedService;
 
 	@BeforeEach
 	public void beforeEachTest() throws JsonProcessingException {
