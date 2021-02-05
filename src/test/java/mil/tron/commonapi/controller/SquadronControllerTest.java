@@ -6,7 +6,6 @@ import mil.tron.commonapi.entity.Squadron;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.security.annotation.WithMockReadWrite;
 import mil.tron.commonapi.service.SquadronService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +35,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-@WithMockReadWrite
 public class SquadronControllerTest {
     private static final String ENDPOINT = "/v1/squadron/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -177,7 +175,6 @@ public class SquadronControllerTest {
     }
 
     @Nested
-    @WithMockReadWrite
     class TestSquadronAttributeChanges {
 
         private Airman newAirman;

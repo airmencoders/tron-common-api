@@ -2,7 +2,6 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Airman;
-import mil.tron.commonapi.security.annotation.WithMockReadWrite;
 
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +30,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-@WithMockReadWrite
 public class AirmanIntegrationTest {
     private static final String ENDPOINT = "/v1/airman/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

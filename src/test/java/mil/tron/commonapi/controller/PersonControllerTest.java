@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.UUID;
 
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.security.annotation.WithMockReadWrite;
 
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +66,6 @@ public class PersonControllerTest {
 	}
 
 	@Nested
-	@WithMockReadWrite
 	class TestGet {
 		@Test
 		void testGetAll() throws Exception {
@@ -100,7 +98,6 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
-	@WithMockReadWrite
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
@@ -147,7 +144,6 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
-	@WithMockReadWrite
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
@@ -193,7 +189,6 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
-	@WithMockReadWrite
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {
