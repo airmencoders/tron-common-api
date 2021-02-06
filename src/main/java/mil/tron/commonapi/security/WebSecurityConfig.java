@@ -39,6 +39,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http
         	.addFilter(appClientPreAuthFilter())
         	.authorizeRequests()
+        		.antMatchers("/api-docs/**").permitAll()
+        		.antMatchers("/api-docs**").permitAll()
 	            .anyRequest()
 	            	.authenticated()
             .and()
