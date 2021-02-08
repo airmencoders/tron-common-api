@@ -24,22 +24,16 @@ import java.util.UUID;
 public class OrganizationDto {
 
     @JsonIgnore
-    @Transient
     public static final String PARENT_ORG_FIELD = "parentOrganization";
     @JsonIgnore
-    @Transient
     public static final String MEMBERS_FIELD = "members";
     @JsonIgnore
-    @Transient
     public static final String LEADER_FIELD = "leader";
     @JsonIgnore
-    @Transient
     public static final String SUB_ORGS_FIELD = "subordinateOrganizations";
     @JsonIgnore
-    @Transient
     public static final String ORG_TYPE_FIELD = "orgType";
     @JsonIgnore
-    @Transient
     public static final String BRANCH_TYPE = "branchType";
 
     @Getter
