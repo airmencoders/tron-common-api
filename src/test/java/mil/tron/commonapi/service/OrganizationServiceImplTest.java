@@ -456,7 +456,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.findById(subord.getId())).thenReturn(Optional.of(subord));
 
 		Map<String, String> fields = new HashMap<>();
-		fields.put("orgs", "id,name");
+		fields.put("organizations", "id,name");
 		fields.put("people", "id,firstName");
 
 		JsonNode node = organizationService.customizeEntity(fields, dto);
@@ -485,7 +485,7 @@ class OrganizationServiceImplTest {
 
 		// check that we can't put that we want 'subordinateOrganizations' and 'parentOrganizations'
 		//  in the nested entities of the output
-		fields.put("orgs", "id,name,parentOrganization,subordinateOrganization");
+		fields.put("organizations", "id,name,parentOrganization,subordinateOrganization");
 
 		// check nested members and orgs don't themselves have nested members and orgs
 		node = organizationService.customizeEntity(fields, dto);
@@ -497,7 +497,7 @@ class OrganizationServiceImplTest {
 		assertFalse(node.get("parentOrganization").has("subordinateOrganizations"));
 
 		// remove the people/org criteria, code should auto place 'id' at least
-		fields.put("orgs", "");
+		fields.put("organizations", "");
 		fields.put("people", "");
 
 		node = organizationService.customizeEntity(fields, dto);
@@ -510,7 +510,7 @@ class OrganizationServiceImplTest {
 		assertFalse(node.get("parentOrganization").has("name"));
 
 		// test junk criteria is ignored
-		fields.put("orgs", "id, name, junkk_34  sfd");
+		fields.put("organizations", "id, name, junkk_34  sfd");
 		fields.put("people", "id, firstName, test222");
 
 		node = organizationService.customizeEntity(fields, dto);

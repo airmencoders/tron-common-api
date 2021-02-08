@@ -447,7 +447,7 @@ public class OrganizationControllerTest {
 					.thenAnswer(invocationOnMock -> {
 						Map<String, String> map = invocationOnMock.getArgument(0);
 						assertEquals("id,firstName", map.get("people"));
-						assertEquals("id,name", map.get("orgs"));
+						assertEquals("id,name", map.get("organizations"));
 						return OBJECT_MAPPER.readTree(OBJECT_MAPPER.writeValueAsString(newOrg));
 					});
 

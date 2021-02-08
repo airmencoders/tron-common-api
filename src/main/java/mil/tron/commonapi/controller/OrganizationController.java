@@ -24,6 +24,10 @@ import java.util.*;
 @RequestMapping("${api-prefix.v1}/organization")
 public class OrganizationController {
 	private OrganizationService organizationService;
+
+	public static final String PEOPLE_PARAMS_FIELD = "people";
+	public static final String ORGS_PARAMS_FIELD = "organizations";
+
 	private static final String UNKNOWN_TYPE = "UNKNOWN";
 	
 	public OrganizationController (OrganizationService organizationService) {
@@ -52,9 +56,9 @@ public class OrganizationController {
 			@Parameter(description = "Case insensitive search string for org name", required = false)
 				@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery,
 			@Parameter(description = "Comma-separated string list to include in Person type sub-fields. Example: people=id,firstName,lastName", required = false)
-				@RequestParam(name="people", required = false, defaultValue = "") String peopleFields,
+				@RequestParam(name = OrganizationController.PEOPLE_PARAMS_FIELD, required = false, defaultValue = "") String peopleFields,
 			@Parameter(description = "Comma-separated string list to include in Organization type sub-fields. Example: organizations=id,name", required = false)
-				@RequestParam(name="organizations", required = false, defaultValue = "") String orgFields) {
+				@RequestParam(name = OrganizationController.ORGS_PARAMS_FIELD, required = false, defaultValue = "") String orgFields) {
 
 		// return all types by default (if no query params given)
 		if (unitType.equals(OrganizationController.UNKNOWN_TYPE) && branchType.equals(OrganizationController.UNKNOWN_TYPE)) {
@@ -121,9 +125,9 @@ public class OrganizationController {
 			@Parameter(description = "Whether to flatten out all attached members and organizations contained therein", required = false)
 				@RequestParam(name = "flatten", required = false, defaultValue = "false") boolean flatten,
 			@Parameter(description = "Comma-separated string list of fields to include in Person type sub-fields. Example: people=id,firstName,lastName", required = false)
-					@RequestParam(name="people", required = false, defaultValue = "") String peopleFields,
+					@RequestParam(name=OrganizationController.PEOPLE_PARAMS_FIELD, required = false, defaultValue = "") String peopleFields,
 			@Parameter(description = "Comma-separated string list of fields to include in Organizational type sub-fields. Example: organizations=id,name", required = false)
-				@RequestParam(name="organizations", required = false, defaultValue = "") String orgFields) {
+				@RequestParam(name=OrganizationController.ORGS_PARAMS_FIELD, required = false, defaultValue = "") String orgFields) {
 
 		OrganizationDto org = organizationService.getOrganization(organizationId);
 
@@ -374,8 +378,8 @@ public class OrganizationController {
 	private Map<String, String> initCustomizationOptions(String peopleFields, String orgFields) {
 		// we have some customizations specified from the user...
 		Map<String, String> fields = new HashMap<>();
-		fields.put("people", peopleFields);
-		fields.put("orgs", orgFields);
+		fields.put(OrganizationController.PEOPLE_PARAMS_FIELD, peopleFields);
+		fields.put(OrganizationController.ORGS_PARAMS_FIELD, orgFields);
 		return fields;
 	}
 }

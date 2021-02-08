@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import mil.tron.commonapi.controller.OrganizationController;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.mixins.CustomOrganizationDtoMixin;
@@ -502,12 +503,6 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public JsonNode customizeEntity(Map<String, String> fields, OrganizationDto dto) {
 
-		final String PARENT_ORG_FIELD = "parentOrganization";
-		final String MEMBERS_FIELD = "members";
-		final String LEADER_FIELD = "leader";
-		final String SUB_ORGS_FIELD = "subordinateOrganizations";
-
-
 		Organization org = convertToEntity(dto);
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.addMixIn(Person.class, CustomPersonDtoMixin.class);
@@ -515,10 +510,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 
 		Set<String> mainEntityFilterFields = new HashSet<>();
-		mainEntityFilterFields.add(MEMBERS_FIELD);
-		mainEntityFilterFields.add(LEADER_FIELD);
-		mainEntityFilterFields.add(SUB_ORGS_FIELD);
-		mainEntityFilterFields.add(PARENT_ORG_FIELD);
+		mainEntityFilterFields.add(OrganizationDto.MEMBERS_FIELD);
+		mainEntityFilterFields.add(OrganizationDto.LEADER_FIELD);
+		mainEntityFilterFields.add(OrganizationDto.SUB_ORGS_FIELD);
+		mainEntityFilterFields.add(OrganizationDto.PARENT_ORG_FIELD);
 		FilterProvider filters = new SimpleFilterProvider()
 				.addFilter("orgFilter", SimpleBeanPropertyFilter
 						.serializeAllExcept(mainEntityFilterFields));
@@ -529,7 +524,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			JsonNode mainNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org));
 
 			// condition the Person type fields the user gave
-			Set<String> personEntityFilterFields = Arrays.stream(fields.get("people")
+			Set<String> personEntityFilterFields = Arrays.stream(fields.get(OrganizationController.PEOPLE_PARAMS_FIELD)
 					.split(","))
 					.map(String::trim)
 					.collect(Collectors.toSet());
@@ -540,7 +535,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			}
 
 			// condition the fields user gave
-			Set<String> subOrgEntityFilterFields = Arrays.stream(fields.get("orgs")
+			Set<String> subOrgEntityFilterFields = Arrays.stream(fields.get(OrganizationController.ORGS_PARAMS_FIELD)
 					.split(","))
 					.map(String::trim)
 					.collect(Collectors.toSet());
@@ -549,8 +544,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 			if (subOrgEntityFilterFields.isEmpty()) {
 				subOrgEntityFilterFields.add("id"); // add ID as the bare minimum like it would be on a regular DTO return
 			}
-			subOrgEntityFilterFields.remove(PARENT_ORG_FIELD);  // never allow parentOrg to be serialized on subordinate entities, might be infinite recursion
-			subOrgEntityFilterFields.remove(SUB_ORGS_FIELD);  // never allow subordinateOrgs to be serialized inside subordinateOrgs, might be infinite recursion
+			subOrgEntityFilterFields.remove(OrganizationDto.PARENT_ORG_FIELD);  // never allow parentOrg to be serialized on subordinate entities, might be infinite recursion
+			subOrgEntityFilterFields.remove(OrganizationDto.SUB_ORGS_FIELD);  // never allow subordinateOrgs to be serialized inside subordinateOrgs, might be infinite recursion
 
 			// add in the filters with the fields user gave to explicitly include
 			filters = new SimpleFilterProvider()
@@ -566,10 +561,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 			JsonNode subOrgsNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getSubordinateOrganizations()));
 
 			// reassemble the object that user will get
-			((ObjectNode) mainNode).set(MEMBERS_FIELD, usersNode);
-			((ObjectNode) mainNode).set(LEADER_FIELD, leaderNode);
-			((ObjectNode) mainNode).set(PARENT_ORG_FIELD, parentOrgNode);
-			((ObjectNode) mainNode).set(SUB_ORGS_FIELD, subOrgsNode);
+			((ObjectNode) mainNode).set(OrganizationDto.MEMBERS_FIELD, usersNode);
+			((ObjectNode) mainNode).set(OrganizationDto.LEADER_FIELD, leaderNode);
+			((ObjectNode) mainNode).set(OrganizationDto.PARENT_ORG_FIELD, parentOrgNode);
+			((ObjectNode) mainNode).set(OrganizationDto.SUB_ORGS_FIELD, subOrgsNode);
 
 			return mainNode;
 
