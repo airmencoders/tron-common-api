@@ -1,5 +1,6 @@
 package mil.tron.commonapi.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.*;
 import mil.tron.commonapi.entity.Organization;
@@ -7,6 +8,7 @@ import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 
+import javax.persistence.Transient;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -20,6 +22,19 @@ import java.util.UUID;
 @Builder
 @EqualsAndHashCode
 public class OrganizationDto {
+
+    @JsonIgnore
+    public static final String PARENT_ORG_FIELD = "parentOrganization";
+    @JsonIgnore
+    public static final String MEMBERS_FIELD = "members";
+    @JsonIgnore
+    public static final String LEADER_FIELD = "leader";
+    @JsonIgnore
+    public static final String SUB_ORGS_FIELD = "subordinateOrganizations";
+    @JsonIgnore
+    public static final String ORG_TYPE_FIELD = "orgType";
+    @JsonIgnore
+    public static final String BRANCH_TYPE = "branchType";
 
     @Getter
     @Setter
@@ -47,16 +62,16 @@ public class OrganizationDto {
     @Getter
     private Branch branchType = Branch.OTHER;
 
-    @JsonSetter("orgType")
+    @JsonSetter(OrganizationDto.ORG_TYPE_FIELD)
     public void setOrgType(Unit type) { this.orgType = type; }
 
-    @JsonSetter("branchType")
+    @JsonSetter(OrganizationDto.BRANCH_TYPE)
     public void setBranchType(Branch branch) { this.branchType = branch; }
 
     /**
      * Custom setter used by Jackson for leader field on JSON deserialization
      */
-    @JsonSetter("leader")
+    @JsonSetter(OrganizationDto.LEADER_FIELD)
     public void setLeaderUUID(UUID id) {
         this.leader = id;
     }
@@ -64,7 +79,7 @@ public class OrganizationDto {
     /**
      * Custom setter used by Jackson for members[] field on JSON deserialization
      */
-    @JsonSetter("members")
+    @JsonSetter(OrganizationDto.MEMBERS_FIELD)
     public void setMembersUUID(Set<UUID> ids) {
         this.members = ids;
     }
@@ -72,7 +87,7 @@ public class OrganizationDto {
     /**
      * Custom setter used by Jackson for subordinateOrganizations[] field on JSON deserialization
      */
-    @JsonSetter("subordinateOrganizations")
+    @JsonSetter(OrganizationDto.SUB_ORGS_FIELD)
     public void setSubOrgsUUID(Set<UUID> ids) {
         this.subordinateOrganizations = ids;
     }
@@ -80,7 +95,7 @@ public class OrganizationDto {
     /**
      * Custom setter used by Jackson for parentOrganization field on JSON deserialization
      */
-    @JsonSetter("parentOrganization")
+    @JsonSetter(OrganizationDto.PARENT_ORG_FIELD)
     public void setParentOrganizationUUID(UUID id) {
         this.parentOrganization = id;
     }

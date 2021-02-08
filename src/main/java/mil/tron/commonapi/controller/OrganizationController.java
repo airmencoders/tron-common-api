@@ -1,5 +1,6 @@
 package mil.tron.commonapi.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +26,10 @@ import java.util.*;
 @RequestMapping("${api-prefix.v1}/organization")
 public class OrganizationController {
 	private OrganizationService organizationService;
+
+	public static final String PEOPLE_PARAMS_FIELD = "people";
+	public static final String ORGS_PARAMS_FIELD = "organizations";
+
 	private static final String UNKNOWN_TYPE = "UNKNOWN";
 	
 	public OrganizationController (OrganizationService organizationService) {
@@ -47,20 +52,39 @@ public class OrganizationController {
 	@PreAuthorizeRead
 	@GetMapping
 	public ResponseEntity<Object> getOrganizations(
-			@RequestParam(name = "type", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String unitType,
-			@RequestParam(name = "branch", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String branchType,
-			@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery) {
+			@Parameter(description = "Unit type to filter on", required = false, content= @Content(schema =  @Schema(implementation = Unit.class)))
+				@RequestParam(name = "type", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String unitType,
+			@Parameter(description = "Branch type to filter on", required = false, content= @Content(schema =  @Schema(implementation = Branch.class)))
+				@RequestParam(name = "branch", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String branchType,
+			@Parameter(description = "Case insensitive search string for org name", required = false)
+				@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery,
+			@Parameter(description = "Comma-separated string list to include in Person type sub-fields. Example: people=id,firstName,lastName", required = false)
+				@RequestParam(name = OrganizationController.PEOPLE_PARAMS_FIELD, required = false, defaultValue = "") String peopleFields,
+			@Parameter(description = "Comma-separated string list to include in Organization type sub-fields. Example: organizations=id,name", required = false)
+				@RequestParam(name = OrganizationController.ORGS_PARAMS_FIELD, required = false, defaultValue = "") String orgFields) {
 
 		// return all types by default (if no query params given)
 		if (unitType.equals(OrganizationController.UNKNOWN_TYPE) && branchType.equals(OrganizationController.UNKNOWN_TYPE)) {
-			return new ResponseEntity<>(organizationService.getOrganizations(searchQuery), HttpStatus.OK);
+			Iterable<OrganizationDto> allOrgs = organizationService.getOrganizations(searchQuery);
+
+			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
+				// for each item, customize the entity
+				List<JsonNode> customizedList = new ArrayList<>();
+				allOrgs.forEach(item -> customizedList.add(
+						organizationService.customizeEntity(
+								initCustomizationOptions(peopleFields, orgFields), item)));
+				return new ResponseEntity<>(customizedList, HttpStatus.OK);
+			}
+
+			// otherwise return list of DTOs
+			return new ResponseEntity<>(allOrgs, HttpStatus.OK);
 		}
 		// otherwise try to return the types specified
 		else {
 			Unit unit;
 			Branch branch;
 
-			// coerce to enumerated value
+			// coerce types to enumerated value
 			try {
 				unit = unitType.equals(OrganizationController.UNKNOWN_TYPE) ? null : Unit.valueOf(unitType.toUpperCase());
 				branch = branchType.equals(OrganizationController.UNKNOWN_TYPE) ? null : Branch.valueOf(branchType.toUpperCase());
@@ -69,7 +93,20 @@ public class OrganizationController {
 				throw new BadRequestException("Invalid branch or service type given");
 			}
 
-			return new ResponseEntity<>(organizationService.getOrganizationsByTypeAndService(searchQuery, unit, branch), HttpStatus.OK);
+			Iterable<OrganizationDto> allFilteredOrgs = organizationService.getOrganizationsByTypeAndService(searchQuery, unit, branch);
+
+			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
+				// for each dto, customize it
+				List<JsonNode> customizedList = new ArrayList<>();
+				allFilteredOrgs.forEach(
+						item -> customizedList.add(
+								organizationService.customizeEntity(
+										initCustomizationOptions(peopleFields, orgFields), item)));
+				return new ResponseEntity<>(customizedList, HttpStatus.OK);
+			}
+
+			// otherwise return the list of filtered DTOs
+			return new ResponseEntity<>(allFilteredOrgs, HttpStatus.OK);
 		}
 	}
 	
@@ -87,16 +124,38 @@ public class OrganizationController {
 	})
 	@PreAuthorizeRead
 	@GetMapping(value = "/{id}")
-	public ResponseEntity<OrganizationDto> getOrganization(
+	public ResponseEntity<Object> getOrganization(
 			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Whether to flatten out all attached members and organizations contained therein", required = false)
-				@RequestParam(name = "flatten", required = false, defaultValue = "false") boolean flatten) {
+				@RequestParam(name = "flatten", required = false, defaultValue = "false") boolean flatten,
+			@Parameter(description = "Comma-separated string list of fields to include in Person type sub-fields. Example: people=id,firstName,lastName", required = false)
+					@RequestParam(name=OrganizationController.PEOPLE_PARAMS_FIELD, required = false, defaultValue = "") String peopleFields,
+			@Parameter(description = "Comma-separated string list of fields to include in Organizational type sub-fields. Example: organizations=id,name", required = false)
+				@RequestParam(name=OrganizationController.ORGS_PARAMS_FIELD, required = false, defaultValue = "") String orgFields) {
+
+		OrganizationDto org = organizationService.getOrganization(organizationId);
 
 		if (flatten) {
-			return new ResponseEntity<>(flattenOrg(organizationService.getOrganization(organizationId)), HttpStatus.OK);
+
+			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
+				// flatten first, then customize that entity
+				return new ResponseEntity<>(
+						organizationService.customizeEntity(
+								initCustomizationOptions(peopleFields, orgFields), flattenOrg(org)), HttpStatus.OK);
+			}
+
+			// otherwise return flattened org as a regular DTO
+			return new ResponseEntity<>(flattenOrg(org), HttpStatus.OK);
 		}
 		else {
-			return new ResponseEntity<>(organizationService.getOrganization(organizationId), HttpStatus.OK);
+			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
+				return new ResponseEntity<>(
+						organizationService.customizeEntity(
+								initCustomizationOptions(peopleFields, orgFields), org), HttpStatus.OK);
+			}
+
+			// otherwise return org DTO as-is
+			return new ResponseEntity<>(org, HttpStatus.OK);
 		}
 	}
 	
@@ -289,7 +348,7 @@ public class OrganizationController {
 		flattenedOrg.setOrgType(org.getOrgType());
 		flattenedOrg.setParentOrganizationUUID(org.getParentOrganization());
 		flattenedOrg.setId(org.getId());
-		flattenedOrg.setLeaderUUID(org.getId());
+		flattenedOrg.setLeaderUUID(org.getLeader());
 		flattenedOrg.setName(org.getName());
 		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
 		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), new HashSet<>()));
@@ -326,4 +385,12 @@ public class OrganizationController {
 		return accumulator;
 	}
 
+	// helper to build the options map for customization of return DTOs
+	private Map<String, String> initCustomizationOptions(String peopleFields, String orgFields) {
+		// we have some customizations specified from the user...
+		Map<String, String> fields = new HashMap<>();
+		fields.put(OrganizationController.PEOPLE_PARAMS_FIELD, peopleFields);
+		fields.put(OrganizationController.ORGS_PARAMS_FIELD, orgFields);
+		return fields;
+	}
 }
