@@ -14,6 +14,8 @@ public class WebSecurityConfigDisabled extends WebSecurityConfigurerAdapter {
         http
         	.cors()
         	.and()
+        	.headers().frameOptions().sameOrigin()
+        	.and()
             .csrf()
         		.disable()
         	.sessionManagement()
