@@ -46,16 +46,36 @@ class PersonServiceImplTest {
 	
 	@BeforeEach
 	public void beforeEachSetup() {
-		testPerson = new Person();
-		testPerson.setId(UUID.randomUUID());
-		testPerson.setFirstName("Test");
-		testPerson.setLastName("Person");
-		testPerson.setEmail("test@good.email");
-		testDto = new PersonDto();
-		testDto.setId(testPerson.getId());
-		testDto.setFirstName(testPerson.getFirstName());
-		testDto.setLastName(testPerson.getLastName());
-		testDto.setEmail(testPerson.getEmail());
+		testPerson = Person.builder()
+				.address("adr")
+				.admin(true)
+				.afsc("sc")
+				.approved(true)
+				.deros("1/2")
+				.dodid("1234567890")
+				.dor(new Date())
+				.dutyTitle("title")
+				.dutyPhone("555")
+				.email("a@b.c")
+				.etsDate(new Date())
+				.firstName("first")
+				.fltChief("chf")
+				.go81("81")
+				.gp("gp")
+				.imds("sucks")
+				.lastName("last")
+				.manNumber("567")
+				.middleName("MI")
+				.phone("888")
+				.ptDate(new Date())
+				.rank(Rank.builder()
+						.abbreviation("Capt")
+						.branchType(Branch.USAF)
+						.build())
+				.title("title")
+				.wc("wc")
+				.build();
+		testDto = personService.convertToDto(testPerson);
 	}
 
 	@Nested
@@ -63,6 +83,7 @@ class PersonServiceImplTest {
 		@Test
 	    void successfulCreate() {
 	    	// Test successful save
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	        Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 	        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
@@ -73,6 +94,7 @@ class PersonServiceImplTest {
 		@Test
 		void idAlreadyExists() {
 			// Test id already exists
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
 	        assertThrows(ResourceAlreadyExistsException.class, () -> personService.createPerson(testDto));
 		}
@@ -82,7 +104,8 @@ class PersonServiceImplTest {
 			 // Test email already exists
 	        Person existingPersonWithEmail = new Person();
 	    	existingPersonWithEmail.setEmail(testPerson.getEmail());
-	    	
+
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
 	    	assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
@@ -96,12 +119,14 @@ class PersonServiceImplTest {
 		@Test
 		void idsNotMatching() {
 			// Test id not matching person id
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	assertThrows(InvalidRecordUpdateRequest.class, () -> personService.updatePerson(UUID.randomUUID(), testDto));
 		}
 		
 		@Test
 		void idNotExist() {
 			// Test id not exist
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
 	    	assertThrows(RecordNotFoundException.class, () -> personService.updatePerson(testPerson.getId(), testDto));
 		}
@@ -118,7 +143,8 @@ class PersonServiceImplTest {
 	    	
 	    	Person existingPersonWithEmail = new Person();
 	    	existingPersonWithEmail.setEmail(newPerson.getEmail());
-	    	
+
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
 	    	assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
@@ -129,6 +155,7 @@ class PersonServiceImplTest {
 		@Test
 		void successfulUpdate() {
 			// Successful update
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
@@ -167,6 +194,7 @@ class PersonServiceImplTest {
 
     @Test
 	void bulkCreatePersonTest() {
+		Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 		Mockito.when(repository.save(Mockito.any(Person.class))).then(returnsFirstArg());
 		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 		Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
@@ -196,75 +224,33 @@ class PersonServiceImplTest {
 
 		@Test
 		void rank() {
-			PersonDto dto = personService.convertToDto(Person.builder()
-					.rank(Rank.builder()
-							.abbreviation("Capt")
-							.branchType(Branch.USAF)
-							.build())
-					.build());
-			assertThat(dto.getRank()).isEqualTo("Capt");
-			assertThat(dto.getBranch()).isEqualTo(Branch.USAF);
-		}
+			PersonDto dto = personService.convertToDto(testPerson);
 
-		@Test
-		void allProperties() {
-			Person person = Person.builder()
-					.address("adr")
-					.admin(true)
-					.afsc("sc")
-					.approved(true)
-					.deros("1/2")
-					.dodid("1234567890")
-					.dor(new Date())
-					.dutyTitle("title")
-					.dutyPhone("555")
-					.email("a@b.c")
-					.etsDate(new Date())
-					.firstName("first")
-					.fltChief("chf")
-					.go81("81")
-					.gp("gp")
-					.imds("sucks")
-					.lastName("last")
-					.manNumber("567")
-					.middleName("MI")
-					.phone("888")
-					.ptDate(new Date())
-					.rank(Rank.builder()
-							.abbreviation("Adm")
-							.branchType(Branch.USN)
-							.build())
-					.title("title")
-					.wc("wc")
-					.build();
-
-			PersonDto dto = personService.convertToDto(person);
-
-			assertThat(dto.getAddress()).isEqualTo(person.getAddress());
-			assertThat(dto.isAdmin()).isEqualTo(person.isAdmin());
-			assertThat(dto.getAfsc()).isEqualTo(person.getAfsc());
-			assertThat(dto.isApproved()).isEqualTo(person.isApproved());
-			assertThat(dto.getDeros()).isEqualTo(person.getDeros());
-			assertThat(dto.getDodid()).isEqualTo(person.getDodid());
-			assertThat(dto.getDor()).isEqualTo(person.getDor());
-			assertThat(dto.getDutyTitle()).isEqualTo(person.getDutyTitle());
-			assertThat(dto.getDutyPhone()).isEqualTo(person.getDutyPhone());
-			assertThat(dto.getEmail()).isEqualTo(person.getEmail());
-			assertThat(dto.getEtsDate()).isEqualTo(person.getEtsDate());
-			assertThat(dto.getFirstName()).isEqualTo(person.getFirstName());
-			assertThat(dto.getFltChief()).isEqualTo(person.getFltChief());
-			assertThat(dto.getGo81()).isEqualTo(person.getGo81());
-			assertThat(dto.getGp()).isEqualTo(person.getGp());
-			assertThat(dto.getImds()).isEqualTo(person.getImds());
-			assertThat(dto.getLastName()).isEqualTo(person.getLastName());
-			assertThat(dto.getManNumber()).isEqualTo(person.getManNumber());
-			assertThat(dto.getMiddleName()).isEqualTo(person.getMiddleName());
-			assertThat(dto.getPhone()).isEqualTo(person.getPhone());
-			assertThat(dto.getPtDate()).isEqualTo(person.getPtDate());
-			assertThat(dto.getTitle()).isEqualTo(person.getTitle());
-			assertThat(dto.getWc()).isEqualTo(person.getWc());
-			assertThat(dto.getRank()).isEqualTo(person.getRank().getAbbreviation());
-			assertThat(dto.getBranch()).isEqualTo(person.getRank().getBranchType());
+			assertThat(dto.getAddress()).isEqualTo(testPerson.getAddress());
+			assertThat(dto.isAdmin()).isEqualTo(testPerson.isAdmin());
+			assertThat(dto.getAfsc()).isEqualTo(testPerson.getAfsc());
+			assertThat(dto.isApproved()).isEqualTo(testPerson.isApproved());
+			assertThat(dto.getDeros()).isEqualTo(testPerson.getDeros());
+			assertThat(dto.getDodid()).isEqualTo(testPerson.getDodid());
+			assertThat(dto.getDor()).isEqualTo(testPerson.getDor());
+			assertThat(dto.getDutyTitle()).isEqualTo(testPerson.getDutyTitle());
+			assertThat(dto.getDutyPhone()).isEqualTo(testPerson.getDutyPhone());
+			assertThat(dto.getEmail()).isEqualTo(testPerson.getEmail());
+			assertThat(dto.getEtsDate()).isEqualTo(testPerson.getEtsDate());
+			assertThat(dto.getFirstName()).isEqualTo(testPerson.getFirstName());
+			assertThat(dto.getFltChief()).isEqualTo(testPerson.getFltChief());
+			assertThat(dto.getGo81()).isEqualTo(testPerson.getGo81());
+			assertThat(dto.getGp()).isEqualTo(testPerson.getGp());
+			assertThat(dto.getImds()).isEqualTo(testPerson.getImds());
+			assertThat(dto.getLastName()).isEqualTo(testPerson.getLastName());
+			assertThat(dto.getManNumber()).isEqualTo(testPerson.getManNumber());
+			assertThat(dto.getMiddleName()).isEqualTo(testPerson.getMiddleName());
+			assertThat(dto.getPhone()).isEqualTo(testPerson.getPhone());
+			assertThat(dto.getPtDate()).isEqualTo(testPerson.getPtDate());
+			assertThat(dto.getTitle()).isEqualTo(testPerson.getTitle());
+			assertThat(dto.getWc()).isEqualTo(testPerson.getWc());
+			assertThat(dto.getRank()).isEqualTo(testPerson.getRank().getAbbreviation());
+			assertThat(dto.getBranch()).isEqualTo(testPerson.getRank().getBranchType());
 		}
 	}
 
@@ -272,23 +258,19 @@ class PersonServiceImplTest {
 	class ConvertToEntityTest {
 		@Test
 		void noRank() {
-			Person person = personService.convertToEntity(PersonDto.builder()
+			assertThrows(RecordNotFoundException.class, () -> personService.convertToEntity(PersonDto.builder()
 					.firstName("first")
-					.build());
-			assertThat(person.getFirstName()).isEqualTo("first");
+					.build()));
 		}
 
 		@Test
 		void rank() {
-			Rank rank = Rank.builder()
-					.abbreviation("Capt")
-					.branchType(Branch.USAF).build();
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType("Capt", Branch.USAF)).thenReturn(Optional.of(rank));
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Person person = personService.convertToEntity(PersonDto.builder()
 					.rank("Capt")
 					.branch(Branch.USAF)
 					.build());
-			assertThat(person.getRank()).isEqualTo(rank);
+			assertThat(person.getRank()).isEqualTo(testPerson.getRank());
 		}
 	}
 }

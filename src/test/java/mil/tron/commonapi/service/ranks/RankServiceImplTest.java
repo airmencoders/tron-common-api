@@ -2,7 +2,9 @@ package mil.tron.commonapi.service.ranks;
 
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.ranks.RankRepository;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 public class RankServiceImplTest {
@@ -44,32 +47,53 @@ public class RankServiceImplTest {
         assertThat(result).hasSize(3);
     }
 
-    @Test
-    void getRankByIdTest(){
-        UUID id = UUID.randomUUID();
-        Mockito.when(rankRepository.findById(id))
-                .thenReturn(Optional.of(Rank.builder()
-                        .id(id)
-                        .abbreviation("Gen")
-                        .build()));
+    @Nested
+    class GetRankByIdTest {
+        @Test
+        void validId() {
+            UUID id = UUID.randomUUID();
+            Mockito.when(rankRepository.findById(id))
+                    .thenReturn(Optional.of(Rank.builder()
+                            .id(id)
+                            .abbreviation("Gen")
+                            .build()));
 
-        Optional<Rank> result = rankService.getRank(id);
+            Rank result = rankService.getRank(id);
 
-        assertThat(result.get().getId()).isEqualTo(id);
-        assertThat(result.get().getAbbreviation()).isEqualTo("Gen");
+            assertThat(result.getId()).isEqualTo(id);
+            assertThat(result.getAbbreviation()).isEqualTo("Gen");
+        }
+        @Test
+        void invalidId() {
+            Mockito.when(rankRepository.findById(Mockito.any()))
+                    .thenReturn(Optional.empty());
+
+            assertThrows(RecordNotFoundException.class, () -> rankService.getRank(UUID.randomUUID()));
+        }
     }
 
-    @Test
-    void getRankTest(){
-        Mockito.when(rankRepository.findByAbbreviationAndBranchType("Gen", Branch.USAF))
-                .thenReturn(Optional.of(Rank.builder()
-                        .abbreviation("Gen")
-                        .branchType(Branch.USAF)
-                        .build()));
+    @Nested
+    class GetRankTest {
+        @Test
+        void validRank() {
+            Mockito.when(rankRepository.findByAbbreviationAndBranchType("Gen", Branch.USAF))
+                    .thenReturn(Optional.of(Rank.builder()
+                            .abbreviation("Gen")
+                            .branchType(Branch.USAF)
+                            .build()));
 
-        Optional<Rank> result = rankService.getRank("Gen", Branch.USAF);
+            Rank result = rankService.getRank("Gen", Branch.USAF);
 
-        assertThat(result.get().getAbbreviation()).isEqualTo("Gen");
-        assertThat(result.get().getBranchType()).isEqualTo(Branch.USAF);
+            assertThat(result.getAbbreviation()).isEqualTo("Gen");
+            assertThat(result.getBranchType()).isEqualTo(Branch.USAF);
+        }
+
+        @Test
+        void invalidRank() {
+            Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any()))
+                    .thenReturn(Optional.empty());
+
+            assertThrows(RecordNotFoundException.class, () -> rankService.getRank("does not exist", Branch.OTHER));
+        }
     }
 }

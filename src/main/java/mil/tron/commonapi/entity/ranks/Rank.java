@@ -1,5 +1,6 @@
 package mil.tron.commonapi.entity.ranks;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -20,6 +21,7 @@ public class Rank {
     @Id
     @Getter
     @Setter
+    @JsonIgnore
     private UUID id;
 
     @Getter

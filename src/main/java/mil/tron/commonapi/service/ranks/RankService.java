@@ -10,6 +10,6 @@ public interface RankService  {
 
     Iterable<Rank> getRanks();
     Iterable<Rank> getRanks(Branch branch);
-    Optional<Rank> getRank(UUID id);
-    Optional<Rank> getRank(String abbreviation, Branch branch);
+    Rank getRank(UUID id);
+    Rank getRank(String abbreviation, Branch branch);
 }

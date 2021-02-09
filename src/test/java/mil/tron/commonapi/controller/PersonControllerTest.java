@@ -120,11 +120,11 @@ public class PersonControllerTest {
 
 		@Test
 		void testBulkCreate() throws Exception {
-			List<Person> people = Lists.newArrayList(
-					new Person(),
-					new Person(),
-					new Person(),
-					new Person()
+			List<PersonDto> people = Lists.newArrayList(
+					new PersonDto(),
+					new PersonDto(),
+					new PersonDto(),
+					new PersonDto()
 			);
 
 			Mockito.when(personService.bulkAddPeople(Mockito.anyList())).then(returnsFirstArg());
