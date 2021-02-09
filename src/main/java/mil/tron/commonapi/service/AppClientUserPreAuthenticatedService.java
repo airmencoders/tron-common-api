@@ -10,6 +10,7 @@ import java.util.stream.StreamSupport;
 import javax.transaction.Transactional;
 
 import lombok.val;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
@@ -52,7 +53,7 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 		if (token.getName().equals(this.commonApiAppName)) {
 			val privileges = this.privilegeRepository.findAll();
 			if (privileges == null) {
-				throw new RuntimeException("There are not privileges available.");
+				throw new RecordNotFoundException("There are not privileges available.");
 			}
 			// add all privileges for self app
 			Set<Privilege> privilegeSet = StreamSupport.stream(privileges.spliterator(), false)
