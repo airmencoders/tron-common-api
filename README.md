@@ -76,3 +76,14 @@ services:
 
 ### jar file
 `export CONTEXTS=test && java -jar target/commonapi-{version}.jar`
+
+
+## Authorization
+Application to Common API authorization is based off the `x-forwarded-client-cert` header to identify the requesting application's identify. This header will be provided by ISTIO in production. For development purposes, the application can be ran with the `development` profile to circumvent authorization so that the header does not need to be provided in requests. The `security.enabled` field in the properties is used to control whether or not Spring Security will enforce authorization.
+
+Example header: `"x-forwarded-client-cert": "By=spiffe://cluster.local/ns/tron-common-api/sa/default;Hash=855b1556a45637abf05c63407437f6f305b4627c4361fb965a78e5731999c0c7;Subject=\"\";URI=spiffe://cluster.local/ns/guardianangel/sa/default"`
+
+The identity is obtained by parsing down the URI field of the header to obtain the namespace name. For example, given a x-forwarded-client-cert header with the URI field: `URI=spiffe://cluster.local/ns/guardianangel/sa/default`, the identity obtained is `guardianangel`.
+
+### Current Privileges
+Current privileges include `READ`/`WRITE` (access to endpoints like /persons and /organization), and `DASHBOARD_USER`/`DASHBOARD_ADMIN` (access to endpoints specifically for dashboard app).

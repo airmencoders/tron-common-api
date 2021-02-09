@@ -3,7 +3,6 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.entity.branches.Branch;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,18 +32,16 @@ public class PersonIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private PersonDto person;
+    private Person person;
 
     @BeforeEach
     public void insertPerson() throws Exception {
-        person = new PersonDto();
+        person = new Person();
         person.setFirstName("John");
         person.setMiddleName("Hero");
         person.setLastName("Public");
         person.setEmail("john@test.com");
         person.setTitle("CAPT");
-        person.setRank("Capt");
-        person.setBranch(Branch.USAF);
     }
 
     @Transactional
@@ -52,13 +49,11 @@ public class PersonIntegrationTest {
     @Test
     public void testBulkAddPeople() throws Exception {
 
-        PersonDto a2 = new PersonDto();
+        Person a2 = new Person();
         a2.setEmail("test1@test.com");
         a2.setTitle("SSGT");
-        a2.setRank("SSgt");
-        a2.setBranch(Branch.USAF);
 
-        List<PersonDto> newPeople = Lists.newArrayList(
+        List<Person> newPeople = Lists.newArrayList(
                 person,
                 a2
         );
@@ -67,13 +62,11 @@ public class PersonIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newPeople)))
                 .andExpect(status().isCreated())
-                .andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), PersonDto[].class).length));
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Person[].class).length));
 
-        PersonDto a3 = new PersonDto();
+        Person a3 = new Person();
         a3.setEmail("test1@test.com");
         a3.setTitle("SSGT");
-        a3.setRank("SSgt");
-        a3.setBranch(Branch.USAF);
 
         // test that we can't add someone with a dup email
         mockMvc.perform(post(ENDPOINT + "persons")

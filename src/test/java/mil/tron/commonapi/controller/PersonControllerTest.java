@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,12 +45,15 @@ public class PersonControllerTest {
 	@MockBean
 	private PersonService personService;
 	
+	@MockBean
+	private AppClientUserPreAuthenticatedService appClientUserPreAuthenticatedService;
+
 	private PersonDto testPerson;
 	private String testPersonJson;
 	
 	@BeforeEach
 	public void beforeEachTest() throws JsonProcessingException {
-		testPerson = new PersonDto();
+		testPerson = new Person();
 		testPerson.setFirstName("Test");
 		testPerson.setLastName("Person");
 		testPerson.setMiddleName("MVC");
@@ -65,7 +67,7 @@ public class PersonControllerTest {
 	class TestGet {
 		@Test
 		void testGetAll() throws Exception {
-			List<PersonDto> persons = new ArrayList<>();
+			List<Person> persons = new ArrayList<>();
 			persons.add(testPerson);
 
 			Mockito.when(personService.getPersons()).thenReturn(persons);
@@ -77,7 +79,7 @@ public class PersonControllerTest {
 		
 		@Test
 		void testGetById() throws Exception {
-			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class))).thenReturn(testPerson);
+			Mockito.when(personService.getPerson(Mockito.any(UUID.class))).thenReturn(testPerson);
 			
 			mockMvc.perform(get(ENDPOINT + "{id}", testPerson.getId()))
 				.andExpect(status().isOk())
@@ -97,7 +99,7 @@ public class PersonControllerTest {
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
-			Mockito.when(personService.createPerson(Mockito.any(PersonDto.class))).thenReturn(testPerson);
+			Mockito.when(personService.createPerson(Mockito.any(Person.class))).thenReturn(testPerson);
 			
 			mockMvc.perform(post(ENDPOINT)
 					.accept(MediaType.APPLICATION_JSON)
@@ -120,11 +122,11 @@ public class PersonControllerTest {
 
 		@Test
 		void testBulkCreate() throws Exception {
-			List<PersonDto> people = Lists.newArrayList(
-					new PersonDto(),
-					new PersonDto(),
-					new PersonDto(),
-					new PersonDto()
+			List<Person> people = Lists.newArrayList(
+					new Person(),
+					new Person(),
+					new Person(),
+					new Person()
 			);
 
 			Mockito.when(personService.bulkAddPeople(Mockito.anyList())).then(returnsFirstArg());
@@ -143,7 +145,7 @@ public class PersonControllerTest {
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
-			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).thenReturn(testPerson);
+			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(Person.class))).thenReturn(testPerson);
 			
 			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
 					.accept(MediaType.APPLICATION_JSON)
@@ -174,7 +176,7 @@ public class PersonControllerTest {
 		
 		@Test
 		void testPutResourceDoesNotExist() throws Exception {
-			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).thenThrow(new RecordNotFoundException("Record not found"));
+			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(Person.class))).thenThrow(new RecordNotFoundException("Record not found"));
 			
 			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
 					.accept(MediaType.APPLICATION_JSON)

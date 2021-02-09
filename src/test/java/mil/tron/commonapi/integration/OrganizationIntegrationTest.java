@@ -4,7 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import liquibase.pro.packaged.O;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.service.OrganizationService;
+import mil.tron.commonapi.service.PersonService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +26,7 @@ import java.util.*;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,6 +46,9 @@ public class OrganizationIntegrationTest {
 
     @Autowired
     private OrganizationService organizationService;
+
+    @Autowired
+    private PersonService personService;
 
     @BeforeEach
     public void insertSquadron() throws Exception {
@@ -179,5 +187,114 @@ public class OrganizationIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(theOrg)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Rollback
+    @Transactional
+    void testCustomizationOfDtoReturn() throws Exception {
+
+        OrganizationDto parent = new OrganizationDto();
+        parent.setName("Father");
+        parent.setOrgType(Unit.SQUADRON);
+        parent.setBranchType(Branch.USAF);
+        OrganizationDto theOrg = new OrganizationDto();
+        theOrg.setName("Son");
+        theOrg.setOrgType(Unit.SQUADRON);
+        theOrg.setBranchType(Branch.USAF);
+
+        Person p1 = Person.builder()
+                .id(UUID.randomUUID())
+                .firstName("Donny")
+                .middleName("Dont")
+                .lastName("Does")
+                .build();
+        Person p2 = Person.builder()
+                .id(UUID.randomUUID())
+                .firstName("John")
+                .middleName("Q")
+                .lastName("Public")
+                .build();
+
+        personService.createPerson(p1);
+        personService.createPerson(p2);
+
+        organizationService.createOrganization(parent);
+
+        theOrg.setParentOrganizationUUID(parent.getId());
+        theOrg.setMembersUUID(Set.of(p1.getId(), p2.getId()));
+        organizationService.createOrganization(theOrg);
+
+        parent.setSubOrgsUUID(Set.of(theOrg.getId()));
+        organizationService.updateOrganization(parent.getId(), parent);
+
+        // test org members have two fields - id,firstName
+        mockMvc.perform(get(ENDPOINT + "{id}?people=id,firstName&organizations=id,name", theOrg.getId()))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("members")
+                        .get(0)
+                        .size()))
+                .andExpect(result -> assertTrue(OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("members")
+                        .get(0)
+                        .has("id")))
+                .andExpect(result -> assertTrue(OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("members")
+                        .get(0)
+                        .has("firstName")));
+
+        // test org parentOrganization has two fields - id,name
+        mockMvc.perform(get(ENDPOINT + "{id}?people=id,firstName&organizations=id,name", theOrg.getId()))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("parentOrganization")
+                        .size()))
+                .andExpect(result -> assertTrue(OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("parentOrganization")
+                        .has("id")))
+                .andExpect(result -> assertTrue(OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("parentOrganization")
+                        .has("name")));
+
+        // test parent org subordinateOrganizations has two fields - id,name
+        mockMvc.perform(get(ENDPOINT + "{id}?flatten=true&people=id,firstName&organizations=id,name", parent.getId()))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("subordinateOrganizations")
+                        .get(0)
+                        .size()))
+                .andExpect(result -> assertTrue(OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("subordinateOrganizations")
+                        .get(0)
+                        .has("id")))
+                .andExpect(result -> assertTrue(OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("subordinateOrganizations")
+                        .get(0)
+                        .has("name")));
+
+        // get all orgs make sure that we have two
+        mockMvc.perform(get(ENDPOINT + "?people=id,firstName&organizations=id,name"))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .size()));
+
+        // get all orgs that are Squadrons and are USAF,  make sure that we have two
+        mockMvc.perform(get(ENDPOINT + "?type=SQUADRON&branch=USAF&people=id,firstName&organizations=id,name"))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER
+                        .readTree(result.getResponse().getContentAsString())
+                        .size()));
+
     }
 }
