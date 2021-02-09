@@ -9,5 +9,5 @@ public interface DashboardUserService {
 //    void removeDashboardUser(UUID id);
 //    DashboardUser getDashboardUser(UUID id);
 
-    Iterable<DashboardUser> getDashboardUsers();
+    Iterable<DashboardUser> getAllDashboardUsers();
 }

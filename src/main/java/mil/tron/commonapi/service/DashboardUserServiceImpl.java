@@ -39,7 +39,7 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     }
 
     @Override
-    public Iterable<DashboardUser> getDashboardUsers() {
+    public Iterable<DashboardUser> getAllDashboardUsers() {
         return dashboardUserRepository.findAll();
     }
 }

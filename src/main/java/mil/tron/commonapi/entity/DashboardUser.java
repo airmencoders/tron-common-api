@@ -20,6 +20,7 @@ public class DashboardUser {
     private UUID id = UUID.randomUUID();
 
     @Email(message="Malformed email address")
+    @Column(unique = true)
     @Getter
     @Setter
     private String email;
@@ -33,7 +34,7 @@ public class DashboardUser {
 
     @Getter
     @Setter
-    private boolean isAdmin;
+    private boolean admin = false;
 
     @PrePersist
     @PreUpdate
