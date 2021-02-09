@@ -3,6 +3,7 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import liquibase.pro.packaged.O;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -203,17 +204,21 @@ public class OrganizationIntegrationTest {
         theOrg.setOrgType(Unit.SQUADRON);
         theOrg.setBranchType(Branch.USAF);
 
-        Person p1 = Person.builder()
+        PersonDto p1 = PersonDto.builder()
                 .id(UUID.randomUUID())
                 .firstName("Donny")
                 .middleName("Dont")
                 .lastName("Does")
+                .rank("Capt")
+                .branch(Branch.USAF)
                 .build();
-        Person p2 = Person.builder()
+        PersonDto p2 = PersonDto.builder()
                 .id(UUID.randomUUID())
                 .firstName("John")
                 .middleName("Q")
                 .lastName("Public")
+                .rank("Capt")
+                .branch(Branch.USAF)
                 .build();
 
         personService.createPerson(p1);
