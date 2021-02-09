@@ -18,7 +18,7 @@
     </changeSet>
     <changeSet author="david.milligan (generated)" id="1612885610265-7">
         <addColumn tableName="person">
-            <column name="admin" type="boolean">
+            <column name="admin" type="boolean" defaultValue="false">
                 <constraints nullable="false"/>
             </column>
         </addColumn>
@@ -30,7 +30,7 @@
     </changeSet>
     <changeSet author="david.milligan (generated)" id="1612885610265-9">
         <addColumn tableName="person">
-            <column name="approved" type="boolean">
+            <column name="approved" type="boolean" defaultValue="false">
                 <constraints nullable="false"/>
             </column>
         </addColumn>
@@ -133,5 +133,10 @@
     </changeSet>
     <changeSet author="david.milligan (generated)" id="1612885610265-33">
         <dropTable tableName="airman"/>
+    </changeSet>
+    <changeSet author="david.milligan" id="seed-1">
+        <loadData file="../seed.1.0.8/ranks.csv"
+                  tableName="rank"
+                  relativeToChangelogFile="true" />
     </changeSet>
 </databaseChangeLog>
