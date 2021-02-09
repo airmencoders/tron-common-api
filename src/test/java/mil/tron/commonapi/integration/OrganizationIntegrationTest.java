@@ -79,11 +79,11 @@ public class OrganizationIntegrationTest {
                 .andExpect(status().isConflict());
 
         // test pagination
-        mockMvc.perform(get(ENDPOINT + "?page=1&size=4"))
+        mockMvc.perform(get(ENDPOINT + "?page=1&limit="))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)));
 
-        mockMvc.perform(get(ENDPOINT + "?page=2&size=2"))
+        mockMvc.perform(get(ENDPOINT + "?page=2&limit=2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
 

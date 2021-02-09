@@ -66,11 +66,11 @@ public class AirmanIntegrationTest {
         assertEquals(OBJECT_MAPPER.writeValueAsString(airman), response.getResponse().getContentAsString());
 
         // test pagination
-        mockMvc.perform(get(ENDPOINT + "?page=1&size=4"))
+        mockMvc.perform(get(ENDPOINT + "?page=1&limit=4"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
 
-        mockMvc.perform(get(ENDPOINT + "?page=2&size=4"))
+        mockMvc.perform(get(ENDPOINT + "?page=2&limit=4"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }

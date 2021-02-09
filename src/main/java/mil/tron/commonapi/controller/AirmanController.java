@@ -40,8 +40,8 @@ public class AirmanController {
     public ResponseEntity<Iterable<Airman>> getAllAirman(
             @Parameter(name = "page", description = "Page of content to retrieve", required = false)
             @RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
-            @Parameter(name = "size", description = "Size of each page", required = false)
-            @RequestParam(name = "size", required = false) Long pageSize) {
+            @Parameter(name = "limit", description = "Size of each page", required = false)
+            @RequestParam(name = "limit", required = false) Long pageSize) {
 
         return new ResponseEntity<>(pager.paginate(airmanService.getAllAirman(), pageNumber, pageSize), HttpStatus.OK);
     }

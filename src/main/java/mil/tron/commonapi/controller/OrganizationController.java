@@ -52,8 +52,8 @@ public class OrganizationController {
 			@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery,
 			@Parameter(name = "page", description = "Page of content to retrieve", required = false)
 				@RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
-			@Parameter(name = "size", description = "Size of each page", required = false)
-				@RequestParam(name = "size", required = false) Long pageSize) {
+			@Parameter(name = "limit", description = "Size of each page", required = false)
+				@RequestParam(name = "limit", required = false) Long pageSize) {
 
 		// return all types by default (if no query params given)
 		if (unitType.equals(OrganizationController.UNKNOWN_TYPE) && branchType.equals(OrganizationController.UNKNOWN_TYPE)) {

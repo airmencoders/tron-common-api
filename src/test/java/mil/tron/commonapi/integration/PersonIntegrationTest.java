@@ -77,11 +77,11 @@ public class PersonIntegrationTest {
                 .andExpect(status().isConflict());
 
         // test pagination
-        mockMvc.perform(get(ENDPOINT + "?page=1&size=4"))
+        mockMvc.perform(get(ENDPOINT + "?page=1&limit=4"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
 
-        mockMvc.perform(get(ENDPOINT + "?page=2&size=1"))
+        mockMvc.perform(get(ENDPOINT + "?page=2&limit=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
