@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.ranks.RankService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Locale;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/rank")
@@ -43,12 +46,12 @@ public class RankController {
                     description = "Successful operation",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Rank.class)))),
             @ApiResponse(responseCode = "404",
-                    description = "Unknown Branch Name",
+                    description = "Resource not found",
                     content = @Content),
     })
     @GetMapping(value = "/{branch}")
-    public ResponseEntity<Iterable<Rank>> getRanks(@PathVariable("branch")Branch branch) {
-        return new ResponseEntity<>(rankService.getRanks(branch), HttpStatus.OK);
+    public ResponseEntity<Iterable<Rank>> getRanks(@PathVariable("branch") String branch) {
+        return new ResponseEntity<>(rankService.getRanks(convertBranch(branch)), HttpStatus.OK);
     }
 
     @Operation(summary = "Retrieves information for a particular rank", description = "Retrieves information for a particular rank")
@@ -61,7 +64,15 @@ public class RankController {
                     content = @Content),
     })
     @GetMapping(value = "/{branch}/{abbreviation}")
-    public ResponseEntity<Rank> getRank(@PathVariable("branch")Branch branch, @PathVariable("abbreviation")String abbreviation){
-        return new ResponseEntity<>(rankService.getRank(abbreviation, branch), HttpStatus.OK);
+    public ResponseEntity<Rank> getRank(@PathVariable("branch") String branch, @PathVariable("abbreviation") String abbreviation) {
+        return new ResponseEntity<>(rankService.getRank(abbreviation, convertBranch(branch)), HttpStatus.OK);
+    }
+
+    private Branch convertBranch(String branch) {
+        try {
+            return Branch.valueOf(branch.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new RecordNotFoundException("Unknown Branch Name");
+        }
     }
 }
