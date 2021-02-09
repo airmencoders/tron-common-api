@@ -3,9 +3,8 @@ package mil.tron.commonapi.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
@@ -13,6 +12,10 @@ import javax.validation.constraints.Email;
 import java.util.Date;
 import java.util.UUID;
 
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@EqualsAndHashCode
 public class PersonDto {
 
     @Getter
@@ -95,6 +98,10 @@ public class PersonDto {
     @Getter
     @Setter
     private String rank;
+
+    @Getter
+    @Setter
+    private Branch branch;
 
     @Getter
     @Setter
