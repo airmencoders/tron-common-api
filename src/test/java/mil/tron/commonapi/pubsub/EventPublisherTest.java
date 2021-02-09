@@ -1,7 +1,7 @@
 package mil.tron.commonapi.pubsub;
 
 import com.google.common.collect.Lists;
-import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
@@ -71,7 +71,7 @@ public class EventPublisherTest {
             publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
                 .thenReturn(URI.create(subscriber.getSubscriberAddress()));
 
-        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Airman", new Airman());
+        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person());
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting captured
@@ -90,7 +90,7 @@ public class EventPublisherTest {
                 publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
                 .thenThrow(new RestClientException("Exception"));
 
-        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Airman", new Airman());
+        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person());
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting capture

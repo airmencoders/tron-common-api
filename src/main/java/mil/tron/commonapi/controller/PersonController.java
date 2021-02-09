@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import javax.validation.Valid;
 
+import mil.tron.commonapi.dto.PersonDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,10 +41,10 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-						content = @Content(array = @ArraySchema(schema = @Schema(implementation = Person.class))))
+						content = @Content(array = @ArraySchema(schema = @Schema(implementation = PersonDto.class))))
 	})
 	@GetMapping
-	public ResponseEntity<Iterable<Person>> getPersons() {
+	public ResponseEntity<Iterable<PersonDto>> getPersons() {
 		return new ResponseEntity<>(personService.getPersons(), HttpStatus.OK);
 	}
 	
@@ -51,7 +52,7 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Person.class))),
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -60,10 +61,10 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@GetMapping(value = "/{id}")
-	public ResponseEntity<Person> getPerson(
+	public ResponseEntity<PersonDto> getPerson(
 			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId) {
-		
-		Person person = personService.getPerson(personId);
+
+		PersonDto person = personService.getPersonDto(personId);
 		return new ResponseEntity<>(person, HttpStatus.OK);
 	}
 	
@@ -71,7 +72,7 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Person.class))),
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "409",
 					description = "Resource already exists with the id provided",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -80,7 +81,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping
-	public ResponseEntity<Person> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody Person person) {
+	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody PersonDto person) {
 		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
 	
@@ -88,17 +89,17 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Person.class))),
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PutMapping(value = "/{id}")
-	public ResponseEntity<Person> updatePerson(
+	public ResponseEntity<PersonDto> updatePerson(
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
-			@Parameter(description = "Updated person", required = true) @Valid @RequestBody Person person) {
-		
-		Person updatedPerson = personService.updatePerson(personId, person);
+			@Parameter(description = "Updated person", required = true) @Valid @RequestBody PersonDto person) {
+
+		PersonDto updatedPerson = personService.updatePerson(personId, person);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 	}
 	
@@ -126,7 +127,7 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Person.class))),
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad data or validation error",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -136,7 +137,7 @@ public class PersonController {
 	})
 	@PostMapping("/persons")
 	public ResponseEntity<Object> addPersons(
-			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<Person> people) {
+			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
 		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
 	}

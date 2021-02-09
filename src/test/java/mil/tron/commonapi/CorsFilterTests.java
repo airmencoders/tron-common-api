@@ -3,6 +3,7 @@ package mil.tron.commonapi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.controller.PersonController;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.service.PersonService;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,12 +31,12 @@ public class CorsFilterTests {
     @MockBean
     private PersonService personService;
 
-    private Person testPerson;
+    private PersonDto testPerson;
     private String testPersonJson;
 
     @BeforeEach
     public void beforeEachTest() throws JsonProcessingException {
-        testPerson = new Person();
+        testPerson = new PersonDto();
         testPerson.setFirstName("Test");
         testPerson.setLastName("Person");
         testPerson.setMiddleName("MVC");
@@ -65,7 +66,7 @@ public class CorsFilterTests {
                 .andExpect(result -> assertThat(result.getResponse().getHeader("Access-Control-Allow-Origin")).isEqualTo("http://localhost:8080"));
 
         // Expect POST fail due to Origin not on allowed list
-        Mockito.when(personService.createPerson(Mockito.any(Person.class))).thenReturn(testPerson);
+        Mockito.when(personService.createPerson(Mockito.any(PersonDto.class))).thenReturn(testPerson);
         mockMvc.perform(post(ENDPOINT)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)

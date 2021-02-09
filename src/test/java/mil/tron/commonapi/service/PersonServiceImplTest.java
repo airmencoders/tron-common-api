@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -38,13 +39,20 @@ class PersonServiceImplTest {
 	private PersonServiceImpl personService;
 	
 	private Person testPerson;
+	private PersonDto testDto;
 	
 	@BeforeEach
 	public void beforeEachSetup() {
 		testPerson = new Person();
+		testPerson.setId(UUID.randomUUID());
 		testPerson.setFirstName("Test");
 		testPerson.setLastName("Person");
 		testPerson.setEmail("test@good.email");
+		testDto = new PersonDto();
+		testDto.setId(testPerson.getId());
+		testDto.setFirstName(testPerson.getFirstName());
+		testDto.setLastName(testPerson.getLastName());
+		testDto.setEmail(testPerson.getEmail());
 	}
 
 	@Nested
@@ -55,15 +63,15 @@ class PersonServiceImplTest {
 	        Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 	        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
-	        Person createdPerson = personService.createPerson(testPerson);
-	        assertThat(createdPerson).isEqualTo(testPerson);
+	        PersonDto createdPerson = personService.createPerson(testDto);
+	        assertThat(createdPerson.getId()).isEqualTo(testPerson.getId());
 	    }
 		
 		@Test
 		void idAlreadyExists() {
 			// Test id already exists
 	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-	        assertThrows(ResourceAlreadyExistsException.class, () -> personService.createPerson(testPerson));
+	        assertThrows(ResourceAlreadyExistsException.class, () -> personService.createPerson(testDto));
 		}
 		
 		@Test
@@ -75,7 +83,7 @@ class PersonServiceImplTest {
 	    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
 	    	assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
-	    		personService.createPerson(testPerson);
+	    		personService.createPerson(testDto);
 	    	});
 		}
 	}
@@ -85,20 +93,20 @@ class PersonServiceImplTest {
 		@Test
 		void idsNotMatching() {
 			// Test id not matching person id
-	    	assertThrows(InvalidRecordUpdateRequest.class, () -> personService.updatePerson(UUID.randomUUID(), testPerson));
+	    	assertThrows(InvalidRecordUpdateRequest.class, () -> personService.updatePerson(UUID.randomUUID(), testDto));
 		}
 		
 		@Test
 		void idNotExist() {
 			// Test id not exist
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
-	    	assertThrows(RecordNotFoundException.class, () -> personService.updatePerson(testPerson.getId(), testPerson));
+	    	assertThrows(RecordNotFoundException.class, () -> personService.updatePerson(testPerson.getId(), testDto));
 		}
 		
 		@Test
 		void emailAlreadyExists() {
 			// Test updating email to one that already exists in database
-	    	Person newPerson = new Person();
+	    	PersonDto newPerson = new PersonDto();
 	    	newPerson.setId(testPerson.getId());
 	    	newPerson.setFirstName(testPerson.getFirstName());
 	    	newPerson.setLastName(testPerson.getLastName());
@@ -121,8 +129,8 @@ class PersonServiceImplTest {
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
-	    	Person updatedPerson = personService.updatePerson(testPerson.getId(), testPerson);
-	    	assertThat(updatedPerson).isEqualTo(testPerson);
+	    	PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
+	    	assertThat(updatedPerson.getId()).isEqualTo(testPerson.getId());
 		}
  	}
 
@@ -138,7 +146,7 @@ class PersonServiceImplTest {
     @Test
     void getPersonsTest() {
     	Mockito.when(repository.findAll()).thenReturn(Arrays.asList(testPerson));
-    	Iterable<Person> persons = personService.getPersons();
+    	Iterable<PersonDto> persons = personService.getPersons();
     	assertThat(persons).hasSize(1);
     }
 
@@ -159,15 +167,15 @@ class PersonServiceImplTest {
 		Mockito.when(repository.save(Mockito.any(Person.class))).then(returnsFirstArg());
 		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 		Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
-		List<Person> people = Lists.newArrayList(
-				new Person(),
-				new Person(),
-				new Person(),
-				new Person()
+		List<PersonDto> people = Lists.newArrayList(
+				new PersonDto(),
+				new PersonDto(),
+				new PersonDto(),
+				new PersonDto()
 		);
 
-		List<Person> createdPeople = personService.bulkAddPeople(people);
-		assertThat(people).isEqualTo(createdPeople);
+		List<PersonDto> createdPeople = personService.bulkAddPeople(people);
+		assertThat(createdPeople).hasSize(4);
 	}
     
 }
