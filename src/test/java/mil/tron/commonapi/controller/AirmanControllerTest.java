@@ -2,6 +2,7 @@ package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.entity.ranks.AirmanRank;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AirmanService;
@@ -52,7 +53,7 @@ public class AirmanControllerTest {
         airman.setMiddleName("Hero");
         airman.setLastName("Public");
         airman.setEmail("john@test.com");
-        airman.setTitle("CAPT");
+        airman.setRank("CAPT");
         airman.setAfsc("17D");
         airman.setPtDate(new Date(2020-1900, Calendar.OCTOBER, 1));
         airman.setEtsDate(new Date(2021-1900, Calendar.JUNE, 29));
@@ -116,7 +117,7 @@ public class AirmanControllerTest {
                 .thenThrow(new RecordNotFoundException("Not found"));
 
         Airman newGuy = new Airman();
-        newGuy.setRank("MAJ");
+        newGuy.setRank(AirmanRank.MAJ.toString());
 
         mockMvc.perform(put(ENDPOINT + newGuy.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -158,7 +159,8 @@ public class AirmanControllerTest {
     @Test
     public void testBulkAddAirmen() throws Exception {
 
-        Mockito.when(airmanService.bulkAddAirmen(Mockito.anyList())).then(returnsFirstArg());
+        Mockito.when(airmanService.bulkAddAirmen(Mockito.anyList()))
+                .then(returnsFirstArg());
 
 
         // delete the record

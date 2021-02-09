@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
@@ -23,11 +24,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 
 @ExtendWith(MockitoExtension.class)
@@ -414,9 +415,144 @@ class OrganizationServiceImplTest {
 				.build();
 		OrganizationDto dto = new ModelMapper().map(org, OrganizationDto.class);
 		Mockito.when(repository.findById(parent.getId())).thenReturn(Optional.of(parent));
+		Mockito.when(repository.findById(subord.getId())).thenReturn(Optional.of(subord));
 		Mockito.when(personService.getPerson(leader.getId())).thenReturn(leader);
 
 		assertEquals(org, organizationService.convertToEntity(dto));
+
+	}
+
+	@Test
+	void testCustomizeEntity() {
+		Person leader = Person.builder().id(UUID.randomUUID()).email("cz@test.com").build();
+		Person member = Person.builder().id(UUID.randomUUID()).email("bm@test.com").build();
+		Organization parent = new Organization();
+		Organization subord = new Organization();
+		Organization org = Organization.builder()
+				.id(UUID.randomUUID())
+				.leader(leader)
+				.parentOrganization(parent)
+				.subordinateOrganizations(Set.of(subord))
+				.name("Test1")
+				.members(Set.of(leader, member))
+				.orgType(Unit.WING)
+				.branchType(Branch.USAF)
+				.build();
+
+		OrganizationDto dto = OrganizationDto.builder()
+				.id(org.getId())
+				.leader(org.getLeader().getId())
+				.parentOrganization(org.getParentOrganization().getId())
+				.branchType(org.getBranchType())
+				.orgType(org.getOrgType())
+				.members(org.getMembers().stream().map(Person::getId).collect(Collectors.toSet()))
+				.subordinateOrganizations(org.getSubordinateOrganizations().stream().map(Organization::getId).collect(Collectors.toSet()))
+				.name(org.getName())
+				.build();
+
+		Mockito.when(personService.getPerson(leader.getId())).thenReturn(leader);
+		Mockito.when(personService.getPerson(member.getId())).thenReturn(member);
+		Mockito.when(repository.findById(parent.getId())).thenReturn(Optional.of(parent));
+		Mockito.when(repository.findById(subord.getId())).thenReturn(Optional.of(subord));
+
+		Map<String, String> fields = new HashMap<>();
+		fields.put("organizations", "id,name");
+		fields.put("people", "id,firstName");
+
+		JsonNode node = organizationService.customizeEntity(fields, dto);
+
+		// check that nested member persons have two fields
+		assertEquals(2, Lists.newArrayList(node.get("members").get(0).elements()).size());
+		assertTrue(node.get("members").get(0).has("id"));
+		assertTrue(node.get("members").get(0).has("firstName"));
+		assertFalse(node.get("members").get(0).has("lastName"));
+
+		// check that leader (another person type field) has its two elements, none more
+		assertEquals(2, Lists.newArrayList(node.get("leader").elements()).size());
+		assertTrue(node.get("leader").has("id"));
+		assertTrue(node.get("leader").has("firstName"));
+		assertFalse(node.get("leader").has("lastName"));
+
+		assertEquals(2, Lists.newArrayList(node.get("parentOrganization").elements()).size());
+		assertTrue(node.get("parentOrganization").has("id"));
+		assertTrue(node.get("parentOrganization").has("name"));
+		assertFalse(node.get("parentOrganization").has("leader"));
+
+		assertEquals(2, Lists.newArrayList(node.get("subordinateOrganizations").get(0).elements()).size());
+		assertTrue(node.get("subordinateOrganizations").get(0).has("id"));
+		assertTrue(node.get("subordinateOrganizations").get(0).has("name"));
+		assertFalse(node.get("subordinateOrganizations").get(0).has("leader"));
+
+		// check that we can't put that we want 'subordinateOrganizations' and 'parentOrganizations'
+		//  in the nested entities of the output
+		fields.put("organizations", "id,name,parentOrganization,subordinateOrganization");
+
+		// check nested members and orgs don't themselves have nested members and orgs
+		node = organizationService.customizeEntity(fields, dto);
+		assertEquals(2, Lists.newArrayList(node.get("parentOrganization").elements()).size());
+		assertTrue(node.get("parentOrganization").has("id"));
+		assertTrue(node.get("parentOrganization").has("name"));
+		assertFalse(node.get("parentOrganization").has("parentOrganization"));
+		assertFalse(node.get("parentOrganization").has("members"));
+		assertFalse(node.get("parentOrganization").has("subordinateOrganizations"));
+
+		// remove the people/org criteria, code should auto place 'id' at least
+		fields.put("organizations", "");
+		fields.put("people", "");
+
+		node = organizationService.customizeEntity(fields, dto);
+		assertEquals(1, Lists.newArrayList(node.get("members").get(0).elements()).size());
+		assertTrue(node.get("members").get(0).has("id"));
+		assertFalse(node.get("members").get(0).has("firstName"));
+
+		assertEquals(1, Lists.newArrayList(node.get("parentOrganization").elements()).size());
+		assertTrue(node.get("parentOrganization").has("id"));
+		assertFalse(node.get("parentOrganization").has("name"));
+
+		// test junk criteria is ignored
+		fields.put("organizations", "id, name, junkk_34  sfd");
+		fields.put("people", "id, firstName, test222");
+
+		node = organizationService.customizeEntity(fields, dto);
+		assertEquals(2, Lists.newArrayList(node.get("members").get(0).elements()).size());
+		assertTrue(node.get("members").get(0).has("id"));
+		assertTrue(node.get("members").get(0).has("firstName"));
+		assertFalse(node.get("members").get(0).has("lastName"));
+
+		// check that leader (another person type field) has its two elements, none more
+		assertEquals(2, Lists.newArrayList(node.get("leader").elements()).size());
+		assertTrue(node.get("leader").has("id"));
+		assertTrue(node.get("leader").has("firstName"));
+		assertFalse(node.get("leader").has("lastName"));
+
+		assertEquals(2, Lists.newArrayList(node.get("parentOrganization").elements()).size());
+		assertTrue(node.get("parentOrganization").has("id"));
+		assertTrue(node.get("parentOrganization").has("name"));
+		assertFalse(node.get("parentOrganization").has("leader"));
+	}
+
+	void testThatOrgCantAssignSubordinateOrgThatsInItsAncestryChain() {
+
+		Organization greatGrandParent = new Organization();
+		Organization grandParent = new Organization();
+		Organization parent = new Organization();
+		Organization theOrg = new Organization();
+		Organization legitSubOrg = new Organization();
+
+		// build the family tree
+		theOrg.setParentOrganization(parent);
+		parent.addSubordinateOrganization(theOrg);
+		parent.setParentOrganization(grandParent);
+		grandParent.setParentOrganization(greatGrandParent);
+		grandParent.addSubordinateOrganization(parent);
+		greatGrandParent.addSubordinateOrganization(grandParent);
+
+
+		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
+		assertTrue(organizationService.orgIsInAncestryChain(greatGrandParent.getId(), theOrg));
+
+		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
+		assertFalse(organizationService.orgIsInAncestryChain(legitSubOrg.getId(), theOrg));
 
 	}
 }

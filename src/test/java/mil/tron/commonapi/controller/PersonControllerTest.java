@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.PersonService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,9 @@ public class PersonControllerTest {
 	
 	@MockBean
 	private PersonService personService;
+	
+	@MockBean
+	private AppClientUserPreAuthenticatedService appClientUserPreAuthenticatedService;
 	
 	private Person testPerson;
 	private String testPersonJson;

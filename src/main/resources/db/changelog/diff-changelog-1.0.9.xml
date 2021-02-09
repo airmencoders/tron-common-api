@@ -1,0 +1,90 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="Dylan" id="1612345937945-privileges-1">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='READ';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="READ" />
+        </insert>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1612345937945-privileges-2">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='WRITE';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="WRITE" />
+        </insert>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1612345937945-privileges-3">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='DASHBOARD_ADMIN';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="DASHBOARD_ADMIN" />
+        </insert>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1612345937945-privileges-4">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='DASHBOARD_USER';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="DASHBOARD_USER" />
+        </insert>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1612345937945-add-guardianangel-app">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM app_client_user WHERE name='guardianangel';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="app_client_user">
+            <column name="id" value="dd05272f-aeb8-4c58-89a8-e5c0b2f48dd8" />
+            <column name="name" value="guardianangel" />
+            <column name="name_as_lower" value="guardianangel" />
+        </insert>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1612345937945-add-guardianangel-app-read">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM app_client_user WHERE name='guardianangel';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="app_client_user_privileges">
+            <column name="app_client_user_id" valueComputed="(SELECT id FROM app_client_user WHERE name='guardianangel')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='READ')" />
+        </insert>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1612345937945-add-guardianangel-app-write">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM app_client_user WHERE name='guardianangel';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="app_client_user_privileges">
+            <column name="app_client_user_id" valueComputed="(SELECT id FROM app_client_user WHERE name='guardianangel')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='WRITE')" />
+        </insert>
+    </changeSet>
+</databaseChangeLog>

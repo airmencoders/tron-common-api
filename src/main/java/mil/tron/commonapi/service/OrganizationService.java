@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -34,7 +35,10 @@ public interface OrganizationService {
 	OrganizationDto removeSubordinateOrg(UUID organizationId, List<UUID> orgIds);
 	List<OrganizationDto> bulkAddOrgs(List<OrganizationDto> newOrgs);
 
+	boolean orgIsInAncestryChain(UUID id, Organization startingOrg);
+
 	// conversion methods
 	OrganizationDto convertToDto(Organization org);
 	Organization convertToEntity(OrganizationDto org);
+	JsonNode customizeEntity(Map<String, String> fields, OrganizationDto dto);
 }

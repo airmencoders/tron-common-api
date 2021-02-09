@@ -1,11 +1,22 @@
 package mil.tron.commonapi.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import mil.tron.commonapi.controller.OrganizationController;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.dto.mixins.CustomOrganizationDtoMixin;
+import mil.tron.commonapi.dto.mixins.CustomPersonDtoMixin;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -32,7 +43,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationUniqueChecksService orgChecksService;
 	private final DtoMapper modelMapper;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
-	
+	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
+
 	public OrganizationServiceImpl(
 			OrganizationRepository repository,
 			PersonRepository personRepository,
@@ -72,7 +84,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 			Organization subordinate = repository.findById(id).orElseThrow(
 					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
-			organization.addSubordinateOrganization(subordinate);
+			if (!orgIsInAncestryChain(subordinate.getId(), organization)) {
+				organization.addSubordinateOrganization(subordinate);
+			}
+			else {
+				throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subordinate.getId()));
+			}
 		}
 
 		return repository.save(organization);
@@ -238,6 +255,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", org.getName()));
+
+		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
+		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : org.getSubordinateOrganizations()) {
+				if (orgIsInAncestryChain(subOrg.getId(), org)) {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
+				}
+			}
+		}
 		
 		return this.convertToDto(repository.save(org));
 	}
@@ -262,6 +288,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 		
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", org.getName()));
+
+		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
+		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : org.getSubordinateOrganizations()) {
+				if (orgIsInAncestryChain(subOrg.getId(), org)) {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
+				}
+			}
+		}
 		
 		return this.convertToDto(repository.save(org));
 	}
@@ -415,12 +450,126 @@ public class OrganizationServiceImpl implements OrganizationService {
 				return findOrganization(uuid);
 			}
 		};
+
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 		modelMapper.addConverter(personDemapper);
 		modelMapper.addConverter(orgDemapper);
-		return modelMapper.map(dto, Organization.class);
+		Organization org = modelMapper.map(dto, Organization.class);
+
+		// since model mapper has trouble mapping over UUID <--> Org for the nested Set<> in the Entity
+		//  just iterate over and do the lookup manually
+		if (dto.getSubordinateOrganizations() != null) {
+			for (UUID id : dto.getSubordinateOrganizations()) {
+				org.addSubordinateOrganization(findOrganization(id));
+			}
+		}
+
+		// since model mapper has trouble mapping over UUID <--> Person for the nested Set<> in the Entity
+		//  just iterate over and do the lookup manually
+		if (dto.getMembers() != null) {
+			for (UUID id : dto.getMembers()) {
+				org.addMember(personService.getPerson(id));
+			}
+		}
+
+		return org;
 	}
 
+	/**
+	 * Helper function that checks if a given org id is in the parental ancestry chain
+	 * @param id the org to check/vet is not already in the parental ancestry chain
+	 * @param startingOrg the org to start the upward-search from
+	 * @return true/false if 'id' is in the ancestry chain
+	 */
+	@Override
+	public boolean orgIsInAncestryChain(UUID id, Organization startingOrg) {
+		Organization parentOrg = startingOrg.getParentOrganization();
+		if (parentOrg == null) return false;
+		else if (parentOrg.getId().equals(id)) return true;
+		else return orgIsInAncestryChain(id, parentOrg);
+	}
+
+	/**
+	 * Customizes the returned org entity by accepting fields from Controller's query params.
+	 * Normally a user just gets a DTO back with UUIDs for nested members and orgs... this allows
+	 * to specify fields to include on top of the UUIDs.  Nested members and organizations are never
+	 * allowed to have their own subordinate organizations and members since this could be an infinite
+	 * recursion.
+	 * @param fields Map passed in from Controller with two keys - "people" and "orgs", each having a comma
+	 *               separated list of field names to include for those types
+	 * @param dto The DTO to perform customization on
+	 * @return The customized entity as a JsonNode blob to be returned by the controller
+	 */
+	@Override
+	public JsonNode customizeEntity(Map<String, String> fields, OrganizationDto dto) {
+
+		Organization org = convertToEntity(dto);
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.addMixIn(Person.class, CustomPersonDtoMixin.class);
+		mapper.addMixIn(Organization.class, CustomOrganizationDtoMixin.class);
 
 
+		Set<String> mainEntityFilterFields = new HashSet<>();
+		mainEntityFilterFields.add(OrganizationDto.MEMBERS_FIELD);
+		mainEntityFilterFields.add(OrganizationDto.LEADER_FIELD);
+		mainEntityFilterFields.add(OrganizationDto.SUB_ORGS_FIELD);
+		mainEntityFilterFields.add(OrganizationDto.PARENT_ORG_FIELD);
+		FilterProvider filters = new SimpleFilterProvider()
+				.addFilter("orgFilter", SimpleBeanPropertyFilter
+						.serializeAllExcept(mainEntityFilterFields));
+
+		try {
+
+			// filter out the fields having objects, we want everything else but those
+			JsonNode mainNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org));
+
+			// condition the Person type fields the user gave
+			Set<String> personEntityFilterFields = Arrays.stream(fields.get(OrganizationController.PEOPLE_PARAMS_FIELD)
+					.split(","))
+					.map(String::trim)
+					.collect(Collectors.toSet());
+
+			personEntityFilterFields.removeIf(s -> s.equals(""));
+			if (personEntityFilterFields.isEmpty()) {
+				personEntityFilterFields.add("id"); // add ID as the bare minimum like it would be on a regular DTO return
+			}
+
+			// condition the fields user gave
+			Set<String> subOrgEntityFilterFields = Arrays.stream(fields.get(OrganizationController.ORGS_PARAMS_FIELD)
+					.split(","))
+					.map(String::trim)
+					.collect(Collectors.toSet());
+
+			subOrgEntityFilterFields.removeIf(s -> s.equals(""));
+			if (subOrgEntityFilterFields.isEmpty()) {
+				subOrgEntityFilterFields.add("id"); // add ID as the bare minimum like it would be on a regular DTO return
+			}
+			subOrgEntityFilterFields.remove(OrganizationDto.PARENT_ORG_FIELD);  // never allow parentOrg to be serialized on subordinate entities, might be infinite recursion
+			subOrgEntityFilterFields.remove(OrganizationDto.SUB_ORGS_FIELD);  // never allow subordinateOrgs to be serialized inside subordinateOrgs, might be infinite recursion
+
+			// add in the filters with the fields user gave to explicitly include
+			filters = new SimpleFilterProvider()
+					.addFilter("personFilter", SimpleBeanPropertyFilter
+							.filterOutAllExcept(personEntityFilterFields))
+					.addFilter("orgFilter", SimpleBeanPropertyFilter
+							.filterOutAllExcept(subOrgEntityFilterFields));
+
+			// json-ize the individual Person-type fields and Org-type fields
+			JsonNode usersNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getMembers()));
+			JsonNode leaderNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getLeader()));
+			JsonNode parentOrgNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getParentOrganization()));
+			JsonNode subOrgsNode = mapper.readTree(mapper.writer(filters).writeValueAsString(org.getSubordinateOrganizations()));
+
+			// reassemble the object that user will get
+			((ObjectNode) mainNode).set(OrganizationDto.MEMBERS_FIELD, usersNode);
+			((ObjectNode) mainNode).set(OrganizationDto.LEADER_FIELD, leaderNode);
+			((ObjectNode) mainNode).set(OrganizationDto.PARENT_ORG_FIELD, parentOrgNode);
+			((ObjectNode) mainNode).set(OrganizationDto.SUB_ORGS_FIELD, subOrgsNode);
+
+			return mainNode;
+
+		} catch (JsonProcessingException e) {
+			throw new BadRequestException("Could not compile custom organizational entity");
+		}
+	}
 }

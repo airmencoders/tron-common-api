@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.pubsub.listeners.OrganizationEntityListener;
 
 import javax.persistence.*;
@@ -53,12 +54,10 @@ public class Organization {
 
 
     @Getter
-    @Setter
     @ManyToOne
     private Person leader;
 
     @Getter
-    @Setter
     @ManyToOne
     private Organization parentOrganization;
 
@@ -77,6 +76,26 @@ public class Organization {
     @Setter
     @Enumerated(value = EnumType.STRING)
     protected Branch branchType = Branch.OTHER;
+
+    /**
+     * Custom setter for parent organization, checks to make sure we're not setting an org's parent as itself
+     * @param parent Organization to add as the parent entity
+     */
+    public void setParentOrganization(Organization parent) {
+        if (parent.getId().equals(this.getId())) {
+            throw new InvalidRecordUpdateRequest("An organization cannot add itself as its parent");
+        }
+        this.parentOrganization = parent;
+    }
+
+    /**
+     * Custom setter for leader, forces leader to be a member if not already in the
+     * organization they're leading.  Also removes the current leader from the org's members.
+     * @param leader Person entity of incoming leader
+     */
+    public void setLeader(Person leader) {
+        this.setLeaderAndUpdateMembers(leader);
+    }
 
     /**
      * This method will be performed before database operations.
@@ -124,6 +143,9 @@ public class Organization {
     }
 
     public void addSubordinateOrganization(Organization subOrg) {
+        if (subOrg.getId().equals(this.getId())) {
+            throw new InvalidRecordUpdateRequest("An organization cannot add itself as a subordinate");
+        }
         this.subordinateOrganizations.add(subOrg);
     }
 
