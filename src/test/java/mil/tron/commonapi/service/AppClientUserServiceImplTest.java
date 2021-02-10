@@ -17,12 +17,16 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import mil.tron.commonapi.dto.AppClientUserDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 
 @ExtendWith(MockitoExtension.class)
 class AppClientUserServiceImplTest {
+	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
+	
 	@Mock
 	private AppClientUserRespository repository;
 	
@@ -46,9 +50,9 @@ class AppClientUserServiceImplTest {
 	@Test
     void getAppClientUsersTest() {
     	Mockito.when(repository.findAll()).thenReturn(users);
-    	Iterable<AppClientUser> appUsers = userService.getAppClientUsers();
-    	List<AppClientUser> result = StreamSupport.stream(appUsers.spliterator(), false).collect(Collectors.toList());
+    	Iterable<AppClientUserDto> appUsers = userService.getAppClientUsers();
+    	List<AppClientUserDto> result = StreamSupport.stream(appUsers.spliterator(), false).collect(Collectors.toList());
     	assertThat(result).hasSize(1);
-    	assertThat(result.get(0)).isEqualTo(users.get(0));
+    	assertThat(result.get(0)).isEqualTo(MODEL_MAPPER.map(users.get(0), AppClientUserDto.class));
     }
 }

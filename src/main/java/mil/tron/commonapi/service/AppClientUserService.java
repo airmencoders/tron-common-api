@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service;
 
-import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.dto.AppClientUserDto;
 
 public interface AppClientUserService {
-	Iterable<AppClientUser> getAppClientUsers();
+	Iterable<AppClientUserDto> getAppClientUsers();
 }
