@@ -1,0 +1,142 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="david.milligan (generated)" id="1612885610265-5">
+        <createTable tableName="rank">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="rankPK"/>
+            </column>
+            <column name="abbreviation" type="VARCHAR(255)"/>
+            <column name="branch_type" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="pay_grade" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-6">
+        <addColumn tableName="person">
+            <column name="address" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-7">
+        <addColumn tableName="person">
+            <column name="admin" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-8">
+        <addColumn tableName="person">
+            <column name="afsc" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-9">
+        <addColumn tableName="person">
+            <column name="approved" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-10">
+        <addColumn tableName="person">
+            <column name="deros" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-11">
+        <addColumn tableName="person">
+            <column name="dodid" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-12">
+        <addColumn tableName="person">
+            <column name="dor" type="timestamp"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-13">
+        <addColumn tableName="person">
+            <column name="duty_phone" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-14">
+        <addColumn tableName="person">
+            <column name="duty_title" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-15">
+        <addColumn tableName="person">
+            <column name="ets_date" type="timestamp"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-16">
+        <addColumn tableName="person">
+            <column name="flt_chief" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-17">
+        <addColumn tableName="person">
+            <column name="go81" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-18">
+        <addColumn tableName="person">
+            <column name="gp" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-19">
+        <addColumn tableName="person">
+            <column name="imds" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-20">
+        <addColumn tableName="person">
+            <column name="man_number" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-21">
+        <addColumn tableName="person">
+            <column name="phone" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-22">
+        <addColumn tableName="person">
+            <column name="pt_date" type="timestamp"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-23">
+        <addColumn tableName="person">
+            <column name="rank_id" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-24">
+        <addColumn tableName="person">
+            <column name="squadron" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-25">
+        <addColumn tableName="person">
+            <column name="unit" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-26">
+        <addColumn tableName="person">
+            <column name="wc" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-27">
+        <addColumn tableName="person">
+            <column name="wing" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-28">
+        <addForeignKeyConstraint baseColumnNames="rank_id" baseTableName="person" constraintName="FK1g22rbc0fbb7kt8fd46oxfbmt" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="rank" validate="true"/>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-31">
+        <dropForeignKeyConstraint baseTableName="airman" constraintName="FKnhnnva29xg5gk1p4lalng3y8j"/>
+    </changeSet>
+    <changeSet author="david.milligan (generated)" id="1612885610265-33">
+        <dropTable tableName="airman"/>
+    </changeSet>
+    <changeSet author="david.milligan" id="seed-1">
+        <loadData file="../seed.1.0.10/ranks.csv"
+                  tableName="rank"
+                  relativeToChangelogFile="true" />
+    </changeSet>
+</databaseChangeLog>
