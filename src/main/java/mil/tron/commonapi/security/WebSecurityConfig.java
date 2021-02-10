@@ -39,7 +39,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http
         	.addFilter(appClientPreAuthFilter())
         	.authorizeRequests()
-        		.antMatchers("/api-docs/**").permitAll()
+				.antMatchers("/").permitAll()  // for swagger redirect to work at root of api
+				.antMatchers("/api-docs/**").permitAll()
         		.antMatchers("/api-docs**").permitAll()
 	            .anyRequest()
 	            	.authenticated()
