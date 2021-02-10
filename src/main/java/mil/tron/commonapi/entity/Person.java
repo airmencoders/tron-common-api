@@ -269,25 +269,29 @@ public class Person {
     }
 
     private void trimStrings() {
-        firstName = (firstName == null) ? null : firstName.trim();
-        middleName = (middleName == null) ? null : middleName.trim();
-        lastName = (lastName == null) ? null : lastName.trim();
-        title = (title == null) ? null : title.trim();
-        email = (email == null) ? null : email.trim();
-        afsc = (afsc == null) ? null : afsc.trim();
-        dodid = (dodid == null) ? null : dodid.trim();
-        imds = (imds == null) ? null : imds.trim();
-        unit = (unit == null) ? null : unit.trim();
-        wing = (wing == null) ? null : wing.trim();
-        gp = (gp == null) ? null : gp.trim();
-        squadron = (squadron == null) ? null : squadron.trim();
-        wc = (wc == null) ? null : wc.trim();
-        go81 = (go81 == null) ? null : go81.trim();
-        deros = (deros == null) ? null : deros.trim();
-        phone = (phone == null) ? null : phone.trim();
-        address = (address == null) ? null : address.trim();
-        fltChief = (fltChief == null) ? null : fltChief.trim();
-        manNumber = (manNumber == null) ? null : manNumber.trim();
-        dutyTitle = (dutyTitle == null) ? null : dutyTitle.trim();
+        firstName = trim(firstName);
+        middleName = trim(middleName);
+        lastName = trim(lastName);
+        title = trim(title);
+        email = trim(email);
+        afsc = trim(afsc);
+        dodid = trim(dodid);
+        imds = trim(imds);
+        unit = trim(unit);
+        wing = trim(wing);
+        gp = trim(gp);
+        squadron = trim(squadron);
+        wc = trim(wc);
+        go81 = trim(go81);
+        deros = trim(deros);
+        phone = trim(phone);
+        address = trim(address);
+        fltChief = trim(fltChief);
+        manNumber = trim(manNumber);
+        dutyTitle = trim(dutyTitle);
+    }
+
+    private final String trim(String value) {
+        return value == null ? null : value.trim();
     }
 }
