@@ -1,21 +1,5 @@
 package mil.tron.commonapi.controller;
 
-import java.util.List;
-import java.util.UUID;
-
-import javax.validation.Valid;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -27,15 +11,25 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.ExceptionResponse;
+import mil.tron.commonapi.pagination.Paginator;
 import mil.tron.commonapi.service.PersonService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/person")
 public class PersonController {
 	private PersonService personService;
+	private Paginator pager;
 
-	public PersonController(PersonService personService) {
+	public PersonController(PersonService personService, Paginator pager) {
 		this.personService = personService;
+		this.pager = pager;
 	}
 	
 	@Operation(summary = "Retrieves all persons", description = "Retrieves all persons")
@@ -46,8 +40,13 @@ public class PersonController {
 	})
 	@PreAuthorizeRead
 	@GetMapping
-	public ResponseEntity<Iterable<Person>> getPersons() {
-		return new ResponseEntity<>(personService.getPersons(), HttpStatus.OK);
+	public ResponseEntity<Object> getPersons(
+			@Parameter(name = "page", description = "Page of content to retrieve", required = false)
+				@RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
+			@Parameter(name = "limit", description = "Size of each page", required = false)
+				@RequestParam(name = "limit", required = false) Long pageSize) {
+
+		return new ResponseEntity<>(pager.paginate(personService.getPersons(), pageNumber, pageSize), HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Retrieves a person by ID", description = "Retrieves a person by ID")
