@@ -50,7 +50,7 @@ Some database migrations are simple (e.g. adding a single column), and you may c
 `mvn spring-boot:run -Pproduction`
 2. Checkout branch with your changes
 3. In the `liquibase-*.properties` files, update the `diffChangeLogFile` property to increment the version number to 1 greater than the current changeset (the newly generated changeset will take this file name, so you don't want to overwrite any existing ones)
-4. Run the following command to tell liquibase to generate a diff between your current postgres database and the hibernate generated H2 databse *(replace the parameters as appropriate to match your environment)*:
+4. Run the following command to tell liquibase to generate a diff between your current postgres database and the hibernate generated H2 database *(replace the parameters as appropriate to match your environment)*:
 ```
 mvnw -Dliquibase.url=jdbc:postgresql://localhost:5432/<dbname> -Dliquibase.username=<username> -Dliquibase.password=<password> liquibase:diff
 ```
