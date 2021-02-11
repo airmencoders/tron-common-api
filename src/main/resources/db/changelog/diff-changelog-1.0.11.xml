@@ -125,6 +125,53 @@
             <column name="name" value="PERSON_READ" />
         </insert>
     </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-privileges-scratch-read">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='SCRATCH_READ';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="SCRATCH_READ" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-privileges-scratch-write">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='SCRATCH_WRITE';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="SCRATCH_WRITE" />
+        </insert>
+    </changeSet>
+
+    <!-- add the person to privs table -->
+    <changeSet author="christopherzell (generated)" id="1613065919077-8">
+        <createTable tableName="person_privileges">
+            <column name="person_id" type="UUID">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="privileges_id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613065919077-10">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="person_privileges" constraintName="FK1y0w2ggtav4vawsgskhlng2q1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="person" validate="true"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613065919077-11">
+        <addForeignKeyConstraint baseColumnNames="privileges_id" baseTableName="person_privileges" constraintName="FKn5ioeypg92snnkmxw03fpihy9" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="privilege" validate="true"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613065919077-1">
+        <alterSequence sequenceName="hibernate_sequence"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613065919077-6">
+        <addNotNullConstraint columnDataType="varchar(255)" columnName="subscribed_event" tableName="subscriber" validate="true"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613065919077-7">
+        <addNotNullConstraint columnDataType="varchar(255)" columnName="subscriber_address" tableName="subscriber" validate="true"/>
+    </changeSet>
 
     <!--    add czell@revacomm to persons-->
     <changeSet author="christopherzell" id="1612995079740-add-czell">
@@ -139,6 +186,37 @@
             <column name="first_name" value="Chris" />
             <column name="last_name" value="Zell" />
         </insert>
+        <insert tableName="person_privileges">
+            <column name="person_id" valueComputed="(SELECT id FROM person WHERE email='czell@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='ORG_READ')" />
+        </insert>
+        <insert tableName="person_privileges">
+            <column name="person_id" valueComputed="(SELECT id FROM person WHERE email='czell@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='ORG_CREATE')" />
+        </insert>
+        <insert tableName="person_privileges">
+            <column name="person_id" valueComputed="(SELECT id FROM person WHERE email='czell@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='ORG_EDIT')" />
+        </insert>
+        <insert tableName="person_privileges">
+            <column name="person_id" valueComputed="(SELECT id FROM person WHERE email='czell@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='ORG_DELETE')" />
+        </insert>
+        <insert tableName="person_privileges">
+            <column name="person_id" valueComputed="(SELECT id FROM person WHERE email='czell@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='PERSON_READ')" />
+        </insert>
+        <insert tableName="person_privileges">
+            <column name="person_id" valueComputed="(SELECT id FROM person WHERE email='czell@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='PERSON_CREATE')" />
+        </insert>
+        <insert tableName="person_privileges">
+            <column name="person_id" valueComputed="(SELECT id FROM person WHERE email='czell@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='PERSON_EDIT')" />
+        </insert>
+        <insert tableName="person_privileges">
+            <column name="person_id" valueComputed="(SELECT id FROM person WHERE email='czell@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='PERSON_DELETE')" />
+        </insert>
     </changeSet>
-
 </databaseChangeLog>

@@ -7,8 +7,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
-import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
+import mil.tron.commonapi.annotation.security.*;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.pagination.Paginator;
@@ -38,6 +37,7 @@ public class PersonController {
 					description = "Successful operation", 
 						content = @Content(array = @ArraySchema(schema = @Schema(implementation = PersonDto.class))))
 	})
+	@PreAuthorizePersonRead
 	@PreAuthorizeRead
 	@GetMapping
 	public ResponseEntity<Object> getPersons(
@@ -61,6 +61,7 @@ public class PersonController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizePersonRead
 	@PreAuthorizeRead
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<PersonDto> getPerson(
@@ -82,6 +83,7 @@ public class PersonController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizePersonCreate
 	@PreAuthorizeWrite
 	@PostMapping
 	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody PersonDto person) {
@@ -97,6 +99,7 @@ public class PersonController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizePersonEdit
 	@PreAuthorizeWrite
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<PersonDto> updatePerson(
@@ -116,6 +119,7 @@ public class PersonController {
 				description = "Resource not found",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizePersonDelete
 	@PreAuthorizeWrite
 	@DeleteMapping(value = "/{id}")
 	public ResponseEntity<Object> deletePerson(
@@ -140,6 +144,7 @@ public class PersonController {
 					description = "A person already exists with the id provided",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizePersonCreate
 	@PreAuthorizeWrite
 	@PostMapping("/persons")
 	public ResponseEntity<Object> addPersons(

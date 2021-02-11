@@ -2,6 +2,7 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
 import java.util.List;
@@ -77,6 +79,9 @@ public class PersonIntegrationTest {
         a3.setRank("SSgt");
         a3.setBranch(Branch.USAF);
 
+        MvcResult result = mockMvc.perform(get(ENDPOINT)).andReturn();
+        int count = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), PersonDto[].class).length;
+
         // test that we can't add someone with a dup email
         mockMvc.perform(post(ENDPOINT + "persons")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -84,9 +89,9 @@ public class PersonIntegrationTest {
                 .andExpect(status().isConflict());
 
         // test pagination
-        mockMvc.perform(get(ENDPOINT + "?page=1&limit=4"))
+        mockMvc.perform(get(ENDPOINT + "?page=1&limit=" + count))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(jsonPath("$", hasSize(count)));
 
         mockMvc.perform(get(ENDPOINT + "?page=2&limit=1"))
                 .andExpect(status().isOk())
