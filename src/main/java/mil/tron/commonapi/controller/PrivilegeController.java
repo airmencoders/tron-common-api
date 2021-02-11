@@ -1,6 +1,5 @@
 package mil.tron.commonapi.controller;
 
-import java.util.UUID;
 
 import javax.validation.Valid;
 
@@ -21,37 +20,38 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.AppClientUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
-import mil.tron.commonapi.service.AppClientUserService;
+import mil.tron.commonapi.service.PrivilegeService;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/app-client")
+@RequestMapping("${api-prefix.v1}/privilege")
 @PreAuthorizeDashboardAdmin
-public class AppClientController {
+public class PrivilegeController {
 	
-	private AppClientUserService userService;
+	private PrivilegeService privilegeService;
 	
-	public AppClientController(AppClientUserService userService) {
-		this.userService = userService;
+	public PrivilegeController(PrivilegeService privilegeService) {
+		this.privilegeService = privilegeService;
 	}
 	
-	@Operation(summary = "Retrieves all application client user information", description = "Retrieves application client user information")
+	@Operation(summary = "Retrieves all Privilege information", description = "Retrieves Privilege information")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation", 
-				content = @Content(array = @ArraySchema(schema = @Schema(implementation = AppClientUserDto.class))))
+				content = @Content(array = @ArraySchema(schema = @Schema(implementation = PrivilegeDto.class))))
 	})
 	@GetMapping
-	public ResponseEntity<Object> getAppClientUsers() {
-		return new ResponseEntity<>(userService.getAppClientUsers(), HttpStatus.OK);
+	public ResponseEntity<Object> getPrivileges() {
+		return new ResponseEntity<>(privilegeService.getPrivileges(), HttpStatus.OK);
 	}
 	
-	@Operation(summary = "Updates an existing Application Client", description = "Updates an existing Application Client")
+	
+	@Operation(summary = "Updates an existing Privilege", description = "Updates an existing Privilege")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = AppClientUserDto.class))),
+					content = @Content(schema = @Schema(implementation = PrivilegeDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -60,11 +60,12 @@ public class AppClientController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PutMapping(value = "/{id}")
-	public ResponseEntity<AppClientUserDto> updateAppClient(
-			@Parameter(description = "App Client ID to update", required = true) @PathVariable("id") UUID appClientId,
-			@Parameter(description = "Updated person", required = true) @Valid @RequestBody AppClientUserDto appClient) {
+	public ResponseEntity<PrivilegeDto> updatePrivilege(
+			@Parameter(description = "App Client ID to update", required = true) @PathVariable("id") Long privilegeId,
+			@Parameter(description = "Updated person", required = true) @Valid @RequestBody PrivilegeDto privilege) {
 		
-		AppClientUserDto updatedAppClientUser = userService.updateAppClientUser(appClientId, appClient);
+		PrivilegeDto updatedAppClientUser = privilegeService.updatePrivilege(privilegeId, privilege);
 		return new ResponseEntity<>(updatedAppClientUser, HttpStatus.OK);
 	}
+
 }
