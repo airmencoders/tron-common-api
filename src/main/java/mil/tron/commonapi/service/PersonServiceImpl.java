@@ -9,6 +9,7 @@ import java.util.stream.StreamSupport;
 
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
@@ -125,5 +126,26 @@ public class PersonServiceImpl implements PersonService {
 		Person entity = modelMapper.map(dto, Person.class);
 		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
 		return entity;
+	}
+
+	@Override
+	public void addPrivilege(UUID id, Privilege priv) {
+		Person p = getPerson(id);
+		p.getPrivileges().add(priv);
+		repository.save(p);
+	}
+
+	@Override
+	public void removePrivilege(UUID id, Privilege priv) {
+		Person p = getPerson(id);
+		p.getPrivileges().remove(priv);
+		repository.save(p);
+	}
+
+	@Override
+	public void removeAllPrivileges(UUID id) {
+		Person p = getPerson(id);
+		p.getPrivileges().clear();
+		repository.save(p);
 	}
 }

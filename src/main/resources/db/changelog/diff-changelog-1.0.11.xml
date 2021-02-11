@@ -1,5 +1,7 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+
+    <!--    Add the scratch storage space-->
     <changeSet author="christopherzell (generated)" id="1612995079740-8">
         <createTable tableName="scratch_storage">
             <column name="id" type="UUID">
@@ -14,4 +16,129 @@
             <column name="value" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
+
+    <!--    Add 'istio-system' with implicit read-->
+    <changeSet author="christopherzell" id="1612995079740-add-istio-app">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM app_client_user WHERE name='istio-system';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="app_client_user">
+            <column name="id" value="2620ba53-2967-4276-a851-00a45a95f75d" />
+            <column name="name" value="istio-system" />
+            <column name="name_as_lower" value="istio-system" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-add-istio-app-read">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM app_client_user WHERE name='istio-system';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="app_client_user_privileges">
+            <column name="app_client_user_id" valueComputed="(SELECT id FROM app_client_user WHERE name='istio-system')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='READ')" />
+        </insert>
+    </changeSet>
+
+    <!--    Add in ORG CRUD privilege names-->
+    <changeSet author="christopherzell" id="1612995079740-privileges-org-create">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='ORG_CREATE';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="ORG_CREATE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-privileges-org-edit">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='ORG_EDIT';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="ORG_EDIT" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-privileges-org-delete">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='ORG_DELETE';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="ORG_DELETE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-privileges-org-read">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='ORG_READ';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="ORG_READ" />
+        </insert>
+    </changeSet>
+
+    <!--    Add in PERSON CRUD privilege names-->
+    <changeSet author="christopherzell" id="1612995079740-privileges-person-create">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='PERSON_CREATE';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="PERSON_CREATE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-privileges-person-edit">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='PERSON_EDIT';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="PERSON_EDIT" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-privileges-person-delete">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='PERSON_DELETE';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="PERSON_DELETE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1612995079740-privileges-person-read">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='PERSON_READ';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="privilege">
+            <column name="name" value="PERSON_READ" />
+        </insert>
+    </changeSet>
+
+    <!--    add czell@revacomm to persons-->
+    <changeSet author="christopherzell" id="1612995079740-add-czell">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM person WHERE email='czell@revacomm.com';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="person">
+            <column name="id" value="7cbd32f4-a92a-4d08-a01d-e001986e03d3" />
+            <column name="email" value="czell@revacomm.com" />
+            <column name="first_name" value="Chris" />
+            <column name="last_name" value="Zell" />
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>
