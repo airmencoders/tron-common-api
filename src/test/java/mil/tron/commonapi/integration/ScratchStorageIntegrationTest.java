@@ -77,6 +77,52 @@ public class ScratchStorageIntegrationTest {
     @Transactional
     @Rollback
     @Test
+    void testInvalidAppID() throws Exception {
+
+        ScratchStorageEntry entry = ScratchStorageEntry
+                .builder()
+                .appId(null)
+                .key("some key2")
+                .value("value")
+                .build();
+
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(entry)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testInvalidKeyValue() throws Exception {
+
+        ScratchStorageEntry entry = ScratchStorageEntry
+                .builder()
+                .appId(UUID.randomUUID())
+                .key(null)
+                .value("value")
+                .build();
+
+        // null key not allowed
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(entry)))
+                .andExpect(status().isBadRequest());
+
+        entry.setKey("");
+
+        // blank key not allowed
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(entry)))
+                .andExpect(status().isBadRequest());
+
+    }
+
+    @Transactional
+    @Rollback
+    @Test
     void testAddKeyValuePair() throws Exception {
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
