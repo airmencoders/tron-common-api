@@ -13,8 +13,6 @@ import mil.tron.commonapi.validations.ValidPhoneNumber;
 import javax.persistence.*;
 import javax.validation.constraints.Email;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @EntityListeners(PersonEntityListener.class)
@@ -33,12 +31,6 @@ public class Person {
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID id = UUID.randomUUID();
-
-    @Getter
-    @Setter
-    @Builder.Default
-    @ManyToMany
-    private Set<Privilege> privileges = new HashSet<>();
 
     @Getter
     @Setter

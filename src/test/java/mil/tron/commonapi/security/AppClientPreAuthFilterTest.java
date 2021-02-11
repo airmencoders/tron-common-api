@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.servlet.http.HttpServletRequest;
 
-import mil.tron.commonapi.MockToken;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -123,15 +122,10 @@ class AppClientPreAuthFilterTest {
     	@Test
     	void testGetCredentials() {
     		Mockito.when(request.getHeader("x-forwarded-client-cert")).thenReturn(XFCC_HEADER);
-
-			String result = (String) filter.getPreAuthenticatedCredentials(request);
-			assertThat(result).isEqualTo("N/A");
-
-			// when there's a JWT present, stuff its email claim into the credentials
-    		Mockito.when(request.getHeader("authorization")).thenReturn(MockToken.token);
-
-			result = (String) filter.getPreAuthenticatedCredentials(request);
-    		assertThat(result).isEqualTo("test@test.com");
+    		
+    		String result = (String) filter.getPreAuthenticatedCredentials(request);
+    		
+    		assertThat(result).isEqualTo("N/A");
     	}
     }
 }

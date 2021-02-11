@@ -7,9 +7,6 @@ import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.exceptions.JWTDecodeException;
-import com.auth0.jwt.interfaces.DecodedJWT;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 
 public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFilter  {
@@ -27,16 +24,6 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 
 	@Override
 	protected Object getPreAuthenticatedCredentials(HttpServletRequest request) {
-		String header = request.getHeader("authorization");
-		if (header != null && header.startsWith("Bearer ")) {
-
-			try {
-				DecodedJWT token = JWT.decode(header.split("Bearer ")[1]);
-				return token.getClaim("email").asString();
-			}
-			catch (JWTDecodeException ignored) {}  // let catch fall thru
-		}
-
 		return "N/A";
 	}
 	

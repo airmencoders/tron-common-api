@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.entity.Privilege;
 
 public interface PersonService {
 	PersonDto createPerson(PersonDto dto);
@@ -20,8 +19,4 @@ public interface PersonService {
 
 	PersonDto convertToDto(Person entity);
 	Person convertToEntity(PersonDto dto);
-
-	void addPrivilege(UUID id, Privilege priv);
-	void removePrivilege(UUID id, Privilege priv);
-	void removeAllPrivileges(UUID id);
 }

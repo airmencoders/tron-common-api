@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.repository.PersonRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,9 +15,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 
 import mil.tron.commonapi.entity.AppClientUser;
@@ -28,15 +23,9 @@ import mil.tron.commonapi.repository.AppClientUserRespository;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class AppClientUserPreAuthenticatedServiceTest {
-
-	@Mock
-	private PersonRepository personRepository;
-
 	@Mock
 	private AppClientUserRespository repository;
 	
@@ -46,7 +35,7 @@ class AppClientUserPreAuthenticatedServiceTest {
 	private PreAuthenticatedAuthenticationToken token = Mockito.mock(PreAuthenticatedAuthenticationToken.class);
 	
 	private AppClientUser user;
-
+	
 	@BeforeEach
 	void setup() {
 		Set<Privilege> privileges = new HashSet<>();
@@ -91,35 +80,6 @@ class AppClientUserPreAuthenticatedServiceTest {
 		Mockito.when(repository.findByNameIgnoreCase(user.getName())).thenReturn(Optional.ofNullable(null));
 		Mockito.when(token.getName()).thenReturn(user.getName());
 		
-		assertThrows(UsernameNotFoundException.class, () -> service.loadUserDetails(token));
-	}
-
-	@Test
-	void testRequestIsFromIstio() {
-
-		// test that a request is from the SSO gateway and get user email from creds and do lookup in Person table
-
-		String istioGatewayName = "istio-system";
-		ReflectionTestUtils.setField(service, "istioGatewayName", istioGatewayName);
-
-		user = new AppClientUser();
-		user.setId(UUID.randomUUID());
-		user.setName(istioGatewayName);
-
-		Person p = Person.builder()
-				.id(UUID.randomUUID())
-				.email("someone@test.com")
-				.build();
-
-		Mockito.when(token.getName()).thenReturn(istioGatewayName);
-		Mockito.when(token.getCredentials()).thenReturn(p.getEmail());
-		Mockito.when(repository.findByNameIgnoreCase(istioGatewayName)).thenReturn(Optional.of(user));
-		Mockito.when(personRepository.findByEmailIgnoreCase(p.getEmail())).thenReturn(Optional.of(p));
-
-		UserDetails resultUser = service.loadUserDetails(token);
-		assertThat(resultUser.getUsername()).isEqualTo(p.getEmail());
-
-		Mockito.when(personRepository.findByEmailIgnoreCase(p.getEmail())).thenReturn(Optional.empty());
 		assertThrows(UsernameNotFoundException.class, () -> service.loadUserDetails(token));
 	}
 }
