@@ -5,6 +5,8 @@ import lombok.*;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -34,7 +36,9 @@ public class DashboardUser {
 
     @Getter
     @Setter
-    private boolean admin = false;
+    @Builder.Default
+    @ManyToMany
+    private Set<Privilege> privileges = new HashSet<>();
 
     @PrePersist
     @PreUpdate

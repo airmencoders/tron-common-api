@@ -19,7 +19,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 		String header = request.getHeader("x-forwarded-client-cert");
 		String uri = extractUriFromXfccHeader(header);
 		
-		return extractNamespaceFromUri(uri);
+		return extractNamespaceFromUri(uri);  //check if namespace matches dashboard
 	}
 
 	@Override
