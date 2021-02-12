@@ -4,8 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
+import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
+import org.modelmapper.Conditions;
 import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -18,39 +25,46 @@ import mil.tron.commonapi.repository.PersonRepository;
 public class PersonServiceImpl implements PersonService {
 	private PersonRepository repository;
 	private PersonUniqueChecksService personChecksService;
+	private RankRepository rankRepository;
+	private final DtoMapper modelMapper;
 
-	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService) {
+	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
+		this.rankRepository = rankRepository;
+		this.modelMapper = new DtoMapper();
+		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 	}
 
 	@Override
-	public Person createPerson(Person person) {
-		if (repository.existsById(person.getId())) 
-			throw new ResourceAlreadyExistsException("Person resource with the id: " + person.getId() + " already exists.");
+	public PersonDto createPerson(PersonDto dto) {
+		Person entity = convertToEntity(dto);
+		if (repository.existsById(entity.getId()))
+			throw new ResourceAlreadyExistsException("Person resource with the id: " + entity.getId() + " already exists.");
 
-		if(!personChecksService.personEmailIsUnique(person))
-			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", person.getEmail()));
+		if(!personChecksService.personEmailIsUnique(entity))
+			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
 			
-		return repository.save(person);
+		return convertToDto(repository.save(entity));
 	}
 
 	@Override
-	public Person updatePerson(UUID id, Person person) {
+	public PersonDto updatePerson(UUID id, PersonDto dto) {
+		Person entity = convertToEntity(dto);
 		// Ensure the id given matches the id of the object given
-		if (!id.equals(person.getId()))
-			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, person.getId()));
+		if (!id.equals(entity.getId()))
+			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, entity.getId()));
 		
 		Optional<Person> dbPerson = repository.findById(id);
 		
 		if (dbPerson.isEmpty())
 			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
 		
-		if (!personChecksService.personEmailIsUnique(person)) {
-			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", person.getEmail()));
+		if (!personChecksService.personEmailIsUnique(entity)) {
+			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
 		
-		return repository.save(person);
+		return convertToDto(repository.save(entity));
 	}
 
 	@Override
@@ -64,8 +78,11 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public Iterable<Person> getPersons() {
-		return repository.findAll();
+	public Iterable<PersonDto> getPersons() {
+		return StreamSupport
+				.stream(repository.findAll().spliterator(), false)
+				.map(this::convertToDto)
+				.collect(Collectors.toList());
 	}
 
 	@Override
@@ -74,11 +91,39 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public List<Person> bulkAddPeople(List<Person> people) {
-		List<Person> addedPeople = new ArrayList<>();
-		for (Person p : people) {
-			addedPeople.add(this.createPerson(p));
+	public PersonDto getPersonDto(UUID id) {
+		return convertToDto(getPerson(id));
+	}
+
+	@Override
+	public boolean exists(UUID id){
+		return repository.existsById(id);
+	}
+
+	@Override
+	public List<PersonDto> bulkAddPeople(List<PersonDto> dtos) {
+		List<PersonDto> added = new ArrayList<>();
+		for (PersonDto dto : dtos) {
+			added.add(this.createPerson(dto));
 		}
-		return addedPeople;
+		return added;
+	}
+
+	@Override
+	public PersonDto convertToDto(Person entity) {
+		PersonDto dto = modelMapper.map(entity, PersonDto.class);
+		Rank rank = entity.getRank();
+		if (rank != null) {
+			dto.setRank(rank.getAbbreviation());
+			dto.setBranch(entity.getRank().getBranchType());
+		}
+		return dto;
+	}
+
+	@Override
+	public Person convertToEntity(PersonDto dto) {
+		Person entity = modelMapper.map(dto, Person.class);
+		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
+		return entity;
 	}
 }

@@ -1,6 +1,5 @@
 package mil.tron.commonapi.pubsub.listener;
 
-import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.pubsub.EventPublisher;
@@ -25,9 +24,9 @@ public class PersonEntityListenerTest {
 
     @Test
     void testAirmanListener() {
-        listener.afterAnyUpdate(new Airman());
-        listener.afterAnyCreation(new Airman());
-        listener.afterAnyRemoval(new Airman());
+        listener.afterAnyUpdate(new Person());
+        listener.afterAnyCreation(new Person());
+        listener.afterAnyRemoval(new Person());
         Mockito
             .verify(publisher, times(3))
             .publishEvent(Mockito.any(EventType.class), Mockito.any(String.class), Mockito.any(String.class), Mockito.any(Object.class));

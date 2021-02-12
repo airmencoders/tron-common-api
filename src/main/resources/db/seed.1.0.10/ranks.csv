@@ -1,0 +1,26 @@
+id,branch_type,pay_grade,abbreviation,name
+bf73117d-1573-4933-bf43-3e2c429421e1,USAF,CTR,CTR,Contractor
+2f231ead-bb4c-441c-9252-dfb668d4bc32,USAF,GS,CIV,Civilian
+8e963a10-0731-47c1-aee6-2ee1284dbccd,USAF,SES,SES,Senior Executive Service
+2be6c620-d0b3-444c-8ec6-7d85a998dddd,USAF,E-1,AB,Airman Basic
+62841316-03b3-4ae4-9515-85eded0c42f5,USAF,E-2,Amn,Airman
+61596024-5843-4f02-80ca-df608fc1854b,USAF,E-3,A1C,Airman First Class
+3940a64a-0a60-4e55-81a6-bfc3eb63bbc4,USAF,E-4,SrA,Senior Airman
+62a47eb7-28f2-4c15-8c96-b586713b0b08,USAF,E-5,SSgt,Staff Sergeant
+ed83d825-0337-4a83-9620-29a4406f7bd4,USAF,E-6,TSgt,Technical Sergeant
+9d4a153c-b6be-4153-999d-8357c55f758d,USAF,E-7,MSgt,Master Sergeant
+81563da4-3b6e-4456-b67b-a1c79f5af4c8,USAF,E-8,SMSgt,Senior Master Sergeant
+cbd46efa-b4b3-41f7-826d-f96af6827436,USAF,E-9,CMSgt,Chief Master Sergeant
+fb4e5b1e-3db0-4936-91f2-e30d7708fcac,USAF,E-9,CCM,Command Chief Master Sergeant
+5cc2b9d8-6481-428e-a9c3-49008eb8b1e8,USAF,E-9,CMSAF,Chief Master Sergeant Of The Air Force
+e50aae34-c948-45e1-8df8-5198c8e73d0e,USAF,O-1,2nd Lt,Second Lieutenant
+4331df98-b4f4-4ad2-a967-d495a1f8f4fe,USAF,O-2,1st Lt,First Lieutenant
+cb349131-c2c9-4abb-87a7-e43efa3bc5b8,USAF,O-3,Capt,Captain
+2d473530-9f36-40d6-b214-4d76d3cc149b,USAF,O-4,Maj,Major
+cb52deb6-ccf6-4754-b538-807ad6b44f7c,USAF,O-5,Lt Col,Lieutenant Colonel
+fe6a1f74-2209-4af0-a852-67049ee08439,USAF,O-6,Col,Colonel
+e2614c98-43f8-4041-9af6-b09e5887b903,USAF,O-7,Brig Gen,Brigadier General
+82bd67d1-0a69-4bd1-b775-b7c86370bc5c,USAF,O-8,Maj Gen,Major General
+afc05741-9400-47c2-aad6-87bce0a8f847,USAF,O-9,Lt Gen,Lieutenant General
+205bf800-3c6a-464c-a1b5-e7a44f8d8549,USAF,O-10,Gen,General
+e3738af7-92b5-4a78-adff-7c09e456a7a1,USAF,O-10,GAF,General of the Air Force

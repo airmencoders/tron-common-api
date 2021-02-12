@@ -22,27 +22,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 		String header = request.getHeader("x-forwarded-client-cert");
 		String uri = extractUriFromXfccHeader(header);
 
-		// returns a the namespace as the principal
-		String principalAsUri = extractNamespaceFromUri(uri);
-		String principalAsUserEmail = "Unknown";
-		// hack for now
-		if (principalAsUri.equals("guardianangel")) {
-			// extract email from jwt
-			if (request != null ) {
-				Enumeration<String> headerNames = request.getHeaderNames();
-				while (headerNames.hasMoreElements()) {
-					if (headerNames.nextElement().equals("authorization")) {
-						DecodedJWT decodedJwt = decodeJwt(request);
-						principalAsUserEmail = decodedJwt.getClaim("email").asString();
-					}
-				}
-			}
-			if (!principalAsUserEmail.equals("Unknown")) {
-				return principalAsUserEmail;
-			}
-		}
-		
-		return principalAsUri;
+		return extractNamespaceFromUri(uri);
 	}
 
 	private DecodedJWT decodeJwt (HttpServletRequest request) {

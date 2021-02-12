@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.dto.AppClientUserDto;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.AppClientUserService;
@@ -41,13 +41,13 @@ class AppClientControllerTest {
 	@MockBean
 	private AppClientUserService userService;
 	
-	private List<AppClientUser> users;
+	private List<AppClientUserDto> users;
 	
 	@BeforeEach
 	void setup() {
 		users = new ArrayList<>();
 		
-		AppClientUser a = new AppClientUser();
+		AppClientUserDto a = new AppClientUserDto();
 		a.setId(UUID.randomUUID());
 		a.setName("User A");
 		a.setPrivileges(new HashSet<Privilege>());

@@ -40,7 +40,23 @@ Seeded data is provided for the purpose of local integration development.
 
 Seeded data is located at `src/main/resources/db/seed/{version}`, and names of the `.csv` files correlate to the table or entity they reperesent.
 
-By default seeded data is not added to the database, but can be trigged through the environemnt variable `CONTEXTS` to `test`. Below are three examples.
+By default, seeded data is not added to the database, but can be triggered through the environment variable `CONTEXTS` to `test`. Below are three examples.
+
+### Liquibase Changeset Generation
+
+Some database migrations are simple (e.g. adding a single column), and you may choose to write the liquibase changesets manually. For more complex changes, allowing liquibase to generate it for you based on a diff between the current db can be a big time saver:
+
+1. Checkout the current master and run it using the production profile to get a snapshot of the current database in your local postgresql:
+`mvn spring-boot:run -Pproduction`
+2. Checkout branch with your changes
+3. In the `liquibase-*.properties` files, update the `diffChangeLogFile` property to increment the version number to 1 greater than the current changeset (the newly generated changeset will take this file name, so you don't want to overwrite any existing ones)
+4. Run the following command to tell liquibase to generate a diff between your current postgres database and the hibernate generated H2 database *(replace the parameters as appropriate to match your environment)*:
+```
+mvnw -Dliquibase.url=jdbc:postgresql://localhost:5432/<dbname> -Dliquibase.username=<username> -Dliquibase.password=<password> liquibase:diff
+```
+5. Make any appropriate changes or customizations to the generated file
+6. Don't forget to add the new changelog file to the `db.changelog-master.xml`
+
 
 ### docker
 `docker run -p 8080:8080 --env CONTEXTS=test registry.il2.dso.mil/tron/products/tron-common-api/tron-common-api:{version}`
