@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.logging.CommonApiLogger;
+import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -15,10 +16,13 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Service that fires off messages to subscribers for various events.  Entity listeners
@@ -49,8 +53,29 @@ public class EventPublisher {
     @Qualifier("eventSender")
     private RestTemplate publisherSender;
 
+    @Autowired
+    private HttpServletRequest request;
+
+    private static final String NAMESPACE_REGEX = "http://[^\\\\.]+\\.([^\\\\.]+)(?=\\.svc\\.cluster\\.local)";
+    private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
+
     public EventPublisher(SubscriberService subService) {
         this.subService = subService;
+    }
+
+    public void publishEvent(EventType type, String message, String className, Object data) {
+
+        // grab the requester from the x-forwarded-client-cert header
+        //  so we can pass to pushevent - so that it knows not to push an event back to
+        //  the requester
+        String header = request.getHeader("x-forwarded-client-cert");
+        String namespace = null;
+        if (header != null) {
+            String uri = AppClientPreAuthFilter.extractUriFromXfccHeader(header);
+            namespace = AppClientPreAuthFilter.extractNamespaceFromUri(uri);
+        }
+
+        pushEvent(type, message, className, data, namespace);
     }
 
     /**
@@ -59,7 +84,7 @@ public class EventPublisher {
      * @param message String message to send to subscribers
      */
     @Async
-    public void publishEvent(EventType type, String message, String className, Object data) {
+    public void pushEvent(EventType type, String message, String className, Object data, String requesterNamespace) {
         List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(type));
 
         Map<String, Object> messageDetails = new HashMap<>();
@@ -68,16 +93,30 @@ public class EventPublisher {
         messageDetails.put("message", message);
         messageDetails.put("data", data);
         for (Subscriber s : subscribers) {
-            publisherLog.info("[PUBLISH BROADCAST] - Event: " + type.toString() + " Message: " + message + " to Subscriber: " + s.getSubscriberAddress());
-            try {
-                publisherSender.postForLocation(s.getSubscriberAddress(), messageDetails);
-                publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + s.getSubscriberAddress());
-            }
-            catch (Exception e) {
-                publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + s.getSubscriberAddress() + " failed.  Exception: " + e.getMessage());
+
+            // only push to everyone but the requester (if the requester is a subscriber)
+            if (!extractSubscriberNamespace(s.getSubscriberAddress()).equals(requesterNamespace)) {
+                publisherLog.info("[PUBLISH BROADCAST] - Event: " + type.toString() + " Message: " + message + " to Subscriber: " + s.getSubscriberAddress());
+                try {
+                    publisherSender.postForLocation(s.getSubscriberAddress(), messageDetails);
+                    publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + s.getSubscriberAddress());
+                } catch (Exception e) {
+                    publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + s.getSubscriberAddress() + " failed.  Exception: " + e.getMessage());
+                }
             }
         }
 
         publisherLog.info("[PUBLISH BROADCAST COMPLETE]");
+    }
+
+    private String extractSubscriberNamespace(String uri) {
+        if (uri == null) return "";
+
+        // namespace in a cluster local address should be 2nd element in the URI
+        Matcher extractNs = NAMESPACE_PATTERN.matcher(uri);
+        if (extractNs.find())
+            return extractNs.group();
+        else
+            return "";
     }
 }

@@ -33,7 +33,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 	 * @param header the full x-forwarded-client-cert header
 	 * @return the URI string field of the header or null if header is malformed
 	 */
-	private String extractUriFromXfccHeader(String header) {
+	public static String extractUriFromXfccHeader(String header) {
 		if (header == null || header.isBlank()) 
 			return null;
 		
@@ -66,7 +66,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 	 * @param uri the uri field extract from an x-forwarded-client-cert header
 	 * @return the namespace value of the URI
 	 */
-	private String extractNamespaceFromUri(String uri) {
+	public static String extractNamespaceFromUri(String uri) {
 		if (uri == null || uri.isBlank()) 
 			return null;
 		
