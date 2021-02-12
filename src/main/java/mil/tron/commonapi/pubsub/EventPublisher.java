@@ -54,7 +54,7 @@ public class EventPublisher {
     private RestTemplate publisherSender;
 
     @Autowired
-    private HttpServletRequest request;
+    private HttpServletRequest servletRequest;
 
     private static final String NAMESPACE_REGEX = "http://[^\\\\.]+\\.([^\\\\.]+)(?=\\.svc\\.cluster\\.local)";
     private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
@@ -63,12 +63,20 @@ public class EventPublisher {
         this.subService = subService;
     }
 
+    /**
+     * Called by Entity Listeners for various types of JPA persistence changes.  Non-blocking operation.
+     * @param type {@link EventType} type event to broadcast
+     * @param message String message to send to subscribers
+     * @param className the className of the entity that is the reason for this message
+     * @param data data from the listener to embed into the push message
+     */
+    @Async
     public void publishEvent(EventType type, String message, String className, Object data) {
 
         // grab the requester from the x-forwarded-client-cert header
         //  so we can pass to pushevent - so that it knows not to push an event back to
         //  the requester
-        String header = request.getHeader("x-forwarded-client-cert");
+        String header = servletRequest.getHeader("x-forwarded-client-cert");
         String namespace = null;
         if (header != null) {
             String uri = AppClientPreAuthFilter.extractUriFromXfccHeader(header);
@@ -79,12 +87,14 @@ public class EventPublisher {
     }
 
     /**
-     * Called by Entity Listeners for various types of JPA persistence changes.  Non-blocking operation.
-     * @param type {@link EventType} type event to broadcast
-     * @param message String message to send to subscribers
+     * Called by the publishEvent async method.
+     * @param type
+     * @param message
+     * @param className
+     * @param data
+     * @param requesterNamespace
      */
-    @Async
-    public void pushEvent(EventType type, String message, String className, Object data, String requesterNamespace) {
+    private void pushEvent(EventType type, String message, String className, Object data, String requesterNamespace) {
         List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(type));
 
         Map<String, Object> messageDetails = new HashMap<>();
@@ -93,7 +103,7 @@ public class EventPublisher {
         messageDetails.put("message", message);
         messageDetails.put("data", data);
         for (Subscriber s : subscribers) {
-
+            String a = extractSubscriberNamespace(s.getSubscriberAddress());
             // only push to everyone but the requester (if the requester is a subscriber)
             if (!extractSubscriberNamespace(s.getSubscriberAddress()).equals(requesterNamespace)) {
                 publisherLog.info("[PUBLISH BROADCAST] - Event: " + type.toString() + " Message: " + message + " to Subscriber: " + s.getSubscriberAddress());
@@ -109,13 +119,13 @@ public class EventPublisher {
         publisherLog.info("[PUBLISH BROADCAST COMPLETE]");
     }
 
-    private String extractSubscriberNamespace(String uri) {
+    public String extractSubscriberNamespace(String uri) {
         if (uri == null) return "";
 
         // namespace in a cluster local address should be 2nd element in the URI
         Matcher extractNs = NAMESPACE_PATTERN.matcher(uri);
         if (extractNs.find())
-            return extractNs.group();
+            return extractNs.group(1);
         else
             return "";
     }
