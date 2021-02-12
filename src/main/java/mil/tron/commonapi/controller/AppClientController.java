@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +22,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.AppClientUserDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.AppClientUserService;
@@ -46,6 +48,26 @@ public class AppClientController {
 	public ResponseEntity<Object> getAppClientUsers() {
 		return new ResponseEntity<>(userService.getAppClientUsers(), HttpStatus.OK);
 	}
+	
+	
+	@Operation(summary = "Adds a App Client User", description = "Adds a App Client User")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = AppClientUserDto.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Resource already exists with the name provided",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeWrite
+	@PostMapping
+	public ResponseEntity<AppClientUserDto> createAppClientUser(@Parameter(description = "App Client to create", required = true) @Valid @RequestBody AppClientUserDto appClient) {
+		return new ResponseEntity<>(userService.createAppClientUser(appClient), HttpStatus.CREATED);
+	}
+	
 	
 	@Operation(summary = "Updates an existing Application Client", description = "Updates an existing Application Client")
 	@ApiResponses(value = {

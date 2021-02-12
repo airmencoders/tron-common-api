@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import org.modelmapper.Converter;
-import org.modelmapper.PropertyMap;
 import org.modelmapper.spi.MappingContext;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +19,7 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 
 @Service
@@ -47,6 +47,19 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	}
 	
 	@Override
+	public AppClientUserDto createAppClientUser(AppClientUserDto appClient) {
+		AppClientUser userEntity = convertToEntity(appClient);
+		
+		userRepository.findByNameIgnoreCase(appClient.getName())
+			.ifPresent(user -> {
+					throw new ResourceAlreadyExistsException(String.format("Client Name: %s already exists", appClient.getName()));
+				}
+			);
+		
+		return convertToDto(userRepository.save(userEntity));
+	}
+	
+	@Override
 	public AppClientUserDto updateAppClientUser(UUID id, AppClientUserDto appClient) {
 		if (!id.equals(appClient.getId()))
 			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, appClient.getId()));
@@ -56,10 +69,21 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		if (dbUser.isEmpty())
 			throw new RecordNotFoundException("Resource with the ID: " + id + " does not exist.");
 		
+		// Check for name uniqueness
+		if (!isNameUnique(appClient, dbUser)) {
+			throw new InvalidRecordUpdateRequest(String.format("Client Name: %s is already in use.", appClient.getName()));
+		}
+
 		AppClientUser entity = convertToEntity(appClient);
 		
 		return convertToDto(userRepository.save(entity));
 			
+	}
+	
+	private boolean isNameUnique(AppClientUserDto appClient, Optional<AppClientUser> dbUser) {
+		return appClient.getName() == null 
+				|| (dbUser.isPresent() && appClient.getName().equalsIgnoreCase(dbUser.get().getName())) 
+				|| userRepository.findByNameIgnoreCase(appClient.getName()).isEmpty();
 	}
 	
 	private AppClientUserDto convertToDto(AppClientUser user) {
