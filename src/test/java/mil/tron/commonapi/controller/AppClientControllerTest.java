@@ -50,7 +50,7 @@ class AppClientControllerTest {
 		AppClientUserDto a = new AppClientUserDto();
 		a.setId(UUID.randomUUID());
 		a.setName("User A");
-		a.setPrivileges(new HashSet<Privilege>());
+		a.setPrivileges(new ArrayList<Privilege>());
 		
 		users.add(a);
 	}

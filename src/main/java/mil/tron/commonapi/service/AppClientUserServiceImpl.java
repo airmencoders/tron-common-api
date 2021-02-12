@@ -1,15 +1,23 @@
 package mil.tron.commonapi.service;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import org.modelmapper.Converter;
+import org.modelmapper.PropertyMap;
+import org.modelmapper.spi.MappingContext;
 import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.dto.AppClientUserDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -22,6 +30,15 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	
 	public AppClientUserServiceImpl(AppClientUserRespository userRepository) {
 		this.userRepository = userRepository;
+		
+		Converter<List<Privilege>, Set<Privilege>> convertPrivilegesToSet = 
+				((MappingContext<List<Privilege>, Set<Privilege>> context) -> new HashSet<>(context.getSource()));
+		
+		Converter<Set<Privilege>, List<Privilege>> convertPrivilegesToArr = 
+				((MappingContext<Set<Privilege>, List<Privilege>> context) -> new ArrayList<>(context.getSource()));
+		
+		MODEL_MAPPER.addConverter(convertPrivilegesToSet);
+		MODEL_MAPPER.addConverter(convertPrivilegesToArr);
 	}
 	
 	@Override

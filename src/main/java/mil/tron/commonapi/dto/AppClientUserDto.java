@@ -1,7 +1,7 @@
 package mil.tron.commonapi.dto;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import javax.validation.constraints.NotBlank;
@@ -35,5 +35,5 @@ public class AppClientUserDto {
 	@Getter
 	@Setter
 	@Builder.Default
-	private Set<Privilege> privileges = new HashSet<>();
+	private List<Privilege> privileges = new ArrayList<>();
 }
