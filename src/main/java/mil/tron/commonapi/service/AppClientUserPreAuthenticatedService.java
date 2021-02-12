@@ -7,6 +7,7 @@ import java.util.Set;
 
 import javax.transaction.Transactional;
 
+import mil.tron.commonapi.entity.DashboardUser;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.AuthenticationUserDetailsService;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.DashboardUserRepository;
 
 /**
  * PreAuthenticated service for use with Client Users that is an Application.
@@ -28,6 +30,7 @@ import mil.tron.commonapi.repository.AppClientUserRespository;
 public class AppClientUserPreAuthenticatedService implements AuthenticationUserDetailsService<PreAuthenticatedAuthenticationToken> {
 	
 	private AppClientUserRespository repository;
+	private DashboardUserRepository dashboardUserRepository;
 	
 	public AppClientUserPreAuthenticatedService(AppClientUserRespository repository) {
 		this.repository = repository;
@@ -36,10 +39,21 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 	@Transactional
 	@Override
 	public UserDetails loadUserDetails(PreAuthenticatedAuthenticationToken token) throws UsernameNotFoundException {
-		AppClientUser user = repository.findByNameIgnoreCase(token.getName()).orElseThrow(() -> new UsernameNotFoundException("Username not found: " + token.getName()));
-		List<GrantedAuthority> privileges = createPrivileges(user.getPrivileges());
+		String userDetailKey = token.getName();
 
-		return new User(user.getName(), "N/A", privileges);
+		List<GrantedAuthority> privileges = new ArrayList<>();
+
+		if (userDetailKey.contains("@")) {
+
+//			DashboardUser dashboardUser = dashboardUserRepository.findByEmail
+//			privileges = createPrivileges(dashboardUser.getPrivileges());
+		} else {
+			AppClientUser user = repository.findByNameIgnoreCase(token.getName()).orElseThrow(() -> new UsernameNotFoundException("Username not found: " + token.getName()));
+			privileges = createPrivileges(user.getPrivileges());
+		}
+
+
+		return new User(userDetailKey, "N/A", privileges);
 	}
 	
 	private List<GrantedAuthority> createPrivileges(Set<Privilege> privileges) {
