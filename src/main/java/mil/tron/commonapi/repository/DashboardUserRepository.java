@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface DashboardUserRepository extends CrudRepository<DashboardUser, UUID> {
-//    public Optional<DashboardUser> findByEmailIgnoreCase(String name);   //extends normal crud
+    public Optional<DashboardUser> findByEmailIgnoreCase(String name);
 }

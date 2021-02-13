@@ -2,7 +2,6 @@ package mil.tron.commonapi.controller;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
-import mil.tron.commonapi.entity.Airman;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.springframework.http.HttpStatus;

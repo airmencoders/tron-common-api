@@ -47,6 +47,10 @@ public class DashboardUser {
         sanitizeNameForUniqueConstraint();
     }
 
+//    public void setPrivilege(Set<Privilege> privileges) {
+//        this.privileges = privileges;
+//    }
+
     private void sanitizeNameForUniqueConstraint() {
         emailAsLower = email == null ? null : email.toLowerCase();
     }
