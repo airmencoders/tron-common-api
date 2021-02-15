@@ -29,7 +29,6 @@ public class AppClientUserDto {
 	
 	@Getter
 	@Setter
-	@NotBlank
 	private String name;
 	
 	@Getter

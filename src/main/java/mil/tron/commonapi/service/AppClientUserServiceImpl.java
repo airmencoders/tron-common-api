@@ -69,6 +69,11 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		if (dbUser.isEmpty())
 			throw new RecordNotFoundException("Resource with the ID: " + id + " does not exist.");
 		
+		// Set the name if not subject to be changed
+		if (appClient.getName() == null) {
+			appClient.setName(dbUser.get().getName());
+		}
+		
 		// Check for name uniqueness
 		if (!isNameUnique(appClient, dbUser)) {
 			throw new InvalidRecordUpdateRequest(String.format("Client Name: %s is already in use.", appClient.getName()));
@@ -81,8 +86,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	}
 	
 	private boolean isNameUnique(AppClientUserDto appClient, Optional<AppClientUser> dbUser) {
-		return appClient.getName() == null 
-				|| (dbUser.isPresent() && appClient.getName().equalsIgnoreCase(dbUser.get().getName())) 
+		return (dbUser.isPresent() && appClient.getName().equalsIgnoreCase(dbUser.get().getName())) 
 				|| userRepository.findByNameIgnoreCase(appClient.getName()).isEmpty();
 	}
 	
