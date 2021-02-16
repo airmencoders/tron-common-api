@@ -57,32 +57,6 @@ public class Person {
     @Setter
     private String email;
 
-
-    /**
-     * An airman's Air Force Specialty Code.
-     * e.g. "17D" is cyber warfare officer.
-     */
-    @Getter
-    @Setter
-    private String afsc;
-
-    /**
-     * An airman's Expiration of Term of Service.
-     * e.g. When their enlistment expires - N/A for officers
-     */
-    @Getter
-    @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-    private Date etsDate;
-
-    /**
-     * An airman's date of most recent physical fitness evalulation.
-     */
-    @Getter
-    @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-    private Date ptDate;
-
     /**
      * An 10-digit airman's DOD Identification number.
      */
@@ -95,13 +69,6 @@ public class Person {
     //  value in string output if the dodid had leading zeros, this was it stays literal
 
     /**
-     * Integrated Maintenance Data System id
-     */
-    @Getter
-    @Setter
-    private String imds;
-
-    /**
      * Service member's rank
      */
     @Getter
@@ -111,85 +78,11 @@ public class Person {
 
     @Getter
     @Setter
-    private String unit;
-
-    /**
-     * Service member's owning Wing
-     */
-    @Getter
-    @Setter
-    private String wing;
-
-    /**
-     * Service member's owning Group
-     */
-    @Getter
-    @Setter
-    private String gp;
-
-    /**
-     * Service member's owning squadron
-     */
-    @Getter
-    @Setter
-    private String squadron;
-
-    /**
-     * Work Center (Office Symbol)
-     */
-    @Getter
-    @Setter
-    private String wc;
-
-    /**
-     * ID in the GO81 training requirements system
-     */
-    @Getter
-    @Setter
-    private String go81;
-
-    /**
-     * Date current rank was obtained (date of rank)
-     */
-    @Getter
-    @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-    private Date dor;
-
-    /**
-     * Date estimated return from overseas (DEROS)
-     */
-    @Getter
-    @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-    private String deros;
-
-    @Getter
-    @Setter
     private String phone;
 
     @Getter
     @Setter
     private String address;
-
-    /**
-     * General purpose flag used by Tempest
-     */
-    @Getter
-    @Setter
-    private boolean admin;
-
-    @Getter
-    @Setter
-    private String fltChief;
-
-    @Getter
-    @Setter
-    private boolean approved;
-
-    @Getter
-    @Setter
-    private String manNumber;
 
     @Getter
     @Setter
@@ -209,9 +102,7 @@ public class Person {
      */
     @JsonIgnore
     private String emailAsLower;
-    
 
-    
     @Override
     public boolean equals(Object other) {
         if (other == null) {
@@ -274,20 +165,9 @@ public class Person {
         lastName = trim(lastName);
         title = trim(title);
         email = trim(email);
-        afsc = trim(afsc);
         dodid = trim(dodid);
-        imds = trim(imds);
-        unit = trim(unit);
-        wing = trim(wing);
-        gp = trim(gp);
-        squadron = trim(squadron);
-        wc = trim(wc);
-        go81 = trim(go81);
-        deros = trim(deros);
         phone = trim(phone);
         address = trim(address);
-        fltChief = trim(fltChief);
-        manNumber = trim(manNumber);
         dutyTitle = trim(dutyTitle);
     }
 

@@ -19,4 +19,5 @@ public interface PersonService {
 
 	PersonDto convertToDto(Person entity);
 	Person convertToEntity(PersonDto dto);
+	PersonDto loadMetadata(PersonDto dto, String properties);
 }

@@ -3,7 +3,6 @@ package mil.tron.commonapi.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.PersonService;
@@ -82,6 +81,7 @@ public class PersonControllerTest {
 		@Test
 		void testGetById() throws Exception {
 			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class))).thenReturn(testPerson);
+			Mockito.when(personService.loadMetadata(Mockito.any(), Mockito.any())).thenReturn(testPerson);
 			
 			mockMvc.perform(get(ENDPOINT + "{id}", testPerson.getId()))
 				.andExpect(status().isOk())

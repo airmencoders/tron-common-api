@@ -64,9 +64,11 @@ public class PersonController {
 	@PreAuthorizeRead
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<PersonDto> getPerson(
-			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId) {
+			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId,
+			@Parameter(name = "meta", description = "Comma separated list of metadata properties to include", required = false)
+				@RequestParam(name = "meta", required = false) String meta) {
 
-		PersonDto person = personService.getPersonDto(personId);
+		PersonDto person = personService.loadMetadata(personService.getPersonDto(personId), meta);
 		return new ResponseEntity<>(person, HttpStatus.OK);
 	}
 	

@@ -1,15 +1,14 @@
 package mil.tron.commonapi.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.modelmapper.Conditions;
@@ -26,12 +25,14 @@ public class PersonServiceImpl implements PersonService {
 	private PersonRepository repository;
 	private PersonUniqueChecksService personChecksService;
 	private RankRepository rankRepository;
+	private PersonMetadataRepository personMetadataRepository;
 	private final DtoMapper modelMapper;
 
-	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository) {
+	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository, PersonMetadataRepository personMetadataRepository) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
+		this.personMetadataRepository = personMetadataRepository;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 	}
@@ -42,10 +43,12 @@ public class PersonServiceImpl implements PersonService {
 		if (repository.existsById(entity.getId()))
 			throw new ResourceAlreadyExistsException("Person resource with the id: " + entity.getId() + " already exists.");
 
-		if(!personChecksService.personEmailIsUnique(entity))
+		if (!personChecksService.personEmailIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
-			
-		return convertToDto(repository.save(entity));
+
+		PersonDto result = convertToDto(repository.save(entity));
+		updateMetadata(dto);
+		return result;
 	}
 
 	@Override
@@ -54,25 +57,32 @@ public class PersonServiceImpl implements PersonService {
 		// Ensure the id given matches the id of the object given
 		if (!id.equals(entity.getId()))
 			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, entity.getId()));
-		
+
 		Optional<Person> dbPerson = repository.findById(id);
-		
+
 		if (dbPerson.isEmpty())
 			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
-		
+
 		if (!personChecksService.personEmailIsUnique(entity)) {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
-		
-		return convertToDto(repository.save(entity));
+
+		PersonDto result = convertToDto(repository.save(entity));
+		updateMetadata(dto);
+		return result;
+	}
+
+	private void updateMetadata(PersonDto dto) {
+		if (dto.getMeta() != null) {
+			dto.getMeta().forEach((key, value) -> personMetadataRepository.save(new PersonMetadata(dto.getId(), key, value)));
+		}
 	}
 
 	@Override
 	public void deletePerson(UUID id) {
 		if (repository.existsById(id)) {
 			repository.deleteById(id);
-		}
-		else {
+		} else {
 			throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
 		}
 	}
@@ -96,7 +106,7 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public boolean exists(UUID id){
+	public boolean exists(UUID id) {
 		return repository.existsById(id);
 	}
 
@@ -125,5 +135,17 @@ public class PersonServiceImpl implements PersonService {
 		Person entity = modelMapper.map(dto, Person.class);
 		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
 		return entity;
+	}
+
+	@Override
+	public PersonDto loadMetadata(PersonDto dto, String properties) {
+		if (properties != null) {
+			personMetadataRepository
+					.findAllById(Arrays.stream(properties.split(","))
+							.map(prop -> new PersonMetadata.PersonMetadataPK(dto.getId(), prop))
+							.collect(Collectors.toList()))
+					.forEach(prop -> dto.setMetaProperty(prop.getKey(), prop.getValue()));
+		}
+		return dto;
 	}
 }
