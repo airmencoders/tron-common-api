@@ -16,7 +16,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import javax.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -26,7 +25,7 @@ import java.util.regex.Pattern;
 
 /**
  * Service that fires off messages to subscribers for various events.  Entity listeners
- * call {@link EventPublisher#publishEvent(EventType, String, String, Object)} to launch an asynchronous
+ * call {@link EventPublisher#publishEvent(EventType, String, String, Object, String)} to launch an asynchronous
  * broadcast to subscribers to the provided event type.
  */
 @Service
@@ -53,37 +52,14 @@ public class EventPublisher {
     @Qualifier("eventSender")
     private RestTemplate publisherSender;
 
-    @Autowired
-    private HttpServletRequest servletRequest;
+    private static final String NAMESPACE_REGEX =
+            "(?:http://[^\\\\.]+\\.([^\\\\.]+)(?=\\.svc\\.cluster\\.local))" +  // match format for cluster-local URI
+                    "|http://localhost:([0-9]+)";  // alternatively match localhost for dev/test
 
-    private static final String NAMESPACE_REGEX = "http://[^\\\\.]+\\.([^\\\\.]+)(?=\\.svc\\.cluster\\.local)";
     private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
 
     public EventPublisher(SubscriberService subService) {
         this.subService = subService;
-    }
-
-    /**
-     * Called by Entity Listeners for various types of JPA persistence changes.  Non-blocking operation.
-     * @param type {@link EventType} type event to broadcast
-     * @param message String message to send to subscribers
-     * @param className the className of the entity that is the reason for this message
-     * @param data data from the listener to embed into the push message
-     */
-    @Async
-    public void publishEvent(EventType type, String message, String className, Object data) {
-
-        // grab the requester from the x-forwarded-client-cert header
-        //  so we can pass to pushevent - so that it knows not to push an event back to
-        //  the requester
-        String header = servletRequest.getHeader("x-forwarded-client-cert");
-        String namespace = null;
-        if (header != null) {
-            String uri = AppClientPreAuthFilter.extractUriFromXfccHeader(header);
-            namespace = AppClientPreAuthFilter.extractNamespaceFromUri(uri);
-        }
-
-        pushEvent(type, message, className, data, namespace);
     }
 
     /**
@@ -92,18 +68,25 @@ public class EventPublisher {
      * @param message
      * @param className
      * @param data
-     * @param requesterNamespace
+     * @param xfccHeader
      */
-    private void pushEvent(EventType type, String message, String className, Object data, String requesterNamespace) {
-        List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(type));
+    @Async
+    public void publishEvent(EventType type, String message, String className, Object data, String xfccHeader) {
+        System.out.println("HEADER: " + xfccHeader);
+        String requesterNamespace = null;
+        if (xfccHeader != null) {
+            String uri = AppClientPreAuthFilter.extractUriFromXfccHeader(xfccHeader);
+            requesterNamespace = AppClientPreAuthFilter.extractNamespaceFromUri(uri);
+        }
 
+        List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(type));
         Map<String, Object> messageDetails = new HashMap<>();
         messageDetails.put("event", type.toString());
         messageDetails.put("type", className);
         messageDetails.put("message", message);
         messageDetails.put("data", data);
         for (Subscriber s : subscribers) {
-            String a = extractSubscriberNamespace(s.getSubscriberAddress());
+
             // only push to everyone but the requester (if the requester is a subscriber)
             if (!extractSubscriberNamespace(s.getSubscriberAddress()).equals(requesterNamespace)) {
                 publisherLog.info("[PUBLISH BROADCAST] - Event: " + type.toString() + " Message: " + message + " to Subscriber: " + s.getSubscriberAddress());
@@ -119,14 +102,24 @@ public class EventPublisher {
         publisherLog.info("[PUBLISH BROADCAST COMPLETE]");
     }
 
+    /**
+     * Extracts the namespace from a cluster-local URI that is a subscriber's registered webhook URL
+     * This is not to be confused with the URI in the XFCC header that Istio injects, that is something different.
+     * This one has a format like http://app-name.ns.svc.cluster.local/ and represents a dns name local to the cluster
+     * Alternatively for dev and test, it will be in format of http://localhost:(\d+), where the port number will
+     * be the 'namespace'
+     * @param uri Registered URL of the subscriber getting a broadcast
+     * @return Namespace of the subscriber's webhook URL, or "" blank string if no namespace found
+     */
     public String extractSubscriberNamespace(String uri) {
         if (uri == null) return "";
 
         // namespace in a cluster local address should be 2nd element in the URI
         Matcher extractNs = NAMESPACE_PATTERN.matcher(uri);
-        if (extractNs.find())
-            return extractNs.group(1);
-        else
-            return "";
+        int c = extractNs.groupCount();
+        boolean found = extractNs.find();
+        if (found && extractNs.group(1) != null) return extractNs.group(1);  // matched P1 cluster-local format
+        else if (found && extractNs.group(2) != null) return extractNs.group(2);  // matched localhost format
+        else return "";  // no matches found
     }
 }

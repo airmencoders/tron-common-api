@@ -19,7 +19,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.net.URI;
@@ -38,8 +37,6 @@ public class EventPublisherTest {
     @MockBean
     private SubscriberService subService;
 
-    @MockBean(name="servletRequest")
-    private HttpServletRequest testRequest;
 
     @MockBean(name="eventSender")
     private RestTemplate publisherSender;
@@ -48,9 +45,10 @@ public class EventPublisherTest {
     private PrintStream originalSystemOut = System.out;
     private final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
 
-    // mimic real-formatted x-forwarded-client-cert header field that would be from a POST'r to the common api
-    //  we'll see thru the code that this POST-r XFCC header is from puckboard and wont send push notification to puckboard
-    //  since they're the ones that originated it
+    // mimic a real-formatted x-forwarded-client-cert header field that would be from a POST'r to the common api
+    //  we'll see thru the code that this POSTr's XFCC header is from puckboard.
+    //  The logic should see change is from puckboard and thus wont send push notification back to puckboard
+    //  since they're the ones that originated the change
     private final String uri = "By=spiffe://cluster.local/ns/tron-common-api/sa/default;Hash=blah;Subject=\"\";URI=spiffe://cluster.local/ns/tron-puckboard/sa/default";
 
     @BeforeEach
@@ -81,13 +79,12 @@ public class EventPublisherTest {
     @Test
     void testAsyncPublish() {
 
-        Mockito.when(testRequest.getHeader("x-forwarded-client-cert")).thenReturn(uri);
         Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventType.class)))
                 .thenReturn(Lists.newArrayList(subscriber, subscriber2));
         Mockito.when(publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
                 .thenReturn(URI.create(subscriber.getSubscriberAddress()));
 
-        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person());
+        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person(), uri);
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting captured
@@ -102,6 +99,29 @@ public class EventPublisherTest {
     }
 
     @Test
+    void testAsyncPublishWithMalformedXFCCHeader() {
+        // a malformed XFCC should just be ignored
+
+        Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventType.class)))
+                .thenReturn(Lists.newArrayList(subscriber, subscriber2));
+        Mockito.when(publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
+                .thenReturn(URI.create(subscriber.getSubscriberAddress()));
+
+        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person(), "");
+
+        // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
+        // a race condition on the logging output getting captured
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+
+        String out = outputStreamCaptor.toString();
+        assertTrue(outputStreamCaptor.toString().contains("[PUBLISH BROADCAST]"));
+        assertFalse(outputStreamCaptor.toString().contains("[PUBLISH ERROR]"));
+
+        assertEquals(2, StringUtils.countOccurrencesOf(outputStreamCaptor.toString(), "[PUBLISH BROADCAST]"));
+
+    }
+
+    @Test
     void testAsyncPublishFails() {
 
         Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventType.class)))
@@ -111,7 +131,7 @@ public class EventPublisherTest {
                 publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
                 .thenThrow(new RestClientException("Exception"));
 
-        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person());
+        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person(), uri);
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting capture
@@ -125,6 +145,7 @@ public class EventPublisherTest {
         assertEquals("tron-puckboard", publisher.extractSubscriberNamespace("http://puckboard-api-service.tron-puckboard.svc.cluster.local/puckboard-api/v1"));
         assertEquals("", publisher.extractSubscriberNamespace("http://cvc.cluster.local/puckboard-api/v1"));
         assertEquals("", publisher.extractSubscriberNamespace("http://svc.cluster.local/puckboard-api/v1"));
+        assertEquals("3000", publisher.extractSubscriberNamespace("http://localhost:3000"));
         assertEquals("", publisher.extractSubscriberNamespace(null));
     }
 }
