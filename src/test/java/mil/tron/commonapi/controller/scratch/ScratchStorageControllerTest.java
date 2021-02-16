@@ -1,7 +1,11 @@
 package mil.tron.commonapi.controller.scratch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
+import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
+import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +24,8 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.AdditionalAnswers.returnsSecondArg;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -28,6 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ScratchStorageControllerTest {
 
     private static final String ENDPOINT = "/v1/scratch/";
+    private static final String SCRATCH_ENDPOINT = "/v1/scratch/apps/";
+    private static final String SCRATCH_PRIVS_ENDPOINT = "/v1/scratch/privs/";
+    private static final String SCRATCH_USERS_ENDPOINT = "/v1/scratch/users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -37,6 +46,26 @@ public class ScratchStorageControllerTest {
     private ScratchStorageService service;
 
     private List<ScratchStorageEntry> entries = new ArrayList<>();
+    private List<ScratchStorageAppRegistryEntry> registeredApps = new ArrayList<>();
+    private List<ScratchStorageAppUserPriv> registeredAppsUserPrivs = new ArrayList<>();
+
+    private ScratchStorageUser user1 = ScratchStorageUser
+            .builder()
+            .id(UUID.randomUUID())
+            .email("john@test.com")
+            .build();
+
+    private Privilege privRead = Privilege
+            .builder()
+            .id(10L)
+            .name("READ")
+            .build();
+
+    private Privilege privWrite = Privilege
+            .builder()
+            .id(11L)
+            .name("WRITE")
+            .build();
 
     @BeforeEach
     void setup() {
@@ -53,6 +82,37 @@ public class ScratchStorageControllerTest {
                 .key("some key")
                 .value("value")
                 .build());
+
+        registeredApps.add(ScratchStorageAppRegistryEntry
+                .builder()
+                .id(UUID.randomUUID())
+                .appName("Area51")
+                .build());
+
+        registeredApps.add(ScratchStorageAppRegistryEntry
+                .builder()
+                .id(UUID.randomUUID())
+                .appName("CoolApp")
+                .build());
+
+        // user1 can READ from the Area51 space
+        registeredAppsUserPrivs.add(ScratchStorageAppUserPriv
+                .builder()
+                .id(UUID.randomUUID())
+                .app(registeredApps.get(0))
+                .user(user1)
+                .privilege(privRead)
+                .build());
+
+        // user1 can WRITE from the Area51 space
+        registeredAppsUserPrivs.add(ScratchStorageAppUserPriv
+                .builder()
+                .id(UUID.randomUUID())
+                .app(registeredApps.get(0))
+                .user(user1)
+                .privilege(privWrite)
+                .build());
+
     }
 
     @Test
@@ -140,5 +200,210 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(delete(ENDPOINT + "{appId}/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appId", equalTo(entries.get(0).getAppId().toString())));
+    }
+
+    // test out the app registration endpoints
+
+    @Test
+    void testGetAllRegisteredApps() throws Exception {
+        // test we can get all registered apps
+
+        Mockito.when(service.getAllRegisteredScratchApps()).thenReturn(registeredApps);
+
+        mockMvc.perform(get(SCRATCH_ENDPOINT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    @Test
+    void testAddNewRegisteredApp() throws Exception {
+        // test we can add a new app
+
+        Mockito.when(service.addNewScratchAppName(Mockito.any(ScratchStorageAppRegistryEntry.class)))
+                .then(returnsFirstArg());
+
+        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+                .builder()
+                .id(null)
+                .appName("TestApp")
+                .build();
+
+        mockMvc.perform(post(SCRATCH_ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newEntry)))
+                .andExpect(status().isCreated())
+                .andExpect(result ->
+                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryEntry.class).getAppName()));
+    }
+
+    @Test
+    void testEditRegisteredApp() throws Exception {
+        // test we can edit an existing app entry
+
+        Mockito.when(service.editExistingScratchAppEntry(Mockito.any(UUID.class), Mockito.any(ScratchStorageAppRegistryEntry.class)))
+                .then(returnsSecondArg());
+
+        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+                .builder()
+                .id(UUID.randomUUID())
+                .appName("TestApp")
+                .build();
+
+        mockMvc.perform(put(SCRATCH_ENDPOINT + "{id}", newEntry.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newEntry)))
+                .andExpect(status().isOk())
+                .andExpect(result ->
+                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryEntry.class).getAppName()));
+    }
+
+    @Test
+    void testDeleteRegisteredApp() throws Exception {
+        // test we can delete a registered app
+
+        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+                .builder()
+                .id(UUID.randomUUID())
+                .appName("TestApp")
+                .build();
+
+        Mockito.when(service.deleteScratchStorageApp(Mockito.any(UUID.class))).thenReturn(newEntry);
+
+        mockMvc.perform(delete(SCRATCH_ENDPOINT + "{id}", newEntry.getId()))
+                .andExpect(status().isOk())
+                .andExpect(result ->
+                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryEntry.class).getAppName()));
+    }
+
+    // test out the app-user-priv endpoints
+
+    @Test
+    void testGetAllAppUserPrivsList() throws Exception {
+        // test we can get all of the registered app-user privs table
+
+        Mockito.when(service.getAllAppsToUsersPrivs()).thenReturn(registeredAppsUserPrivs);
+        mockMvc.perform(get(SCRATCH_PRIVS_ENDPOINT)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    @Test
+    void testGetAllPrivsByAppId() throws Exception {
+        // test we can get all the privs for a given app id
+        Mockito.when(service.getAllPrivsForAppId(Mockito.any(UUID.class))).thenReturn(Lists.newArrayList(registeredAppsUserPrivs.get(0)));
+        mockMvc.perform(get(SCRATCH_PRIVS_ENDPOINT + "{id}", UUID.randomUUID()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void testAddNewAppUserPriv() throws Exception {
+        // test we can add a new App-User priv entry
+
+        ScratchStorageAppUserPriv entry = ScratchStorageAppUserPriv
+                .builder()
+                .id(UUID.randomUUID())
+                .app(registeredApps.get(0))
+                .user(user1)
+                .privilege(privRead)
+                .build();
+
+        Mockito.when(service.addNewUserAppPrivilegeEntry(Mockito.any(ScratchStorageAppUserPriv.class)))
+                .then(returnsFirstArg());
+
+        mockMvc.perform(post(SCRATCH_PRIVS_ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(entry)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id", equalTo(entry.getId().toString())));
+    }
+
+    @Test
+    void testEditAppUserPriv() throws Exception {
+        // test we can edit an existing app-user priv entry
+
+        ScratchStorageAppUserPriv entry = ScratchStorageAppUserPriv
+                .builder()
+                .id(UUID.randomUUID())
+                .app(registeredApps.get(0))
+                .user(user1)
+                .privilege(privRead)
+                .build();
+
+        Mockito.when(service.editUserAppPrivilegeEntry(Mockito.any(UUID.class), Mockito.any(ScratchStorageAppUserPriv.class)))
+                .then(returnsSecondArg());
+
+        mockMvc.perform(put(SCRATCH_PRIVS_ENDPOINT + "{id}", entry.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(entry)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(entry.getId().toString())));
+    }
+
+    @Test
+    void testDeleteAppUserPriv() throws Exception {
+        // test we can delete an app-user priv
+
+        ScratchStorageAppUserPriv entry = ScratchStorageAppUserPriv
+                .builder()
+                .id(UUID.randomUUID())
+                .app(registeredApps.get(0))
+                .user(user1)
+                .privilege(privRead)
+                .build();
+
+        Mockito.when(service.deleteUserAppPrivilege(Mockito.any(UUID.class)))
+                .thenReturn(entry);
+
+        mockMvc.perform(delete(SCRATCH_PRIVS_ENDPOINT + "{id}", entry.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(entry.getId().toString())));
+    }
+
+    // test out the scratch user management endpoints
+
+    @Test
+    void testGetAllScratchUsers() throws Exception {
+        // test we can get all the scratch users
+
+        Mockito.when(service.getAllScratchUsers()).thenReturn(Lists.newArrayList(user1));
+        mockMvc.perform(get(SCRATCH_USERS_ENDPOINT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void testAddNewScratchUser() throws Exception {
+        // test we can add a new user to the scratch users so they can get a UUID
+
+        Mockito.when(service.addNewScratchUser(Mockito.any(ScratchStorageUser.class))).thenReturn(user1);
+        mockMvc.perform(post(SCRATCH_USERS_ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user1)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id", equalTo(user1.getId().toString())));
+    }
+
+    @Test
+    void testEditScratchUser() throws Exception {
+        // test we can edit a user to the scratch user
+
+        Mockito.when(service.editScratchUser(Mockito.any(UUID.class), Mockito.any(ScratchStorageUser.class)))
+                .then(returnsSecondArg());
+
+        mockMvc.perform(put(SCRATCH_USERS_ENDPOINT + "{id}", user1.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(user1.getId().toString())));
+    }
+
+    @Test
+    void testDeleteScratchUser() throws Exception {
+        // test we can delete a scratch user
+
+        Mockito.when(service.deleteScratchUser(Mockito.any(UUID.class))).thenReturn(user1);
+
+        mockMvc.perform(delete(SCRATCH_USERS_ENDPOINT + "{id}", user1.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(user1.getId().toString())));
     }
 }

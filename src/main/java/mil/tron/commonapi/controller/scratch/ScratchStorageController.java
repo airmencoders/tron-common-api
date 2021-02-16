@@ -1,6 +1,9 @@
 package mil.tron.commonapi.controller.scratch;
 
+import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
+import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
+import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,5 +51,81 @@ public class ScratchStorageController {
     @DeleteMapping("/{appId}")
     public ResponseEntity<Object> deleteAllKeyValuePairsForAppId(@PathVariable UUID appId) {
         return new ResponseEntity<>(scratchStorageService.deleteAllKeyValuePairsForAppId(appId), HttpStatus.OK);
+    }
+
+    // scratch app registration/management endpoints...
+
+    /**
+     * Gets the entire table of Scratch Storage apps that are registered with Common API
+     * @return returns list of the appnames and the UUIDs they are registered under
+     */
+    @GetMapping("/apps")
+    public ResponseEntity<Object> getScratchSpaceApps() {
+        return new ResponseEntity<>(scratchStorageService.getAllRegisteredScratchApps(), HttpStatus.OK);
+    }
+
+    @PostMapping("/apps")
+    public ResponseEntity<Object> postNewScratchSpaceApp(@Valid @RequestBody ScratchStorageAppRegistryEntry entry) {
+        return new ResponseEntity<>(scratchStorageService.addNewScratchAppName(entry), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/apps/{id}")
+    public ResponseEntity<Object> editExistingAppEntry(@PathVariable UUID id, @Valid @RequestBody ScratchStorageAppRegistryEntry entry) {
+        return new ResponseEntity<>(scratchStorageService.editExistingScratchAppEntry(id, entry), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/apps/{id}")
+    public ResponseEntity<Object> deleteExistingAppEntry(@PathVariable UUID id) {
+        return new ResponseEntity<>(scratchStorageService.deleteScratchStorageApp(id), HttpStatus.OK);
+    }
+
+
+    // scratch app user/privilege management endpoints...
+
+    @GetMapping("/privs")
+    public ResponseEntity<Object> getScratchSpaceAppsToUsersPrivs() {
+        return new ResponseEntity<>(scratchStorageService.getAllAppsToUsersPrivs(), HttpStatus.OK);
+    }
+
+    @GetMapping("/privs/{appId}")
+    public ResponseEntity<Object> getScratchSpaceAppsToUsersPrivs(@PathVariable UUID appId) {
+        return new ResponseEntity<>(scratchStorageService.getAllPrivsForAppId(appId), HttpStatus.OK);
+    }
+
+    @PostMapping("/privs")
+    public ResponseEntity<Object> addNewScratchAppUserPriv(@Valid @RequestBody ScratchStorageAppUserPriv entry) {
+        return new ResponseEntity<>(scratchStorageService.addNewUserAppPrivilegeEntry(entry), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/privs/{id}")
+    public ResponseEntity<Object> editExistingScratchAppUserPriv(@PathVariable UUID id, @Valid @RequestBody ScratchStorageAppUserPriv entry) {
+        return new ResponseEntity<>(scratchStorageService.editUserAppPrivilegeEntry(id, entry), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/privs/{id}")
+    public ResponseEntity<Object> deleteAppUserPrivEntry(@PathVariable UUID id) {
+        return new ResponseEntity<>(scratchStorageService.deleteUserAppPrivilege(id), HttpStatus.OK);
+    }
+
+    // scratch app user management endpoints
+
+    @GetMapping("/users")
+    public ResponseEntity<Object> getAllUsers() {
+        return new ResponseEntity<>(scratchStorageService.getAllScratchUsers(), HttpStatus.OK);
+    }
+
+    @PostMapping("/users")
+    public ResponseEntity<Object> addNewScratchUser(@Valid @RequestBody ScratchStorageUser user) {
+        return new ResponseEntity<>(scratchStorageService.addNewScratchUser(user), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/users/{id}")
+    public ResponseEntity<Object> editScratchUser(@PathVariable UUID id, @Valid @RequestBody ScratchStorageUser user) {
+        return new ResponseEntity<>(scratchStorageService.editScratchUser(id, user), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Object> deleteScratchUser(@PathVariable UUID id) {
+        return new ResponseEntity<>(scratchStorageService.deleteScratchUser(id), HttpStatus.OK);
     }
 }

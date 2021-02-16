@@ -10,6 +10,9 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.util.UUID;
 
+/**
+ * This is the table/entries representation of the scratch storage area of key/value pairs
+ */
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
