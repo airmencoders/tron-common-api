@@ -1,6 +1,8 @@
 package mil.tron.commonapi.service.scratch;
 
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
@@ -8,6 +10,7 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
@@ -24,18 +27,21 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     private ScratchStorageRepository repository;
     private ScratchStorageAppRegistryEntryRepository appRegistryRepo;
-    private ScratchStorageAppUserPrivRepository appUserPrivsRepo;
     private ScratchStorageUserRepository scratchUserRepo;
+    private ScratchStorageAppUserPrivRepository appPrivRepo;
+    private PrivilegeRepository privRepo;
 
 
     public ScratchStorageServiceImpl(ScratchStorageRepository repository,
                                      ScratchStorageAppRegistryEntryRepository appRegistryRepo,
-                                     ScratchStorageAppUserPrivRepository appUserPrivsRepo,
-                                     ScratchStorageUserRepository scratchUserRepo) {
+                                     ScratchStorageUserRepository scratchUserRepo,
+                                     ScratchStorageAppUserPrivRepository appPrivRepo,
+                                     PrivilegeRepository privRepo) {
         this.repository = repository;
         this.appRegistryRepo = appRegistryRepo;
-        this.appUserPrivsRepo = appUserPrivsRepo;
         this.scratchUserRepo = scratchUserRepo;
+        this.appPrivRepo = appPrivRepo;
+        this.privRepo = privRepo;
     }
 
     @Override
@@ -159,52 +165,60 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         return app;
     }
 
-    //
-    // scratch storage app to user priv management...
-
     @Override
-    public Iterable<ScratchStorageAppUserPriv> getAllAppsToUsersPrivs() {
-        return appUserPrivsRepo.findAll();
+    public ScratchStorageAppRegistryEntry addUserPrivToApp(UUID appId, ScratchStorageAppUserPrivDto priv) {
+
+        ScratchStorageAppRegistryEntry app = appRegistryRepo.findById(appId)
+                .orElseThrow(() -> new RecordNotFoundException("Cannot find app with UUID: " + appId));
+
+        ScratchStorageAppUserPriv entity =  this.mapUserPrivDtoToEntity(priv);
+
+        // save the app user priv entity to db
+        appPrivRepo.save(entity);
+
+        app.addUserAndPriv(entity);
+        return appRegistryRepo.save(app);
     }
 
     @Override
-    public Iterable<ScratchStorageAppUserPriv> getAllPrivsForAppId(UUID appId) {
-        return appUserPrivsRepo.findAllByAppId(appId);
+    public ScratchStorageAppRegistryEntry removeUserPrivFromApp(UUID appId, UUID appPrivIdEntry) {
+
+        ScratchStorageAppRegistryEntry app = appRegistryRepo.findById(appId)
+                .orElseThrow(() -> new RecordNotFoundException("Cannot find app with UUID: " + appId));
+
+        ScratchStorageAppUserPriv priv = appPrivRepo.findById(appPrivIdEntry)
+                .orElseThrow(() -> new RecordNotFoundException("Cannot find that app-user priv entry with ID: " + appPrivIdEntry));
+
+        app.removeUserAndPriv(priv);
+
+        // delete the priv combo
+        appPrivRepo.deleteById(appPrivIdEntry);
+
+        return appRegistryRepo.save(app);
     }
 
-    @Override
-    public ScratchStorageAppUserPriv addNewUserAppPrivilegeEntry(ScratchStorageAppUserPriv appUserPriv) {
-        if (appUserPriv.getId() == null) {
-            appUserPriv.setId(UUID.randomUUID());
-        }
+    /**
+     * Private helper to unroll a ScratchStorageAppUserPrivDto into an entity.
+     * In these DTO types, the user and priv come in as a UUID
+     * @param dto
+     * @return the full blown entity of type ScratchStorageAppUserPriv
+     */
+    private ScratchStorageAppUserPriv mapUserPrivDtoToEntity(ScratchStorageAppUserPrivDto dto) {
 
-        if (appUserPrivsRepo.existsById(appUserPriv.getId())) {
-            throw new ResourceAlreadyExistsException("Scratch Space app-user-privilege binding with that UUID already exists");
-        }
+        ScratchStorageUser user = scratchUserRepo.findById(dto.getUserId())
+                .orElseThrow(() -> new RecordNotFoundException("User for privilege not found"));
 
-        return appUserPrivsRepo.save(appUserPriv);
-    }
+        Privilege priv = privRepo.findById(dto.getPrivilegeId())
+                .orElseThrow(() -> new RecordNotFoundException("Could not find privilege with ID: " + dto.getPrivilegeId()));
 
-    @Override
-    public ScratchStorageAppUserPriv editUserAppPrivilegeEntry(UUID id, ScratchStorageAppUserPriv appUserPriv) {
-        if (!id.equals(appUserPriv.getId()))
-            throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, appUserPriv.getId()));
+        ScratchStorageAppUserPriv entity = ScratchStorageAppUserPriv
+                .builder()
+                .id(dto.getId())
+                .user(user)
+                .privilege(priv)
+                .build();
 
-        if (!appUserPrivsRepo.existsById(appUserPriv.getId())) {
-            throw new RecordNotFoundException("Scratch Space app-user-privilege binding by that UUID does not exist");
-        }
-
-        return appUserPrivsRepo.save(appUserPriv);
-    }
-
-    @Override
-    public ScratchStorageAppUserPriv deleteUserAppPrivilege(UUID id) {
-        ScratchStorageAppUserPriv appUserPriv = appUserPrivsRepo.findById(id)
-                .orElseThrow(() -> new RecordNotFoundException("Cannot delete non-existent app-user-privilege with UUID: " + id));
-
-        appUserPrivsRepo.deleteById(id);
-
-        return appUserPriv;
+        return entity;
     }
 
     //

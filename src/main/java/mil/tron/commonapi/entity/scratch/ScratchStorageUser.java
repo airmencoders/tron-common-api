@@ -22,7 +22,8 @@ public class ScratchStorageUser {
     @Id
     @Getter
     @Setter
-    private UUID id;
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 
     @Getter
     @Setter

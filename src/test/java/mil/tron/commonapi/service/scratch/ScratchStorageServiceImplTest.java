@@ -2,6 +2,7 @@ package mil.tron.commonapi.service.scratch;
 
 
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
@@ -10,10 +11,12 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageUserRepository;
+import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,10 +25,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
@@ -38,6 +38,9 @@ public class ScratchStorageServiceImplTest {
 
     @Mock
     private ScratchStorageAppRegistryEntryRepository appRegistryRepo;
+
+    @Mock
+    private PrivilegeRepository privRepo;
 
     @Mock
     private ScratchStorageAppUserPrivRepository appPrivRepo;
@@ -62,7 +65,6 @@ public class ScratchStorageServiceImplTest {
 
     private List<ScratchStorageEntry> entries = new ArrayList<>();
     private List<ScratchStorageAppRegistryEntry> registeredApps = new ArrayList<>();
-    private List<ScratchStorageAppUserPriv> registeredAppsUserPrivs = new ArrayList<>();
 
     private ScratchStorageUser user1 = ScratchStorageUser
             .builder()
@@ -92,30 +94,36 @@ public class ScratchStorageServiceImplTest {
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("Area51")
+                .userPrivs(Set.of(
+                        ScratchStorageAppUserPriv
+                            .builder()
+                            .user(user1)
+                            .privilege(privRead)
+                            .build(),
+                        ScratchStorageAppUserPriv
+                            .builder()
+                            .user(user1)
+                            .privilege(privWrite)
+                            .build()
+                ))
                 .build());
 
         registeredApps.add(ScratchStorageAppRegistryEntry
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("CoolApp")
-                .build());
-
-        // user1 can READ from the Area51 space
-        registeredAppsUserPrivs.add(ScratchStorageAppUserPriv
-                .builder()
-                .id(UUID.randomUUID())
-                .app(registeredApps.get(0))
-                .user(user1)
-                .privilege(privRead)
-                .build());
-
-        // user1 can WRITE from the Area51 space
-        registeredAppsUserPrivs.add(ScratchStorageAppUserPriv
-                .builder()
-                .id(UUID.randomUUID())
-                .app(registeredApps.get(0))
-                .user(user1)
-                .privilege(privWrite)
+                .userPrivs(Set.of(
+                        ScratchStorageAppUserPriv
+                                .builder()
+                                .user(user1)
+                                .privilege(privRead)
+                                .build(),
+                        ScratchStorageAppUserPriv
+                                .builder()
+                                .user(user1)
+                                .privilege(privWrite)
+                                .build()
+                ))
                 .build());
 
     }
@@ -252,82 +260,77 @@ public class ScratchStorageServiceImplTest {
         assertThrows(RecordNotFoundException.class, () -> service.deleteScratchStorageApp(newEntry.getId()));
     }
 
-    // test scratch space app-user privilege services
-
     @Test
-    void testGetAllAppUserPrivs() {
-        Mockito.when(appPrivRepo.findAll()).thenReturn(registeredAppsUserPrivs);
-        assertEquals(registeredAppsUserPrivs.size(), Lists.newArrayList(service.getAllAppsToUsersPrivs()).size());
-    }
+    void testAddUserPrivToApp() {
 
-    @Test
-    void testGetAllPrivsForGivenAppId() {
-        Mockito.when(appPrivRepo.findAllByAppId(Mockito.any(UUID.class))).thenReturn(Lists.newArrayList(registeredAppsUserPrivs.get(0)));
-        assertEquals(1, Lists.newArrayList(service.getAllPrivsForAppId(UUID.randomUUID())).size());
-    }
-
-    @Test
-    void testAddNewAppUserPriv() {
-
-        ScratchStorageAppUserPriv entry = ScratchStorageAppUserPriv
-                .builder()
-                .id(null)
-                .app(registeredApps.get(0))
-                .user(user1)
-                .privilege(privRead)
-                .build();
-
-        Mockito.when(appPrivRepo.existsById(Mockito.any(UUID.class)))
-                .thenReturn(false)
-                .thenReturn(true);
-
-        Mockito.when(appPrivRepo.save(Mockito.any(ScratchStorageAppUserPriv.class))).then(returnsFirstArg());
-
-        assertNotNull(service.addNewUserAppPrivilegeEntry(entry).getId());
-        assertThrows(ResourceAlreadyExistsException.class, () -> service.addNewUserAppPrivilegeEntry(entry));
-    }
-
-    @Test
-    void testEditAppUserPriv() {
-
-        ScratchStorageAppUserPriv entry = ScratchStorageAppUserPriv
+        ScratchStorageAppUserPriv priv = ScratchStorageAppUserPriv
                 .builder()
                 .id(UUID.randomUUID())
-                .app(registeredApps.get(0))
                 .user(user1)
                 .privilege(privRead)
                 .build();
 
-        Mockito.when(appPrivRepo.existsById(Mockito.any(UUID.class)))
-                .thenReturn(true)
-                .thenReturn(false);
-
-        Mockito.when(appPrivRepo.save(Mockito.any(ScratchStorageAppUserPriv.class))).then(returnsFirstArg());
-
-        assertEquals(entry.getId(), service.editUserAppPrivilegeEntry(entry.getId(), entry).getId());
-        assertThrows(InvalidRecordUpdateRequest.class, () -> service.editUserAppPrivilegeEntry(UUID.randomUUID(), entry));
-        assertThrows(RecordNotFoundException.class, () -> service.editUserAppPrivilegeEntry(entry.getId(), entry));
-    }
-
-    @Test
-    void testDeleteAppUserPriv() {
-
-        ScratchStorageAppUserPriv entry = ScratchStorageAppUserPriv
+        ScratchStorageAppUserPrivDto dto = ScratchStorageAppUserPrivDto
                 .builder()
                 .id(UUID.randomUUID())
-                .app(registeredApps.get(0))
-                .user(user1)
-                .privilege(privRead)
+                .userId(UUID.randomUUID())
+                .privilegeId(1L)
                 .build();
 
-        Mockito.when(appPrivRepo.findById(Mockito.any(UUID.class)))
-                .thenReturn(Optional.of(entry))
+        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+                .builder()
+                .id(UUID.randomUUID())
+                .appName("TestApp")
+                .build();
+
+        Mockito.when(appPrivRepo.save(Mockito.any(ScratchStorageAppUserPriv.class))).then(returnsFirstArg());
+        Mockito.when(scratchUserRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(user1));
+        Mockito.when(privRepo.findById(Mockito.any(Long.class))).thenReturn(Optional.of(privRead));
+
+        Mockito.when(appRegistryRepo.save(Mockito.any(ScratchStorageAppRegistryEntry.class))).then(returnsFirstArg());
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(newEntry))
                 .thenReturn(Optional.empty());
 
+        assertEquals(1, service.addUserPrivToApp(newEntry.getId(), dto).getUserPrivs().size());
+        assertThrows(RecordNotFoundException.class, () -> service.addUserPrivToApp(newEntry.getId(), dto));
+    }
+
+    @Test
+    void testRemoveUserPrivToApp() {
+
+        ScratchStorageAppUserPriv priv = ScratchStorageAppUserPriv
+                .builder()
+                .id(UUID.randomUUID())
+                .user(user1)
+                .privilege(privRead)
+                .build();
+
+        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+                .builder()
+                .id(UUID.randomUUID())
+                .appName("TestApp")
+                .userPrivs(Sets.newHashSet(Lists.newArrayList(priv)))
+                .build();
+
+        ScratchStorageAppUserPrivDto dto = ScratchStorageAppUserPrivDto
+                .builder()
+                .id(priv.getId())
+                .userId(user1.getId())
+                .privilegeId(privRead.getId())
+                .build();
+
+        Mockito.when(appPrivRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(priv));
         Mockito.doNothing().when(appPrivRepo).deleteById(Mockito.any(UUID.class));
 
-        assertEquals(entry.getId(), service.deleteUserAppPrivilege(entry.getId()).getId());
-        assertThrows(RecordNotFoundException.class, () -> service.deleteUserAppPrivilege(UUID.randomUUID()));
+        Mockito.when(appRegistryRepo.save(Mockito.any(ScratchStorageAppRegistryEntry.class))).then(returnsFirstArg());
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(newEntry))
+                .thenReturn(Optional.empty());
+
+        assertEquals(0, service.removeUserPrivFromApp(newEntry.getId(), priv.getId()).getUserPrivs().size());
+        assertThrows(RecordNotFoundException.class, () -> service.removeUserPrivFromApp(newEntry.getId(), priv.getId()));
     }
 
     // test out the scratch user functions

@@ -5,7 +5,7 @@ import mil.tron.commonapi.entity.Privilege;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.ManyToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import java.util.UUID;
 
@@ -15,6 +15,7 @@ import java.util.UUID;
  */
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode
 @Builder
 @Entity
 @Table(name="scratch_storage_app_user_privs")
@@ -23,20 +24,17 @@ public class ScratchStorageAppUserPriv {
     @Id
     @Getter
     @Setter
-    private UUID id;
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 
     @Getter
     @Setter
-    @ManyToMany
-    private ScratchStorageAppRegistryEntry app;
-
-    @Getter
-    @Setter
+    @OneToOne
     private ScratchStorageUser user;
 
     @Getter
     @Setter
-    @ManyToMany
+    @OneToOne
     private Privilege privilege;
 
 }

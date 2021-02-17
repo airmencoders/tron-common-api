@@ -14,4 +14,56 @@
             <column name="value" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-9">
+        <createTable tableName="scratch_storage_app_registry">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="scratch_storage_app_registryPK"/>
+            </column>
+            <column name="app_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-10">
+        <createTable tableName="scratch_storage_app_registry_user_privs">
+            <column name="scratch_storage_app_registry_entry_id" type="UUID">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="user_privs_id" type="UUID">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-11">
+        <createTable tableName="scratch_storage_app_user_privs">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="scratch_storage_app_user_privsPK"/>
+            </column>
+            <column name="privilege_id" type="BIGINT"/>
+            <column name="user_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-12">
+        <createTable tableName="scratch_storage_user">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="scratch_storage_userPK"/>
+            </column>
+            <column name="email" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-13">
+        <addUniqueConstraint columnNames="user_privs_id" constraintName="UK_9r4dm213g2rsp5oci5q1tbp7w" tableName="scratch_storage_app_registry_user_privs"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-14">
+        <addForeignKeyConstraint baseColumnNames="scratch_storage_app_registry_entry_id" baseTableName="scratch_storage_app_registry_user_privs" constraintName="FK838e0yn58qu1ybeeh7fiboucd" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="scratch_storage_app_registry" validate="true"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-15">
+        <addForeignKeyConstraint baseColumnNames="privilege_id" baseTableName="scratch_storage_app_user_privs" constraintName="FKbiqhc72lnr3971y31yfdj3ho5" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="privilege" validate="true"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-16">
+        <addForeignKeyConstraint baseColumnNames="user_privs_id" baseTableName="scratch_storage_app_registry_user_privs" constraintName="FKqsyu1q0cfs812wm5xrp8ajfdk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="scratch_storage_app_user_privs" validate="true"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1613508896370-17">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="scratch_storage_app_user_privs" constraintName="FKqy82irleik4assn4xbvc2xqod" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="scratch_storage_user" validate="true"/>
+    </changeSet>
 </databaseChangeLog>

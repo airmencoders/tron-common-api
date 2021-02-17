@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service.scratch;
 
+import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
-import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 
@@ -21,13 +21,8 @@ public interface ScratchStorageService {
     ScratchStorageAppRegistryEntry addNewScratchAppName(ScratchStorageAppRegistryEntry entry);
     ScratchStorageAppRegistryEntry editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryEntry entry);
     ScratchStorageAppRegistryEntry deleteScratchStorageApp(UUID id);
-
-    // scratch storage app-to-user privs management...
-    Iterable<ScratchStorageAppUserPriv> getAllAppsToUsersPrivs();
-    Iterable<ScratchStorageAppUserPriv> getAllPrivsForAppId(UUID appId);
-    ScratchStorageAppUserPriv addNewUserAppPrivilegeEntry(ScratchStorageAppUserPriv appUserPriv);
-    ScratchStorageAppUserPriv editUserAppPrivilegeEntry(UUID id, ScratchStorageAppUserPriv appUserPriv);
-    ScratchStorageAppUserPriv deleteUserAppPrivilege(UUID id);
+    ScratchStorageAppRegistryEntry addUserPrivToApp(UUID appId, ScratchStorageAppUserPrivDto priv);
+    ScratchStorageAppRegistryEntry removeUserPrivFromApp(UUID appId, UUID appPrivIdEntry);
 
     // scratch storage users management
     Iterable<ScratchStorageUser> getAllScratchUsers();

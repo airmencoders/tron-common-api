@@ -24,6 +24,7 @@ public class ScratchStorageEntry {
     @JsonIgnore
     @Getter
     @Setter
+    @Builder.Default
     private UUID id = UUID.randomUUID();
 
     @Getter

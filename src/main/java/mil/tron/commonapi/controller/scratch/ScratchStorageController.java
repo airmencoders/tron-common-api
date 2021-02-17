@@ -1,5 +1,6 @@
 package mil.tron.commonapi.controller.scratch;
 
+import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
@@ -74,38 +75,22 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.editExistingScratchAppEntry(id, entry), HttpStatus.OK);
     }
 
+    @PatchMapping("/apps/{id}/user")
+    public ResponseEntity<Object> addUserPriv(@PathVariable UUID id, @Valid @RequestBody ScratchStorageAppUserPrivDto priv) {
+        ScratchStorageAppRegistryEntry p = scratchStorageService.addUserPrivToApp(id, priv);
+        return new ResponseEntity<>(p, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/apps/{id}/user/{appPrivIdEntry}")
+    public ResponseEntity<Object> removeUserPriv(@PathVariable UUID id, @PathVariable UUID appPrivIdEntry) {
+        return new ResponseEntity<>(scratchStorageService.removeUserPrivFromApp(id, appPrivIdEntry), HttpStatus.OK);
+    }
+
     @DeleteMapping("/apps/{id}")
     public ResponseEntity<Object> deleteExistingAppEntry(@PathVariable UUID id) {
         return new ResponseEntity<>(scratchStorageService.deleteScratchStorageApp(id), HttpStatus.OK);
     }
 
-
-    // scratch app user/privilege management endpoints...
-
-    @GetMapping("/privs")
-    public ResponseEntity<Object> getScratchSpaceAppsToUsersPrivs() {
-        return new ResponseEntity<>(scratchStorageService.getAllAppsToUsersPrivs(), HttpStatus.OK);
-    }
-
-    @GetMapping("/privs/{appId}")
-    public ResponseEntity<Object> getScratchSpaceAppsToUsersPrivs(@PathVariable UUID appId) {
-        return new ResponseEntity<>(scratchStorageService.getAllPrivsForAppId(appId), HttpStatus.OK);
-    }
-
-    @PostMapping("/privs")
-    public ResponseEntity<Object> addNewScratchAppUserPriv(@Valid @RequestBody ScratchStorageAppUserPriv entry) {
-        return new ResponseEntity<>(scratchStorageService.addNewUserAppPrivilegeEntry(entry), HttpStatus.CREATED);
-    }
-
-    @PutMapping("/privs/{id}")
-    public ResponseEntity<Object> editExistingScratchAppUserPriv(@PathVariable UUID id, @Valid @RequestBody ScratchStorageAppUserPriv entry) {
-        return new ResponseEntity<>(scratchStorageService.editUserAppPrivilegeEntry(id, entry), HttpStatus.OK);
-    }
-
-    @DeleteMapping("/privs/{id}")
-    public ResponseEntity<Object> deleteAppUserPrivEntry(@PathVariable UUID id) {
-        return new ResponseEntity<>(scratchStorageService.deleteUserAppPrivilege(id), HttpStatus.OK);
-    }
 
     // scratch app user management endpoints
 
