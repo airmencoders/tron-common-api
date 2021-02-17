@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardUser;
+import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -63,5 +64,40 @@ public class DashboardUserController {
         return new ResponseEntity<>(dashboardUserService.createDashboardUser(dashboardUser), HttpStatus.CREATED);
     }
 
+    @Operation(summary = "Updates an existing dashboard user", description = "Updates an existing dashboard user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = PersonDto.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Resource not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
 
+    @PreAuthorizeDashboardAdmin
+    @PutMapping(value = "/{id}")
+    public ResponseEntity<DashboardUserDto> updateDashboardUser(
+            @Parameter(description = "Dashboard User ID to update", required = true) @PathVariable("id") UUID Id,
+            @Parameter(description = "Updated person", required = true) @Valid @RequestBody DashboardUserDto dashboardUserDto) {
+
+        DashboardUserDto updatedDashboardUser = dashboardUserService.updateDashboardUser(Id, dashboardUserDto);
+        return new ResponseEntity<>(updatedDashboardUser, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Deletes an existing person", description = "Deletes an existing person")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204",
+                    description = "Successful operation",
+                    content = @Content),
+            @ApiResponse(responseCode = "404",
+                    description = "Resource not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @PreAuthorizeDashboardAdmin
+    @DeleteMapping(value = "/{id}")
+    public ResponseEntity<Object> deleteDashboardUser(
+            @Parameter(description = "Dashboard ID to delete", required = true) @PathVariable("id") UUID Id) {
+        dashboardUserService.deleteDashboardUser(Id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 }

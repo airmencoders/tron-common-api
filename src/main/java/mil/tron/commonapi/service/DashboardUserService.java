@@ -6,13 +6,10 @@ import mil.tron.commonapi.dto.DashboardUserDto;
 import java.util.UUID;
 
 public interface DashboardUserService {
-    // how to set up a user who has not hit the dashboard yet?  email?  Is it assumed that the user is authenticated already
     DashboardUserDto createDashboardUser(DashboardUserDto dashboardUserDto);
-//    DashboardUser updateDashboardUser(UUID id, DashboardUser dashboardUser);
-//    void removeDashboardUser(UUID id);
-//    DashboardUser getDashboardUser(UUID Id);
+    DashboardUserDto updateDashboardUser(UUID id, DashboardUserDto dashboardUserDto);
+    void deleteDashboardUser(UUID id);
     DashboardUserDto getDashboardUserDto(UUID Id);
-
     Iterable<DashboardUserDto> getAllDashboardUsers();
 
     DashboardUserDto convertToDto(DashboardUser user);
