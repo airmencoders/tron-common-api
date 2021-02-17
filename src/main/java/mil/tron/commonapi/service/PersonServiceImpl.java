@@ -49,9 +49,9 @@ public class PersonServiceImpl implements PersonService {
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
 
 		if (dto.getMeta() != null) {
-			dto.getMeta().forEach((key, value) -> {
-				entity.getMetadata().add(new PersonMetadata(entity.getId(), key, value));
-			});
+			dto.getMeta().forEach((key, value) ->
+				entity.getMetadata().add(new PersonMetadata(entity.getId(), key, value))
+			);
 		}
 		return convertToDto(repository.save(entity), ALL);
 	}

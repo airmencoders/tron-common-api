@@ -24,14 +24,23 @@ public class PersonDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID id = UUID.randomUUID();
 
+    /**
+     * The person's first (given) name
+     */
     @Getter
     @Setter
     private String firstName;
 
+    /**
+     * The person's middle name
+     */
     @Getter
     @Setter
     private String middleName;
 
+    /**
+     * The person's last (family) name
+     */
     @Getter
     @Setter
     private String lastName;
@@ -44,6 +53,9 @@ public class PersonDto {
     @Setter
     private String title;
 
+    /**
+     * The person's email address
+     */
     @Email(message = "Malformed email address")
     @Getter
     @Setter
@@ -58,29 +70,45 @@ public class PersonDto {
     private String dodid;
 
     /**
-     * Service member's rank
+     * The person's rank (abbreviation, ex: TSgt, SSgt, Capt, Col etc.)
      */
     @Getter
     @Setter
     private String rank;
 
+    /**
+     * The person's service branch
+     */
     @Getter
     @Setter
     private Branch branch;
 
+    /**
+     * The person's phone number
+     */
     @Getter
     @Setter
+    @ValidPhoneNumber
     private String phone;
 
+    /**
+     * The person's address
+     */
     @Getter
     @Setter
     private String address;
 
+    /**
+     * The person's duty (work) phone number
+     */
     @Getter
     @Setter
     @ValidPhoneNumber
     private String dutyPhone;
 
+    /**
+     * The person's official job title
+     */
     @Getter
     @Setter
     private String dutyTitle;

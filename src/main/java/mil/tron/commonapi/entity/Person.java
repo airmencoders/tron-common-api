@@ -4,11 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.pubsub.listeners.PersonEntityListener;
-import mil.tron.commonapi.validations.ValidDodId;
-import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.persistence.*;
-import javax.validation.constraints.Email;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -39,38 +36,27 @@ public class Person {
     @Getter
     @Setter
     private String lastName;
-    
-    /**
-    * The title of a person, as in how they should be addressed.
-    * Examples: Mr., Ms., Dr., SSgt, PFC, PO2, LCpl
-    */
+
     @Getter
     @Setter
     private String title;
 
-    @Email(message="Malformed email address")
+    @Getter
+    @Setter
+    private String dutyTitle;
+
     @Getter
     @Setter
     private String email;
 
     /**
      * An 10-digit airman's DOD Identification number.
+     * Putting DODID as a string since using a Long would require manually padding
+     * value in string output if the dodid had leading zeros, this was it stays literal
      */
     @Getter
     @Setter
-    @ValidDodId
     private String dodid;
-    //
-    // Putting DODID as a string since using a Long would require manually padding
-    //  value in string output if the dodid had leading zeros, this was it stays literal
-
-    /**
-     * Service member's rank
-     */
-    @Getter
-    @Setter
-    @ManyToOne
-    private Rank rank;
 
     @Getter
     @Setter
@@ -78,32 +64,28 @@ public class Person {
 
     @Getter
     @Setter
+    private String dutyPhone;
+
+    @Getter
+    @Setter
     private String address;
 
     @Getter
     @Setter
-    @ValidPhoneNumber
-    private String dutyPhone;
-
-    /**
-     * Job title performed as an airman
-     */
-    @Getter
-    @Setter
-    private String dutyTitle;
-    
-    /**
-     * Converted value of {@link Person#email} to lowercase. 
-     * This is used for a unique constraint in the database for emails.
-     */
-    @JsonIgnore
-    private String emailAsLower;
+    @ManyToOne
+    private Rank rank;
 
     @Getter
     @Builder.Default
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name="personId")
     private Set<PersonMetadata> metadata = new HashSet<>();
+
+    /**
+     * Converted value of {@link Person#email} to lowercase.
+     * This is used for a unique constraint in the database for emails.
+     */
+    private String emailAsLower;
 
     @Override
     public boolean equals(Object other) {
