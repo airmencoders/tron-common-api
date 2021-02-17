@@ -32,6 +32,14 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 
 	@Override
 	protected Object getPreAuthenticatedCredentials(HttpServletRequest request) {
+		if (request == null || request.getHeaderNames() == null) return "N/A";
+		Enumeration<String> headerNames = request.getHeaderNames();
+		while (headerNames.hasMoreElements()){
+			if (headerNames.nextElement().equals("authorization")){
+				DecodedJWT decodedJwt = decodeJwt(request);
+				return decodedJwt.getClaim("email").asString();
+			}
+		}
 		return "N/A";
 	}
 	

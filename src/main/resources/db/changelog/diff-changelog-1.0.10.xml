@@ -32,4 +32,42 @@
         <addForeignKeyConstraint baseColumnNames="privileges_id" baseTableName="dashboard_user_privileges" constraintName="FKt6lxco0il6m5bmw7ibgyi902i" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="privilege" validate="true"/>
     </changeSet>
 
+    <changeSet author="ayee" id="1613069009166-add-ayee-admin-user">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM dashboard_user WHERE email='ayee@revacomm.com';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="dashboard_user">
+            <column name="id" value="abaf5b64-57cd-430b-8057-75e168044943" />
+            <column name="email" value="ayee@revacomm.com" />
+            <column name="name_as_lower" value="ayee@revacomm.com" />
+        </insert>
+    </changeSet>
+    <changeSet author="ayee" id="1613069009166-add-ayee-admin-privileges">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM dashboard_user WHERE email='ayee@revacomm.com';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="dashboard_user_privileges">
+            <column name="dashboard_user_id" valueComputed="(SELECT id FROM dashboard_user WHERE email='ayee@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='DASHBOARD_ADMIN')" />
+        </insert>
+    </changeSet>
+    <changeSet author="ayee" id="1613069009166-add-ayee-user-privileges">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM dashboard_user WHERE email='ayee@revacomm.com';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="dashboard_user_privileges">
+            <column name="dashboard_user_id" valueComputed="(SELECT id FROM dashboard_user WHERE email='ayee@revacomm.com')" />
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='DASHBOARD_USER')" />
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>
