@@ -2,6 +2,7 @@ package mil.tron.commonapi.service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import mil.tron.commonapi.dto.PersonDto;
@@ -22,6 +23,7 @@ import mil.tron.commonapi.repository.PersonRepository;
 
 @Service
 public class PersonServiceImpl implements PersonService {
+	private static final String ALL = "$all";
 	private PersonRepository repository;
 	private PersonUniqueChecksService personChecksService;
 	private RankRepository rankRepository;
@@ -46,9 +48,12 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personEmailIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
 
-		PersonDto result = convertToDto(repository.save(entity));
-		updateMetadata(dto);
-		return result;
+		if (dto.getMeta() != null) {
+			dto.getMeta().forEach((key, value) -> {
+				entity.getMetadata().add(new PersonMetadata(entity.getId(), key, value));
+			});
+		}
+		return convertToDto(repository.save(entity), ALL);
 	}
 
 	@Override
@@ -67,15 +72,22 @@ public class PersonServiceImpl implements PersonService {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
 
-		PersonDto result = convertToDto(repository.save(entity));
-		updateMetadata(dto);
-		return result;
-	}
-
-	private void updateMetadata(PersonDto dto) {
+		dbPerson.get().getMetadata().forEach(entity.getMetadata()::add);
 		if (dto.getMeta() != null) {
-			dto.getMeta().forEach((key, value) -> personMetadataRepository.save(new PersonMetadata(dto.getId(), key, value)));
+			dto.getMeta().forEach((key, value) -> {
+				Optional<PersonMetadata> match = entity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
+				if (match.isPresent()) {
+					if (value == null) {
+						personMetadataRepository.delete(match.get());
+					} else {
+						match.get().setValue(value);
+					}
+				} else if (value != null) {
+					entity.getMetadata().add(personMetadataRepository.save(new PersonMetadata(id, key, value)));
+				}
+			});
 		}
+		return convertToDto(repository.save(entity), ALL);
 	}
 
 	@Override
@@ -88,10 +100,10 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public Iterable<PersonDto> getPersons() {
+	public Iterable<PersonDto> getPersons(String metadataProperties) {
 		return StreamSupport
 				.stream(repository.findAll().spliterator(), false)
-				.map(this::convertToDto)
+				.map(person -> convertToDto(person, metadataProperties))
 				.collect(Collectors.toList());
 	}
 
@@ -101,8 +113,8 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto getPersonDto(UUID id) {
-		return convertToDto(getPerson(id));
+	public PersonDto getPersonDto(UUID id, String metadataProperties) {
+		return convertToDto(getPerson(id), metadataProperties);
 	}
 
 	@Override
@@ -120,12 +132,20 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto convertToDto(Person entity) {
+	public PersonDto convertToDto(Person entity, String properties) {
 		PersonDto dto = modelMapper.map(entity, PersonDto.class);
 		Rank rank = entity.getRank();
 		if (rank != null) {
 			dto.setRank(rank.getAbbreviation());
 			dto.setBranch(entity.getRank().getBranchType());
+		}
+		if (properties != null) {
+			Stream<PersonMetadata> metadata = entity.getMetadata().stream();
+			if (!ALL.equals(properties)) {
+				Set<String> split = new HashSet<>(Arrays.stream(properties.split(",")).collect(Collectors.toSet()));
+				metadata = metadata.filter(m -> split.contains(m.getKey()));
+			}
+			metadata.forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
 		}
 		return dto;
 	}
@@ -135,17 +155,5 @@ public class PersonServiceImpl implements PersonService {
 		Person entity = modelMapper.map(dto, Person.class);
 		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
 		return entity;
-	}
-
-	@Override
-	public PersonDto loadMetadata(PersonDto dto, String properties) {
-		if (properties != null) {
-			personMetadataRepository
-					.findAllById(Arrays.stream(properties.split(","))
-							.map(prop -> new PersonMetadata.PersonMetadataPK(dto.getId(), prop))
-							.collect(Collectors.toList()))
-					.forEach(prop -> dto.setMetaProperty(prop.getKey(), prop.getValue()));
-		}
-		return dto;
 	}
 }

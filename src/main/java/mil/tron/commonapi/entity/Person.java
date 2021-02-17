@@ -1,9 +1,6 @@
 package mil.tron.commonapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.pubsub.listeners.PersonEntityListener;
@@ -12,7 +9,8 @@ import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
-import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @EntityListeners(PersonEntityListener.class)
@@ -21,7 +19,6 @@ import java.util.UUID;
 @Builder
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-@JsonIgnoreProperties(ignoreUnknown = true)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = "emailAsLower") })
 public class Person {
 
@@ -29,7 +26,6 @@ public class Person {
     @Getter
     @Setter
     @Builder.Default
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID id = UUID.randomUUID();
 
     @Getter
@@ -102,6 +98,12 @@ public class Person {
      */
     @JsonIgnore
     private String emailAsLower;
+
+    @Getter
+    @Builder.Default
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name="personId")
+    private Set<PersonMetadata> metadata = new HashSet<>();
 
     @Override
     public boolean equals(Object other) {

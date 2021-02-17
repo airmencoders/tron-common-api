@@ -56,9 +56,6 @@ public class PersonDto {
     @Setter
     @ValidDodId
     private String dodid;
-    //
-    // Putting DODID as a string since using a Long would require manually padding
-    //  value in string output if the dodid had leading zeros, this was it stays literal
 
     /**
      * Service member's rank
@@ -84,9 +81,6 @@ public class PersonDto {
     @ValidPhoneNumber
     private String dutyPhone;
 
-    /**
-     * Job title performed as an airman
-     */
     @Getter
     @Setter
     private String dutyTitle;
