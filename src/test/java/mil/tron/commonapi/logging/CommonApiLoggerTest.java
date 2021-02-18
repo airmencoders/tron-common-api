@@ -3,6 +3,7 @@ package mil.tron.commonapi.logging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.MockToken;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.service.PersonService;
 
@@ -66,7 +67,7 @@ public class CommonApiLoggerTest {
 
     @Test
     public void callBeforePutRequest() throws Throwable {
-        Person p = new Person();
+        PersonDto p = new PersonDto();
         mockMvc.perform(put(ENDPOINT + UUID.randomUUID().toString())
                 .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON)
@@ -77,7 +78,7 @@ public class CommonApiLoggerTest {
 
     @Test
     public void callBeforePostRequest() throws Throwable {
-        Person p = new Person();
+        PersonDto p = new PersonDto();
         mockMvc.perform(post(ENDPOINT)
                 .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON)
@@ -88,7 +89,6 @@ public class CommonApiLoggerTest {
 
     @Test
     public void callBeforeGetRequest() throws Throwable {
-        Person p = new Person();
         mockMvc.perform(get(ENDPOINT)
                 .header("authorization", MockToken.token)
                 .accept(MediaType.APPLICATION_JSON));
