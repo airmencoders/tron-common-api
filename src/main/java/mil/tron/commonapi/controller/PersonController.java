@@ -44,11 +44,9 @@ public class PersonController {
 			@Parameter(name = "page", description = "Page of content to retrieve", required = false)
 				@RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
 			@Parameter(name = "limit", description = "Size of each page", required = false)
-				@RequestParam(name = "limit", required = false) Long pageSize,
-			@Parameter(name = "meta", description = "Comma separated list of metadata properties to include or $all to include all", required = false)
-				@RequestParam(name = "meta", required = false) String meta) {
+				@RequestParam(name = "limit", required = false) Long pageSize) {
 
-		return new ResponseEntity<>(pager.paginate(personService.getPersons(meta), pageNumber, pageSize), HttpStatus.OK);
+		return new ResponseEntity<>(pager.paginate(personService.getPersons(), pageNumber, pageSize), HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Retrieves a person by ID", description = "Retrieves a person by ID")
@@ -66,11 +64,9 @@ public class PersonController {
 	@PreAuthorizeRead
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<PersonDto> getPerson(
-			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId,
-			@Parameter(name = "meta", description = "Comma separated list of metadata properties to include or $all to include all", required = false)
-				@RequestParam(name = "meta", required = false) String meta) {
+			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId) {
 
-		PersonDto person = personService.getPersonDto(personId, meta);
+		PersonDto person = personService.getPersonDto(personId);
 		return new ResponseEntity<>(person, HttpStatus.OK);
 	}
 	

@@ -71,7 +71,7 @@ class PersonServiceImplTest {
 				new PersonMetadata(testPerson.getId(), "key1", "value1"),
 				new PersonMetadata(testPerson.getId(), "key2", "value2")
 		));
-		testDto = personService.convertToDto(testPerson, "$all");
+		testDto = personService.convertToDto(testPerson);
 	}
 
 	@Nested
@@ -172,7 +172,7 @@ class PersonServiceImplTest {
     @Test
     void getPersonsTest() {
     	Mockito.when(repository.findAll()).thenReturn(Arrays.asList(testPerson));
-    	Iterable<PersonDto> persons = personService.getPersons(null);
+    	Iterable<PersonDto> persons = personService.getPersons();
     	assertThat(persons).hasSize(1);
     }
 
@@ -211,7 +211,7 @@ class PersonServiceImplTest {
 		void noRank() {
 			PersonDto dto = personService.convertToDto(Person.builder()
 					.firstName("first")
-					.build(), null);
+					.build());
 
 			assertThat(dto.getFirstName()).isEqualTo("first");
 			assertThat(dto.getRank()).isNull();
@@ -220,7 +220,7 @@ class PersonServiceImplTest {
 
 		@Test
 		void rank() {
-			PersonDto dto = personService.convertToDto(testPerson, null);
+			PersonDto dto = personService.convertToDto(testPerson);
 
 			assertThat(dto.getAddress()).isEqualTo(testPerson.getAddress());
 			assertThat(dto.getDodid()).isEqualTo(testPerson.getDodid());
@@ -240,25 +240,12 @@ class PersonServiceImplTest {
 		void metadata() {
 			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop1", "value1"));
 			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop2", "value2"));
-			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop3", "value3"));
 
-			PersonDto dto = personService.convertToDto(testPerson,"prop1,prop3,prop4");
-
-			assertThat(dto.getMetaProperty("prop1")).isEqualTo("value1");
-			assertThat(dto.getMetaProperty("prop2")).isNull();
-			assertThat(dto.getMetaProperty("prop3")).isEqualTo("value3");
-			assertThat(dto.getMetaProperty("prop4")).isNull();
-		}
-
-		@Test
-		void allMetadata() {
-			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop1", "value1"));
-			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop2", "value2"));
-
-			PersonDto dto = personService.convertToDto(testPerson,"$all");
+			PersonDto dto = personService.convertToDto(testPerson);
 
 			assertThat(dto.getMetaProperty("prop1")).isEqualTo("value1");
 			assertThat(dto.getMetaProperty("prop2")).isEqualTo("value2");
+			assertThat(dto.getMetaProperty("prop3")).isNull();
 		}
 	}
 

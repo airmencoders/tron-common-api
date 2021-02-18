@@ -10,13 +10,13 @@ public interface PersonService {
 	PersonDto createPerson(PersonDto dto);
 	PersonDto updatePerson(UUID id, PersonDto dto);
 	void deletePerson(UUID id);
-	Iterable<PersonDto> getPersons(String metadataProperties);
-	PersonDto getPersonDto(UUID id, String metadataProperties);
+	Iterable<PersonDto> getPersons();
+	PersonDto getPersonDto(UUID id);
 	Person getPerson(UUID id);
 	boolean exists(UUID id);
 
 	List<PersonDto> bulkAddPeople(List<PersonDto> dtos);
 
-	PersonDto convertToDto(Person entity, String metadataProperties);
+	PersonDto convertToDto(Person entity);
 	Person convertToEntity(PersonDto dto);
 }

@@ -72,7 +72,7 @@ public class PersonControllerTest {
 			List<PersonDto> persons = new ArrayList<>();
 			persons.add(testPerson);
 
-			Mockito.when(personService.getPersons(null)).thenReturn(persons);
+			Mockito.when(personService.getPersons()).thenReturn(persons);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
@@ -80,32 +80,12 @@ public class PersonControllerTest {
 		}
 
 		@Test
-		void testGetAllWithMetadata() throws Exception {
-			Mockito.when(personService.getPersons(Mockito.any())).thenReturn(List.of(testPerson));
-
-			mockMvc.perform(get(ENDPOINT + "?meta=prop1,prop2"))
-					.andExpect(status().isOk());
-
-			Mockito.verify(personService).getPersons("prop1,prop2");
-		}
-
-		@Test
 		void testGetById() throws Exception {
-			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class), Mockito.any())).thenReturn(testPerson);
+			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class))).thenReturn(testPerson);
 
 			mockMvc.perform(get(ENDPOINT + "{id}", testPerson.getId()))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
-		}
-
-		@Test
-		void testGetByIdWithMetadata() throws Exception {
-			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class), Mockito.any())).thenReturn(testPerson);
-
-			mockMvc.perform(get(ENDPOINT + "{id}?meta=prop1,prop2", testPerson.getId()))
-					.andExpect(status().isOk());
-
-			Mockito.verify(personService).getPersonDto(testPerson.getId(), "prop1,prop2");
 		}
 		
 		@Test

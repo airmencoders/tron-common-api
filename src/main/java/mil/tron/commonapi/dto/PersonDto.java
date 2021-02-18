@@ -1,7 +1,11 @@
 package mil.tron.commonapi.dto;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.validations.ValidDodId;
@@ -16,6 +20,21 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @EqualsAndHashCode
+@Schema(
+        type = "object",
+        title = "Person",
+        subTypes = { Airman.class, CoastGuardsman.class, Marine.class, Sailor.class, Soldier.class, Spaceman.class },
+        discriminatorProperty = "branch",
+        discriminatorMapping = {
+                @DiscriminatorMapping(value = "USAF", schema = Airman.class),
+                @DiscriminatorMapping(value = "USCG", schema = CoastGuardsman.class),
+                @DiscriminatorMapping(value = "USMC", schema = Marine.class),
+                @DiscriminatorMapping(value = "USN", schema = Sailor.class),
+                @DiscriminatorMapping(value = "USA", schema = Soldier.class),
+                @DiscriminatorMapping(value = "USSF", schema = Spaceman.class),
+                @DiscriminatorMapping(value = "OTHER", schema = PersonDto.class),
+        }
+)
 public class PersonDto {
 
     @Getter
@@ -113,10 +132,13 @@ public class PersonDto {
     @Setter
     private String dutyTitle;
 
-    @Getter
-    @Setter
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @JsonIgnore
     private Map<String, String> meta;
+
+    @JsonAnyGetter
+    public Map<String, String> getMeta() {
+        return meta;
+    }
 
     @JsonIgnore
     public String getFullName() {
@@ -128,12 +150,19 @@ public class PersonDto {
         return meta != null ? meta.get(property) : null;
     }
 
-    @JsonIgnore
+    @JsonAnySetter
     public PersonDto setMetaProperty(String property, String value) {
         if (meta == null) {
             meta = new HashMap<>();
         }
         meta.put(property, value);
+        return this;
+    }
+
+    public PersonDto removeMetaProperty(String property) {
+        if (meta != null) {
+            meta.remove(property);
+        }
         return this;
     }
 }

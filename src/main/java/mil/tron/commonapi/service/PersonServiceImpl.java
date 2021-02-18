@@ -2,7 +2,6 @@ package mil.tron.commonapi.service;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import mil.tron.commonapi.dto.PersonDto;
@@ -23,7 +22,6 @@ import mil.tron.commonapi.repository.PersonRepository;
 
 @Service
 public class PersonServiceImpl implements PersonService {
-	private static final String ALL = "$all";
 	private PersonRepository repository;
 	private PersonUniqueChecksService personChecksService;
 	private RankRepository rankRepository;
@@ -53,7 +51,7 @@ public class PersonServiceImpl implements PersonService {
 				entity.getMetadata().add(new PersonMetadata(entity.getId(), key, value))
 			);
 		}
-		return convertToDto(repository.save(entity), ALL);
+		return convertToDto(repository.save(entity));
 	}
 
 	@Override
@@ -72,11 +70,11 @@ public class PersonServiceImpl implements PersonService {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
 
+		List<PersonMetadata> toDelete = new ArrayList<>();
 		dbPerson.get().getMetadata().forEach(metadata -> {
+			entity.getMetadata().add(metadata);
 			if (dto.getMeta().containsKey(metadata.getKey())) {
-				entity.getMetadata().add(metadata);
-			} else {
-				personMetadataRepository.delete(metadata);
+				toDelete.add(metadata);
 			}
 		});
 		if (dto.getMeta() != null) {
@@ -84,7 +82,7 @@ public class PersonServiceImpl implements PersonService {
 				Optional<PersonMetadata> match = entity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
 				if (match.isPresent()) {
 					if (value == null) {
-						personMetadataRepository.delete(match.get());
+						toDelete.add(match.get());
 					} else {
 						match.get().setValue(value);
 					}
@@ -93,7 +91,12 @@ public class PersonServiceImpl implements PersonService {
 				}
 			});
 		}
-		return convertToDto(repository.save(entity), ALL);
+		// we have to save the person entity first, then try to delete metadata: hibernate seems to get confused
+		// if we try to remove metadata rows from the person's metadata property and it generates invalid SQL
+		PersonDto result = convertToDto(repository.save(entity));
+		personMetadataRepository.deleteAll(toDelete);
+		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
+		return result;
 	}
 
 	@Override
@@ -106,10 +109,10 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public Iterable<PersonDto> getPersons(String metadataProperties) {
+	public Iterable<PersonDto> getPersons() {
 		return StreamSupport
 				.stream(repository.findAll().spliterator(), false)
-				.map(person -> convertToDto(person, metadataProperties))
+				.map(this::convertToDto)
 				.collect(Collectors.toList());
 	}
 
@@ -119,8 +122,8 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto getPersonDto(UUID id, String metadataProperties) {
-		return convertToDto(getPerson(id), metadataProperties);
+	public PersonDto getPersonDto(UUID id) {
+		return convertToDto(getPerson(id));
 	}
 
 	@Override
@@ -138,21 +141,14 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto convertToDto(Person entity, String properties) {
+	public PersonDto convertToDto(Person entity) {
 		PersonDto dto = modelMapper.map(entity, PersonDto.class);
 		Rank rank = entity.getRank();
 		if (rank != null) {
 			dto.setRank(rank.getAbbreviation());
 			dto.setBranch(entity.getRank().getBranchType());
 		}
-		if (properties != null) {
-			Stream<PersonMetadata> metadata = entity.getMetadata().stream();
-			if (!ALL.equals(properties)) {
-				Set<String> split = new HashSet<>(Arrays.stream(properties.split(",")).collect(Collectors.toSet()));
-				metadata = metadata.filter(m -> split.contains(m.getKey()));
-			}
-			metadata.forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
-		}
+		entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
 		return dto;
 	}
 
