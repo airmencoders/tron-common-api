@@ -72,7 +72,13 @@ public class PersonServiceImpl implements PersonService {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
 
-		dbPerson.get().getMetadata().forEach(entity.getMetadata()::add);
+		dbPerson.get().getMetadata().forEach(metadata -> {
+			if (dto.getMeta().containsKey(metadata.getKey())) {
+				entity.getMetadata().add(metadata);
+			} else {
+				personMetadataRepository.delete(metadata);
+			}
+		});
 		if (dto.getMeta() != null) {
 			dto.getMeta().forEach((key, value) -> {
 				Optional<PersonMetadata> match = entity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
