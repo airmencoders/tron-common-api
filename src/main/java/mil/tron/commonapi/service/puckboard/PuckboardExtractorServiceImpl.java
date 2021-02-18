@@ -61,7 +61,10 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     };
 
     @AllArgsConstructor
-    private static class RankInfo{ String rank; Branch branch; }
+    private static class RankInfo {
+        String rank;
+        Branch branch;
+    }
 
     /**
      * Convert the JSON as given by the controller (as a JsonNode)
@@ -93,6 +96,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
      */
     private Map<Integer, RankInfo> processBranchInfo(JsonNode branchInfoJson) {
         Map<Integer, RankInfo> allRanks = new HashMap<>();
+        allRanks.put(0, new RankInfo("CIV", Branch.USAF)); //default
         for (int i = 0; i < branchInfoJson.size(); i++) {
             JsonNode node = branchInfoJson.get(i);
             Branch branch = resolveServiceName(node.get(BRANCH_ID_FIELD).asInt());
@@ -187,52 +191,54 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
         // go thru each person and add/update to Common
         for (int i = 0; i < peopleInfo.size(); i++) {
             JsonNode node = peopleInfo.get(i);
-
-            UUID id = UUID.fromString(node.get(PERSON_ID_FIELD).textValue());
-            PersonDto airman = new PersonDto();
-            airman.setDodid(node.get(PERSON_DODID_FIELD).isNull() ? null : node.get(PERSON_DODID_FIELD).asText());
-            airman.setDutyPhone(node.get(PERSON_PHONE_FIELD).textValue());
-            RankInfo rankInfo = rankLookup.get(node.get(PERSON_RANK_FIELD).asInt());
-            if (rankInfo == null) {
-                rankInfo = new RankInfo("CIV", Branch.USAF);
-            }
-            airman.setTitle(rankInfo.rank);
-            airman.setRank(rankInfo.rank);
-            airman.setBranch(rankInfo.branch);
-            airman.setId(id);
-            airman.setFirstName(node.get(PERSON_FIRST_NAME_FIELD).textValue());
-            airman.setLastName(node.get(PERSON_LAST_NAME_FIELD).textValue());
-            airman.setEmail(node.get(PERSON_EMAIL_FIELD).textValue());
+            PersonDto personDto = convertToPersonDto(node, rankLookup);
 
             try {
-                if (!personService.exists(id)) {
-
-                    // create new airman
-                    personService.createPerson(airman);
-                    personIdStatus.put(id, "Created - " + airman.getFullName());
+                if (!personService.exists(personDto.getId())) {
+                    personService.createPerson(personDto);
+                    personIdStatus.put(personDto.getId(), "Created - " + personDto.getFullName());
                 } else {
-                    personService.updatePerson(id, airman);
-                    personIdStatus.put(id, "Updated - " + airman.getFullName());
+                    personService.updatePerson(personDto.getId(), personDto);
+                    personIdStatus.put(personDto.getId(), "Updated - " + personDto.getFullName());
                 }
 
-                // now go thru each puckboard org person was in - either add or remove depending on active status
-                List<String> personOrgIds = ImmutableList.copyOf(node.get(ORG_STATUS_FIELD).fieldNames());
-                for (String org : personOrgIds) {
-                    JsonNode orgNode = node.get(ORG_STATUS_FIELD).get(org);
-                    UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
-
-                    if (orgNode.get("active").booleanValue()) {
-                        orgService.addOrganizationMember(orgId, Lists.newArrayList(id));
-                    } else {
-                        orgService.removeOrganizationMember(orgId, Lists.newArrayList(id));
-                    }
-                }
+                assignPersonToOrg(node, personDto.getId());
             } catch (ResourceAlreadyExistsException | RecordNotFoundException | TransactionSystemException e) {
-                personIdStatus.put(id, "Problem - " + airman.getFullName() + " (" + e.getMessage() + ")");
+                personIdStatus.put(personDto.getId(), "Problem - " + personDto.getFullName() + " (" + e.getMessage() + ")");
             }
         }
 
         return personIdStatus;
+    }
+
+    private PersonDto convertToPersonDto(JsonNode node, Map<Integer, RankInfo> rankLookup) {
+        RankInfo rankInfo = rankLookup.get(node.get(PERSON_RANK_FIELD).asInt());
+        return PersonDto.builder()
+                .id(UUID.fromString(node.get(PERSON_ID_FIELD).textValue()))
+                .dodid(node.get(PERSON_DODID_FIELD).asText(null))
+                .dutyPhone(node.get(PERSON_PHONE_FIELD).textValue())
+                .title(rankInfo.rank)
+                .rank(rankInfo.rank)
+                .branch(rankInfo.branch)
+                .firstName(node.get(PERSON_FIRST_NAME_FIELD).textValue())
+                .lastName(node.get(PERSON_LAST_NAME_FIELD).textValue())
+                .email(node.get(PERSON_EMAIL_FIELD).textValue())
+                .build();
+    }
+
+    private void assignPersonToOrg(JsonNode node, UUID id) {
+        // now go thru each puckboard org person was in - either add or remove depending on active status
+        List<String> personOrgIds = ImmutableList.copyOf(node.get(ORG_STATUS_FIELD).fieldNames());
+        for (String org : personOrgIds) {
+            JsonNode orgNode = node.get(ORG_STATUS_FIELD).get(org);
+            UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
+
+            if (orgNode.get("active").booleanValue()) {
+                orgService.addOrganizationMember(orgId, Lists.newArrayList(id));
+            } else {
+                orgService.removeOrganizationMember(orgId, Lists.newArrayList(id));
+            }
+        }
     }
 
     /**
