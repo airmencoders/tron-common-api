@@ -10,7 +10,7 @@ public interface DashboardUserService {
     DashboardUserDto updateDashboardUser(UUID id, DashboardUserDto dashboardUserDto);
     void deleteDashboardUser(UUID id);
     DashboardUserDto getDashboardUserDto(UUID Id);
-    Iterable<DashboardUserDto> getAllDashboardUsers();
+    Iterable<DashboardUserDto> getAllDashboardUsersDto();
 
     DashboardUserDto convertToDto(DashboardUser user);
     DashboardUser convertToEntity(DashboardUserDto dto);

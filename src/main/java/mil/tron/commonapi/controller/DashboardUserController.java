@@ -34,7 +34,7 @@ public class DashboardUserController {
     @PreAuthorizeDashboardUser
     @GetMapping("")
     public ResponseEntity<Iterable<DashboardUserDto>> getAllDashboardUsers() {
-        return new ResponseEntity<>(dashboardUserService.getAllDashboardUsers(), HttpStatus.OK);
+        return new ResponseEntity<>(dashboardUserService.getAllDashboardUsersDto(), HttpStatus.OK);
     }
 
     @Operation(summary = "Retrieves a dashboard user by ID", description = "Retrieves a dashboard user by ID")

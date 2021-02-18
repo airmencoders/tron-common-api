@@ -62,7 +62,7 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 
     @Override
     @Operation(summary = "Retrieves all dashboard users", description = "Retrieves all dashboard users")
-    public Iterable<DashboardUserDto> getAllDashboardUsers() {
+    public Iterable<DashboardUserDto> getAllDashboardUsersDto() {
         return StreamSupport.stream(dashboardUserRepository.findAll().spliterator(), false).map(this::convertToDto).collect(Collectors.toList());
     }
 
