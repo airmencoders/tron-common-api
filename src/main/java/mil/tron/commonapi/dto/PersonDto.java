@@ -1,28 +1,53 @@
-package mil.tron.commonapi.entity;
+package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonSetter;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.val;
-import mil.tron.commonapi.entity.ranks.AirmanRank;
-import mil.tron.commonapi.exception.InvalidFieldValueException;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.*;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
-import javax.persistence.Entity;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
-
+import javax.validation.constraints.Email;
 import java.util.Date;
+import java.util.UUID;
 
-@Entity
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class Airman extends Person {
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@EqualsAndHashCode
+public class PersonDto {
 
-    private AirmanRank rank;
+    @Getter
+    @Setter
+    @Builder.Default
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private UUID id = UUID.randomUUID();
+
+    @Getter
+    @Setter
+    private String firstName;
+
+    @Getter
+    @Setter
+    private String middleName;
+
+    @Getter
+    @Setter
+    private String lastName;
+
+    /**
+     * The title of a person, as in how they should be addressed.
+     * Examples: Mr., Ms., Dr., SSgt, PFC, PO2, LCpl
+     */
+    @Getter
+    @Setter
+    private String title;
+
+    @Email(message="Malformed email address")
+    @Getter
+    @Setter
+    private String email;
 
     /**
      * An airman's Air Force Specialty Code.
@@ -67,32 +92,16 @@ public class Airman extends Person {
     @Setter
     private String imds;
 
-
     /**
-     * Rank of Airman service member
+     * Service member's rank
      */
-    @JsonGetter("rank")
-    public String getRank() {
-        if (this.rank == null) {
-            return null;
-        }
-        return this.rank.toString();
-    }
+    @Getter
+    @Setter
+    private String rank;
 
-    @JsonSetter("rank")
-    public void setRank(String rank) {
-        if (rank == null) {
-            this.rank = AirmanRank.UNKNOWN;
-        }
-        else {
-            val rankEnum = AirmanRank.valueByString(rank.toUpperCase());
-            if (rankEnum == null) {
-                throw new InvalidFieldValueException("Airman rank must be one of: " +
-                        AirmanRank.getValueString());
-            }
-            this.rank = rankEnum;
-        }
-    }
+    @Getter
+    @Setter
+    private Branch branch;
 
     @Getter
     @Setter
@@ -188,32 +197,8 @@ public class Airman extends Person {
     @Setter
     private String dutyTitle;
 
-    /**
-     * This method will be performed before database operations.
-     *
-     * Entity parameters are formatted as needed
-     */
-    @PreUpdate
-    @PrePersist
-    public void sanitizeEntity() {
-        trimStrings();
-    }
-
-    public void trimStrings() {
-        afsc = (afsc == null) ? null : afsc.trim();
-        dodid = (dodid == null) ? null : dodid.trim();
-        imds = (imds == null) ? null : imds.trim();
-        unit = (unit == null) ? null : unit.trim();
-        wing = (wing == null) ? null : wing.trim();
-        gp = (gp == null) ? null : gp.trim();
-        squadron = (squadron == null) ? null : squadron.trim();
-        wc = (wc == null) ? null : wc.trim();
-        go81 = (go81 == null) ? null : go81.trim();
-        deros = (deros == null) ? null : deros.trim();
-        phone = (phone == null) ? null : phone.trim();
-        address = (address == null) ? null : address.trim();
-        fltChief = (fltChief == null) ? null : fltChief.trim();
-        manNumber = (manNumber == null) ? null : manNumber.trim();
-        dutyTitle = (dutyTitle == null) ? null : dutyTitle.trim();
+    @JsonIgnore
+    public String getFullName() {
+        return String.format("%s %s", firstName, lastName);
     }
 }

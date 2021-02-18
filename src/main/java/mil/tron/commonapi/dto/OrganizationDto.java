@@ -8,7 +8,6 @@ import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 
-import javax.persistence.Transient;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;

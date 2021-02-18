@@ -1,42 +1,42 @@
 package mil.tron.commonapi.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
+import mil.tron.commonapi.service.PersonService;
+import org.assertj.core.util.Lists;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import mil.tron.commonapi.exception.RecordNotFoundException;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.assertj.core.util.Lists;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-import mil.tron.commonapi.service.PersonService;
-
-@WebMvcTest(PersonController.class)
+@ExtendWith(SpringExtension.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 public class PersonControllerTest {
 	private static final String ENDPOINT = "/v1/person/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -49,13 +49,13 @@ public class PersonControllerTest {
 	
 	@MockBean
 	private AppClientUserPreAuthenticatedService appClientUserPreAuthenticatedService;
-	
-	private Person testPerson;
+
+	private PersonDto testPerson;
 	private String testPersonJson;
 	
 	@BeforeEach
 	public void beforeEachTest() throws JsonProcessingException {
-		testPerson = new Person();
+		testPerson = new PersonDto();
 		testPerson.setFirstName("Test");
 		testPerson.setLastName("Person");
 		testPerson.setMiddleName("MVC");
@@ -69,7 +69,7 @@ public class PersonControllerTest {
 	class TestGet {
 		@Test
 		void testGetAll() throws Exception {
-			List<Person> persons = new ArrayList<>();
+			List<PersonDto> persons = new ArrayList<>();
 			persons.add(testPerson);
 
 			Mockito.when(personService.getPersons()).thenReturn(persons);
@@ -81,7 +81,7 @@ public class PersonControllerTest {
 		
 		@Test
 		void testGetById() throws Exception {
-			Mockito.when(personService.getPerson(Mockito.any(UUID.class))).thenReturn(testPerson);
+			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class))).thenReturn(testPerson);
 			
 			mockMvc.perform(get(ENDPOINT + "{id}", testPerson.getId()))
 				.andExpect(status().isOk())
@@ -101,7 +101,7 @@ public class PersonControllerTest {
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
-			Mockito.when(personService.createPerson(Mockito.any(Person.class))).thenReturn(testPerson);
+			Mockito.when(personService.createPerson(Mockito.any(PersonDto.class))).thenReturn(testPerson);
 			
 			mockMvc.perform(post(ENDPOINT)
 					.accept(MediaType.APPLICATION_JSON)
@@ -124,11 +124,11 @@ public class PersonControllerTest {
 
 		@Test
 		void testBulkCreate() throws Exception {
-			List<Person> people = Lists.newArrayList(
-					new Person(),
-					new Person(),
-					new Person(),
-					new Person()
+			List<PersonDto> people = Lists.newArrayList(
+					new PersonDto(),
+					new PersonDto(),
+					new PersonDto(),
+					new PersonDto()
 			);
 
 			Mockito.when(personService.bulkAddPeople(Mockito.anyList())).then(returnsFirstArg());
@@ -147,7 +147,7 @@ public class PersonControllerTest {
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
-			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(Person.class))).thenReturn(testPerson);
+			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).thenReturn(testPerson);
 			
 			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
 					.accept(MediaType.APPLICATION_JSON)
@@ -178,7 +178,7 @@ public class PersonControllerTest {
 		
 		@Test
 		void testPutResourceDoesNotExist() throws Exception {
-			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(Person.class))).thenThrow(new RecordNotFoundException("Record not found"));
+			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).thenThrow(new RecordNotFoundException("Record not found"));
 			
 			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
 					.accept(MediaType.APPLICATION_JSON)

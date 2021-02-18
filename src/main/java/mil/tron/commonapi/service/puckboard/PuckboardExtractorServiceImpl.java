@@ -5,15 +5,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.OrganizationDto;
-import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
-import mil.tron.commonapi.service.AirmanService;
 import mil.tron.commonapi.service.OrganizationService;
+import mil.tron.commonapi.service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionSystemException;
@@ -33,10 +32,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private OrganizationRepository orgRepo;
 
     @Autowired
-    private AirmanRepository airmanRepo;
-
-    @Autowired
-    private AirmanService airmanService;
+    private PersonService personService;
 
     private static final String ORG_ID_FIELD = "organizationId";
     private static final String ORG_TYPE_FIELD = "branchId";
@@ -179,7 +175,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
             JsonNode node = peopleInfo.get(i);
 
             UUID id = UUID.fromString(node.get(PERSON_ID_FIELD).textValue());
-            Airman airman = new Airman();
+            PersonDto airman = new PersonDto();
             airman.setDodid(node.get(PERSON_DODID_FIELD).isNull() ? null : node.get(PERSON_DODID_FIELD).asText());
             airman.setDutyPhone(node.get(PERSON_PHONE_FIELD).textValue());
             airman.setTitle(branchLookup.get(node.get(PERSON_RANK_FIELD).asText()));
@@ -189,13 +185,13 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
             airman.setEmail(node.get(PERSON_EMAIL_FIELD).textValue());
 
             try {
-                if (!airmanRepo.existsById(id)) {
+                if (!personService.exists(id)) {
 
                     // create new airman
-                    airmanService.createAirman(airman);
+                    personService.createPerson(airman);
                     personIdStatus.put(id, "Created - " + airman.getFullName());
                 } else {
-                    airmanService.updateAirman(id, airman);
+                    personService.updatePerson(id, airman);
                     personIdStatus.put(id, "Updated - " + airman.getFullName());
                 }
 

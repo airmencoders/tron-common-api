@@ -14,6 +14,7 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
+import mil.tron.commonapi.pagination.Paginator;
 import mil.tron.commonapi.service.OrganizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,14 +27,15 @@ import java.util.*;
 @RequestMapping("${api-prefix.v1}/organization")
 public class OrganizationController {
 	private OrganizationService organizationService;
+	private Paginator pager;
 
 	public static final String PEOPLE_PARAMS_FIELD = "people";
 	public static final String ORGS_PARAMS_FIELD = "organizations";
-
 	private static final String UNKNOWN_TYPE = "UNKNOWN";
 	
-	public OrganizationController (OrganizationService organizationService) {
+	public OrganizationController (OrganizationService organizationService, Paginator pager) {
 		this.organizationService = organizationService;
+		this.pager = pager;
 	}
 	
 	@Operation(summary = "Retrieves all organizations",
@@ -61,9 +63,13 @@ public class OrganizationController {
 			@Parameter(description = "Comma-separated string list to include in Person type sub-fields. Example: people=id,firstName,lastName", required = false)
 				@RequestParam(name = OrganizationController.PEOPLE_PARAMS_FIELD, required = false, defaultValue = "") String peopleFields,
 			@Parameter(description = "Comma-separated string list to include in Organization type sub-fields. Example: organizations=id,name", required = false)
-				@RequestParam(name = OrganizationController.ORGS_PARAMS_FIELD, required = false, defaultValue = "") String orgFields) {
+				@RequestParam(name = OrganizationController.ORGS_PARAMS_FIELD, required = false, defaultValue = "") String orgFields,
+			@Parameter(name = "page", description = "Page of content to retrieve", required = false)
+				@RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
+			@Parameter(name = "limit", description = "Size of each page", required = false)
+				@RequestParam(name = "limit", required = false) Long pageSize) {
 
-		// return all types by default (if no query params given)
+			// return all types by default (if no query params given)
 		if (unitType.equals(OrganizationController.UNKNOWN_TYPE) && branchType.equals(OrganizationController.UNKNOWN_TYPE)) {
 			Iterable<OrganizationDto> allOrgs = organizationService.getOrganizations(searchQuery);
 
@@ -73,11 +79,11 @@ public class OrganizationController {
 				allOrgs.forEach(item -> customizedList.add(
 						organizationService.customizeEntity(
 								initCustomizationOptions(peopleFields, orgFields), item)));
-				return new ResponseEntity<>(customizedList, HttpStatus.OK);
+				return new ResponseEntity<>(pager.paginate(customizedList, pageNumber, pageSize), HttpStatus.OK);
 			}
 
 			// otherwise return list of DTOs
-			return new ResponseEntity<>(allOrgs, HttpStatus.OK);
+			return new ResponseEntity<>(pager.paginate(allOrgs, pageNumber, pageSize), HttpStatus.OK);
 		}
 		// otherwise try to return the types specified
 		else {
@@ -102,11 +108,12 @@ public class OrganizationController {
 						item -> customizedList.add(
 								organizationService.customizeEntity(
 										initCustomizationOptions(peopleFields, orgFields), item)));
-				return new ResponseEntity<>(customizedList, HttpStatus.OK);
+				return new ResponseEntity<>(pager.paginate(customizedList, pageNumber, pageSize), HttpStatus.OK);
 			}
 
 			// otherwise return the list of filtered DTOs
-			return new ResponseEntity<>(allFilteredOrgs, HttpStatus.OK);
+			return new ResponseEntity<>(
+					pager.paginate(allFilteredOrgs, pageNumber, pageSize), HttpStatus.OK);
 		}
 	}
 	

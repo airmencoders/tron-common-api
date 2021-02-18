@@ -5,12 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 import mil.tron.commonapi.dto.OrganizationDto;
-import mil.tron.commonapi.entity.Airman;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.repository.AirmanRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
-import mil.tron.commonapi.service.AirmanServiceImpl;
 import mil.tron.commonapi.service.OrganizationServiceImpl;
+import mil.tron.commonapi.service.PersonServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,10 +40,7 @@ public class PuckboardExtractorServiceImplTest {
     private OrganizationServiceImpl orgService;
 
     @Mock
-    private AirmanRepository airmanRepository;
-
-    @Mock
-    private AirmanServiceImpl airmanService;
+    private PersonServiceImpl personService;
 
     @InjectMocks
     private PuckboardExtractorServiceImpl puckboardExtractorService;
@@ -81,9 +77,9 @@ public class PuckboardExtractorServiceImplTest {
     void testPersistOrgsAndMembersCreate() {
 
         // set up GO path - where every Org gets added
-        Mockito.when(airmanRepository.existsById(Mockito.any(UUID.class))).thenReturn(false);
-        Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
-        Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
+        Mockito.when(personService.exists(Mockito.any(UUID.class))).thenReturn(false);
+        Mockito.when(personService.createPerson(Mockito.any(PersonDto.class))).then(returnsFirstArg());
+        Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).then(returnsSecondArg());
         Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(false);
         Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
         Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());
@@ -99,9 +95,9 @@ public class PuckboardExtractorServiceImplTest {
     void testPersistOrgsAndMembersUpdate() {
 
         // set up GO path - where every Org gets UPDATED
-        Mockito.when(airmanRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-        Mockito.when(airmanService.createAirman(Mockito.any(Airman.class))).then(returnsFirstArg());
-        Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
+        Mockito.when(personService.exists(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(personService.createPerson(Mockito.any(PersonDto.class))).then(returnsFirstArg());
+        Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).then(returnsSecondArg());
         Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
         Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());
@@ -116,12 +112,12 @@ public class PuckboardExtractorServiceImplTest {
     void testPersistOrgsAndMembersExceptions() {
 
         // set up GO path - where every Org gets UPDATED
-        Mockito.when(airmanRepository.existsById(Mockito.any(UUID.class))).thenReturn(false);
-        Mockito.when(airmanService.createAirman(Mockito.any(Airman.class)))
+        Mockito.when(personService.exists(Mockito.any(UUID.class))).thenReturn(false);
+        Mockito.when(personService.createPerson(Mockito.any(PersonDto.class)))
                 .thenThrow(new RecordNotFoundException("Not Found"))  // throw exception on first item
                 .then(returnsFirstArg());
 
-        Mockito.when(airmanService.updateAirman(Mockito.any(UUID.class), Mockito.any(Airman.class))).then(returnsSecondArg());
+        Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).then(returnsSecondArg());
         Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
         Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());

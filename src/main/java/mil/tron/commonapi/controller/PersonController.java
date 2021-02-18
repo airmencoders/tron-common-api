@@ -1,21 +1,5 @@
 package mil.tron.commonapi.controller;
 
-import java.util.List;
-import java.util.UUID;
-
-import javax.validation.Valid;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -25,36 +9,51 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
-import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
+import mil.tron.commonapi.pagination.Paginator;
 import mil.tron.commonapi.service.PersonService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/person")
 public class PersonController {
 	private PersonService personService;
+	private Paginator pager;
 
-	public PersonController(PersonService personService) {
+	public PersonController(PersonService personService, Paginator pager) {
 		this.personService = personService;
+		this.pager = pager;
 	}
 	
 	@Operation(summary = "Retrieves all persons", description = "Retrieves all persons")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-						content = @Content(array = @ArraySchema(schema = @Schema(implementation = Person.class))))
+						content = @Content(array = @ArraySchema(schema = @Schema(implementation = PersonDto.class))))
 	})
 	@PreAuthorizeRead
 	@GetMapping
-	public ResponseEntity<Iterable<Person>> getPersons() {
-		return new ResponseEntity<>(personService.getPersons(), HttpStatus.OK);
+	public ResponseEntity<Object> getPersons(
+			@Parameter(name = "page", description = "Page of content to retrieve", required = false)
+				@RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
+			@Parameter(name = "limit", description = "Size of each page", required = false)
+				@RequestParam(name = "limit", required = false) Long pageSize) {
+
+		return new ResponseEntity<>(pager.paginate(personService.getPersons(), pageNumber, pageSize), HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Retrieves a person by ID", description = "Retrieves a person by ID")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Person.class))),
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -64,10 +63,10 @@ public class PersonController {
 	})
 	@PreAuthorizeRead
 	@GetMapping(value = "/{id}")
-	public ResponseEntity<Person> getPerson(
+	public ResponseEntity<PersonDto> getPerson(
 			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId) {
-		
-		Person person = personService.getPerson(personId);
+
+		PersonDto person = personService.getPersonDto(personId);
 		return new ResponseEntity<>(person, HttpStatus.OK);
 	}
 	
@@ -75,7 +74,7 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Person.class))),
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "409",
 					description = "Resource already exists with the id provided",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -85,7 +84,7 @@ public class PersonController {
 	})
 	@PreAuthorizeWrite
 	@PostMapping
-	public ResponseEntity<Person> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody Person person) {
+	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody PersonDto person) {
 		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
 	
@@ -93,18 +92,18 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Person.class))),
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
 	@PutMapping(value = "/{id}")
-	public ResponseEntity<Person> updatePerson(
+	public ResponseEntity<PersonDto> updatePerson(
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
-			@Parameter(description = "Updated person", required = true) @Valid @RequestBody Person person) {
-		
-		Person updatedPerson = personService.updatePerson(personId, person);
+			@Parameter(description = "Updated person", required = true) @Valid @RequestBody PersonDto person) {
+
+		PersonDto updatedPerson = personService.updatePerson(personId, person);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 	}
 	
@@ -133,7 +132,7 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = Person.class))),
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad data or validation error",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -144,7 +143,7 @@ public class PersonController {
 	@PreAuthorizeWrite
 	@PostMapping("/persons")
 	public ResponseEntity<Object> addPersons(
-			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<Person> people) {
+			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
 		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
 	}
