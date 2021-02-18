@@ -230,14 +230,13 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         Privilege priv = privRepo.findById(dto.getPrivilegeId())
                 .orElseThrow(() -> new RecordNotFoundException("Could not find privilege with ID: " + dto.getPrivilegeId()));
 
-        ScratchStorageAppUserPriv entity = ScratchStorageAppUserPriv
+        return ScratchStorageAppUserPriv
                 .builder()
                 .id(dto.getId())
                 .user(user)
                 .privilege(priv)
                 .build();
 
-        return entity;
     }
 
     //
@@ -290,7 +289,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 .orElseThrow(() -> new RecordNotFoundException("Application with ID " + appId + " doesn't exist"));
 
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
-            if (priv.getUser().getEmail().toLowerCase().equals(email.toLowerCase())
+            if (priv.getUser().getEmail().equalsIgnoreCase(email)
                 && priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV))
                     return true;
         }

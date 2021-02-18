@@ -41,7 +41,9 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 						return jwt.getClaim("email").asString();
 					}
 				}
-				catch (JWTDecodeException ignored) {}
+				catch (JWTDecodeException ignored) {
+					return null;
+				}
 			}
 		}
 		return "N/A";
