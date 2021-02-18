@@ -4,9 +4,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.PersonMetadata;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
@@ -27,6 +28,19 @@ public class PersonServiceImpl implements PersonService {
 	private RankRepository rankRepository;
 	private PersonMetadataRepository personMetadataRepository;
 	private final DtoMapper modelMapper;
+	private final Map<Branch, Set<String>> validProperties = Map.of(
+			Branch.USAF, fields(Airman.class),
+			Branch.USCG, fields(CoastGuardsman.class),
+			Branch.USMC, fields(Marine.class),
+			Branch.USN, fields(Sailor.class),
+			Branch.USA, fields(Soldier.class),
+			Branch.USSF, fields(Spaceman.class),
+			Branch.OTHER, Collections.emptySet()
+	);
+
+	private final Set<String> fields(Class target){
+		return Arrays.stream(target.getDeclaredFields()).map(t -> t.getName()).collect(Collectors.toSet());
+	}
 
 	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository, PersonMetadataRepository personMetadataRepository) {
 		this.repository = repository;
@@ -45,6 +59,8 @@ public class PersonServiceImpl implements PersonService {
 
 		if (!personChecksService.personEmailIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
+
+		checkValidMetadataProperties(dto);
 
 		if (dto.getMeta() != null) {
 			dto.getMeta().forEach((key, value) ->
@@ -69,6 +85,8 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personEmailIsUnique(entity)) {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
+
+		checkValidMetadataProperties(dto);
 
 		List<PersonMetadata> toDelete = new ArrayList<>();
 		dbPerson.get().getMetadata().forEach(metadata -> {
@@ -97,6 +115,25 @@ public class PersonServiceImpl implements PersonService {
 		personMetadataRepository.deleteAll(toDelete);
 		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
 		return result;
+	}
+
+	private void checkValidMetadataProperties(PersonDto dto) {
+		if (dto.getMeta() != null) {
+			Branch branch = dto.getBranch();
+			if (branch == null) {
+				branch = Branch.OTHER;
+			}
+			Set<String> properties = validProperties.get(branch);
+			Set<String> unknownProperties = new HashSet<>();
+			dto.getMeta().forEach((key, value) -> {
+				if (!properties.contains(key)) {
+					unknownProperties.add(key);
+				}
+			});
+			if (unknownProperties.size() > 0) {
+				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", dto.getBranch(), String.join(", ", unknownProperties)));
+			}
+		}
 	}
 
 	@Override

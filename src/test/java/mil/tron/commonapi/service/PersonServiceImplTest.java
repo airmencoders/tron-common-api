@@ -68,8 +68,8 @@ class PersonServiceImplTest {
 				.title("title")
 				.build();
 		testPerson.getMetadata().addAll(List.of(
-				new PersonMetadata(testPerson.getId(), "key1", "value1"),
-				new PersonMetadata(testPerson.getId(), "key2", "value2")
+				new PersonMetadata(testPerson.getId(), "afsc", "value1"),
+				new PersonMetadata(testPerson.getId(), "admin", "value2")
 		));
 		testDto = personService.convertToDto(testPerson);
 	}
@@ -107,6 +107,17 @@ class PersonServiceImplTest {
 	    	assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
 	    		personService.createPerson(testDto);
 	    	});
+		}
+
+		@Test
+		void invalidProperty() {
+			testDto.setMetaProperty("blahblah", "value");
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+				personService.createPerson(testDto);
+			});
 		}
 	}
 	
@@ -157,6 +168,17 @@ class PersonServiceImplTest {
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 	    	PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
 	    	assertThat(updatedPerson.getId()).isEqualTo(testPerson.getId());
+		}
+
+		@Test
+		void invalidProperty() {
+			testDto.setMetaProperty("blahblah", "value");
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+				personService.updatePerson(testPerson.getId(), testDto);
+			});
 		}
  	}
 
