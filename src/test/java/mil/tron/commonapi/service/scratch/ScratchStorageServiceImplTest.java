@@ -136,6 +136,7 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testGetAllEntriesByApp() {
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findAllByAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0)));
         assertEquals(Lists.newArrayList(entries.get(0)), service.getAllEntriesByApp(entries.get(0).getAppId()));
     }
@@ -155,6 +156,7 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testGetKeyValueByAppId() {
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findByAppIdAndKey(entries.get(0).getId(), "hello"))
                 .thenReturn(Optional.of(entries.get(0)))
                 .thenReturn(Optional.empty());
@@ -165,6 +167,7 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testSetKeyValuePair() {
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findByAppIdAndKey(entries.get(0).getAppId(), entries.get(0).getKey()))
                 .thenReturn(Optional.of(entries.get(0)))  // first time record exists
                 .thenReturn(Optional.empty()); // next time it doesn't
@@ -180,6 +183,7 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testDeleteKeyValuePairByAppId() {
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
                 .thenReturn(Optional.of(entries.get(0))) // return an item first call
                 .thenReturn(Optional.empty());  // return not found second call
@@ -192,6 +196,7 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testDeleteAllPairsByAppId() {
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findAllByAppId(Mockito.any(UUID.class))).thenReturn(entries);
         Mockito.doNothing().when(repository).deleteById(Mockito.any(UUID.class));
 

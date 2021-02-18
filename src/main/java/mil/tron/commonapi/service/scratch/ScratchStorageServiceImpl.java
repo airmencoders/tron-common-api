@@ -24,7 +24,7 @@ import java.util.UUID;
 
 @Service
 public class ScratchStorageServiceImpl implements ScratchStorageService {
-
+    private static final String SCRATCH_WRITE_PRIV = "SCRATCH_WRITE";
     private ScratchStorageRepository repository;
     private ScratchStorageAppRegistryEntryRepository appRegistryRepo;
     private ScratchStorageUserRepository scratchUserRepo;
@@ -44,6 +44,16 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         this.privRepo = privRepo;
     }
 
+    /**
+     * Private helper to validate an app exists by Id
+     * @param appId UUID of application
+     */
+    private void validateAppId(UUID appId) {
+        if (!appRegistryRepo.existsById(appId)) {
+            throw new RecordNotFoundException("No application with ID: " + appId + " was found");
+        }
+    }
+
     @Override
     public Iterable<ScratchStorageEntry> getAllEntries() {
         return repository.findAll();
@@ -51,6 +61,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     @Override
     public Iterable<ScratchStorageEntry> getAllEntriesByApp(UUID appId) {
+        validateAppId(appId);
         return repository.findAllByAppId(appId);
     }
 
@@ -61,6 +72,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     @Override
     public ScratchStorageEntry getKeyValueEntryByAppId(UUID appId, String keyName) {
+        validateAppId(appId);
         return repository.findByAppIdAndKey(appId, keyName).orElseThrow(() -> new RecordNotFoundException("Cannot find record with that AppId/Key Name"));
     }
 
@@ -73,6 +85,8 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      */
     @Override
     public ScratchStorageEntry setKeyValuePair(UUID appId, String key, String value) {
+
+        validateAppId(appId);
         Optional<ScratchStorageEntry> entry = repository.findByAppIdAndKey(appId, key);
 
         if (entry.isPresent()) {
@@ -80,8 +94,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             ScratchStorageEntry existingEntry = entry.get();
             existingEntry.setValue(value);
             return repository.save(existingEntry);
-        }
-        else {
+        } else {
             // create new
             ScratchStorageEntry newEntry = ScratchStorageEntry
                     .builder()
@@ -93,10 +106,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
             return repository.save(newEntry);
         }
+
     }
 
     @Override
     public ScratchStorageEntry deleteKeyValuePair(UUID appId, String key) {
+
+        validateAppId(appId);
+
         ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, key).orElseThrow(() ->
                 new RecordNotFoundException("Cannot delete specified record, record not found"));
 
@@ -108,6 +125,8 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     @Override
     public Iterable<ScratchStorageEntry> deleteAllKeyValuePairsForAppId(UUID appId) {
+
+        validateAppId(appId);
 
         List<ScratchStorageEntry> deletedEntries = new ArrayList<>();
         List<ScratchStorageEntry> entries = Lists.newArrayList(repository.findAllByAppId(appId));
@@ -261,5 +280,21 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         scratchUserRepo.deleteById(id);
         return user;
+    }
+
+    @Override
+    public boolean userCanWriteToAppId(UUID appId, String email) {
+
+        // get the appId after validating its a real app ID that's registered
+        ScratchStorageAppRegistryEntry appEntry = appRegistryRepo.findById(appId)
+                .orElseThrow(() -> new RecordNotFoundException("Application with ID " + appId + " doesn't exist"));
+
+        for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
+            if (priv.getUser().getEmail().toLowerCase().equals(email.toLowerCase())
+                && priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV))
+                    return true;
+        }
+
+        return false;
     }
 }

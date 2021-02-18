@@ -29,4 +29,5 @@ public interface ScratchStorageService {
     ScratchStorageUser editScratchUser(UUID id, ScratchStorageUser user);
     ScratchStorageUser addNewScratchUser(ScratchStorageUser user);
     ScratchStorageUser deleteScratchUser(UUID id);
+    boolean userCanWriteToAppId(UUID appId, String email);
 }

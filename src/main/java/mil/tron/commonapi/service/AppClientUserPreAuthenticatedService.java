@@ -1,16 +1,10 @@
 package mil.tron.commonapi.service;
 
-import java.util.ArrayList;
-
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-import javax.transaction.Transactional;
-
 import lombok.val;
+import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
@@ -22,9 +16,12 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.stereotype.Service;
 
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.AppClientUser;
-import mil.tron.commonapi.repository.AppClientUserRespository;
+import javax.transaction.Transactional;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * PreAuthenticated service for use with Client Users that is an Application.
@@ -49,6 +46,7 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 	@Transactional
 	@Override
 	public UserDetails loadUserDetails(PreAuthenticatedAuthenticationToken token) throws UsernameNotFoundException {
+
 		// allow for configured self app hostname to have all privileges
 		if (token.getName().equals(this.commonApiAppName)) {
 			val privileges = this.privilegeRepository.findAll();

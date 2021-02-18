@@ -20,7 +20,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.equalTo;
@@ -168,6 +167,9 @@ public class ScratchStorageControllerTest {
                 .value("Chris")
                 .build();
 
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true); // let user have the privs to mutate
+
         Mockito.when(service.setKeyValuePair(entry.getAppId(), entry.getKey(), entry.getValue())).thenReturn(entry);
 
         mockMvc.perform(post(ENDPOINT)
@@ -183,6 +185,9 @@ public class ScratchStorageControllerTest {
     void testDeleteAllByAppId() throws Exception {
         // test we can delete all key value pairs for an app given its ID
 
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true); // let user have the privs to mutate
+
         Mockito.when(service.deleteAllKeyValuePairsForAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0)));
 
         mockMvc.perform(delete(ENDPOINT + "{appId}", entries.get(0).getAppId()))
@@ -194,11 +199,20 @@ public class ScratchStorageControllerTest {
     void testDeleteAllByAppIdAndKeyName() throws Exception {
         // test we can delete a specific key value pair for an app given its ID
 
+
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true) // let user have the privs to mutate
+                .thenReturn(false);   // deny on second call
+
         Mockito.when(service.deleteKeyValuePair(entries.get(0).getAppId(), "hello")).thenReturn(entries.get(0));
 
         mockMvc.perform(delete(ENDPOINT + "{appId}/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appId", equalTo(entries.get(0).getAppId().toString())));
+
+        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
+                .andExpect(status().isForbidden());
+
     }
 
     //

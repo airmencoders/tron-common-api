@@ -33,12 +33,18 @@ public class ScratchStorageAppRegistryEntry {
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    /**
+     * The String name of the app
+     */
     @Getter
     @Setter
     @NotBlank
     @NotNull
     private String appName;
 
+    /**
+     * Collection of user privs for this registered app name
+     */
     @Getter
     @Builder.Default
     @OneToMany

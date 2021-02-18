@@ -1,13 +1,15 @@
 package mil.tron.commonapi.security;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
+
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.servlet.http.HttpServletRequest;
-
-import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 
 public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFilter  {
 	
@@ -22,8 +24,26 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 		return extractNamespaceFromUri(uri);
 	}
 
+	/**
+	 * If request has a JWT and has an email field, stash it in the credentials for now
+	 * @param request injected HTTP Request
+	 * @return either "N/A" or the email contained in the JWT
+	 */
 	@Override
 	protected Object getPreAuthenticatedCredentials(HttpServletRequest request) {
+		String authHeader = request.getHeader("authorization");
+		if (authHeader != null) {
+			String[] jwtParts = authHeader.split("Bearer ");
+			if (jwtParts.length > 1) {
+				try {
+					DecodedJWT jwt = JWT.decode(jwtParts[1]);
+					if (jwt.getClaim("email") != null) {
+						return jwt.getClaim("email").asString();
+					}
+				}
+				catch (JWTDecodeException ignored) {}
+			}
+		}
 		return "N/A";
 	}
 	

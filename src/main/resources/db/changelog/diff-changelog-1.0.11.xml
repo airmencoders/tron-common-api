@@ -66,4 +66,26 @@
     <changeSet author="christopherzell (generated)" id="1613508896370-17">
         <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="scratch_storage_app_user_privs" constraintName="FKqy82irleik4assn4xbvc2xqod" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="scratch_storage_user" validate="true"/>
     </changeSet>
+    <changeSet author="christopherzell" id="1613508896370-privileges-1">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='SCRATCH_WRITE';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="SCRATCH_WRITE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell" id="1613508896370-privileges-2">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='SCRATCH_READ';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="SCRATCH_READ" />
+        </insert>
+    </changeSet>
 </databaseChangeLog>
