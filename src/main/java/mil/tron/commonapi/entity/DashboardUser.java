@@ -22,7 +22,7 @@ public class DashboardUser {
     private UUID id = UUID.randomUUID();
 
     @Email(message="Malformed email address")
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     @Getter
     @Setter
     private String email;
@@ -43,7 +43,7 @@ public class DashboardUser {
     @PrePersist
     @PreUpdate
     public void sanitize() {
-        trimStringFields();
+        trimStrings();
         sanitizeNameForUniqueConstraint();
     }
 
@@ -51,7 +51,10 @@ public class DashboardUser {
         emailAsLower = email == null ? null : email.toLowerCase();
     }
 
-    private void trimStringFields() {
-        email = email == null ? null : email.trim();
+    private void trimStrings() {
+        email = trim(email);
+    }
+    private final String trim(String value) {
+        return value == null ? null : value.trim();
     }
 }

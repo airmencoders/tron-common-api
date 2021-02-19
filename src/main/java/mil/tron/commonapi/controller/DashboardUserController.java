@@ -61,7 +61,7 @@ public class DashboardUserController {
     @PreAuthorizeDashboardAdmin
     @PostMapping("")
     public ResponseEntity<DashboardUserDto> addDashboardUser(@Parameter(description = "Dashboard user to add", required = true) @Valid @RequestBody DashboardUserDto dashboardUser) {
-        return new ResponseEntity<>(dashboardUserService.createDashboardUser(dashboardUser), HttpStatus.CREATED);
+        return new ResponseEntity<>(dashboardUserService.createDashboardUserDto(dashboardUser), HttpStatus.CREATED);
     }
 
     @Operation(summary = "Updates an existing dashboard user", description = "Updates an existing dashboard user")
@@ -73,14 +73,13 @@ public class DashboardUserController {
                     description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-
     @PreAuthorizeDashboardAdmin
     @PutMapping(value = "/{id}")
     public ResponseEntity<DashboardUserDto> updateDashboardUser(
             @Parameter(description = "Dashboard User ID to update", required = true) @PathVariable("id") UUID Id,
             @Parameter(description = "Updated person", required = true) @Valid @RequestBody DashboardUserDto dashboardUserDto) {
 
-        DashboardUserDto updatedDashboardUser = dashboardUserService.updateDashboardUser(Id, dashboardUserDto);
+        DashboardUserDto updatedDashboardUser = dashboardUserService.updateDashboardUserDto(Id, dashboardUserDto);
         return new ResponseEntity<>(updatedDashboardUser, HttpStatus.OK);
     }
 

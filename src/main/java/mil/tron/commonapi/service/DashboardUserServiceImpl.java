@@ -8,6 +8,7 @@ import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -41,18 +42,22 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     }
 
     @Override
-    public DashboardUserDto createDashboardUser(DashboardUserDto dashboardUserDto) {
+    public DashboardUserDto createDashboardUserDto(DashboardUserDto dashboardUserDto) {
         DashboardUser dashboardUser = convertToEntity(dashboardUserDto);
         if (dashboardUser.getId() == null) {
             // we have to generate an ID manually since we're not using normal
             dashboardUser.setId(UUID.randomUUID());
         }
 
-        if (!userChecksService.UserEmailIsUnique(dashboardUser))
+        if (!userChecksService.UserEmailIsUnique(dashboardUser)) {
             throw new ResourceAlreadyExistsException(String.format("dashboardUser with the email: %s already exists", dashboardUser.getEmail()));
+        }
+
+        if (dashboardUser.getPrivileges().stream().count() == 0) {
+            throw new InvalidRecordUpdateRequest(String.format("A privilege must be set"));
+        }
 
         // the record with this 'id' shouldn't already exist...
-        // If a privilege is not given, the user is granted the DASHBOARD_USER privilege only
         if (!dashboardUserRepository.existsById(dashboardUser.getId())) {
             return convertToDto(dashboardUserRepository.save(dashboardUser));
         }
@@ -72,7 +77,7 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     }
 
     @Override
-    public DashboardUserDto updateDashboardUser(UUID id, DashboardUserDto dashboardUserDto) {
+    public DashboardUserDto updateDashboardUserDto(UUID id, DashboardUserDto dashboardUserDto) {
         DashboardUser dashboardUser = convertToEntity(dashboardUserDto);
         // Ensure the id given matches the id of the object given
         if (!id.equals(dashboardUser.getId()))
@@ -85,6 +90,10 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 
         if (!userChecksService.UserEmailIsUnique(dashboardUser)) {
             throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", dashboardUser.getEmail()));
+        }
+
+        if (dashboardUser.getPrivileges().stream().count() == 0) {
+            throw new InvalidRecordUpdateRequest(String.format("A privilege must be set"));
         }
 
         return convertToDto(dashboardUserRepository.save(dashboardUser));
@@ -113,6 +122,8 @@ public class DashboardUserServiceImpl implements DashboardUserService {
             Set<Privilege> defaultPrivilege = this.privilegeRepository.findByName("DASHBOARD_USER").map(Collections::singleton).orElse(Collections.emptySet());
             if (defaultPrivilege != null && defaultPrivilege.stream().count() == 1) {
                 entity.setPrivileges(defaultPrivilege);
+            } else {
+                throw new InvalidFieldValueException("No privilege provided and default privilege cannot be set");
             }
         }
         return entity;
