@@ -188,9 +188,10 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         // delete all its priv pairs too
         for (ScratchStorageAppUserPriv item : app.getUserPrivs()) {
-            if (appPrivRepo.existsById(item.getId()))
+            if (appPrivRepo.existsById(item.getId())) {
                 app.getUserPrivs().remove(item);
                 appPrivRepo.deleteById(item.getId());
+            }
         }
 
         // delete all its key-value pairs
@@ -278,8 +279,6 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         if (user.getId() == null) {
             user.setId(UUID.randomUUID());
         }
-
-        List<ScratchStorageUser> users = Lists.newArrayList(scratchUserRepo.findAll());
 
         // check here for dups - even though at the db layer it will be inhibited -- albeit with a nasty 500 error there
         if (scratchUserRepo.existsById(user.getId()) || scratchUserRepo.existsByEmailIgnoreCase(user.getEmail())) {
