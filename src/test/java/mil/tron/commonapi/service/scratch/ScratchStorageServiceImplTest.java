@@ -251,6 +251,9 @@ public class ScratchStorageServiceImplTest {
     void testDeleteRegisteredAppEntry() {
         Mockito.doNothing().when(appRegistryRepo).deleteById(Mockito.any(UUID.class));
 
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class)))
+                .thenReturn(true);
+
         ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
                 .builder()
                 .id(UUID.randomUUID())
