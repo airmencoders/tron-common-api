@@ -139,8 +139,9 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         return deletedEntries;
     }
 
-    //
-    // scratch storage app management...
+    // ***************************************** //
+    // Scratch storage app management functions  //
+    // ***************************************** //
 
     @Override
     public Iterable<ScratchStorageAppRegistryEntry> getAllRegisteredScratchApps() {
@@ -153,8 +154,9 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             entry.setId(UUID.randomUUID());
         }
 
-        if (appRegistryRepo.existsById(entry.getId())) {
-            throw new ResourceAlreadyExistsException("Scratch Space app by that UUID already exists");
+        // check here for dups - even though at the db layer it will be inhibited -- albeit with a nasty 500 error there
+        if (appRegistryRepo.existsById(entry.getId()) || appRegistryRepo.existsByAppNameIgnoreCase(entry.getAppName().trim())) {
+            throw new ResourceAlreadyExistsException("Scratch Space app by that UUID or AppName already exists");
         }
 
         return appRegistryRepo.save(entry);
@@ -170,6 +172,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             throw new RecordNotFoundException("Scratch Space app by that UUID does not exist");
         }
 
+        // check here for dups - even though at the db layer it will be inhibited -- albeit with a nasty 500 error there
+        if (appRegistryRepo.existsByAppNameIgnoreCase(entry.getAppName().trim())) {
+            throw new ResourceAlreadyExistsException("Scratch space application with that name already exists");
+        }
+
         return appRegistryRepo.save(entry);
     }
 
@@ -178,6 +185,16 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         ScratchStorageAppRegistryEntry app = appRegistryRepo.findById(id)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot delete non-existent app with UUID: " + id));
+
+        // delete all its priv pairs too
+        for (ScratchStorageAppUserPriv item : app.getUserPrivs()) {
+            if (appPrivRepo.existsById(item.getId()))
+                app.getUserPrivs().remove(item);
+                appPrivRepo.deleteById(item.getId());
+        }
+
+        // delete all its key-value pairs
+        deleteAllKeyValuePairsForAppId(app.getId());
 
         appRegistryRepo.deleteById(id);
 
@@ -189,6 +206,13 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         ScratchStorageAppRegistryEntry app = appRegistryRepo.findById(appId)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot find app with UUID: " + appId));
+
+        // make sure this user-priv set doesn't already exist
+        for (ScratchStorageAppUserPriv item : app.getUserPrivs()) {
+            if (item.getPrivilege().getId().equals(priv.getPrivilegeId()) && item.getUser().getId().equals(priv.getUserId())) {
+                throw new ResourceAlreadyExistsException("A User-Privilege set already exists for given App Id");
+            }
+        }
 
         ScratchStorageAppUserPriv entity =  this.mapUserPrivDtoToEntity(priv);
 
@@ -239,8 +263,10 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     }
 
-    //
-    // Scratch Storage user management functions
+    // ******************************************* //
+    // Scratch Storage user management functions   //
+    // ******************************************  //
+
 
     @Override
     public Iterable<ScratchStorageUser> getAllScratchUsers() {
@@ -253,8 +279,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             user.setId(UUID.randomUUID());
         }
 
-        if (scratchUserRepo.existsById(user.getId())) {
-            throw new ResourceAlreadyExistsException("Scratch Space user already exists");
+        List<ScratchStorageUser> users = Lists.newArrayList(scratchUserRepo.findAll());
+
+        // check here for dups - even though at the db layer it will be inhibited -- albeit with a nasty 500 error there
+        if (scratchUserRepo.existsById(user.getId()) || scratchUserRepo.existsByEmailIgnoreCase(user.getEmail())) {
+            throw new ResourceAlreadyExistsException("Scratch Space user with that UUID or email already exists");
         }
 
         return scratchUserRepo.save(user);
@@ -267,6 +296,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         if (!scratchUserRepo.existsById(user.getId())) {
             throw new RecordNotFoundException("Scratch User with ID: " + user.getId() + " does not exist");
+        }
+
+        // check here for dups - even though at the db layer it will be inhibited -- albeit with a nasty 500 error there
+        if (scratchUserRepo.existsByEmailIgnoreCase(user.getEmail())) {
+            throw new ResourceAlreadyExistsException("Scratch Space user already exists with that email address");
         }
 
         return scratchUserRepo.save(user);

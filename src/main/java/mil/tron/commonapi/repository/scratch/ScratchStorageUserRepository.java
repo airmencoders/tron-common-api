@@ -6,4 +6,5 @@ import org.springframework.data.repository.CrudRepository;
 import java.util.UUID;
 
 public interface ScratchStorageUserRepository extends CrudRepository<ScratchStorageUser, UUID> {
+    public boolean existsByEmailIgnoreCase(String email);
 }

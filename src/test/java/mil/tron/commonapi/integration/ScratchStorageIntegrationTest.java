@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.repository.PrivilegeRepository;
@@ -21,6 +22,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
 import java.util.HashMap;
@@ -428,5 +430,190 @@ public class ScratchStorageIntegrationTest {
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user1.getEmail())))
                 .andExpect(status().isNotFound());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testErrorConditions() throws Exception {
+
+        // Note, that "user" doing these tests are already Mocked as a DASHBOARD_ADMIN
+
+        // test various error conditions are caught
+            // blank or null email
+            // blank or null appName
+            // email or appName with leading or trailing whitespace
+            // try to add duplicate email with varying cases is denied
+            // try to add duplicate app names with varying cases is denied
+            // check that user-priv sets per app is not allowed to have duplicates
+
+
+        // make a new user - "user3"
+        ScratchStorageUser user3 = ScratchStorageUser
+                .builder()
+                .email("")
+                .build();
+
+        //  with blank email should fail
+        mockMvc.perform(post(ENDPOINT + "users")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3)))
+                .andExpect(status().isBadRequest());
+
+        // with null email should fail
+        user3.setEmail(null);
+        mockMvc.perform(post(ENDPOINT + "users")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3)))
+                .andExpect(status().isBadRequest());
+
+        // with duplicate email fails
+        user3.setEmail("user1@test.com");
+        mockMvc.perform(post(ENDPOINT + "users")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3)))
+                .andExpect(status().isConflict());
+
+        // with malformed email fails
+        user3.setEmail("user1..test.com");
+        mockMvc.perform(post(ENDPOINT + "users")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3)))
+                .andExpect(status().isBadRequest());
+
+        // valid email finally succeeds
+        user3.setEmail("valid@test.com");
+        MvcResult result = mockMvc.perform(post(ENDPOINT + "users")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID user3Id = OBJECT_MAPPER
+                .readValue(result.getResponse().getContentAsString(), ScratchStorageUser.class)
+                .getId();
+
+        // test edit fails when setting to duplicate email, even with varying case
+        user3.setId(user3Id);
+        user3.setEmail("user1@TEST.com");
+        mockMvc.perform(put(ENDPOINT + "users/{id}", user3Id)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3)))
+                .andExpect(status().isConflict());
+
+        // test edit fails when setting to duplicate email with leading and trailing whitespace still fails
+        user3.setId(user3Id);
+        user3.setEmail("   user1@test.com      ");
+        mockMvc.perform(put(ENDPOINT + "users/{id}", user3Id)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3)))
+                .andExpect(status().isBadRequest());
+
+
+        // register new "App3", but with COOL_APP's name - should fail
+        Map<String, String> app3Registration = new HashMap<>();
+        app3Registration.put("appName", COOL_APP_NAME);
+        mockMvc.perform(post(ENDPOINT + "apps")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(app3Registration)))
+                .andExpect(status().isConflict());
+
+        // same app name varying case should still fail
+        app3Registration.put("appName", COOL_APP_NAME.toUpperCase());
+        mockMvc.perform(post(ENDPOINT + "apps")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(app3Registration)))
+                .andExpect(status().isConflict());
+
+        // same app name with leading and trailing whitespace shall fail
+        app3Registration.put("appName", "     " + COOL_APP_NAME + "    ");
+        mockMvc.perform(post(ENDPOINT + "apps")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(app3Registration)))
+                .andExpect(status().isConflict());
+
+        // blank app name should fail
+        app3Registration.put("appName", "");
+        mockMvc.perform(post(ENDPOINT + "apps")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(app3Registration)))
+                .andExpect(status().isBadRequest());
+
+        // null app name should fail
+        app3Registration.put("appName", null);
+        mockMvc.perform(post(ENDPOINT + "apps")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(app3Registration)))
+                .andExpect(status().isBadRequest());
+
+
+        // finally let app3 register
+        app3Registration.put("appName", "app3");
+        MvcResult newApp = mockMvc.perform(post(ENDPOINT + "apps")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(app3Registration)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID app3Id = OBJECT_MAPPER
+                .readValue(newApp.getResponse().getContentAsString(), ScratchStorageAppRegistryEntry.class)
+                .getId();
+
+        // test that edit app3 entry with existing app name fails
+        app3Registration.put("id", app3Id.toString());
+        app3Registration.put("appName", COOL_APP_NAME);
+        mockMvc.perform(put(ENDPOINT + "apps/{appId}", app3Id)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(app3Registration)))
+                .andExpect(status().isConflict());
+
+
+        // get the privs from the db
+        List<Privilege> privs = Lists.newArrayList(privRepo.findAll());
+        Long writePrivId = privs.stream()
+                .filter(item -> item.getName().equals("SCRATCH_WRITE"))
+                .collect(Collectors.toList()).get(0).getId();
+
+        // define user1's privilege set to COOL_APP
+        //  these will be PATCH to the endpoint in a ScratchStorageAppUserPrivDto
+        ScratchStorageAppUserPrivDto user3PrivDto =
+                ScratchStorageAppUserPrivDto.builder()
+                        .userId(user3.getId())
+                        .privilegeId(writePrivId)
+                        .build();
+
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", app3Id)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3PrivDto)))
+                .andExpect(status().isOk());
+
+        // test that we get CONFLICT on trying to add a priv set that already exists for given app/user/priv combo
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", app3Id)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3PrivDto)))
+                .andExpect(status().isConflict());
     }
 }

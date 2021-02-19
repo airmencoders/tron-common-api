@@ -6,4 +6,5 @@ import org.springframework.data.repository.CrudRepository;
 import java.util.UUID;
 
 public interface ScratchStorageAppUserPrivRepository extends CrudRepository<ScratchStorageAppUserPriv, UUID> {
+    public boolean existsByUserIdAndPrivilegeId(UUID userId, Long privilegeId);
 }

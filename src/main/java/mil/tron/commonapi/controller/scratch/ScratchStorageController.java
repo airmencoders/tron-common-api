@@ -14,6 +14,7 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -196,7 +197,10 @@ public class ScratchStorageController {
                     description = "Malformed request body or app name already exists",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges"),
+            @ApiResponse(responseCode = "409",
+                    description = "App UUID or App Name is already is use",
+                    content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
     @PostMapping("/apps")
@@ -218,7 +222,10 @@ public class ScratchStorageController {
                     description = "Application ID not found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges"),
+            @ApiResponse(responseCode = "409",
+                    description = "App Name is already is use",
+                    content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
     @PutMapping("/apps/{id}")
@@ -241,7 +248,10 @@ public class ScratchStorageController {
                     description = "Application ID not found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges"),
+            @ApiResponse(responseCode = "409",
+                    description = "This app/user/priv combo already exists",
+                    content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
     @PatchMapping("/apps/{id}/user")
@@ -325,7 +335,10 @@ public class ScratchStorageController {
                     description = "Malformed Scratch Storage object",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges"),
+            @ApiResponse(responseCode = "409",
+                    description = "Scratch User UUID or email address is already is use",
+                    content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
     @PostMapping("/users")
@@ -347,7 +360,10 @@ public class ScratchStorageController {
                     description = "User id not found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges"),
+            @ApiResponse(responseCode = "409",
+                    description = "Scratch User Email Address is already is use",
+                    content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
     @PutMapping("/users/{id}")

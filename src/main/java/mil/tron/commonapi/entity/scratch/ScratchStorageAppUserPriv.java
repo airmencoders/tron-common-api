@@ -3,10 +3,7 @@ package mil.tron.commonapi.entity.scratch;
 import lombok.*;
 import mil.tron.commonapi.entity.Privilege;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.util.UUID;
 
 /**

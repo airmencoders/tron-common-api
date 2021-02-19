@@ -1,11 +1,9 @@
 package mil.tron.commonapi.entity.scratch;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.util.HashSet;
@@ -20,7 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @Entity
-@Table(name="scratch_storage_app_registry")
+@Table(name="scratch_storage_app_registry", uniqueConstraints = { @UniqueConstraint(columnNames = "appNameAsLower") })
 public class ScratchStorageAppRegistryEntry {
 
     /**
@@ -42,6 +40,9 @@ public class ScratchStorageAppRegistryEntry {
     @NotNull
     private String appName;
 
+    @JsonIgnore
+    private String appNameAsLower;
+
     /**
      * Collection of user privs for this registered app name
      */
@@ -56,6 +57,25 @@ public class ScratchStorageAppRegistryEntry {
 
     public void removeUserAndPriv(ScratchStorageAppUserPriv priv) {
         this.userPrivs.remove(priv);
+    }
+
+    @PreUpdate
+    @PrePersist
+    public void sanitizeEntity() {
+        trimStrings();
+        sanitizeAppNameForUniqueConstraint();
+    }
+
+    private void sanitizeAppNameForUniqueConstraint() {
+        appNameAsLower = appName == null ? null : appName.toLowerCase();
+    }
+
+    private void trimStrings() {
+        appName = trim(appName);
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
 }
