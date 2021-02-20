@@ -57,7 +57,7 @@ public class EventPublisherTest {
         subscriber = Subscriber.builder()
                 .id(UUID.randomUUID())
                 .subscribedEvent(EventType.PERSON_CHANGE)
-                .subscriberAddress("http://some.address/changed")
+                .subscriberAddress("http://some.svc.cluster.local/api/changed")
                 .build();
 
         subscriber2 = Subscriber.builder()
@@ -100,7 +100,7 @@ public class EventPublisherTest {
 
     @Test
     void testAsyncPublishWithMalformedXFCCHeader() {
-        // a malformed XFCC should just be ignored
+        // a malformed XFCC should just be ignored, and we just blast out the message to all subscribers
 
         Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventType.class)))
                 .thenReturn(Lists.newArrayList(subscriber, subscriber2));
@@ -147,5 +147,9 @@ public class EventPublisherTest {
         assertEquals("", publisher.extractSubscriberNamespace("http://svc.cluster.local/puckboard-api/v1"));
         assertEquals("3000", publisher.extractSubscriberNamespace("http://localhost:3000"));
         assertEquals("", publisher.extractSubscriberNamespace(null));
+
+        assertEquals("tron-puckboard", publisher.extractNamespace("By=spiffe://cluster.local/ns/tron-common-api/sa/default;Hash=blah;Subject=\"\";URI=spiffe://cluster.local/ns/tron-puckboard/sa/default"));
+        assertEquals("3000", publisher.extractNamespace("By=spiffe://cluster.local/ns/tron-common-api/sa/default;Hash=blah;Subject=\"\";URI=spiffe://localhost:3000"));
+        assertNull(publisher.extractNamespace(""));
     }
 }
