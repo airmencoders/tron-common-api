@@ -72,7 +72,6 @@ public class EventPublisher {
      */
     @Async
     public void publishEvent(EventType type, String message, String className, Object data, String xfccHeader) {
-        System.out.println("HEADER: " + xfccHeader);
         String requesterNamespace = extractNamespace(xfccHeader);
 
         List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(type));
@@ -82,7 +81,6 @@ public class EventPublisher {
         messageDetails.put("message", message);
         messageDetails.put("data", data);
         for (Subscriber s : subscribers) {
-            String str = extractSubscriberNamespace(s.getSubscriberAddress());
             // only push to everyone but the requester (if the requester is a subscriber)
             if (!extractSubscriberNamespace(s.getSubscriberAddress()).equals(requesterNamespace)) {
                 publisherLog.info("[PUBLISH BROADCAST] - Event: " + type.toString() + " Message: " + message + " to Subscriber: " + s.getSubscriberAddress());
