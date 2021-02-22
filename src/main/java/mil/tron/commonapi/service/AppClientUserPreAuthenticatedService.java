@@ -10,6 +10,7 @@ import java.util.stream.StreamSupport;
 
 import javax.transaction.Transactional;
 
+
 import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.val;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -39,7 +40,6 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 	
 	private AppClientUserRespository appClientUserRespository;
 	private DashboardUserRepository dashboardUserRepository;
-
 	private PrivilegeRepository privilegeRepository;
 
 	@Value("${common-api-app-name}")
