@@ -35,5 +35,4 @@ public class AppClientUserDto {
 	@Setter
 	@Builder.Default
 	private List<Privilege> privileges = new ArrayList<>();
-
 }
