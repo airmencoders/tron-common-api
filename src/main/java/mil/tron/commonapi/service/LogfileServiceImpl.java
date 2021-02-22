@@ -2,7 +2,9 @@ package mil.tron.commonapi.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import mil.tron.commonapi.dto.LogfileDto;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.FileCompressionException;
 import mil.tron.commonapi.exception.FileNotExistsException;
 
@@ -36,10 +39,9 @@ public class LogfileServiceImpl implements LogfileService {
 
 	@Override
 	public Iterable<LogfileDto> getAllLogfileInfo() {
-		File file = logsPath.toFile();
 		List<LogfileDto> dtos = new ArrayList<>();
 		
-		for (String name : file.list()) {
+		for (String name : getNamesFromPath()) {
 			dtos.add(convertToDto(name));
 		}
 		
@@ -48,24 +50,28 @@ public class LogfileServiceImpl implements LogfileService {
 
 	@Override
 	public Resource getLogfileResource(String fileName) {
+		Path path;
 		try {
-			Path path = logsPath.resolve(fileName).normalize();
-			Resource resource = null;
-			
-			// If trying to retrieve the most current logfile,
-			// compress it before sending
-			if (getExtension(fileName).isPresent() && getExtension(fileName).get().equals("log"))
-				resource = new ByteArrayResource(gzipFile(path));
-			else 
-				resource = new UrlResource(path.toUri());
-
-			if (!resource.exists() || !resource.isReadable())
-				throw new FileNotExistsException(fileName);
-			
-			return resource;
-		} catch (Exception ex) {
-			throw new FileNotExistsException(fileName, ex);
+			path = logsPath.resolve(fileName).normalize();
+		} catch (InvalidPathException ex) {
+			throw new BadRequestException("Could not resolve filename: " + fileName);
 		}
+		
+		Resource resource = null;
+		
+		Optional<String> fileType = getExtension(fileName);
+		
+		// If trying to retrieve the most current logfile,
+		// compress it before sending
+		if (fileType.isPresent() && fileType.get().equals("log"))
+			resource = new ByteArrayResource(gzipFileAsBytes(path));
+		else
+			resource = createUrlResourceFromPathString(path.toUri().toString());
+
+		if (!resource.exists() || !resource.isReadable())
+			throw new FileNotExistsException(fileName);
+		
+		return resource;
 	}
 	
 	@Override
@@ -79,28 +85,39 @@ public class LogfileServiceImpl implements LogfileService {
 			
 		return savedFileName;
 	}
-
-	private LogfileDto convertToDto(String name) {
-		LogfileDto dto = new LogfileDto();
-		dto.setName(name);
+	
+	protected String[] getNamesFromPath() {
+		File file = logsPath.toFile();
 		
-		String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path(apiEndpoint)
-                .path(name)
-                .toUriString();
-		dto.setDownloadUri(fileDownloadUri);
+		return file.list();
+	}
+	
+	protected UrlResource createUrlResourceFromPathString(String url) {
+		try {
+			return new UrlResource(url);
+		} catch (MalformedURLException e) {
+			throw new BadRequestException(e.getLocalizedMessage());
+		}
+	}
+
+ 	protected LogfileDto convertToDto(String name) {
+		LogfileDto dto = new LogfileDto();
+		
+		dto.setName(name);
+		dto.setDownloadUri(createDownloadUri(name));
 		
 		return dto;
 	}
+ 	
+ 	protected String createDownloadUri(String name) {
+ 		return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path(apiEndpoint)
+                .path(name)
+                .toUriString();
+ 	}
 	
-	private byte[] gzipFile(Path path) {
-		byte[] fileContents;
-		
-		try {
-			fileContents = Files.readAllBytes(path);
-		} catch (Exception ex) {
-			throw new FileCompressionException(String.format("Could not load file: %s for compression.", path.getFileName()), ex);
-		}
+	protected byte[] gzipFileAsBytes(Path path) {
+		byte[] fileContents = readPathFileAsBytes(path);
 		
 		ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
 		
@@ -114,7 +131,15 @@ public class LogfileServiceImpl implements LogfileService {
 		return byteOutputStream.toByteArray();
 	}
 	
-	private Optional<String> getExtension(String fileName) {
+	protected byte[] readPathFileAsBytes(Path path) {
+		try {
+			return Files.readAllBytes(path);
+		} catch (Exception ex) {
+			throw new FileCompressionException(String.format("Could not load file: %s for compression.", path.getFileName()), ex);
+		}
+	}
+	
+	protected Optional<String> getExtension(String fileName) {
 		return Optional.ofNullable(fileName)
 			      .filter(f -> f.contains("."))
 			      .map(f -> f.substring(fileName.lastIndexOf(".") + 1));

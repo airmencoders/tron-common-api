@@ -1,8 +1,5 @@
 package mil.tron.commonapi.controller;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.core.io.Resource;
@@ -29,8 +26,6 @@ import mil.tron.commonapi.service.LogfileService;
 @RestController
 @RequestMapping("${api-prefix.v1}/logfile")
 public class LogfileController {
-	
-	
 	private LogfileService service;
 	
 	public LogfileController(LogfileService service) {
@@ -52,14 +47,11 @@ public class LogfileController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation"),
-			@ApiResponse(responseCode = "500",
-				description = "I/O error",
+			@ApiResponse(responseCode = "400",
+				description = "I/O error involving file",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "404",
 				description = "File not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad request",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@GetMapping("/{fileName:.+}")
@@ -72,5 +64,4 @@ public class LogfileController {
 			.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + service.getLogfileResourceName(resource) + "\"")
 			.body(resource);
 	}
-	
 }
