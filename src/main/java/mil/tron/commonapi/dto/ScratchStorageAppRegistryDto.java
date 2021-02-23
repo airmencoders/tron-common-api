@@ -14,7 +14,24 @@ import java.util.*;
  * Represents a registered scratch space app that includes:
  *   - its UUID
  *   - its app name
- *   - its users and their privileges
+ *   - its users and their privileges, represented as a collection of:
+ *      {
+ *          userId,
+ *          userEmail,
+ *          privs: [
+ *              {
+ *                  userPrivPairId,
+ *                  priv: {
+ *                      id,
+ *                      name
+ *                  }
+ *               }
+ *           ]
+ *      }
+ *
+ *  The 'userPrivPairId' is the UUID of the particular ScratchStorageAppUserPriv entry
+ *  in the database (ScratchStorageAppUserPrivRepository to be specific).  You can delete
+ *  the record of that UUID and effectively remove that Privilege of that user from that application.
  *
  */
 @Builder
