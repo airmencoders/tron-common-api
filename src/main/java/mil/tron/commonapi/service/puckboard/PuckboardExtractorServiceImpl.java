@@ -35,6 +35,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     @Autowired
     private PersonService personService;
 
+    private static final String ARRAY_RESULT_FIELD = "result";
+
     private static final String ORG_ID_FIELD = "organizationId";
     private static final String ORG_TYPE_FIELD = "branchId";
     private static final String ORG_NAME_FIELD = "organizationName";
@@ -72,7 +74,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
      * lookup table since Puckboard saves 'rankId' for a person's rank and
      * Common API uses a set of pre-defined rank strings.
      * Puckboard's rank entity is an array of all the services as a object, like this:
-     *  [
+     * {
+     *  "result": [
      *      {
      *          "id": 4,
      *          "name": "Air Force",
@@ -91,7 +94,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
      *           ...
      *      },
      *      ...
-     * ]
+     *   ]
+     * }
      * @param branchInfoJson The JsonNode given by the controller from the Puckboard API branch info dump
      */
     private Map<Integer, RankInfo> processBranchInfo(JsonNode branchInfoJson) {
@@ -258,13 +262,13 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
             JsonNode branchInfoJson) {
 
         // process branch information into lookup hash
-        Map<Integer, RankInfo> rankLookup = this.processBranchInfo(branchInfoJson);
+        Map<Integer, RankInfo> rankLookup = this.processBranchInfo(branchInfoJson.get(ARRAY_RESULT_FIELD));
 
         // process unit information
-        Map<UUID, String> orgStatus = this.processOrgInformation(orgs);
+        Map<UUID, String> orgStatus = this.processOrgInformation(orgs.get(ARRAY_RESULT_FIELD));
 
         // process people information
-        Map<UUID, String> peopleStatus = this.processPersonnelInfo(people, rankLookup);
+        Map<UUID, String> peopleStatus = this.processPersonnelInfo(people.get(ARRAY_RESULT_FIELD), rankLookup);
 
         return new ImmutableMap.Builder<String, Map<UUID, String>>()
                 .put("orgs", orgStatus)
