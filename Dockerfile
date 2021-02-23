@@ -3,7 +3,7 @@ FROM centos:7 as wgetsrc
 RUN yum install wget -y
 
 # Load the hardened jdk image we use to run puckboard
-FROM registry.il2.dso.mil/platform-one/devops/pipeline-templates/harden-jdk/jdk11-headless:8.2.276
+FROM registry.il2.dso.mil/platform-one/devops/pipeline-templates/base-image/harden-headless-jdk11:1.11.232
 
 ENV CONTEXTS DEV
 
