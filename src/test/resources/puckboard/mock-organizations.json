@@ -1,146 +1,148 @@
-[
-  {
-    "classType": "Organization",
-    "organizationId": "b9b50e31-2269-480c-aae8-1c59c65d6cc2",
-    "organizationName": "15th Wing",
-    "organizationType": "Wing",
-    "isSchedulingUnit": false,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "4262c1ee-66fc-4f29-915b-958be4f94bbe",
-    "organizationName": "535th Airlift Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "f37669d5-d6df-49fe-9c8f-bc1a0f4ecc49",
-    "organizationName": "204th Airlift Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "d8549f9b-f785-4afb-a9c6-1884b6fc93b3",
-    "organizationName": "315th Airlift Wing",
-    "organizationType": "Wing",
-    "isSchedulingUnit": false,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "e265715d-c438-4b63-b14b-515c2f59f9cb",
-    "organizationName": "300th Airlift Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "e7bb0b0f-579b-4731-8847-c61a723bcd3d",
-    "organizationName": "317th Airlift Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "7556867b-24f1-4beb-8803-b8b8b48b58ef",
-    "organizationName": "701st Airlift Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "5e03e096-f88a-49ae-854e-56f1372a8917",
-    "organizationName": "437th Airlift Wing",
-    "organizationType": "Wing",
-    "isSchedulingUnit": false,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "dae15c2a-e3fa-4af2-8bc1-56aae9c81154",
-    "organizationName": "14th Airlift Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "34de042a-e8dd-43c5-9936-686d93be401e",
-    "organizationName": "15th Airlift Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "710b68b5-1786-4fa3-b51c-d91c6f9f9084",
-    "organizationName": "16th Airlift Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9a",
-    "organizationName": "Tron Parent Wing",
-    "organizationType": "Wing",
-    "isSchedulingUnit": false,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
-    "organizationName": "Tron Demo Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
-    "organizationName": "Tron Demo Squadron 2",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 4
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "e512a9f2-1304-42a8-8ad2-0ded5f084623",
-    "organizationName": "Tron Marine Parent Wing",
-    "organizationType": "Wing",
-    "isSchedulingUnit": false,
-    "classType": null,
-    "branchId": 2
-  },
-  {
-    "classType": "Organization",
-    "organizationId": "d2265748-fde4-4ddc-bfda-72ca88d8a7f6",
-    "organizationName": "Tron Marine Demo Squadron",
-    "organizationType": "Squadron",
-    "isSchedulingUnit": true,
-    "classType": null,
-    "branchId": 2
-  }
-]
+{
+  "result": [
+    {
+      "classType": "Organization",
+      "organizationId": "b9b50e31-2269-480c-aae8-1c59c65d6cc2",
+      "organizationName": "15th Wing",
+      "organizationType": "Wing",
+      "isSchedulingUnit": false,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "4262c1ee-66fc-4f29-915b-958be4f94bbe",
+      "organizationName": "535th Airlift Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "f37669d5-d6df-49fe-9c8f-bc1a0f4ecc49",
+      "organizationName": "204th Airlift Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "d8549f9b-f785-4afb-a9c6-1884b6fc93b3",
+      "organizationName": "315th Airlift Wing",
+      "organizationType": "Wing",
+      "isSchedulingUnit": false,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "e265715d-c438-4b63-b14b-515c2f59f9cb",
+      "organizationName": "300th Airlift Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "e7bb0b0f-579b-4731-8847-c61a723bcd3d",
+      "organizationName": "317th Airlift Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "7556867b-24f1-4beb-8803-b8b8b48b58ef",
+      "organizationName": "701st Airlift Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "5e03e096-f88a-49ae-854e-56f1372a8917",
+      "organizationName": "437th Airlift Wing",
+      "organizationType": "Wing",
+      "isSchedulingUnit": false,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "dae15c2a-e3fa-4af2-8bc1-56aae9c81154",
+      "organizationName": "14th Airlift Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "34de042a-e8dd-43c5-9936-686d93be401e",
+      "organizationName": "15th Airlift Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "710b68b5-1786-4fa3-b51c-d91c6f9f9084",
+      "organizationName": "16th Airlift Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9a",
+      "organizationName": "Tron Parent Wing",
+      "organizationType": "Wing",
+      "isSchedulingUnit": false,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+      "organizationName": "Tron Demo Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+      "organizationName": "Tron Demo Squadron 2",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 4
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "e512a9f2-1304-42a8-8ad2-0ded5f084623",
+      "organizationName": "Tron Marine Parent Wing",
+      "organizationType": "Wing",
+      "isSchedulingUnit": false,
+      "classType": null,
+      "branchId": 2
+    },
+    {
+      "classType": "Organization",
+      "organizationId": "d2265748-fde4-4ddc-bfda-72ca88d8a7f6",
+      "organizationName": "Tron Marine Demo Squadron",
+      "organizationType": "Squadron",
+      "isSchedulingUnit": true,
+      "classType": null,
+      "branchId": 2
+    }
+  ]
+}
