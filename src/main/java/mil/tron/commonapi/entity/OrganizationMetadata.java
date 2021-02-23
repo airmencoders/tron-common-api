@@ -10,12 +10,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @Entity
-@IdClass(PersonMetadata.PersonMetadataPK.class)
-public class PersonMetadata {
+@IdClass(OrganizationMetadata.OrganizationMetadataPK.class)
+public class OrganizationMetadata {
     @Id
     @Getter
     @Setter
-    private UUID personId;
+    private UUID organizationId;
 
     @Id
     @Getter
@@ -29,8 +29,8 @@ public class PersonMetadata {
     @AllArgsConstructor
     @NoArgsConstructor
     @EqualsAndHashCode
-    public static class PersonMetadataPK implements Serializable {
-        protected UUID personId;
+    public static class OrganizationMetadataPK implements Serializable {
+        protected UUID organizationId;
         protected String key;
     }
 }

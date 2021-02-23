@@ -1,8 +1,9 @@
-package mil.tron.commonapi.dto;
+package mil.tron.commonapi.dto.persons;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 import lombok.Setter;
+import mil.tron.commonapi.dto.PersonDto;
 
 import java.util.Date;
 

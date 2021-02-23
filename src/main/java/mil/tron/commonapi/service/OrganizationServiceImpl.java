@@ -12,7 +12,9 @@ import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.mixins.CustomOrganizationDtoMixin;
 import mil.tron.commonapi.dto.mixins.CustomPersonDtoMixin;
+import mil.tron.commonapi.dto.organizations.*;
 import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.entity.OrganizationMetadata;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
@@ -20,9 +22,11 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
+import static mil.tron.commonapi.service.utility.ReflectionUtils.*;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
@@ -41,25 +45,37 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final PersonService personService;
 	private final PersonRepository personRepository;
 	private final OrganizationUniqueChecksService orgChecksService;
+	private final OrganizationMetadataRepository organizationMetadataRepository;
 	private final DtoMapper modelMapper;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
+	private static final Map<Unit, Set<String>> validProperties = Map.of(
+			Unit.FLIGHT, fields(Flight.class),
+			Unit.GROUP, fields(Group.class),
+			Unit.OTHER_USAF, fields(OtherUsaf.class),
+			Unit.SQUADRON, fields(Squadron.class),
+			Unit.WING, fields(Wing.class),
+			Unit.ORGANIZATION, Collections.emptySet()
+	);
 
 	public OrganizationServiceImpl(
 			OrganizationRepository repository,
 			PersonRepository personRepository,
 			PersonService personService,
-			OrganizationUniqueChecksService orgChecksService) {
+			OrganizationUniqueChecksService orgChecksService,
+			OrganizationMetadataRepository organizationMetadataRepository) {
 
 		this.repository = repository;
 		this.personRepository = personRepository;
 		this.personService = personService;
 		this.orgChecksService = orgChecksService;
+		this.organizationMetadataRepository = organizationMetadataRepository;
 		this.modelMapper = new DtoMapper();
 	}
 
 	/**
 	 * Finds a record by UUID that returns the raw entity type (not DTO)
+	 *
 	 * @param id UUID of the organization to find
 	 * @return Organization entity object (if found), otherwise throws Exception
 	 */
@@ -70,8 +86,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Adds a list of organizations as subordinate orgs to provided organization
+	 *
 	 * @param organizationId organization ID to modify
-	 * @param orgIds list of orgs by their UUIDs to add as subordinate organizations
+	 * @param orgIds         list of orgs by their UUIDs to add as subordinate organizations
 	 * @return the persisted, modified organization
 	 */
 	@Override
@@ -86,8 +103,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 			if (!orgIsInAncestryChain(subordinate.getId(), organization)) {
 				organization.addSubordinateOrganization(subordinate);
-			}
-			else {
+			} else {
 				throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subordinate.getId()));
 			}
 		}
@@ -97,8 +113,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Removes a list of organizations as subordinate orgs from provided organization
+	 *
 	 * @param organizationId organization ID to modify
-	 * @param orgIds list of orgs by their UUIDs to remove from subordinate organizations
+	 * @param orgIds         list of orgs by their UUIDs to remove from subordinate organizations
 	 * @return the persisted, modified organization
 	 */
 	@Override
@@ -119,8 +136,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Removes members from an organization and re-persists it to db.
+	 *
 	 * @param organizationId UUID of the organization
-	 * @param personIds List of Person UUIDs to remove
+	 * @param personIds      List of Person UUIDs to remove
 	 * @return Organization entity object
 	 */
 	@Override
@@ -140,8 +158,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Adds members from an organization and re-persists it to db.
+	 *
 	 * @param organizationId UUID of the organization
-	 * @param personIds List of Person UUIDs to remove
+	 * @param personIds      List of Person UUIDs to remove
 	 * @return Organization entity object
 	 */
 	@Override
@@ -162,15 +181,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Modifies non collection type attributes of the organization
+	 *
 	 * @param organizationId The UUID of the organization to modify
-	 * @param attribs A map of string key-values where keys are named of fields and values are the value to set to
+	 * @param attribs        A map of string key-values where keys are named of fields and values are the value to set to
 	 * @return The modified Organization entity object
 	 */
 	@Override
-	public Organization modify(UUID organizationId, Map<String, String> attribs) {
+	public OrganizationDto modify(UUID organizationId, Map<String, String> attribs) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
 				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
-
+		Map<String, String> metadata = new HashMap<>();
 		attribs.forEach((k, v) -> {
 			Field field = ReflectionUtils.findField(Organization.class, k);
 			try {
@@ -194,22 +214,23 @@ public class OrganizationServiceImpl implements OrganizationService {
 					} else {
 						throw new InvalidRecordUpdateRequest("Field: " + field.getName() + " is not of recognized type");
 					}
-
+				} else {
+					metadata.put(k, v);
 				}
-			}
-			catch (NoSuchMethodException e) {
+			} catch (NoSuchMethodException e) {
 				throw new InvalidRecordUpdateRequest("Provided field: " + field.getName() + " is not settable");
 			}
 		});
 
-		return repository.save(organization);
+		return updateMetadata(organization, Optional.empty(), metadata);
 	}
 
 	/**
 	 * Filters out organizations by type and branch.
+	 *
 	 * @param searchQuery name of org to match on for filtering (case in-sensitve)
-	 * @param type The unit type
-	 * @param branch The branch/service type (if null then ignores it)
+	 * @param type        The unit type
+	 * @param branch      The branch/service type (if null then ignores it)
 	 * @return filtered list of Organizations
 	 */
 	@Override
@@ -228,9 +249,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Controller-facing method to filter out organizations by type and service
+	 *
 	 * @param searchQuery name of org to match on for filtering (case in-sensitve)
-	 * @param type The unit type
-	 * @param branch The branch service type (null to ignore)
+	 * @param type        The unit type
+	 * @param branch      The branch service type (null to ignore)
 	 * @return The filtered list of organizations
 	 */
 	@Override
@@ -243,6 +265,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Creates a new organization and returns the DTO representation of which
+	 *
 	 * @param organization The DTO containing the new Org information with an optional UUID (one will be assigned if omitted)
 	 * @return The new organization in DTO form
 	 */
@@ -264,45 +287,86 @@ public class OrganizationServiceImpl implements OrganizationService {
 				}
 			}
 		}
-		
+
+		checkValidMetadataProperties(organization.getOrgType(), organization.getMeta());
+
+		if (organization.getMeta() != null) {
+			organization.getMeta().forEach((key, value) ->
+					org.getMetadata().add(new OrganizationMetadata(org.getId(), key, value))
+			);
+		}
+
 		return this.convertToDto(repository.save(org));
 	}
 
 	/**
 	 * Updates an existing organization
-	 * @param id UUID of the existing organization
+	 *
+	 * @param id           UUID of the existing organization
 	 * @param organization The organization information to overwrite the existing with (in DTO form)
 	 * @return The modified organization re-wrapped in a DTO object
 	 */
 	@Override
 	public OrganizationDto updateOrganization(UUID id, OrganizationDto organization) {
-		Organization org = this.convertToEntity(organization);
+		Organization entity = this.convertToEntity(organization);
 
-		if (!id.equals(org.getId()))
-			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, org.getId()));
-		
-		Optional<Organization> dbOrg = repository.findById(id);
-		
-		if (dbOrg.isEmpty())
+		if (!id.equals(entity.getId()))
+			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, entity.getId()));
+
+		Optional<Organization> dbEntity = repository.findById(id);
+
+		if (dbEntity.isEmpty())
 			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
-		
-		if (!orgChecksService.orgNameIsUnique(org))
-			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", org.getName()));
 
-		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
-		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
-			for (Organization subOrg : org.getSubordinateOrganizations()) {
-				if (orgIsInAncestryChain(subOrg.getId(), org)) {
+		if (!orgChecksService.orgNameIsUnique(entity))
+			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", entity.getName()));
+
+		// vet all this entity's desired subordinate organizations, make sure none of them are already in this entity's ancestry chain
+		if (entity.getSubordinateOrganizations() != null && !entity.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : entity.getSubordinateOrganizations()) {
+				if (orgIsInAncestryChain(subOrg.getId(), entity)) {
 					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
 				}
 			}
 		}
-		
-		return this.convertToDto(repository.save(org));
+
+		return updateMetadata(entity, dbEntity, organization.getMeta());
+	}
+
+	private OrganizationDto updateMetadata(Organization updatedEntity, Optional<Organization> dbEntity, Map<String, String> metadata) {
+		checkValidMetadataProperties(updatedEntity.getOrgType(), metadata);
+		List<OrganizationMetadata> toDelete = new ArrayList<>();
+		if (dbEntity.isPresent()) {
+			dbEntity.get().getMetadata().forEach(m -> {
+				updatedEntity.getMetadata().add(m);
+				if (metadata == null || metadata.containsKey(m.getKey())) {
+					toDelete.add(m);
+				}
+			});
+		}
+		if (metadata != null) {
+			metadata.forEach((key, value) -> {
+				Optional<OrganizationMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
+				if (match.isPresent()) {
+					if (value == null) {
+						toDelete.add(match.get());
+					} else {
+						match.get().setValue(value);
+					}
+				} else if (value != null) {
+					updatedEntity.getMetadata().add(organizationMetadataRepository.save(new OrganizationMetadata(updatedEntity.getId(), key, value)));
+				}
+			});
+		}
+		OrganizationDto result = convertToDto(repository.save(updatedEntity));
+		organizationMetadataRepository.deleteAll(toDelete);
+		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
+		return result;
 	}
 
 	/**
 	 * Deletes an organization by UUID (if it exists)
+	 *
 	 * @param id
 	 */
 	@Override
@@ -315,6 +379,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Gets all organizations in the database, and converts them to DTO form before returning
+	 *
 	 * @param searchQuery String to search on the organization names
 	 * @return Iterable of OrganizationDTOs
 	 */
@@ -329,6 +394,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Gets a single Organization from the database by UUID
+	 *
 	 * @param id UUID of the organization to get
 	 * @return The DTO representation of the organization
 	 */
@@ -341,7 +407,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * Adds one or more members from an org - this method is also used by child-types to add members
 	 *
 	 * @param organizationId The UUID of the organization to perform the operation on
-	 * @param personIds The list of UUIDs of type Person to add
+	 * @param personIds      The list of UUIDs of type Person to add
 	 * @return The updated OrganizationDTO object
 	 */
 	@Override
@@ -353,7 +419,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * Removes one or more members from an org - this method is also used by child-types to remove members
 	 *
 	 * @param organizationId The UUID of the organization to perform the operation on
-	 * @param personIds The list of UUIDs of type Person to remove
+	 * @param personIds      The list of UUIDs of type Person to remove
 	 * @return The updated OrganizationDTO object
 	 */
 	@Override
@@ -365,7 +431,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * Adds one or more subordinate organizations from provided organization
 	 *
 	 * @param organizationId The UUID of the organization to perform the operation on
-	 * @param orgIds The list of UUIDs of type Organization to add as subordinates
+	 * @param orgIds         The list of UUIDs of type Organization to add as subordinates
 	 * @return The updated OrganizationDTO object
 	 */
 	@Override
@@ -377,7 +443,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * Removes one or more subordinate organizations from provided organization
 	 *
 	 * @param organizationId The UUID of the organization to perform the operation on
-	 * @param orgIds The list of UUIDs of type Organization to removes from subordinates
+	 * @param orgIds         The list of UUIDs of type Organization to removes from subordinates
 	 * @return The updated OrganizationDTO object
 	 */
 	@Override
@@ -386,18 +452,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Modifies an organization's attributes (except members) such as Leader, Parent Org, and Name
-	 * @param organizationId UUID of the organization to modify
-	 * @param attribs a HashMap of fields to change (in key/value form)
-	 * @return the modified and persisted organization
-	 */
-	@Override
-	public OrganizationDto modifyAttributes(UUID organizationId, Map<String, String> attribs) {
-		return this.convertToDto(this.modify(organizationId, attribs));
-	}
-
-	/**
 	 * Adds a list of Org DTOs as new entities in the database
+	 *
 	 * @param newOrgs List of Organization DTOs to add
 	 * @return Same list of input Org DTOs (if they were all successfully created)
 	 */
@@ -414,23 +470,27 @@ public class OrganizationServiceImpl implements OrganizationService {
 	/**
 	 * Converts an organization entity with all its nested entities into a DTO
 	 * structure with only UUID representations for types of Org/Person
-	 *
+	 * <p>
 	 * Using model mapper here allows mapping autonomously of most fields except for the
 	 * ones of custom type - where we have to explicitly grab out the UUID field since model
 	 * mapper has no clue
+	 *
 	 * @param org
 	 * @return object of type OrganizationTerseDto
 	 */
-    @Override
-    public OrganizationDto convertToDto(Organization org) {
+	@Override
+	public OrganizationDto convertToDto(Organization org) {
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
-		return modelMapper.map(org, OrganizationDto.class);
-    }
+		OrganizationDto dto = modelMapper.map(org, OrganizationDto.class);
+		org.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
+		return dto;
+	}
 
 	/**
 	 * Converts an organizational DTO back to its full POJO/entity
 	 * It requires the reverse mapping of convertToDto process where we have to detect
 	 * UUIDs and then go to the respective service to find them/look them up
+	 *
 	 * @param dto
 	 * @return object of type Organization
 	 */
@@ -477,7 +537,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Helper function that checks if a given org id is in the parental ancestry chain
-	 * @param id the org to check/vet is not already in the parental ancestry chain
+	 *
+	 * @param id          the org to check/vet is not already in the parental ancestry chain
 	 * @param startingOrg the org to start the upward-search from
 	 * @return true/false if 'id' is in the ancestry chain
 	 */
@@ -495,9 +556,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * to specify fields to include on top of the UUIDs.  Nested members and organizations are never
 	 * allowed to have their own subordinate organizations and members since this could be an infinite
 	 * recursion.
+	 *
 	 * @param fields Map passed in from Controller with two keys - "people" and "orgs", each having a comma
 	 *               separated list of field names to include for those types
-	 * @param dto The DTO to perform customization on
+	 * @param dto    The DTO to perform customization on
 	 * @return The customized entity as a JsonNode blob to be returned by the controller
 	 */
 	@Override
@@ -570,6 +632,24 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		} catch (JsonProcessingException e) {
 			throw new BadRequestException("Could not compile custom organizational entity");
+		}
+	}
+
+	private void checkValidMetadataProperties(Unit orgType, Map<String, String> metadata) {
+		if (metadata != null) {
+			if (orgType == null) {
+				orgType = Unit.ORGANIZATION;
+			}
+			Set<String> properties = validProperties.get(orgType);
+			Set<String> unknownProperties = new HashSet<>();
+			metadata.forEach((key, value) -> {
+				if (!properties.contains(key)) {
+					unknownProperties.add(key);
+				}
+			});
+			if (unknownProperties.size() > 0) {
+				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", orgType, String.join(", ", unknownProperties)));
+			}
 		}
 	}
 }

@@ -6,12 +6,14 @@ import java.util.stream.StreamSupport;
 
 import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.dto.persons.*;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
+import static mil.tron.commonapi.service.utility.ReflectionUtils.*;
 import org.modelmapper.Conditions;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +30,7 @@ public class PersonServiceImpl implements PersonService {
 	private RankRepository rankRepository;
 	private PersonMetadataRepository personMetadataRepository;
 	private final DtoMapper modelMapper;
-	private final Map<Branch, Set<String>> validProperties = Map.of(
+	private static final Map<Branch, Set<String>> validProperties = Map.of(
 			Branch.USAF, fields(Airman.class),
 			Branch.USCG, fields(CoastGuardsman.class),
 			Branch.USMC, fields(Marine.class),
@@ -37,10 +39,6 @@ public class PersonServiceImpl implements PersonService {
 			Branch.USSF, fields(Spaceman.class),
 			Branch.OTHER, Collections.emptySet()
 	);
-
-	private final Set<String> fields(Class target){
-		return Arrays.stream(target.getDeclaredFields()).map(t -> t.getName()).collect(Collectors.toSet());
-	}
 
 	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository, PersonMetadataRepository personMetadataRepository) {
 		this.repository = repository;
@@ -60,9 +58,9 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personEmailIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
 
-		checkValidMetadataProperties(dto);
 
 		if (dto.getMeta() != null) {
+			checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
 			dto.getMeta().forEach((key, value) ->
 				entity.getMetadata().add(new PersonMetadata(entity.getId(), key, value))
 			);
@@ -86,18 +84,23 @@ public class PersonServiceImpl implements PersonService {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
 
-		checkValidMetadataProperties(dto);
+		return updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+	}
 
+	private PersonDto updateMetadata(Branch branch, Person updatedEntity, Optional<Person> dbEntity, Map<String, String> metadata) {
+		checkValidMetadataProperties(branch, metadata);
 		List<PersonMetadata> toDelete = new ArrayList<>();
-		dbPerson.get().getMetadata().forEach(metadata -> {
-			entity.getMetadata().add(metadata);
-			if (dto.getMeta().containsKey(metadata.getKey())) {
-				toDelete.add(metadata);
-			}
-		});
-		if (dto.getMeta() != null) {
-			dto.getMeta().forEach((key, value) -> {
-				Optional<PersonMetadata> match = entity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
+		if(dbEntity.isPresent()) {
+			dbEntity.get().getMetadata().forEach(m -> {
+				updatedEntity.getMetadata().add(m);
+				if (metadata == null || !metadata.containsKey(m.getKey())) {
+					toDelete.add(m);
+				}
+			});
+		}
+		if (metadata != null) {
+			metadata.forEach((key, value) -> {
+				Optional<PersonMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
 				if (match.isPresent()) {
 					if (value == null) {
 						toDelete.add(match.get());
@@ -105,33 +108,32 @@ public class PersonServiceImpl implements PersonService {
 						match.get().setValue(value);
 					}
 				} else if (value != null) {
-					entity.getMetadata().add(personMetadataRepository.save(new PersonMetadata(id, key, value)));
+					updatedEntity.getMetadata().add(personMetadataRepository.save(new PersonMetadata(updatedEntity.getId(), key, value)));
 				}
 			});
 		}
 		// we have to save the person entity first, then try to delete metadata: hibernate seems to get confused
 		// if we try to remove metadata rows from the person's metadata property and it generates invalid SQL
-		PersonDto result = convertToDto(repository.save(entity));
+		PersonDto result = convertToDto(repository.save(updatedEntity));
 		personMetadataRepository.deleteAll(toDelete);
 		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
 		return result;
 	}
 
-	private void checkValidMetadataProperties(PersonDto dto) {
-		if (dto.getMeta() != null) {
-			Branch branch = dto.getBranch();
+	private void checkValidMetadataProperties(Branch branch, Map<String, String> metadata) {
+		if (metadata != null) {
 			if (branch == null) {
 				branch = Branch.OTHER;
 			}
 			Set<String> properties = validProperties.get(branch);
 			Set<String> unknownProperties = new HashSet<>();
-			dto.getMeta().forEach((key, value) -> {
+			metadata.forEach((key, value) -> {
 				if (!properties.contains(key)) {
 					unknownProperties.add(key);
 				}
 			});
 			if (unknownProperties.size() > 0) {
-				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", dto.getBranch(), String.join(", ", unknownProperties)));
+				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", branch, String.join(", ", unknownProperties)));
 			}
 		}
 	}
