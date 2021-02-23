@@ -4,6 +4,7 @@ import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.logging.CommonApiLogger;
 import mil.tron.commonapi.pubsub.EventPublisher;
+import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.persistence.PostPersist;
 import javax.persistence.PostRemove;
 import javax.persistence.PostUpdate;
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +28,9 @@ public class PersonEntityListener {
 
     @Autowired
     private EventPublisher publisher;
+
+    @Autowired
+    private HttpServletRequest servletRequest;
 
     /**
      * Removes fields from the person entity, except for UUID
@@ -48,7 +53,9 @@ public class PersonEntityListener {
                 EventType.PERSON_CREATE,
                 PERSON_CREATE_MSG, 
                 person.getClass().getName(),
-                stripPerson(person));
+                stripPerson(person),
+                servletRequest.getHeader(AppClientPreAuthFilter.XFCC_HEADER_NAME)
+        );
     }
 
     /**
@@ -62,7 +69,9 @@ public class PersonEntityListener {
                 EventType.PERSON_CHANGE,
                 PERSON_CHANGE_MSG,
                 person.getClass().getName(),
-                stripPerson(person));
+                stripPerson(person),
+                servletRequest.getHeader(AppClientPreAuthFilter.XFCC_HEADER_NAME)
+        );
     }
 
     /**
@@ -76,6 +85,8 @@ public class PersonEntityListener {
                 EventType.PERSON_DELETE, 
                 PERSON_DELETE_MSG,
                 person.getClass().getName(),
-                stripPerson(person));
+                stripPerson(person),
+                servletRequest.getHeader(AppClientPreAuthFilter.XFCC_HEADER_NAME)
+        );
     }
 }
