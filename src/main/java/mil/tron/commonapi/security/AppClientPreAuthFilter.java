@@ -10,13 +10,14 @@ import javax.servlet.http.HttpServletRequest;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 
 public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFilter  {
-	
+
+	public static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
 	private static final String NAMESPACE_REGEX = "(?<=\\/ns\\/)([^\\/]*)";
 	private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
 	
 	@Override
 	protected Object getPreAuthenticatedPrincipal(HttpServletRequest request) {
-		String header = request.getHeader("x-forwarded-client-cert");
+		String header = request.getHeader(XFCC_HEADER_NAME);
 		String uri = extractUriFromXfccHeader(header);
 		
 		return extractNamespaceFromUri(uri);
@@ -33,7 +34,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 	 * @param header the full x-forwarded-client-cert header
 	 * @return the URI string field of the header or null if header is malformed
 	 */
-	private String extractUriFromXfccHeader(String header) {
+	public static String extractUriFromXfccHeader(String header) {
 		if (header == null || header.isBlank()) 
 			return null;
 		
@@ -66,7 +67,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 	 * @param uri the uri field extract from an x-forwarded-client-cert header
 	 * @return the namespace value of the URI
 	 */
-	private String extractNamespaceFromUri(String uri) {
+	public static String extractNamespaceFromUri(String uri) {
 		if (uri == null || uri.isBlank()) 
 			return null;
 		
