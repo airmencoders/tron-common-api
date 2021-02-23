@@ -2,7 +2,9 @@ package mil.tron.commonapi.service.scratch;
 
 
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
@@ -207,8 +209,14 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testGetAllRegisteredApps() {
+        DtoMapper mapper = new DtoMapper();
+        List<ScratchStorageAppRegistryDto> registeredAppsDtos = new ArrayList<>();
+        for (ScratchStorageAppRegistryEntry entry : registeredApps) {
+            registeredAppsDtos.add(mapper.map(entry, ScratchStorageAppRegistryDto.class));
+        }
+
         Mockito.when(appRegistryRepo.findAll()).thenReturn(registeredApps);
-        assertEquals(registeredApps, service.getAllRegisteredScratchApps());
+        assertEquals(registeredAppsDtos.get(0).getId(), Lists.newArrayList(service.getAllRegisteredScratchApps()).get(0).getId());
     }
 
     @Test

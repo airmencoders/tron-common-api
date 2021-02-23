@@ -1,7 +1,9 @@
 package mil.tron.commonapi.service.scratch;
 
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
@@ -17,10 +19,9 @@ import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageUserRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 public class ScratchStorageServiceImpl implements ScratchStorageService {
@@ -30,7 +31,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     private ScratchStorageUserRepository scratchUserRepo;
     private ScratchStorageAppUserPrivRepository appPrivRepo;
     private PrivilegeRepository privRepo;
-
+    private DtoMapper dtoMapper;
 
     public ScratchStorageServiceImpl(ScratchStorageRepository repository,
                                      ScratchStorageAppRegistryEntryRepository appRegistryRepo,
@@ -42,6 +43,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         this.scratchUserRepo = scratchUserRepo;
         this.appPrivRepo = appPrivRepo;
         this.privRepo = privRepo;
+        this.dtoMapper = new DtoMapper();
     }
 
     /**
@@ -144,8 +146,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     // ***************************************** //
 
     @Override
-    public Iterable<ScratchStorageAppRegistryEntry> getAllRegisteredScratchApps() {
-        return appRegistryRepo.findAll();
+    public Iterable<ScratchStorageAppRegistryDto> getAllRegisteredScratchApps() {
+        return StreamSupport
+                .stream(appRegistryRepo.findAll().spliterator(), false)
+                .map(item -> dtoMapper.map(item, ScratchStorageAppRegistryDto.class))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -187,10 +192,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 .orElseThrow(() -> new RecordNotFoundException("Cannot delete non-existent app with UUID: " + id));
 
         // delete all its priv pairs too
-        for (ScratchStorageAppUserPriv item : app.getUserPrivs()) {
+        //  have to remake a new hash set each iteration otherwise get a ConcurrentModificationException
+        for (ScratchStorageAppUserPriv item : new HashSet<>(app.getUserPrivs())) {
             if (appPrivRepo.existsById(item.getId())) {
-                app.getUserPrivs().remove(item);
-                appPrivRepo.deleteById(item.getId());
+                app.removeUserAndPriv(item);  // remove the user-priv from the app
+                appPrivRepo.deleteById(item.getId()); // delete the user-priv in the db
             }
         }
 

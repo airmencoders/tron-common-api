@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service.scratch;
 
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
@@ -17,7 +18,7 @@ public interface ScratchStorageService {
     Iterable<ScratchStorageEntry> deleteAllKeyValuePairsForAppId(UUID appId);
 
     // scratch storage app management...
-    Iterable<ScratchStorageAppRegistryEntry> getAllRegisteredScratchApps();
+    Iterable<ScratchStorageAppRegistryDto> getAllRegisteredScratchApps();
     ScratchStorageAppRegistryEntry addNewScratchAppName(ScratchStorageAppRegistryEntry entry);
     ScratchStorageAppRegistryEntry editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryEntry entry);
     ScratchStorageAppRegistryEntry deleteScratchStorageApp(UUID id);

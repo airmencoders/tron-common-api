@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
@@ -177,7 +178,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })

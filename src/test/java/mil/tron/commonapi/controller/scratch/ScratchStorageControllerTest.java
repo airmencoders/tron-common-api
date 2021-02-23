@@ -1,7 +1,9 @@
 package mil.tron.commonapi.controller.scratch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
@@ -222,7 +224,14 @@ public class ScratchStorageControllerTest {
     void testGetAllRegisteredApps() throws Exception {
         // test we can get all registered apps
 
-        Mockito.when(service.getAllRegisteredScratchApps()).thenReturn(registeredApps);
+        DtoMapper mapper = new DtoMapper();
+        List<ScratchStorageAppRegistryDto> dtos = new ArrayList<>();
+        for (ScratchStorageAppRegistryEntry entry : registeredApps) {
+            dtos.add(mapper.map(registeredApps, ScratchStorageAppRegistryDto.class));
+        }
+
+        Mockito.when(service.getAllRegisteredScratchApps()).thenReturn(dtos);
+
 
         mockMvc.perform(get(SCRATCH_ENDPOINT))
                 .andExpect(status().isOk())
