@@ -1,0 +1,10 @@
+{
+  "id": "399288c9-a0b8-40c9-ba61-c12ae30adace",
+  "firstName": "test",
+  "lastName": "person",
+  "email": "test@person.com",
+  "rank": "CIV",
+  "branch": "USAF",
+  "afsc": "11FX",
+  "imds": "sucks"
+}

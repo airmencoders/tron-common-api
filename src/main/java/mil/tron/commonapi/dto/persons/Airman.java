@@ -11,7 +11,6 @@ public class Airman extends PersonDto {
     /**
      * An airman's Air Force Specialty Code.
      * e.g. "17D" is cyber warfare officer.
-     * The person's email address
      */
     @Getter
     @Setter
@@ -74,7 +73,6 @@ public class Airman extends PersonDto {
 
     /**
      * ID in the GO81 training requirements system
-     * The person's service branch
      */
     @Getter
     @Setter
@@ -82,7 +80,6 @@ public class Airman extends PersonDto {
 
     /**
      * Date current rank was obtained (date of rank)
-     * The person's phone number
      */
     @Getter
     @Setter
@@ -91,7 +88,6 @@ public class Airman extends PersonDto {
 
     /**
      * Date estimated return from overseas (DEROS)
-     * The person's address
      */
     @Getter
     @Setter
@@ -100,7 +96,6 @@ public class Airman extends PersonDto {
 
     /**
      * General purpose flag used by Tempest
-     * The person's duty (work) phone number
      */
     @Getter
     @Setter

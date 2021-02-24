@@ -58,14 +58,17 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personEmailIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
 
-
+		checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
+		Person resultEntity = repository.save(entity);
+		PersonDto result = convertToDto(resultEntity);
 		if (dto.getMeta() != null) {
-			checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
-			dto.getMeta().forEach((key, value) ->
-				entity.getMetadata().add(new PersonMetadata(entity.getId(), key, value))
-			);
+			dto.getMeta().forEach((key, value) -> {
+				resultEntity.getMetadata().add(new PersonMetadata(result.getId(), key, value));
+				result.setMetaProperty(key, value);
+			});
+			personMetadataRepository.saveAll(resultEntity.getMetadata());
 		}
-		return convertToDto(repository.save(entity));
+		return result;
 	}
 
 	@Override

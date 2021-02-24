@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import mil.tron.commonapi.controller.OrganizationController;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.mixins.CustomOrganizationDtoMixin;
 import mil.tron.commonapi.dto.mixins.CustomPersonDtoMixin;
@@ -16,6 +17,7 @@ import mil.tron.commonapi.dto.organizations.*;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.OrganizationMetadata;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -289,14 +291,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 		}
 
 		checkValidMetadataProperties(organization.getOrgType(), organization.getMeta());
-
+		Organization resultEntity = repository.save(org);
+		OrganizationDto result = convertToDto(resultEntity);
 		if (organization.getMeta() != null) {
-			organization.getMeta().forEach((key, value) ->
-					org.getMetadata().add(new OrganizationMetadata(org.getId(), key, value))
-			);
+			organization.getMeta().forEach((key, value) -> {
+				resultEntity.getMetadata().add(new OrganizationMetadata(result.getId(), key, value));
+				result.setMetaProperty(key, value);
+			});
+			organizationMetadataRepository.saveAll(resultEntity.getMetadata());
 		}
-
-		return this.convertToDto(repository.save(org));
+		return result;
 	}
 
 	/**
