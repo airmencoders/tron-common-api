@@ -30,7 +30,6 @@ import mil.tron.commonapi.exception.FileNotExistsException;
 
 @ExtendWith(MockitoExtension.class)
 class LogfileServiceImplTest {
-	private static final String LOG_DIR = "logs";
 	private static final String ENDPOINT_PREFIX = "/v1";
 	
 	private LogfileServiceImpl service;
@@ -74,11 +73,6 @@ class LogfileServiceImplTest {
 	@Test
 	void getLogfileResource_FileNotExists() throws Exception {
 		assertThrows(FileNotExistsException.class, () -> service.getLogfileResource("asdf.txt"));
-	}
-	
-	@Test
-	void getLogfileResource_InvalidFilePath() throws Exception {
-		assertThrows(BadRequestException.class, () -> service.getLogfileResource("<*//"));
 	}
 	
 	@Test
