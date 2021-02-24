@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.*;
+import org.springframework.web.context.WebApplicationContext;
 
 import javax.transaction.Transactional;
 import java.io.IOException;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -32,6 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class PersonIntegrationTest {
     private static final String ENDPOINT = "/v1/person/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    @Autowired
+    private WebApplicationContext wac;
 
     @Autowired
     private MockMvc mockMvc;
@@ -88,8 +93,6 @@ public class PersonIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testAirmanMetadata() throws Exception {
         String id = OBJECT_MAPPER.readTree(
@@ -113,12 +116,10 @@ public class PersonIntegrationTest {
         mockMvc.perform(get(ENDPOINT + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("imds").doesNotExist())
-                .andExpect(jsonPath("imds").value("tperson"))
+                .andExpect(jsonPath("go81").value("tperson"))
                 .andExpect(jsonPath("afsc").value("99A"));
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testAirmanInvalidMetadata() throws Exception {
         mockMvc.perform(post(ENDPOINT)
@@ -127,8 +128,6 @@ public class PersonIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
-    @Transactional
-    @Rollback
     @Test
     public void testPersonInvalidMetadata() throws Exception {
         mockMvc.perform(post(ENDPOINT)

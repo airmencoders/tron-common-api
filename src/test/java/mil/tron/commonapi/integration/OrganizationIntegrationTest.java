@@ -1,6 +1,7 @@
 package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.io.Resources;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -20,6 +21,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 
 import javax.transaction.Transactional;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -307,5 +310,17 @@ public class OrganizationIntegrationTest {
                         .readTree(result.getResponse().getContentAsString())
                         .size()));
 
+    }
+
+    @Test
+    public void testCreateOrganizationInvalidMetadata() throws Exception {
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resource("invalidOrganization.json")))
+                .andExpect(status().isBadRequest());
+    }
+
+    private static String resource(String name) throws IOException {
+        return Resources.toString(Resources.getResource("integration/" + name), StandardCharsets.UTF_8);
     }
 }
