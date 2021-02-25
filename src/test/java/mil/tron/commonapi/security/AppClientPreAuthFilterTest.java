@@ -125,7 +125,7 @@ class AppClientPreAuthFilterTest {
     		
     		String result = (String) filter.getPreAuthenticatedCredentials(request);
     		
-    		assertThat(result).isEqualTo("N/A");
+    		assertThat(result).isEqualTo("NoCredentials");
     	}
     }
 }
