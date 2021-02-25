@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("hasAuthority('WRITE')")
+@PreAuthorize("hasAuthority('WRITE') || hasAuthority('DASHBOARD_ADMIN')")
 public @interface PreAuthorizeWrite {
 
 }
