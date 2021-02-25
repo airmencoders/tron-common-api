@@ -1,10 +1,10 @@
 package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.io.Resources;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
 import org.assertj.core.util.Lists;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,17 +13,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.*;
+import org.springframework.web.context.WebApplicationContext;
 
 import javax.transaction.Transactional;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -33,13 +36,16 @@ public class PersonIntegrationTest {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
+    private WebApplicationContext wac;
+
+    @Autowired
     private MockMvc mockMvc;
 
-    private PersonDto person;
-
-    @BeforeEach
-    public void insertPerson() {
-        person = new PersonDto();
+    @Transactional
+    @Rollback
+    @Test
+    public void testBulkAddPeople() throws Exception {
+        PersonDto person = new PersonDto();
         person.setFirstName("John");
         person.setMiddleName("Hero");
         person.setLastName("Public");
@@ -47,12 +53,6 @@ public class PersonIntegrationTest {
         person.setTitle("CAPT");
         person.setRank("Capt");
         person.setBranch(Branch.USAF);
-    }
-
-    @Transactional
-    @Rollback
-    @Test
-    public void testBulkAddPeople() throws Exception {
 
         PersonDto a2 = new PersonDto();
         a2.setEmail("test1@test.com");
@@ -93,4 +93,50 @@ public class PersonIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)));
     }
 
+    @Test
+    public void testAirmanMetadata() throws Exception {
+        String id = OBJECT_MAPPER.readTree(
+                mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(resource("newAirman.json")))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("afsc").value("11FX"))
+                        .andExpect(jsonPath("imds").value("sucks"))
+                        .andReturn().getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(get(ENDPOINT + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("afsc").value("11FX"))
+                .andExpect(jsonPath("imds").value("sucks"));
+
+        mockMvc.perform(put(ENDPOINT + id).contentType(MediaType.APPLICATION_JSON).content(resource("updatedAirman.json")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("imds").doesNotExist())
+                .andExpect(jsonPath("go81").value("tperson"))
+                .andExpect(jsonPath("afsc").value("99A"));
+
+        mockMvc.perform(get(ENDPOINT + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("imds").doesNotExist())
+                .andExpect(jsonPath("go81").value("tperson"))
+                .andExpect(jsonPath("afsc").value("99A"));
+    }
+
+    @Test
+    public void testAirmanInvalidMetadata() throws Exception {
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resource("invalidAirman.json")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testPersonInvalidMetadata() throws Exception {
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resource("invalidPerson.json")))
+                .andExpect(status().isBadRequest());
+    }
+
+    private static String resource(String name) throws IOException {
+        return Resources.toString(Resources.getResource("integration/" + name), StandardCharsets.UTF_8);
+    }
 }

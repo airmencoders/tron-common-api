@@ -77,6 +77,12 @@ public class Organization {
     @Enumerated(value = EnumType.STRING)
     protected Branch branchType = Branch.OTHER;
 
+    @Getter
+    @Builder.Default
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name="organizationId")
+    private Set<OrganizationMetadata> metadata = new HashSet<>();
+
     /**
      * Custom setter for parent organization, checks to make sure we're not setting an org's parent as itself
      * @param parent Organization to add as the parent entity

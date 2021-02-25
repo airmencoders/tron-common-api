@@ -2,11 +2,13 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
@@ -37,6 +39,9 @@ class PersonServiceImplTest {
 
 	@Mock
 	private RankRepository rankRepository;
+
+	@Mock
+	private PersonMetadataRepository personMetadataRepository;
 	
 	@InjectMocks
 	private PersonServiceImpl personService;
@@ -48,33 +53,24 @@ class PersonServiceImplTest {
 	public void beforeEachSetup() {
 		testPerson = Person.builder()
 				.address("adr")
-				.admin(true)
-				.afsc("sc")
-				.approved(true)
-				.deros("1/2")
 				.dodid("1234567890")
-				.dor(new Date())
 				.dutyTitle("title")
 				.dutyPhone("555")
 				.email("a@b.c")
-				.etsDate(new Date())
 				.firstName("first")
-				.fltChief("chf")
-				.go81("81")
-				.gp("gp")
-				.imds("sucks")
 				.lastName("last")
-				.manNumber("567")
 				.middleName("MI")
 				.phone("888")
-				.ptDate(new Date())
 				.rank(Rank.builder()
 						.abbreviation("Capt")
 						.branchType(Branch.USAF)
 						.build())
 				.title("title")
-				.wc("wc")
 				.build();
+		testPerson.getMetadata().addAll(List.of(
+				new PersonMetadata(testPerson.getId(), "afsc", "value1"),
+				new PersonMetadata(testPerson.getId(), "admin", "value2")
+		));
 		testDto = personService.convertToDto(testPerson);
 	}
 
@@ -111,6 +107,17 @@ class PersonServiceImplTest {
 	    	assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
 	    		personService.createPerson(testDto);
 	    	});
+		}
+
+		@Test
+		void invalidProperty() {
+			testDto.setMetaProperty("blahblah", "value");
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+				personService.createPerson(testDto);
+			});
 		}
 	}
 	
@@ -161,6 +168,17 @@ class PersonServiceImplTest {
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 	    	PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
 	    	assertThat(updatedPerson.getId()).isEqualTo(testPerson.getId());
+		}
+
+		@Test
+		void invalidProperty() {
+			testDto.setMetaProperty("blahblah", "value");
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+				personService.updatePerson(testPerson.getId(), testDto);
+			});
 		}
  	}
 
@@ -227,30 +245,29 @@ class PersonServiceImplTest {
 			PersonDto dto = personService.convertToDto(testPerson);
 
 			assertThat(dto.getAddress()).isEqualTo(testPerson.getAddress());
-			assertThat(dto.isAdmin()).isEqualTo(testPerson.isAdmin());
-			assertThat(dto.getAfsc()).isEqualTo(testPerson.getAfsc());
-			assertThat(dto.isApproved()).isEqualTo(testPerson.isApproved());
-			assertThat(dto.getDeros()).isEqualTo(testPerson.getDeros());
 			assertThat(dto.getDodid()).isEqualTo(testPerson.getDodid());
-			assertThat(dto.getDor()).isEqualTo(testPerson.getDor());
 			assertThat(dto.getDutyTitle()).isEqualTo(testPerson.getDutyTitle());
 			assertThat(dto.getDutyPhone()).isEqualTo(testPerson.getDutyPhone());
 			assertThat(dto.getEmail()).isEqualTo(testPerson.getEmail());
-			assertThat(dto.getEtsDate()).isEqualTo(testPerson.getEtsDate());
 			assertThat(dto.getFirstName()).isEqualTo(testPerson.getFirstName());
-			assertThat(dto.getFltChief()).isEqualTo(testPerson.getFltChief());
-			assertThat(dto.getGo81()).isEqualTo(testPerson.getGo81());
-			assertThat(dto.getGp()).isEqualTo(testPerson.getGp());
-			assertThat(dto.getImds()).isEqualTo(testPerson.getImds());
 			assertThat(dto.getLastName()).isEqualTo(testPerson.getLastName());
-			assertThat(dto.getManNumber()).isEqualTo(testPerson.getManNumber());
 			assertThat(dto.getMiddleName()).isEqualTo(testPerson.getMiddleName());
 			assertThat(dto.getPhone()).isEqualTo(testPerson.getPhone());
-			assertThat(dto.getPtDate()).isEqualTo(testPerson.getPtDate());
 			assertThat(dto.getTitle()).isEqualTo(testPerson.getTitle());
-			assertThat(dto.getWc()).isEqualTo(testPerson.getWc());
 			assertThat(dto.getRank()).isEqualTo(testPerson.getRank().getAbbreviation());
 			assertThat(dto.getBranch()).isEqualTo(testPerson.getRank().getBranchType());
+		}
+
+		@Test
+		void metadata() {
+			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop1", "value1"));
+			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop2", "value2"));
+
+			PersonDto dto = personService.convertToDto(testPerson);
+
+			assertThat(dto.getMetaProperty("prop1")).isEqualTo("value1");
+			assertThat(dto.getMetaProperty("prop2")).isEqualTo("value2");
+			assertThat(dto.getMetaProperty("prop3")).isNull();
 		}
 	}
 

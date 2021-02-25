@@ -9,6 +9,7 @@ import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
@@ -41,6 +42,9 @@ class OrganizationServiceImplTest {
 
 	@Mock
 	private PersonService personService;
+
+	@Mock
+	private OrganizationMetadataRepository organizationMetadataRepository;
 
 	@Mock
 	OrganizationUniqueChecksServiceImpl uniqueService;
@@ -238,18 +242,18 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 		Mockito.when(personRepository.findById(leader.getId())).thenReturn(Optional.of(leader));
-		OrganizationDto savedOrg = organizationService.modifyAttributes(testOrg.getId(), attribs);
+		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getLeader()).isEqualTo(leader.getId());
 
 		// Test that can't accept non existent squadron ID
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenThrow(new RecordNotFoundException("Record not found"));
-		assertThrows(RecordNotFoundException.class, () -> organizationService.modifyAttributes(new Organization().getId(), attribs));
+		assertThrows(RecordNotFoundException.class, () -> organizationService.modify(new Organization().getId(), attribs));
 
 		// Test that can't accept non existent leader ID
 		attribs.put("leader", new Person().getId().toString());
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
 		Mockito.when(personRepository.findById(Mockito.any(UUID.class))).thenThrow(new RecordNotFoundException("Record not found"));
-		assertThrows(RecordNotFoundException.class, () -> organizationService.modifyAttributes(testOrg.getId(), attribs));
+		assertThrows(RecordNotFoundException.class, () -> organizationService.modify(testOrg.getId(), attribs));
 	}
 
 	@Test
@@ -259,7 +263,7 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
-		OrganizationDto savedOrg = organizationService.modifyAttributes(testOrg.getId(), attribs);
+		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getName()).isEqualTo("test org");
 	}
 
@@ -271,13 +275,13 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg), Optional.of(newUnit));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
-		OrganizationDto savedOrg = organizationService.modifyAttributes(testOrg.getId(), attribs);
+		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getParentOrganization()).isEqualTo(newUnit.getId());
 
 		// test bogus parent
 		attribs.put("parentOrganization", new Organization().getId().toString());
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg)).thenThrow(new RecordNotFoundException("Not Found"));
-		assertThrows(RecordNotFoundException.class, () -> organizationService.modifyAttributes(testOrgDto.getId(), attribs));
+		assertThrows(RecordNotFoundException.class, () -> organizationService.modify(testOrgDto.getId(), attribs));
 	}
 
 	@Test
@@ -288,7 +292,7 @@ class OrganizationServiceImplTest {
 
 		// can't patch/change an org's ID
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
-		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.modifyAttributes(testOrgDto.getId(), attribs));
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.modify(testOrgDto.getId(), attribs));
 	}
 
 	@Test

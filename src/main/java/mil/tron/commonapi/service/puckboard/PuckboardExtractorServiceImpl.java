@@ -163,7 +163,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
             }
             else {
                 // unit exists, just update the unit name
-                orgService.modifyAttributes(id,
+                orgService.modify(id,
                         new ImmutableMap
                                 .Builder<String, String>()
                                 .put("name", name)
