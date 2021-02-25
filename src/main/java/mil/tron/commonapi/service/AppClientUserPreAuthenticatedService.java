@@ -32,17 +32,14 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 
 	private AppClientUserRespository appClientUserRespository;
 	private DashboardUserRepository dashboardUserRepository;
-	private PrivilegeRepository privilegeRepository;
 	private static final String NO_CREDS = "NoCredentials";
 
 	@Value("${common-api-app-name}")
 	private String commonApiAppName;
 
 	public AppClientUserPreAuthenticatedService(AppClientUserRespository appClientUserRespository,
-												PrivilegeRepository privilegeRepository,
 												DashboardUserRepository dashboardUserRepository) {
 		this.appClientUserRespository = appClientUserRespository;
-		this.privilegeRepository = privilegeRepository;
 		this.dashboardUserRepository = dashboardUserRepository;
 	}
 

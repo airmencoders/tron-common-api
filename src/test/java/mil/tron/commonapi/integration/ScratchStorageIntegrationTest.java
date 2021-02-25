@@ -5,11 +5,15 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,10 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.equalTo;
@@ -83,6 +84,9 @@ public class ScratchStorageIntegrationTest {
     @Autowired
     private PrivilegeRepository privRepo;
 
+    @Autowired
+    private DashboardUserRepository dashRepo;
+
     // predefine a key value pair for COOL_APP_NAME
     private ScratchStorageEntry entry1 = ScratchStorageEntry
             .builder()
@@ -112,6 +116,8 @@ public class ScratchStorageIntegrationTest {
             .build();
 
 
+    private DashboardUser admin;
+
     /**
      * Private helper to create a JWT on the fly
      * @param email email to embed with the "email" claim
@@ -134,14 +140,26 @@ public class ScratchStorageIntegrationTest {
     @WithMockUser(username = "istio-system", authorities = "{ DASHBOARD_ADMIN }")
     void setup() throws Exception {
 
+         // create the admin
+         admin = DashboardUser.builder()
+                .id(UUID.randomUUID())
+                .email("admin@admin.com")
+                .privileges(Set.of(privRepo.findByName("DASHBOARD_ADMIN").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD ADMIN"))))
+                .build();
+
+         // persist the admin
+         dashRepo.save(admin);
+
         // persist/create the scratch space users - user1 and user2
         mockMvc.perform(post(ENDPOINT + "users")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user1)))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post(ENDPOINT + "users")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user2)))
@@ -170,6 +188,7 @@ public class ScratchStorageIntegrationTest {
         coolAppRegistration.put("id", entry1.getAppId().toString());
         coolAppRegistration.put("appName", COOL_APP_NAME);
         mockMvc.perform(post(ENDPOINT + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -185,6 +204,7 @@ public class ScratchStorageIntegrationTest {
                 .build();
 
         mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user1PrivDto)))
@@ -194,6 +214,7 @@ public class ScratchStorageIntegrationTest {
         testAppRegistration.put("id", entry2.getAppId().toString());
         testAppRegistration.put("appName", TEST_APP_NAME);
         mockMvc.perform(post(ENDPOINT + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -209,6 +230,7 @@ public class ScratchStorageIntegrationTest {
                         .build();
 
         mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry2.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user2PrivDto)))
@@ -309,11 +331,10 @@ public class ScratchStorageIntegrationTest {
     @Test
     void getAllKeyValuePairs() throws Exception {
 
+        // have to be a dashboard admin to do this
         mockMvc.perform(get(ENDPOINT)
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                .header(AUTH_HEADER_NAME, createToken(user2.getEmail()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(entry1)))
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
     }
@@ -437,7 +458,7 @@ public class ScratchStorageIntegrationTest {
     @Test
     void testErrorConditions() throws Exception {
 
-        // Note, that "user" doing these tests are already Mocked as a DASHBOARD_ADMIN
+        // Note, that "user" doing these tests are done as an admin
 
         // test various error conditions are caught
             // blank or null email
@@ -456,6 +477,7 @@ public class ScratchStorageIntegrationTest {
 
         //  with blank email should fail
         mockMvc.perform(post(ENDPOINT + "users")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3)))
@@ -464,6 +486,7 @@ public class ScratchStorageIntegrationTest {
         // with null email should fail
         user3.setEmail(null);
         mockMvc.perform(post(ENDPOINT + "users")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3)))
@@ -472,6 +495,7 @@ public class ScratchStorageIntegrationTest {
         // with duplicate email fails
         user3.setEmail("user1@test.com");
         mockMvc.perform(post(ENDPOINT + "users")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3)))
@@ -480,6 +504,7 @@ public class ScratchStorageIntegrationTest {
         // with malformed email fails
         user3.setEmail("user1..test.com");
         mockMvc.perform(post(ENDPOINT + "users")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3)))
@@ -488,6 +513,7 @@ public class ScratchStorageIntegrationTest {
         // valid email finally succeeds
         user3.setEmail("valid@test.com");
         MvcResult result = mockMvc.perform(post(ENDPOINT + "users")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3)))
@@ -502,6 +528,7 @@ public class ScratchStorageIntegrationTest {
         user3.setId(user3Id);
         user3.setEmail("user1@TEST.com");
         mockMvc.perform(put(ENDPOINT + "users/{id}", user3Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3)))
@@ -511,6 +538,7 @@ public class ScratchStorageIntegrationTest {
         user3.setId(user3Id);
         user3.setEmail("   user1@test.com      ");
         mockMvc.perform(put(ENDPOINT + "users/{id}", user3Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3)))
@@ -521,6 +549,7 @@ public class ScratchStorageIntegrationTest {
         Map<String, String> app3Registration = new HashMap<>();
         app3Registration.put("appName", COOL_APP_NAME);
         mockMvc.perform(post(ENDPOINT + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -530,6 +559,7 @@ public class ScratchStorageIntegrationTest {
         // same app name varying case should still fail
         app3Registration.put("appName", COOL_APP_NAME.toUpperCase());
         mockMvc.perform(post(ENDPOINT + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -539,6 +569,7 @@ public class ScratchStorageIntegrationTest {
         // same app name with leading and trailing whitespace shall fail
         app3Registration.put("appName", "     " + COOL_APP_NAME + "    ");
         mockMvc.perform(post(ENDPOINT + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -548,6 +579,7 @@ public class ScratchStorageIntegrationTest {
         // blank app name should fail
         app3Registration.put("appName", "");
         mockMvc.perform(post(ENDPOINT + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -557,6 +589,7 @@ public class ScratchStorageIntegrationTest {
         // null app name should fail
         app3Registration.put("appName", null);
         mockMvc.perform(post(ENDPOINT + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -567,6 +600,7 @@ public class ScratchStorageIntegrationTest {
         // finally let app3 register
         app3Registration.put("appName", "app3");
         MvcResult newApp = mockMvc.perform(post(ENDPOINT + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -582,6 +616,7 @@ public class ScratchStorageIntegrationTest {
         app3Registration.put("id", app3Id.toString());
         app3Registration.put("appName", COOL_APP_NAME);
         mockMvc.perform(put(ENDPOINT + "apps/{appId}", app3Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
@@ -604,6 +639,7 @@ public class ScratchStorageIntegrationTest {
                         .build();
 
         mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", app3Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3PrivDto)))
@@ -611,6 +647,7 @@ public class ScratchStorageIntegrationTest {
 
         // test that we get CONFLICT on trying to add a priv set that already exists for given app/user/priv combo
         mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", app3Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3PrivDto)))

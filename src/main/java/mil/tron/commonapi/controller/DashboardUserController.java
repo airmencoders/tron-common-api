@@ -8,10 +8,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardUser;
-import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.springframework.http.HttpStatus;
@@ -52,9 +50,9 @@ public class DashboardUserController {
     @PreAuthorizeDashboardUser
     @GetMapping(value = "/{id}")
     public ResponseEntity<DashboardUserDto> getDashboardUser(
-            @Parameter(description = "Dashboard User ID to retrieve", required = true) @PathVariable("id") UUID Id) {
+            @Parameter(description = "Dashboard User ID to retrieve", required = true) @PathVariable("id") UUID id) {
 
-        DashboardUserDto dashboardUser = dashboardUserService.getDashboardUserDto(Id);
+        DashboardUserDto dashboardUser = dashboardUserService.getDashboardUserDto(id);
         return new ResponseEntity<>(dashboardUser, HttpStatus.OK);
     }
 
@@ -76,10 +74,10 @@ public class DashboardUserController {
     @PreAuthorizeDashboardAdmin
     @PutMapping(value = "/{id}")
     public ResponseEntity<DashboardUserDto> updateDashboardUser(
-            @Parameter(description = "Dashboard User ID to update", required = true) @PathVariable("id") UUID Id,
+            @Parameter(description = "Dashboard User ID to update", required = true) @PathVariable("id") UUID id,
             @Parameter(description = "Updated person", required = true) @Valid @RequestBody DashboardUserDto dashboardUserDto) {
 
-        DashboardUserDto updatedDashboardUser = dashboardUserService.updateDashboardUserDto(Id, dashboardUserDto);
+        DashboardUserDto updatedDashboardUser = dashboardUserService.updateDashboardUserDto(id, dashboardUserDto);
         return new ResponseEntity<>(updatedDashboardUser, HttpStatus.OK);
     }
 
@@ -95,8 +93,8 @@ public class DashboardUserController {
     @PreAuthorizeDashboardAdmin
     @DeleteMapping(value = "/{id}")
     public ResponseEntity<Object> deleteDashboardUser(
-            @Parameter(description = "Dashboard ID to delete", required = true) @PathVariable("id") UUID Id) {
-        dashboardUserService.deleteDashboardUser(Id);
+            @Parameter(description = "Dashboard ID to delete", required = true) @PathVariable("id") UUID id) {
+        dashboardUserService.deleteDashboardUser(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
