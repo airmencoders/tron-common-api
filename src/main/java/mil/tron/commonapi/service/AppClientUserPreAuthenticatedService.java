@@ -3,10 +3,8 @@ package mil.tron.commonapi.service;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
-import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -46,21 +44,20 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 	@Transactional
 	@Override
 	public UserDetails loadUserDetails(PreAuthenticatedAuthenticationToken token) throws UsernameNotFoundException {
-		if (token.getName().equals(this.commonApiAppName)) {
 
-			// pull dashboard user by credential/email
-			if (!token.getCredentials().equals(NO_CREDS)) {
-				Optional<DashboardUser> dashboardUser = dashboardUserRepository.findByEmailIgnoreCase(token.getCredentials().toString());
-				if (dashboardUser.isPresent()) {
-					List<GrantedAuthority> dashboardUserPrivileges = createPrivileges(dashboardUser.get().getPrivileges());
-					return new User(dashboardUser.get().getEmail(), NO_CREDS, dashboardUserPrivileges);
-				}
-				else {
-					// continue on as a non-dashboard user/admin, if destined for ScratchStorage
-					//  their email will be evaluated there for app access
-					return new User(token.getCredentials().toString(), NO_CREDS, new ArrayList<>());
-				}
+		// pull dashboard user by credential/email if request was from the SSO gateway
+		if (token.getName().equals(this.commonApiAppName) && !token.getCredentials().equals(NO_CREDS)) {
+			Optional<DashboardUser> dashboardUser = dashboardUserRepository.findByEmailIgnoreCase(token.getCredentials().toString());
+			if (dashboardUser.isPresent()) {
+				List<GrantedAuthority> dashboardUserPrivileges = createPrivileges(dashboardUser.get().getPrivileges());
+				return new User(dashboardUser.get().getEmail(), NO_CREDS, dashboardUserPrivileges);
 			}
+			else {
+				// continue on as a non-dashboard user/admin, if destined for ScratchStorage
+				//  their email will be evaluated there for app access
+				return new User(token.getCredentials().toString(), NO_CREDS, new ArrayList<>());
+			}
+
 		}
 		AppClientUser user = appClientUserRespository.findByNameIgnoreCase(token.getName()).orElseThrow(() -> new UsernameNotFoundException("App Client name not found: " + token.getName()));
 		List<GrantedAuthority> privileges = createPrivileges(user.getPrivileges());
