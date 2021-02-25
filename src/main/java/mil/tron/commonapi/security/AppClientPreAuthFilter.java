@@ -1,11 +1,11 @@
 package mil.tron.commonapi.security;
 
 import com.auth0.jwt.JWT;
-import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -16,35 +16,29 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 	public static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
 	private static final String NAMESPACE_REGEX = "(?<=\\/ns\\/)([^\\/]*)";
 	private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
+	private static final String NoCredentials = "NoCredentials";
 	
 	@Override
 	protected Object getPreAuthenticatedPrincipal(HttpServletRequest request) {
 		String header = request.getHeader(XFCC_HEADER_NAME);
 		String uri = extractUriFromXfccHeader(header);
-		
+
 		return extractNamespaceFromUri(uri);
 	}
 
-	/**
-	 * If request has a JWT and has an email field, stash it in the credentials for now
-	 * @param request injected HTTP Request
-	 * @return either "N/A" or the email contained in the JWT
-	 */
+	private DecodedJWT decodeJwt (HttpServletRequest request) {
+		String bearer = request.getHeader("authorization");
+		return JWT.decode(bearer.split("Bearer ")[1]);
+	}
+
 	@Override
 	protected Object getPreAuthenticatedCredentials(HttpServletRequest request) {
-		String authHeader = request.getHeader("authorization");
-		if (authHeader != null) {
-			String[] jwtParts = authHeader.split("Bearer ");
-			if (jwtParts.length > 1) {
-				try {
-					DecodedJWT jwt = JWT.decode(jwtParts[1]);
-					if (jwt.getClaim("email") != null) {
-						return jwt.getClaim("email").asString();
-					}
-				}
-				catch (JWTDecodeException ignored) {
-					return null;
-				}
+		if (request == null || request.getHeaderNames() == null) return NoCredentials;
+		Enumeration<String> headerNames = request.getHeaderNames();
+		while (headerNames.hasMoreElements()){
+			if (headerNames.nextElement().equals("authorization")){
+				DecodedJWT decodedJwt = decodeJwt(request);
+				return decodedJwt.getClaim("email").asString();
 			}
 		}
 		return "N/A";
