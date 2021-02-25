@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import javax.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -32,7 +33,7 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 	private AppClientUserRespository appClientUserRespository;
 	private DashboardUserRepository dashboardUserRepository;
 	private PrivilegeRepository privilegeRepository;
-	private static final String NoCredentials = "NoCredentials";
+	private static final String NO_CREDS = "NoCredentials";
 
 	@Value("${common-api-app-name}")
 	private String commonApiAppName;
@@ -49,20 +50,25 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 	@Override
 	public UserDetails loadUserDetails(PreAuthenticatedAuthenticationToken token) throws UsernameNotFoundException {
 		if (token.getName().equals(this.commonApiAppName)) {
+
 			// pull dashboard user by credential/email
-			if (!token.getCredentials().equals(NoCredentials)) {
-				DashboardUser dashboardUser = dashboardUserRepository.findByEmailIgnoreCase(token.getCredentials().toString()).orElseThrow(() -> new UsernameNotFoundException("Dashboard User not found: " + token.getCredentials().toString()));
-				List<GrantedAuthority> dashboardUserPrivileges = createPrivileges(dashboardUser.getPrivileges());
-				return new User(dashboardUser.getEmail(), "N/A", dashboardUserPrivileges);
-			}
-			else {
-				throw new RecordNotFoundException("Error you are not a dashboard user.");
+			if (!token.getCredentials().equals(NO_CREDS)) {
+				Optional<DashboardUser> dashboardUser = dashboardUserRepository.findByEmailIgnoreCase(token.getCredentials().toString());
+				if (dashboardUser.isPresent()) {
+					List<GrantedAuthority> dashboardUserPrivileges = createPrivileges(dashboardUser.get().getPrivileges());
+					return new User(dashboardUser.get().getEmail(), NO_CREDS, dashboardUserPrivileges);
+				}
+				else {
+					// continue on as a non-dashboard user/admin, if destined for ScratchStorage
+					//  their email will be evaluated there for app access
+					return new User(token.getCredentials().toString(), NO_CREDS, new ArrayList<>());
+				}
 			}
 		}
 		AppClientUser user = appClientUserRespository.findByNameIgnoreCase(token.getName()).orElseThrow(() -> new UsernameNotFoundException("App Client name not found: " + token.getName()));
 		List<GrantedAuthority> privileges = createPrivileges(user.getPrivileges());
 
-		return new User(user.getName(), "N/A", privileges);
+		return new User(user.getName(), NO_CREDS, privileges);
 	}
 	
 	private List<GrantedAuthority> createPrivileges(Set<Privilege> privileges) {
