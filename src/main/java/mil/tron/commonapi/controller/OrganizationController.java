@@ -322,7 +322,7 @@ public class OrganizationController {
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
 
-			return new ResponseEntity<>(organizationService.modifyAttributes(organizationId, attribs), HttpStatus.OK);
+			return new ResponseEntity<>(organizationService.modify(organizationId, attribs), HttpStatus.OK);
 	}
 
 	@Operation(summary = "Adds one or more organization entities",

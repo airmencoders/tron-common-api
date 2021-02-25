@@ -1,21 +1,41 @@
 package mil.tron.commonapi.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import mil.tron.commonapi.dto.persons.*;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.validation.constraints.Email;
-import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @EqualsAndHashCode
+@Schema(
+        type = "object",
+        title = "Person",
+        subTypes = { Airman.class, CoastGuardsman.class, Marine.class, Sailor.class, Soldier.class, Spaceman.class },
+        discriminatorProperty = "branch",
+        discriminatorMapping = {
+                @DiscriminatorMapping(value = "USAF", schema = Airman.class),
+                @DiscriminatorMapping(value = "USCG", schema = CoastGuardsman.class),
+                @DiscriminatorMapping(value = "USMC", schema = Marine.class),
+                @DiscriminatorMapping(value = "USN", schema = Sailor.class),
+                @DiscriminatorMapping(value = "USA", schema = Soldier.class),
+                @DiscriminatorMapping(value = "USSF", schema = Spaceman.class),
+                @DiscriminatorMapping(value = "OTHER", schema = PersonDto.class),
+        }
+)
 public class PersonDto {
 
     @Getter
@@ -24,14 +44,23 @@ public class PersonDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID id = UUID.randomUUID();
 
+    /**
+     * The person's first (given) name
+     */
     @Getter
     @Setter
     private String firstName;
 
+    /**
+     * The person's middle name
+     */
     @Getter
     @Setter
     private String middleName;
 
+    /**
+     * The person's last (family) name
+     */
     @Getter
     @Setter
     private String lastName;
@@ -44,35 +73,13 @@ public class PersonDto {
     @Setter
     private String title;
 
-    @Email(message="Malformed email address")
+    /**
+     * The person's email address
+     */
+    @Email(message = "Malformed email address")
     @Getter
     @Setter
     private String email;
-
-    /**
-     * An airman's Air Force Specialty Code.
-     * e.g. "17D" is cyber warfare officer.
-     */
-    @Getter
-    @Setter
-    private String afsc;
-
-    /**
-     * An airman's Expiration of Term of Service.
-     * e.g. When their enlistment expires - N/A for officers
-     */
-    @Getter
-    @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-    private Date etsDate;
-
-    /**
-     * An airman's date of most recent physical fitness evalulation.
-     */
-    @Getter
-    @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-    private Date ptDate;
 
     /**
      * An 10-digit airman's DOD Identification number.
@@ -81,124 +88,82 @@ public class PersonDto {
     @Setter
     @ValidDodId
     private String dodid;
-    //
-    // Putting DODID as a string since using a Long would require manually padding
-    //  value in string output if the dodid had leading zeros, this was it stays literal
 
     /**
-     * Integrated Maintenance Data System id
-     */
-    @Getter
-    @Setter
-    private String imds;
-
-    /**
-     * Service member's rank
+     * The person's rank (abbreviation, ex: TSgt, SSgt, Capt, Col etc.)
      */
     @Getter
     @Setter
     private String rank;
 
+    /**
+     * The person's service branch
+     */
     @Getter
     @Setter
     private Branch branch;
 
-    @Getter
-    @Setter
-    private String unit;
-
     /**
-     * Service member's owning Wing
+     * The person's phone number
      */
     @Getter
     @Setter
-    private String wing;
-
-    /**
-     * Service member's owning Group
-     */
-    @Getter
-    @Setter
-    private String gp;
-
-    /**
-     * Service member's owning squadron
-     */
-    @Getter
-    @Setter
-    private String squadron;
-
-    /**
-     * Work Center (Office Symbol)
-     */
-    @Getter
-    @Setter
-    private String wc;
-
-    /**
-     * ID in the GO81 training requirements system
-     */
-    @Getter
-    @Setter
-    private String go81;
-
-    /**
-     * Date current rank was obtained (date of rank)
-     */
-    @Getter
-    @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-    private Date dor;
-
-    /**
-     * Date estimated return from overseas (DEROS)
-     */
-    @Getter
-    @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-    private String deros;
-
-    @Getter
-    @Setter
+    @ValidPhoneNumber
     private String phone;
 
+    /**
+     * The person's address
+     */
     @Getter
     @Setter
     private String address;
 
     /**
-     * General purpose flag used by Tempest
+     * The person's duty (work) phone number
      */
-    @Getter
-    @Setter
-    private boolean admin;
-
-    @Getter
-    @Setter
-    private String fltChief;
-
-    @Getter
-    @Setter
-    private boolean approved;
-
-    @Getter
-    @Setter
-    private String manNumber;
-
     @Getter
     @Setter
     @ValidPhoneNumber
     private String dutyPhone;
 
     /**
-     * Job title performed as an airman
+     * The person's official job title
      */
     @Getter
     @Setter
     private String dutyTitle;
 
     @JsonIgnore
+    private Map<String, String> meta;
+
+    @JsonAnyGetter
+    public Map<String, String> getMeta() {
+        return meta;
+    }
+
+    @JsonIgnore
     public String getFullName() {
         return String.format("%s %s", firstName, lastName);
+    }
+
+    @JsonIgnore
+    public String getMetaProperty(String property) {
+        return meta != null ? meta.get(property) : null;
+    }
+
+    @JsonAnySetter
+    public PersonDto setMetaProperty(String property, String value) {
+        if (meta == null) {
+            meta = new HashMap<>();
+        }
+        meta.put(property, value);
+        return this;
+    }
+
+    public PersonDto removeMetaProperty(String property) {
+        if (meta != null) {
+            meta.remove(property);
+        }
+        return this;
     }
 }

@@ -3,7 +3,6 @@ package mil.tron.commonapi.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.PersonService;
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -78,11 +78,11 @@ public class PersonControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(persons)));
 		}
-		
+
 		@Test
 		void testGetById() throws Exception {
 			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class))).thenReturn(testPerson);
-			
+
 			mockMvc.perform(get(ENDPOINT + "{id}", testPerson.getId()))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
