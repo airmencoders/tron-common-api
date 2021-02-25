@@ -97,4 +97,14 @@
             <column name="name" value="SCRATCH_READ" />
         </insert>
     </changeSet>
+    <changeSet author="christopherzell" id="1613508896370-privileges-3">
+        <update tableName="dashboard_user">
+            <column name="email" value="ckumabe.ctr@revacomm.com"/>
+            <where>email='ckumabe@revacomm.com'</where>
+        </update>
+        <update tableName="dashboard_user">
+            <column name="email_as_lower" value="ckumabe.ctr@revacomm.com"/>
+            <where>email_as_lower='ckumabe@revacomm.com'</where>
+        </update>
+    </changeSet>
 </databaseChangeLog>
