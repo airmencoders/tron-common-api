@@ -320,6 +320,35 @@ public class OrganizationIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    public void testCreateSquadronMetadata() throws Exception {
+        String id = OBJECT_MAPPER.readTree(
+            mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(resource("newSquadron.json")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("pas").value("test1"))
+                .andReturn().getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(get(ENDPOINT + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("pas").value("test1"));
+
+        mockMvc.perform(put(ENDPOINT + id).contentType(MediaType.APPLICATION_JSON).content(resource("updatedSquadron.json")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("pas").doesNotExist());
+
+        mockMvc.perform(get(ENDPOINT + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("pas").doesNotExist());
+
+        mockMvc.perform(patch(ENDPOINT + id).contentType(MediaType.APPLICATION_JSON).content(resource("patchedSquadron.json")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("pas").value("test2"));
+
+        mockMvc.perform(get(ENDPOINT + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("pas").value("test2"));
+    }
+
     private static String resource(String name) throws IOException {
         return Resources.toString(Resources.getResource("integration/" + name), StandardCharsets.UTF_8);
     }
