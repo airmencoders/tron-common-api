@@ -1,14 +1,10 @@
 package mil.tron.commonapi.service;
 
 import io.swagger.v3.oas.annotations.Operation;
-import lombok.val;
 import mil.tron.commonapi.dto.DashboardUserDto;
-import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.DashboardUser;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
