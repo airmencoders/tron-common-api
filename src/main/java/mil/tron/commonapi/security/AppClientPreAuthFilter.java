@@ -16,6 +16,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 	
 	private static final String NAMESPACE_REGEX = "(?<=\\/ns\\/)([^\\/]*)";
 	private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
+	private static final String NoCredentials = "NoCredentials";
 	
 	@Override
 	protected Object getPreAuthenticatedPrincipal(HttpServletRequest request) {
@@ -32,7 +33,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 
 	@Override
 	protected Object getPreAuthenticatedCredentials(HttpServletRequest request) {
-		if (request == null || request.getHeaderNames() == null) return "N/A";
+		if (request == null || request.getHeaderNames() == null) return NoCredentials;
 		Enumeration<String> headerNames = request.getHeaderNames();
 		while (headerNames.hasMoreElements()){
 			if (headerNames.nextElement().equals("authorization")){

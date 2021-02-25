@@ -16,6 +16,8 @@ import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksService;
 import org.modelmapper.Conditions;
+import org.modelmapper.Converter;
+import org.modelmapper.spi.MappingContext;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -24,7 +26,7 @@ import java.util.stream.StreamSupport;
 
 @Service
 public class DashboardUserServiceImpl implements DashboardUserService {
-    private static final DtoMapper MODEL_MAPPER = new DtoMapper();
+//    private static final DtoMapper MODEL_MAPPER = new DtoMapper();
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserUniqueChecksService userChecksService;
     private PrivilegeRepository privilegeRepository;
@@ -38,7 +40,16 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         this.userChecksService = dashboardUserUniqueChecksService;
         this.privilegeRepository = privilegeRepository;
         this.modelMapper = new DtoMapper();
-        modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+        this.modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+
+        Converter<List<Privilege>, Set<Privilege>> convertPrivilegesToSet =
+                ((MappingContext<List<Privilege>, Set<Privilege>> context) -> new HashSet<>(context.getSource()));
+
+        Converter<Set<Privilege>, List<Privilege>> convertPrivilegesToArr =
+                ((MappingContext<Set<Privilege>, List<Privilege>> context) -> new ArrayList<>(context.getSource()));
+
+        this.modelMapper.addConverter(convertPrivilegesToSet);
+        this.modelMapper.addConverter(convertPrivilegesToArr);
     }
 
     @Override
@@ -111,21 +122,12 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 
     @Override
     public DashboardUserDto convertToDto(DashboardUser user) {
-        return MODEL_MAPPER.map(user, DashboardUserDto.class);
+        return modelMapper.map(user, DashboardUserDto.class);
     }
 
     @Override
     public DashboardUser convertToEntity(DashboardUserDto dto) {
         DashboardUser entity = modelMapper.map(dto, DashboardUser.class);
-        // if the dto doesn't have a privilege then set the default.  Used by create and update methods.
-        if (entity.getPrivileges().stream().count() == 0) {
-            Set<Privilege> defaultPrivilege = this.privilegeRepository.findByName("DASHBOARD_USER").map(Collections::singleton).orElse(Collections.emptySet());
-            if (defaultPrivilege != null && defaultPrivilege.stream().count() == 1) {
-                entity.setPrivileges(defaultPrivilege);
-            } else {
-                throw new InvalidFieldValueException("No privilege provided and default privilege cannot be set");
-            }
-        }
         return entity;
     }
 }

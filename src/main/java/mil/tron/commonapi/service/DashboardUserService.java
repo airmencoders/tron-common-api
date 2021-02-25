@@ -14,4 +14,5 @@ public interface DashboardUserService {
     // conversions
     DashboardUserDto convertToDto(DashboardUser user);
     DashboardUser convertToEntity(DashboardUserDto dto);
+
 }

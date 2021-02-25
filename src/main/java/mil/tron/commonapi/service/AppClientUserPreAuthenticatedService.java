@@ -37,14 +37,15 @@ import mil.tron.commonapi.repository.AppClientUserRespository;
  */
 @Service
 public class AppClientUserPreAuthenticatedService implements AuthenticationUserDetailsService<PreAuthenticatedAuthenticationToken> {
-	
+
 	private AppClientUserRespository appClientUserRespository;
 	private DashboardUserRepository dashboardUserRepository;
 	private PrivilegeRepository privilegeRepository;
+	private static final String NoCredentials = "NoCredentials";
 
 	@Value("${common-api-app-name}")
 	private String commonApiAppName;
-	
+
 	public AppClientUserPreAuthenticatedService(AppClientUserRespository appClientUserRespository,
 												PrivilegeRepository privilegeRepository,
 												DashboardUserRepository dashboardUserRepository) {
@@ -56,27 +57,18 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 	@Transactional
 	@Override
 	public UserDetails loadUserDetails(PreAuthenticatedAuthenticationToken token) throws UsernameNotFoundException {
-		// allow for configured self app hostname to have all privileges
 		if (token.getName().equals(this.commonApiAppName)) {
 			// pull dashboard user by credential/email
-			if (token.getCredentials() != "N/A") {
+			if (!token.getCredentials().equals(NoCredentials)) {
 				DashboardUser dashboardUser = dashboardUserRepository.findByEmailIgnoreCase(token.getCredentials().toString()).orElseThrow(() -> new UsernameNotFoundException("Dashboard User not found: " + token.getCredentials().toString()));
 				List<GrantedAuthority> dashboardUserPrivileges = createPrivileges(dashboardUser.getPrivileges());
 				return new User(dashboardUser.getEmail(), "N/A", dashboardUserPrivileges);
 			}
-			// temporary
 			else {
-				val privileges = this.privilegeRepository.findAll();
-				if (privileges == null) {
-					throw new RecordNotFoundException("There are no privileges available.");
-				}
-				// add all privileges for self app
-				Set<Privilege> privilegeSet = StreamSupport.stream(privileges.spliterator(), false)
-						.collect(Collectors.toSet());
-				return new User(this.commonApiAppName, "N/A", this.createPrivileges(privilegeSet));
+				throw new RecordNotFoundException("Error you are not a dashboard user.");
 			}
 		}
-		AppClientUser user = appClientUserRespository.findByNameIgnoreCase(token.getName()).orElseThrow(() -> new UsernameNotFoundException("Username not found: " + token.getName()));
+		AppClientUser user = appClientUserRespository.findByNameIgnoreCase(token.getName()).orElseThrow(() -> new UsernameNotFoundException("App Client name not found: " + token.getName()));
 		List<GrantedAuthority> privileges = createPrivileges(user.getPrivileges());
 
 		return new User(user.getName(), "N/A", privileges);

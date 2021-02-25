@@ -1,19 +1,13 @@
 package mil.tron.commonapi.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
-import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 
-import javax.persistence.Column;
 import javax.persistence.Id;
-import javax.persistence.ManyToMany;
 import javax.validation.constraints.Email;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -36,5 +30,5 @@ public class DashboardUserDto {
     @Getter
     @Setter
     @Builder.Default
-    private Set<Privilege> privileges = new HashSet<>();
+    private List<Privilege> privileges = new ArrayList<>();
 }

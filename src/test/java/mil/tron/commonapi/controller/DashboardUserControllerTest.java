@@ -54,7 +54,7 @@ public class DashboardUserControllerTest {
         testDashboardUserDto = new DashboardUserDto();
         testDashboardUserDto.setEmail("admin@mvc.com");
         Privilege priv = new Privilege((long)3,"DASHBOARD_ADMIN");
-        HashSet<Privilege> privileges = new HashSet<>();
+        List<Privilege> privileges = new ArrayList<>();
         privileges.add(priv);
         testDashboardUserDto.setPrivileges(privileges);
 

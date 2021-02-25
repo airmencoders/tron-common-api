@@ -20,10 +20,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.UUID;
-import java.util.Optional;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -110,12 +107,12 @@ public class DashboardUserServiceImplTest {
             // Test updating email to one that already exists in database
             DashboardUserDto userWithEmail = new DashboardUserDto();
             userWithEmail.setEmail(testDashboardUser.getEmail());
-            userWithEmail.setPrivileges(testDashboardUser.getPrivileges());
+            userWithEmail.setPrivileges(new ArrayList<>(testDashboardUser.getPrivileges()));
             UUID testId = userWithEmail.getId();
 
             DashboardUserDto existingUserWithEmail = new DashboardUserDto();
             existingUserWithEmail.setEmail(testDashboardUser.getEmail());
-            existingUserWithEmail.setPrivileges(testDashboardUser.getPrivileges());
+            existingUserWithEmail.setPrivileges(new ArrayList<>(testDashboardUser.getPrivileges()));
 
             Mockito.when(dashboardUserRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testDashboardUser));
             Mockito.when(uniqueChecksService.UserEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(false);
