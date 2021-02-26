@@ -15,7 +15,7 @@ public class DashboardUserUniqueChecksServiceImpl implements DashboardUserUnique
     }
 
     @Override
-    public boolean UserEmailIsUnique(DashboardUser user) {
+    public boolean userEmailIsUnique(DashboardUser user) {
         if (user.getId() != null && userRepo.existsById(user.getId())) {
             DashboardUser dbUser = userRepo.findById(user.getId()).orElseThrow(() ->
                     new RecordNotFoundException("Error retrieving Record with UUID: " + user.getId())

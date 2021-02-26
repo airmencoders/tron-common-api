@@ -1,19 +1,14 @@
 package mil.tron.commonapi.service;
 
 import io.swagger.v3.oas.annotations.Operation;
-import lombok.val;
 import mil.tron.commonapi.dto.DashboardUserDto;
-import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.DashboardUser;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
-import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksService;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
@@ -26,19 +21,15 @@ import java.util.stream.StreamSupport;
 
 @Service
 public class DashboardUserServiceImpl implements DashboardUserService {
-//    private static final DtoMapper MODEL_MAPPER = new DtoMapper();
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserUniqueChecksService userChecksService;
-    private PrivilegeRepository privilegeRepository;
     private static final String RESOURCE_NOT_FOUND_MSG = "User with the ID: %s does not exist.";
     private final DtoMapper modelMapper;
 
     public DashboardUserServiceImpl(DashboardUserRepository dashboardUserRepository,
-                                    DashboardUserUniqueChecksService dashboardUserUniqueChecksService,
-                                    PrivilegeRepository privilegeRepository) {
+                                    DashboardUserUniqueChecksService dashboardUserUniqueChecksService) {
         this.dashboardUserRepository = dashboardUserRepository;
         this.userChecksService = dashboardUserUniqueChecksService;
-        this.privilegeRepository = privilegeRepository;
         this.modelMapper = new DtoMapper();
         this.modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -60,12 +51,12 @@ public class DashboardUserServiceImpl implements DashboardUserService {
             dashboardUser.setId(UUID.randomUUID());
         }
 
-        if (!userChecksService.UserEmailIsUnique(dashboardUser)) {
+        if (!userChecksService.userEmailIsUnique(dashboardUser)) {
             throw new ResourceAlreadyExistsException(String.format("dashboardUser with the email: %s already exists", dashboardUser.getEmail()));
         }
 
         if (dashboardUser.getPrivileges().stream().count() == 0) {
-            throw new InvalidRecordUpdateRequest(String.format("A privilege must be set"));
+            throw new InvalidRecordUpdateRequest("A privilege must be set");
         }
 
         // the record with this 'id' shouldn't already exist...
@@ -99,12 +90,12 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         if (dbDashboardUser.isEmpty())
             throw new RecordNotFoundException("Dashboard User resource with the ID: " + id + " does not exist.");
 
-        if (!userChecksService.UserEmailIsUnique(dashboardUser)) {
+        if (!userChecksService.userEmailIsUnique(dashboardUser)) {
             throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", dashboardUser.getEmail()));
         }
 
         if (dashboardUser.getPrivileges().stream().count() == 0) {
-            throw new InvalidRecordUpdateRequest(String.format("A privilege must be set"));
+            throw new InvalidRecordUpdateRequest("A privilege must be set");
         }
 
         return convertToDto(dashboardUserRepository.save(dashboardUser));
@@ -127,7 +118,6 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 
     @Override
     public DashboardUser convertToEntity(DashboardUserDto dto) {
-        DashboardUser entity = modelMapper.map(dto, DashboardUser.class);
-        return entity;
+        return modelMapper.map(dto, DashboardUser.class);
     }
 }
