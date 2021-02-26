@@ -1,23 +1,22 @@
 package mil.tron.commonapi.security;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
+
+import javax.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.servlet.http.HttpServletRequest;
-
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.interfaces.DecodedJWT;
-import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
-
 public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFilter  {
 
 	public static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
 	private static final String NAMESPACE_REGEX = "(?<=\\/ns\\/)([^\\/]*)";
 	private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
-	private static final String NoCredentials = "NoCredentials";
+	private static final String NO_CRED = "NoCredentials";
 	
 	@Override
 	protected Object getPreAuthenticatedPrincipal(HttpServletRequest request) {
@@ -34,7 +33,7 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 
 	@Override
 	protected Object getPreAuthenticatedCredentials(HttpServletRequest request) {
-		if (request == null || request.getHeaderNames() == null) return NoCredentials;
+		if (request == null || request.getHeaderNames() == null) return NO_CRED;
 		Enumeration<String> headerNames = request.getHeaderNames();
 		while (headerNames.hasMoreElements()){
 			if (headerNames.nextElement().equals("authorization")){
@@ -42,9 +41,10 @@ public class AppClientPreAuthFilter extends AbstractPreAuthenticatedProcessingFi
 				return decodedJwt.getClaim("email").asString();
 			}
 		}
-		return "N/A";
+		return NO_CRED;
 	}
-	
+
+
 	/**
 	 * Extracts URI field from an x-forwarded-client-cert header
 	 * 
