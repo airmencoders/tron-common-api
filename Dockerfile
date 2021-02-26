@@ -20,4 +20,4 @@ COPY --from=wgetsrc /usr/lib64/libssl.so.10 /usr/lib64/
 COPY --from=wgetsrc /usr/lib64/libidn.so.11 /usr/lib64/
 COPY --from=wgetsrc /usr/lib64/libcrypto.so.10 /usr/lib64/
 
-ENTRYPOINT ["java","-Xms512m","-Xmx1024m","-XX:+HeapDumpOnOutOfMemoryError","-XX:HeapDumpPath=/tmp/heap-dump.core","-Dspring.profiles.active=production","-jar","/app/commonapi.jar"]
+ENTRYPOINT ["java","-Xms512m","-Xmx1024m","-XX:+HeapDumpOnOutOfMemoryError","-XX:HeapDumpPath=/tmp/heap-dump.core","-jar","/app/commonapi.jar"]
