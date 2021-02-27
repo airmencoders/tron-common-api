@@ -1,5 +1,6 @@
 package mil.tron.commonapi.controller;
 
+import com.github.fge.jsonpatch.JsonPatch;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -106,7 +107,26 @@ public class PersonController {
 		PersonDto updatedPerson = personService.updatePerson(personId, person);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 	}
-	
+
+	@Operation(summary = "Patches an existing person", description = "Patches an existing person")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeWrite
+	@PatchMapping(path = "/{id}", consumes = "application/json-patch+json")
+	public ResponseEntity<PersonDto> patchPerson(
+			@Parameter(description = "Person ID to patch", required = true) @PathVariable("id") UUID personId,
+			@Parameter(description = "Patched person", required = true) @Valid @RequestBody JsonPatch patch) {
+		PersonDto updatedPerson = personService.patchPerson(personId, patch);
+		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
+	}
+
+
 	@Operation(summary = "Deletes an existing person", description = "Deletes an existing person")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204",
