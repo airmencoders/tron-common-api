@@ -65,10 +65,10 @@ public class PuckboardExtractorServiceImplTest {
                         Resources.getResource("puckboard/mock-personnel.json"), StandardCharsets.UTF_8));
 
         unitCount = 0;
-        peopleCount = peopleNodes.size();
+        peopleCount = peopleNodes.get("result").size();
 
         // determine number of squadrons we have head of time to compare with
-        List<JsonNode> units = ImmutableList.copyOf(orgNodes.elements());
+        List<JsonNode> units = ImmutableList.copyOf(orgNodes.get("result").elements());
         unitCount = units.size();
 
     }

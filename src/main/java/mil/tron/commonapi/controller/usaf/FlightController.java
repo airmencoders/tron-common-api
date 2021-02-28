@@ -198,7 +198,7 @@ public class FlightController {
 
         OrganizationDto org = organizationService.getOrganization(id);
         if (org.getOrgType().equals(Unit.FLIGHT))
-            return new ResponseEntity<>(organizationService.modifyAttributes(id, attribs), HttpStatus.OK);
+            return new ResponseEntity<>(organizationService.modify(id, attribs), HttpStatus.OK);
         else
             throw new InvalidRecordUpdateRequest(FlightController.UNIT_NOT_A_FLIGHT);
     }

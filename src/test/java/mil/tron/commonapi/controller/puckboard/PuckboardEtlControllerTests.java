@@ -68,7 +68,7 @@ public class PuckboardEtlControllerTests {
         puckboardServer.expect(manyTimes(), requestTo(endsWith("/branch"))).andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(branchesData, MediaType.APPLICATION_JSON));
 
-        puckboardServer.expect(manyTimes(), requestTo(endsWith("/organizations"))).andExpect(method(HttpMethod.GET))
+        puckboardServer.expect(manyTimes(), requestTo(endsWith("/organizations?isSchedulingUnit=true"))).andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(organizationsData, MediaType.APPLICATION_JSON));
 
         puckboardServer.expect(manyTimes(), requestTo(endsWith("/personnel"))).andExpect(method(HttpMethod.GET))
@@ -91,7 +91,7 @@ public class PuckboardEtlControllerTests {
 
     @Test
     void testOrganizationsFailuresOccur() throws Exception {
-        puckboardServer.expect(manyTimes(), requestTo(endsWith("/organizations")))  // mock the Rest call to /organizations fails
+        puckboardServer.expect(manyTimes(), requestTo(endsWith("/organizations?isSchedulingUnit=true")))  // mock the Rest call to /organizations fails
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withServerError());
 
@@ -103,7 +103,7 @@ public class PuckboardEtlControllerTests {
 
     @Test
     void testPersonnelFailuresOccur() throws Exception {
-        puckboardServer.expect(manyTimes(), requestTo(endsWith("/organizations"))).andExpect(method(HttpMethod.GET))
+        puckboardServer.expect(manyTimes(), requestTo(endsWith("/organizations?isSchedulingUnit=true"))).andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(organizationsData, MediaType.APPLICATION_JSON));
 
         puckboardServer.expect(manyTimes(), requestTo(endsWith("/personnel")))  // mock the Rest call to /personnel fails
@@ -117,7 +117,7 @@ public class PuckboardEtlControllerTests {
 
     @Test
     void testBranchFailuresOccur() throws Exception {
-        puckboardServer.expect(manyTimes(), requestTo(endsWith("/organizations"))).andExpect(method(HttpMethod.GET))
+        puckboardServer.expect(manyTimes(), requestTo(endsWith("/organizations?isSchedulingUnit=true"))).andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(organizationsData, MediaType.APPLICATION_JSON));
 
         puckboardServer.expect(manyTimes(), requestTo(endsWith("/personnel"))).andExpect(method(HttpMethod.GET))

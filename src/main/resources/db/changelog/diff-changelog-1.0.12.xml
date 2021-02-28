@@ -1,0 +1,45 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet id="remove-airman-columns" author="david.milligan">
+        <dropColumn columnName="admin" tableName="person"/>
+        <dropColumn columnName="afsc" tableName="person"/>
+        <dropColumn columnName="approved" tableName="person"/>
+        <dropColumn columnName="deros" tableName="person"/>
+        <dropColumn columnName="dor" tableName="person"/>
+        <dropColumn columnName="ets_date" tableName="person"/>
+        <dropColumn columnName="flt_chief" tableName="person"/>
+        <dropColumn columnName="go81" tableName="person"/>
+        <dropColumn columnName="gp" tableName="person"/>
+        <dropColumn columnName="imds" tableName="person"/>
+        <dropColumn columnName="man_number" tableName="person"/>
+        <dropColumn columnName="pt_date" tableName="person"/>
+        <dropColumn columnName="squadron" tableName="person"/>
+        <dropColumn columnName="unit" tableName="person"/>
+        <dropColumn columnName="wc" tableName="person"/>
+        <dropColumn columnName="wing" tableName="person"/>
+    </changeSet>
+    <changeSet id="person-metadata" author="david.milligan">
+        <createTable tableName="person_metadata">
+            <column name="key" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="person_metadataPK"/>
+            </column>
+            <column name="person_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="person_metadataPK"/>
+            </column>
+            <column name="value" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="FK_person_metadata_person_id" baseTableName="person_metadata" baseColumnNames="person_id" referencedTableName="person" referencedColumnNames="id" deferrable="false" initiallyDeferred="false" validate="true" onDelete="CASCADE"/>
+    </changeSet>
+    <changeSet id="org-metadata" author="david.milligan">
+        <createTable tableName="organization_metadata">
+            <column name="key" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="organization_metadataPK"/>
+            </column>
+            <column name="organization_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="organization_metadataPK"/>
+            </column>
+            <column name="value" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="FK_organization_metadata_organization_id" baseTableName="organization_metadata" baseColumnNames="organization_id" referencedTableName="organization" referencedColumnNames="id" deferrable="false" initiallyDeferred="false" validate="true" onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

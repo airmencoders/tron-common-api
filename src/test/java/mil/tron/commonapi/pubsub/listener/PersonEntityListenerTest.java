@@ -11,6 +11,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import javax.servlet.http.HttpServletRequest;
+
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,13 +25,17 @@ public class PersonEntityListenerTest {
     @Mock
     EventPublisher publisher;
 
+    private HttpServletRequest testRequest = mock(HttpServletRequest.class);
+
     @Test
     void testAirmanListener() {
+        Mockito.when(testRequest.getHeader(Mockito.anyString())).thenReturn("");
+
         listener.afterAnyUpdate(new Person());
         listener.afterAnyCreation(new Person());
         listener.afterAnyRemoval(new Person());
         Mockito
             .verify(publisher, times(3))
-            .publishEvent(Mockito.any(EventType.class), Mockito.any(String.class), Mockito.any(String.class), Mockito.any(Object.class));
+            .publishEvent(Mockito.any(EventType.class), Mockito.any(String.class), Mockito.any(String.class), Mockito.any(Object.class), Mockito.anyString());
     }
 }

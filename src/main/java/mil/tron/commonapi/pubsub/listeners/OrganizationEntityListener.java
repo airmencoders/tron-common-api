@@ -4,6 +4,7 @@ import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.logging.CommonApiLogger;
 import mil.tron.commonapi.pubsub.EventPublisher;
+import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.persistence.PostPersist;
 import javax.persistence.PostRemove;
 import javax.persistence.PostUpdate;
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +27,9 @@ public class OrganizationEntityListener {
 
     @Autowired
     private EventPublisher publisher;
+
+    @Autowired
+    private HttpServletRequest servletRequest;
 
     /**
      * Removes members/subordinate organizations fields from the org entity
@@ -47,7 +52,8 @@ public class OrganizationEntityListener {
                 EventType.ORGANIZATION_CREATE,
                 ORGANIZATION_CREATE_MSG,
                 organization.getClass().getName(),
-                stripOrganization(organization)
+                stripOrganization(organization),
+                servletRequest.getHeader(AppClientPreAuthFilter.XFCC_HEADER_NAME)
         );
     }
 
@@ -62,7 +68,8 @@ public class OrganizationEntityListener {
                 EventType.ORGANIZATION_CHANGE,
                 ORGANIZATION_DATA_CHANGED,
                 organization.getClass().getName(),
-                stripOrganization(organization)
+                stripOrganization(organization),
+                servletRequest.getHeader(AppClientPreAuthFilter.XFCC_HEADER_NAME)
         );
     }
 
@@ -77,6 +84,8 @@ public class OrganizationEntityListener {
                 EventType.ORGANIZATION_DELETE,
                 ORGANIZATION_DELETE_MSG,
                 organization.getClass().getName(),
-                stripOrganization(organization));
+                stripOrganization(organization),
+                servletRequest.getHeader(AppClientPreAuthFilter.XFCC_HEADER_NAME)
+        );
     }
 }

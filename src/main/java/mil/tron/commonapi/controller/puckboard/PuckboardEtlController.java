@@ -32,6 +32,7 @@ public class PuckboardEtlController {
 
     /**
      * Make a bean here for use/visibility in the Unit Test mocking
+     *
      * @param builder
      * @return
      */
@@ -52,20 +53,21 @@ public class PuckboardEtlController {
 
         String bearerToken = request.getHeader("authorization");
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", bearerToken);
+        if (bearerToken != null && !bearerToken.isEmpty()) {
+            headers.set("Authorization", bearerToken);
+        }
         HttpEntity entity = new HttpEntity(headers);
 
         // grab puckboard organizations
         JsonNode orgs;
         try {
             ResponseEntity<String> orgsString = restTemplate.exchange(
-                    this.puckboardUrl + "/organizations",
+                    this.puckboardUrl + "/organizations?isSchedulingUnit=true",
                     HttpMethod.GET,
                     entity,
                     String.class);
             orgs = mapper.readTree(orgsString.getBody());
-        }
-        catch (RestClientException | JsonProcessingException e) {
+        } catch (RestClientException | JsonProcessingException e) {
             return new ResponseEntity<>("Puckboard Organization Fetch error - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
@@ -78,8 +80,7 @@ public class PuckboardEtlController {
                     entity,
                     String.class);
             people = mapper.readTree(peopleString.getBody());
-        }
-        catch (RestClientException | JsonProcessingException e) {
+        } catch (RestClientException | JsonProcessingException e) {
             return new ResponseEntity<>("Puckboard Personnel Fetch error - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
@@ -92,8 +93,7 @@ public class PuckboardEtlController {
                     entity,
                     String.class);
             branchInfo = mapper.readTree(branchString.getBody());
-        }
-        catch (RestClientException | JsonProcessingException e) {
+        } catch (RestClientException | JsonProcessingException e) {
             return new ResponseEntity<>("Puckboard Branch Info Fetch error - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 

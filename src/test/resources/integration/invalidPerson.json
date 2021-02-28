@@ -1,0 +1,8 @@
+{
+  "firstName": "invalid",
+  "lastName": "person",
+  "email": "invalid@person.com",
+  "rank": "CIV",
+  "branch": "OTHER",
+  "afsc": "blah"
+}

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import lombok.AllArgsConstructor;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -34,11 +35,14 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     @Autowired
     private PersonService personService;
 
+    private static final String ARRAY_RESULT_FIELD = "result";
+
     private static final String ORG_ID_FIELD = "organizationId";
     private static final String ORG_TYPE_FIELD = "branchId";
     private static final String ORG_NAME_FIELD = "organizationName";
     private static final String ORG_STATUS_FIELD = "organizationStatus";
 
+    private static final String BRANCH_ID_FIELD = "id";
     private static final String PERSON_ID_FIELD = "id";
     private static final String PERSON_FIRST_NAME_FIELD = "firstName";
     private static final String PERSON_LAST_NAME_FIELD = "lastName";
@@ -48,7 +52,21 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private static final String PERSON_RANK_FIELD = "rankId";
     private static final String PERSON_RANK_ABBR_FIELD = "rankAbbr";
 
-    private static final int PB_MARINE_BRANCH = 2;
+    private static final Branch[] branchMapping = {
+            Branch.OTHER, // 0
+            Branch.USA, // 1
+            Branch.USMC, // 2
+            Branch.USN, // 3
+            Branch.USAF, // 4
+            Branch.USSF, // 5
+            Branch.USCG, // 6
+    };
+
+    @AllArgsConstructor
+    private static class RankInfo {
+        String rank;
+        Branch branch;
+    }
 
     /**
      * Convert the JSON as given by the controller (as a JsonNode)
@@ -56,7 +74,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
      * lookup table since Puckboard saves 'rankId' for a person's rank and
      * Common API uses a set of pre-defined rank strings.
      * Puckboard's rank entity is an array of all the services as a object, like this:
-     *  [
+     * {
+     *  "result": [
      *      {
      *          "id": 4,
      *          "name": "Air Force",
@@ -75,18 +94,23 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
      *           ...
      *      },
      *      ...
-     * ]
+     *   ]
+     * }
      * @param branchInfoJson The JsonNode given by the controller from the Puckboard API branch info dump
      */
-    private Map<String, String> processBranchInfo(JsonNode branchInfoJson) {
-        Map<String, String> allRanks = new HashMap<>();
+    private Map<Integer, RankInfo> processBranchInfo(JsonNode branchInfoJson) {
+        Map<Integer, RankInfo> allRanks = new HashMap<>();
+        allRanks.put(0, new RankInfo("CIV", Branch.USAF)); //default
         for (int i = 0; i < branchInfoJson.size(); i++) {
             JsonNode node = branchInfoJson.get(i);
+            Branch branch = resolveServiceName(node.get(BRANCH_ID_FIELD).asInt());
             for (String rankSetName : Lists.newArrayList("enlistedRanks", "officerRanks", "warrantOfficerRanks")) {
                 JsonNode rankSet = node.get(rankSetName);
                 for (int j = 0; j < rankSet.size(); j++) {
                     JsonNode rankNode = rankSet.get(j);
-                    allRanks.put(rankNode.get(PERSON_RANK_FIELD).asText(), rankNode.get(PERSON_RANK_ABBR_FIELD).textValue());
+                    allRanks.put(
+                            rankNode.get(PERSON_RANK_FIELD).asInt(),
+                            new RankInfo(rankNode.get(PERSON_RANK_ABBR_FIELD).textValue(),branch));
                 }
             }
         }
@@ -95,10 +119,8 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     }
 
     // helper function to convert PB's branchId to service name
-    private Branch resolveServiceName(JsonNode name) {
-        // infer the service from name
-        if (name != null && name.intValue() == PB_MARINE_BRANCH) return Branch.USMC;
-        else return Branch.USAF;
+    private Branch resolveServiceName(Integer branchId) {
+        return branchId >= 0 && branchId < branchMapping.length ? branchMapping[branchId] : Branch.USAF;
     }
 
     // helper function to infer unit type by its name
@@ -134,14 +156,14 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
                 OrganizationDto s = new OrganizationDto();
                 s.setId(id);
                 s.setName(name);
-                s.setBranchType(resolveServiceName(node.get(ORG_TYPE_FIELD)));
+                s.setBranchType(resolveServiceName(node.get(ORG_TYPE_FIELD).asInt()));
                 s.setOrgType(resolveUnitType(node.get(ORG_NAME_FIELD)));
                 orgService.createOrganization(s);
                 unitIdStatus.put(id, "Created - " + name);
             }
             else {
                 // unit exists, just update the unit name
-                orgService.modifyAttributes(id,
+                orgService.modify(id,
                         new ImmutableMap
                                 .Builder<String, String>()
                                 .put("name", name)
@@ -163,57 +185,64 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
      * UUID.  Conversely, that UUID is removed from the said organization if it has an "active" status of "false" in the
      * puckboard data.
      * @param peopleInfo JsonNode containing the personnel dump from puckboard
-     * @param branchLookup Lookup table of puckboard's rank structure built from {@link #processBranchInfo(JsonNode)}
+     * @param rankLookup Lookup table of puckboard's rank structure built from {@link #processBranchInfo(JsonNode)}
      * @return Map of personnel data added/updated to Common API by the UUID and if the entity was added/updated or had an error
      */
-    private Map<UUID, String> processPersonnelInfo(JsonNode peopleInfo, Map<String, String> branchLookup) {
+    private Map<UUID, String> processPersonnelInfo(JsonNode peopleInfo, Map<Integer, RankInfo> rankLookup) {
 
         Map<UUID, String> personIdStatus = new HashMap<>();
 
         // go thru each person and add/update to Common
         for (int i = 0; i < peopleInfo.size(); i++) {
             JsonNode node = peopleInfo.get(i);
-
-            UUID id = UUID.fromString(node.get(PERSON_ID_FIELD).textValue());
-            PersonDto airman = new PersonDto();
-            airman.setDodid(node.get(PERSON_DODID_FIELD).isNull() ? null : node.get(PERSON_DODID_FIELD).asText());
-            airman.setDutyPhone(node.get(PERSON_PHONE_FIELD).textValue());
-            airman.setTitle(branchLookup.get(node.get(PERSON_RANK_FIELD).asText()));
-            airman.setId(id);
-            airman.setFirstName(node.get(PERSON_FIRST_NAME_FIELD).textValue());
-            airman.setLastName(node.get(PERSON_LAST_NAME_FIELD).textValue());
-            airman.setEmail(node.get(PERSON_EMAIL_FIELD).textValue());
+            PersonDto personDto = convertToPersonDto(node, rankLookup);
 
             try {
-                if (!personService.exists(id)) {
-
-                    // create new airman
-                    personService.createPerson(airman);
-                    personIdStatus.put(id, "Created - " + airman.getFullName());
+                if (!personService.exists(personDto.getId())) {
+                    personService.createPerson(personDto);
+                    personIdStatus.put(personDto.getId(), "Created - " + personDto.getFullName());
                 } else {
-                    personService.updatePerson(id, airman);
-                    personIdStatus.put(id, "Updated - " + airman.getFullName());
+                    personService.updatePerson(personDto.getId(), personDto);
+                    personIdStatus.put(personDto.getId(), "Updated - " + personDto.getFullName());
                 }
 
-                // now go thru each puckboard org person was in - either add or remove depending on active status
-                List<String> personOrgIds = ImmutableList.copyOf(node.get(ORG_STATUS_FIELD).fieldNames());
-                for (String org : personOrgIds) {
-                    JsonNode orgNode = node.get(ORG_STATUS_FIELD).get(org);
-                    UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
-
-                    if (orgNode.get("active").booleanValue()) {
-                        orgService.addOrganizationMember(orgId, Lists.newArrayList(id));
-                    } else {
-                        orgService.removeOrganizationMember(orgId, Lists.newArrayList(id));
-                    }
-                }
-            }
-            catch (ResourceAlreadyExistsException | RecordNotFoundException | TransactionSystemException e) {
-                personIdStatus.put(id, "Problem - " + airman.getFullName() + " (" + e.getMessage() + ")");
+                assignPersonToOrg(node, personDto.getId());
+            } catch (ResourceAlreadyExistsException | RecordNotFoundException | TransactionSystemException e) {
+                personIdStatus.put(personDto.getId(), "Problem - " + personDto.getFullName() + " (" + e.getMessage() + ")");
             }
         }
 
         return personIdStatus;
+    }
+
+    private PersonDto convertToPersonDto(JsonNode node, Map<Integer, RankInfo> rankLookup) {
+        RankInfo rankInfo = rankLookup.get(node.get(PERSON_RANK_FIELD).asInt());
+        return PersonDto.builder()
+                .id(UUID.fromString(node.get(PERSON_ID_FIELD).textValue()))
+                .dodid(node.get(PERSON_DODID_FIELD).asText(null))
+                .dutyPhone(node.get(PERSON_PHONE_FIELD).textValue())
+                .title(rankInfo.rank)
+                .rank(rankInfo.rank)
+                .branch(rankInfo.branch)
+                .firstName(node.get(PERSON_FIRST_NAME_FIELD).textValue())
+                .lastName(node.get(PERSON_LAST_NAME_FIELD).textValue())
+                .email(node.get(PERSON_EMAIL_FIELD).textValue())
+                .build();
+    }
+
+    private void assignPersonToOrg(JsonNode node, UUID id) {
+        // now go thru each puckboard org person was in - either add or remove depending on active status
+        List<String> personOrgIds = ImmutableList.copyOf(node.get(ORG_STATUS_FIELD).fieldNames());
+        for (String org : personOrgIds) {
+            JsonNode orgNode = node.get(ORG_STATUS_FIELD).get(org);
+            UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
+
+            if (orgNode.get("active").booleanValue()) {
+                orgService.addOrganizationMember(orgId, Lists.newArrayList(id));
+            } else {
+                orgService.removeOrganizationMember(orgId, Lists.newArrayList(id));
+            }
+        }
     }
 
     /**
@@ -233,13 +262,13 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
             JsonNode branchInfoJson) {
 
         // process branch information into lookup hash
-        Map<String, String> branchLookup = this.processBranchInfo(branchInfoJson);
+        Map<Integer, RankInfo> rankLookup = this.processBranchInfo(branchInfoJson.get(ARRAY_RESULT_FIELD));
 
         // process unit information
-        Map<UUID, String> orgStatus = this.processOrgInformation(orgs);
+        Map<UUID, String> orgStatus = this.processOrgInformation(orgs.get(ARRAY_RESULT_FIELD));
 
         // process people information
-        Map<UUID, String> peopleStatus = this.processPersonnelInfo(people, branchLookup);
+        Map<UUID, String> peopleStatus = this.processPersonnelInfo(people.get(ARRAY_RESULT_FIELD), rankLookup);
 
         return new ImmutableMap.Builder<String, Map<UUID, String>>()
                 .put("orgs", orgStatus)

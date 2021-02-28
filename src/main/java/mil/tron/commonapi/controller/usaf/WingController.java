@@ -196,7 +196,7 @@ public class WingController {
 
         OrganizationDto org = organizationService.getOrganization(id);
         if (org.getOrgType().equals(Unit.WING))
-            return new ResponseEntity<>(organizationService.modifyAttributes(id, attribs), HttpStatus.OK);
+            return new ResponseEntity<>(organizationService.modify(id, attribs), HttpStatus.OK);
         else
             throw new InvalidRecordUpdateRequest(WingController.UNIT_NOT_A_WING);
     }

@@ -1,0 +1,9 @@
+{
+  "firstName": "invalid",
+  "lastName": "airman",
+  "email": "invalid@airman.com",
+  "rank": "CIV",
+  "branch": "USAF",
+  "blah": "blah",
+  "foo": "bar"
+}
