@@ -2,9 +2,7 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.DashboardUserDto;
 
-import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.DashboardUser;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;

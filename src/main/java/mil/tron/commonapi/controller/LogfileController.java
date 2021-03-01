@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.LogfileDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.LogfileService;
@@ -36,8 +37,12 @@ public class LogfileController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation", 
-				content = @Content(array = @ArraySchema(schema = @Schema(implementation = LogfileDto.class))))
+				content = @Content(array = @ArraySchema(schema = @Schema(implementation = LogfileDto.class)))),
+			@ApiResponse(responseCode = "403",
+				description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeDashboardAdmin
 	@GetMapping
 	public ResponseEntity<Object> getLogfileInfo() {
 		return new ResponseEntity<>(service.getAllLogfileInfo(), HttpStatus.OK);
@@ -52,8 +57,12 @@ public class LogfileController {
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "404",
 				description = "File not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+				description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeDashboardAdmin
 	@GetMapping("/{fileName:.+}")
 	public ResponseEntity<Resource> getLogfile(@PathVariable String fileName, HttpServletRequest request) {
 		Resource resource = service.getLogfileResource(fileName);
