@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.*;
 
@@ -157,5 +158,20 @@ public class DashboardUserServiceImplTest {
         // Test person not exists
         Mockito.when(dashboardUserRepo.findById(testDashboardUserDto.getId())).thenReturn(Optional.ofNullable(null));
         assertThrows(RecordNotFoundException.class, () -> dashboardUserService.getDashboardUserDto(testDashboardUserDto.getId()));
+    }
+    
+    @Test
+    void getSelfTestExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(testDashboardUser));
+    	
+    	DashboardUserDto retrievedDashboardUserDto = dashboardUserService.getSelf(testDashboardUserDto.getEmail());
+    	assertThat(retrievedDashboardUserDto).isEqualTo(testDashboardUserDto);
+    }
+    
+    @Test
+    void getSelfTestNotExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenThrow(new UsernameNotFoundException("Not found"));
+    	
+    	assertThrows(UsernameNotFoundException.class, () -> dashboardUserService.getSelf(testDashboardUserDto.getEmail()));
     }
 }

@@ -1,6 +1,5 @@
 package mil.tron.commonapi.service;
 
-import io.swagger.v3.oas.annotations.Operation;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -13,6 +12,7 @@ import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksService;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
 import org.modelmapper.spi.MappingContext;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -68,7 +68,6 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     }
 
     @Override
-    @Operation(summary = "Retrieves all dashboard users", description = "Retrieves all dashboard users")
     public Iterable<DashboardUserDto> getAllDashboardUsersDto() {
         return StreamSupport.stream(dashboardUserRepository.findAll().spliterator(), false).map(this::convertToDto).collect(Collectors.toList());
     }
@@ -120,4 +119,9 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     public DashboardUser convertToEntity(DashboardUserDto dto) {
         return modelMapper.map(dto, DashboardUser.class);
     }
+
+	@Override
+	public DashboardUserDto getSelf(String email) {
+		return convertToDto(dashboardUserRepository.findByEmailIgnoreCase(email).orElseThrow(() -> new UsernameNotFoundException("Dashboard User: " + email + " not found.")));
+	}
 }
