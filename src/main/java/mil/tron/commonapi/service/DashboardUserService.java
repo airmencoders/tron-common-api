@@ -11,6 +11,7 @@ public interface DashboardUserService {
     void deleteDashboardUser(UUID id);
     DashboardUserDto getDashboardUserDto(UUID id);
     Iterable<DashboardUserDto> getAllDashboardUsersDto();
+    DashboardUserDto getSelf(String email);
     // conversions
     DashboardUserDto convertToDto(DashboardUser user);
     DashboardUser convertToEntity(DashboardUserDto dto);

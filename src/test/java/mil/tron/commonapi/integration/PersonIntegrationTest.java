@@ -14,7 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.*;
-import org.springframework.web.context.WebApplicationContext;
 
 import javax.transaction.Transactional;
 import java.io.IOException;
@@ -26,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -34,9 +32,6 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 public class PersonIntegrationTest {
     private static final String ENDPOINT = "/v1/person/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    @Autowired
-    private WebApplicationContext wac;
 
     @Autowired
     private MockMvc mockMvc;
