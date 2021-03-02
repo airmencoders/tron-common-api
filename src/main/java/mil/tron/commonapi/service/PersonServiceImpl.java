@@ -7,6 +7,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.JsonPatch;
+import com.github.fge.jsonpatch.JsonPatchException;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.ranks.Rank;
@@ -27,6 +32,7 @@ public class PersonServiceImpl implements PersonService {
 	private PersonUniqueChecksService personChecksService;
 	private RankRepository rankRepository;
 	private final DtoMapper modelMapper;
+	private final ObjectMapper objMapper;
 
 	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository) {
 		this.repository = repository;
@@ -34,6 +40,7 @@ public class PersonServiceImpl implements PersonService {
 		this.rankRepository = rankRepository;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+		objMapper = new ObjectMapper();
 	}
 
 	@Override
@@ -65,6 +72,20 @@ public class PersonServiceImpl implements PersonService {
 		}
 		
 		return convertToDto(repository.save(entity));
+	}
+
+	@Override
+	public PersonDto patchPerson(UUID id, JsonPatch patch) {
+
+		Optional<Person> dbPerson = repository.findById(id);
+
+		if (dbPerson.isEmpty()) {
+			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
+		}
+
+		Person patchedPerson = applyPatchToPerson(patch, dbPerson.get());
+
+		return convertToDto(repository.save(patchedPerson));
 	}
 
 	@Override
@@ -125,5 +146,16 @@ public class PersonServiceImpl implements PersonService {
 		Person entity = modelMapper.map(dto, Person.class);
 		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
 		return entity;
+	}
+
+	@Override
+	public Person applyPatchToPerson(JsonPatch patch, Person person) {
+		try {
+			JsonNode patched = patch.apply(objMapper.convertValue(person, JsonNode.class));
+			return objMapper.treeToValue(patched, Person.class);
+		}
+		catch (JsonPatchException | JsonProcessingException e) {
+			throw new InvalidRecordUpdateRequest(String.format("Error patching person with email %s.", person.getEmail()));
+		}
 	}
 }
