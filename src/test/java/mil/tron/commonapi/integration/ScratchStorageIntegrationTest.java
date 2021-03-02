@@ -121,6 +121,7 @@ public class ScratchStorageIntegrationTest {
 
     private DashboardUser admin;
     private List<Privilege> privs;
+    private Long writePrivId;
 
     /**
      * Private helper to create a JWT on the fly
@@ -172,7 +173,7 @@ public class ScratchStorageIntegrationTest {
 
         // get the privs from the db
         privs = Lists.newArrayList(privRepo.findAll());
-        Long writePrivId = privs.stream()
+        writePrivId = privs.stream()
                 .filter(item -> item.getName().equals("SCRATCH_WRITE"))
                 .collect(Collectors.toList()).get(0).getId();
 
@@ -458,7 +459,7 @@ public class ScratchStorageIntegrationTest {
     }
 
     /**
-     * Full stack test from an admin blessing 'user1' to be a SCRATCH_ADMIN and then user1 adding a new user
+     * Full stack test from an admin blessing 'user1' to be a SCRATCH_ADMIN and then 'user1' adding a new user
      * to his app (COOL_APP) and then making that new user have WRITE access, revoking WRITE & giving READ access, and
      * then finally revoking their app access completely, and making sure the new guy is still in the scratch space
      * universe though... and verifying all of this along the way.
@@ -693,6 +694,80 @@ public class ScratchStorageIntegrationTest {
         }
 
         assertTrue(newGuyExists);
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testRemoveUserFromScratchSpaceEverywhere() throws Exception {
+
+
+        // add user2 to COOL_APP - so both user1 and user2 shall be authorized on that app
+        ScratchStorageAppUserPrivDto user2PrivDto =
+                ScratchStorageAppUserPrivDto.builder()
+                        .email(user2.getEmail())
+                        .privilegeId(writePrivId)
+                        .build();
+
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user2PrivDto)))
+                .andExpect(status().isOk());
+
+        // now as the dashboard admin we delete user2 completely from the scratch universe
+        mockMvc.perform(delete(ENDPOINT + "users/{userId}", user2.getId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // verify that user2 is no longer listed in COOL_APP or TEST_APP's privs
+        MvcResult allAppRecords = mockMvc.perform(get(ENDPOINT + "/apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ScratchStorageAppRegistryDto[] appArray = OBJECT_MAPPER.readValue(allAppRecords.getResponse().getContentAsString(),
+                ScratchStorageAppRegistryDto[].class);
+
+        boolean foundUser2Id = false;
+        for (ScratchStorageAppRegistryDto entry : appArray) {
+            for (ScratchStorageAppRegistryDto.UserWithPrivs priv : entry.getUserPrivs()) {
+                if (priv.getUserId().equals(user2.getId())) {
+                    foundUser2Id = true;
+                    break;
+                }
+            }
+            if (foundUser2Id) break;
+        }
+
+        assertFalse(foundUser2Id);
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testDeleteAppAndAllItsData() throws Exception {
+
+        // delete TEST_APP should take all of its key-values with it
+
+        // make sure "some key" exists
+        mockMvc.perform(get(ENDPOINT + "{appId}/{keyName}", entry2.getAppId(), "some key")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete(ENDPOINT + "apps/{appId}", entry2.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(ENDPOINT + "{appId}/{keyName}", entry2.getAppId(), "some key")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isNotFound());
     }
 
     @Transactional

@@ -16,7 +16,6 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -351,6 +350,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
+    @PreAuthorizeDashboardAdmin
     @DeleteMapping("/apps/{id}")
     public ResponseEntity<Object> deleteExistingAppEntry(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id) {

@@ -348,6 +348,17 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         ScratchStorageUser user = scratchUserRepo.findById(id)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot delete non-existent scratch user with UUID: " + id));
 
+        // must go thru the app universe and delete all privs associated with this user first
+        List<ScratchStorageAppRegistryEntry> allUserApps = Lists.newArrayList(appRegistryRepo.findAll());
+        for (ScratchStorageAppRegistryEntry app : allUserApps) {
+            for (ScratchStorageAppUserPriv item : new HashSet<>(app.getUserPrivs())) {
+                if (item.getUser().getId().equals(id)) {
+                    app.removeUserAndPriv(item);
+                    appPrivRepo.deleteById(item.getId());
+                }
+            }
+        }
+
         scratchUserRepo.deleteById(id);
         return user;
     }
