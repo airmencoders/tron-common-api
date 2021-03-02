@@ -31,6 +31,7 @@ public class SpringdocConfig {
 			String.format("%s/group/**", apiPrefix),
 			String.format("%s/squadron/**", apiPrefix),
 			String.format("%s/wing/**", apiPrefix),
+			String.format("%s/userinfo/**", apiPrefix),
 			String.format("%s/scratch/**", apiPrefix),
 		};
     	
@@ -41,8 +42,9 @@ public class SpringdocConfig {
     public GroupedOpenApi dashboardApi(@Value("${api-prefix.v1}") String apiPrefix) {
     	String[] paths = {
 			String.format("%s/app-client/**", apiPrefix),
-			String.format("%s/userinfo/**", apiPrefix),
+			String.format("%s/privilege/**", apiPrefix),
 			String.format("%s/list-request-headers", apiPrefix),
+			String.format("%s/logfile/**", apiPrefix),
 			String.format("%s/dashboard-users/**", apiPrefix),
 		};
     	return GroupedOpenApi.builder().group("dashboard-api").pathsToMatch(paths).build();
