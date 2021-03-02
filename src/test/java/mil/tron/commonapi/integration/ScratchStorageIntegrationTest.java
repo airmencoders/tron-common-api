@@ -5,11 +5,12 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
+import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -34,6 +35,8 @@ import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -117,6 +120,7 @@ public class ScratchStorageIntegrationTest {
 
 
     private DashboardUser admin;
+    private List<Privilege> privs;
 
     /**
      * Private helper to create a JWT on the fly
@@ -147,8 +151,8 @@ public class ScratchStorageIntegrationTest {
                 .privileges(Set.of(privRepo.findByName("DASHBOARD_ADMIN").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD ADMIN"))))
                 .build();
 
-         // persist the admin
-         dashRepo.save(admin);
+        // persist the admin
+        dashRepo.save(admin);
 
         // persist/create the scratch space users - user1 and user2
         mockMvc.perform(post(ENDPOINT + "users")
@@ -167,7 +171,7 @@ public class ScratchStorageIntegrationTest {
 
 
         // get the privs from the db
-        List<Privilege> privs = Lists.newArrayList(privRepo.findAll());
+        privs = Lists.newArrayList(privRepo.findAll());
         Long writePrivId = privs.stream()
                 .filter(item -> item.getName().equals("SCRATCH_WRITE"))
                 .collect(Collectors.toList()).get(0).getId();
@@ -199,7 +203,7 @@ public class ScratchStorageIntegrationTest {
         //  these will be PATCH to the endpoint in a ScratchStorageAppUserPrivDto
         ScratchStorageAppUserPrivDto user1PrivDto =
                 ScratchStorageAppUserPrivDto.builder()
-                .userId(user1.getId())
+                .email(user1.getEmail())
                 .privilegeId(writePrivId)
                 .build();
 
@@ -225,7 +229,7 @@ public class ScratchStorageIntegrationTest {
         //  these will be PATCH to the endpoint in a ScratchStorageAppUserPrivDto
         ScratchStorageAppUserPrivDto user2PrivDto =
                 ScratchStorageAppUserPrivDto.builder()
-                        .userId(user2.getId())
+                        .email(user2.getEmail())
                         .privilegeId(writePrivId)
                         .build();
 
@@ -453,6 +457,244 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Full stack test from an admin blessing 'user1' to be a SCRATCH_ADMIN and then user1 adding a new user
+     * to his app (COOL_APP) and then making that new user have WRITE access, revoking WRITE & giving READ access, and
+     * then finally revoking their app access completely, and making sure the new guy is still in the scratch space
+     * universe though... and verifying all of this along the way.
+     * @throws Exception if Jackson croaks
+     */
+    @Transactional
+    @Rollback
+    @Test
+    void testScratchAdminFunctions() throws Exception {
+
+        // emulate a user1 (who has been upgraded as a SCRATCH_ADMIN) performing
+        //   admin functions on assigned App space
+
+        String newGuyEmail = "newguy@test.com";  // new scratch user we'll add later
+
+        // first check that user1 with SCRATCH_WRITE can't get COOL_APP's record
+        mockMvc.perform(get(ENDPOINT + "apps/{appId}", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
+
+
+        // get the priv ID of SCRATCH_ADMIN from the REST interface
+        MvcResult privList = mockMvc.perform(get("/v1/privilege")
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+        Privilege[] privArray = OBJECT_MAPPER
+                .readValue(privList.getResponse().getContentAsString(), Privilege[].class);
+
+        // yank out the SCRATCH_ADMIN from the JSON
+        Privilege adminPriv = Arrays
+                .stream(privArray)
+                .filter(item -> item.getName().equals("SCRATCH_ADMIN"))
+                .collect(Collectors.toList()).get(0);
+
+        // yank out the SCRATCH_WRITE details from the JSON
+        Privilege writePriv = Arrays
+                .stream(privArray)
+                .filter(item -> item.getName().equals("SCRATCH_WRITE"))
+                .collect(Collectors.toList()).get(0);
+
+        // yank out the SCRATCH_READ details from the JSON
+        Privilege readPriv = Arrays
+                .stream(privArray)
+                .filter(item -> item.getName().equals("SCRATCH_READ"))
+                .collect(Collectors.toList()).get(0);
+
+        // bless user1 with scratch admin rights to his app space
+        ScratchStorageAppUserPrivDto user1PrivDto =
+                ScratchStorageAppUserPrivDto.builder()
+                        .email(user1.getEmail())
+                        .privilegeId(adminPriv.getId())
+                        .build();
+
+        // as the dashboard admin, get COOL_APP's record - which include its privs
+        MvcResult result = mockMvc.perform(get(ENDPOINT + "apps/{appId}", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ScratchStorageAppRegistryDto appDto = OBJECT_MAPPER.readValue(
+                result.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class);
+
+        // get user1's priv entry in the returned Dto, get its ID
+        ScratchStorageAppUserPriv user1AdminPriv = null;
+        for (ScratchStorageAppRegistryDto.UserWithPrivs user : appDto.getUserPrivs()) {
+            if (user.getUserId().equals(user1.getId())) {
+                for (ScratchStorageAppRegistryDto.PrivilegeIdPair pair : user.getPrivs()) {
+                    if (pair.getPriv().getName().equals("SCRATCH_WRITE")) {
+                        user1PrivDto.setId(pair.getUserPrivPairId());
+                    }
+                }
+            }
+        }
+
+        // as the dashboard admin, PATCH the existing priv for user1, now user1 should be an ADMIN for his space
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user1PrivDto)))
+                .andExpect(status().isOk());
+
+        // now verify that user1 can get his app's record and all the attached users, doesn't take a DashboardAdmin anymore
+        mockMvc.perform(get(ENDPOINT + "apps/{appId}", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+
+        // now test that user1, can add a new user to their app, a user that isn't even in the scratch storage
+        //   universe yet, new user will be implictly added/assigned a UUID/ and placed against this app with chosen priv
+        ScratchStorageAppUserPrivDto newUserDto = ScratchStorageAppUserPrivDto
+                .builder()
+                .email(newGuyEmail)
+                .privilegeId(writePriv.getId())
+                .build();
+
+        // make sure 'user2' can't do this
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user2.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newUserDto)))
+                .andExpect(status().isForbidden());
+
+        // user1 should definitely be able to
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newUserDto)))
+                .andExpect(status().isOk());
+
+
+        // make sure that the new guy we just added is there and has SCRATCH_WRITE privs
+        MvcResult newDetails = mockMvc.perform(get(ENDPOINT + "apps/{appId}", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ScratchStorageAppRegistryDto newDetailsDto = OBJECT_MAPPER.readValue(
+                newDetails.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class);
+
+        // sift thru the COOL_APP's record and make sure the new guy is listed (created) with SCRATCH_WRITE privs
+        boolean userHasWritePriv = false;
+        for (ScratchStorageAppRegistryDto.UserWithPrivs user : newDetailsDto.getUserPrivs()) {
+            if (user.getEmailAddress().equals(newGuyEmail)) {
+                for (ScratchStorageAppRegistryDto.PrivilegeIdPair priv : user.getPrivs()) {
+                    if (priv.getPriv().getName().equals("SCRATCH_WRITE")) {
+                        userHasWritePriv = true;
+                        break;
+                    }
+                }
+            }
+            if (userHasWritePriv) break;
+        }
+
+        assertTrue(userHasWritePriv);
+
+
+        // now take away the new guy's WRITE access and make READ
+        newUserDto.setPrivilegeId(readPriv.getId());
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newUserDto)))
+                .andExpect(status().isOk());
+
+        // make sure that the new guy we just added is there and has SCRATCH_WRITE privs
+        MvcResult readOnlyDetails = mockMvc.perform(get(ENDPOINT + "apps/{appId}", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ScratchStorageAppRegistryDto readOnlyDetailsDto = OBJECT_MAPPER.readValue(
+                readOnlyDetails.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class);
+
+        // sift thru the COOL_APP's record and make sure the new guy is listed (created) with SCRATCH_READ privs
+        boolean userHasReadPriv = false;
+        UUID privEntryId = null;
+        for (ScratchStorageAppRegistryDto.UserWithPrivs user : readOnlyDetailsDto.getUserPrivs()) {
+            if (user.getEmailAddress().equals(newGuyEmail)) {
+                for (ScratchStorageAppRegistryDto.PrivilegeIdPair priv : user.getPrivs()) {
+                    if (priv.getPriv().getName().equals("SCRATCH_READ")) {
+                        privEntryId = priv.getUserPrivPairId();
+                        userHasReadPriv = true;
+                        break;
+                    }
+                }
+            }
+            if (userHasReadPriv) break;
+        }
+
+        assertTrue(userHasReadPriv);
+
+        // finally revoke the new guys privs - but the system will not delete that user from the
+        //   scratch space universe, since they may be referenced for other apps!
+        // we can use the privEntryId retrieved above in the last app details pull, we delete using that identifier to
+        //  single out the priv we want gone
+        mockMvc.perform(delete(ENDPOINT + "apps/{appId}/user/{privId}", entry1.getAppId(), privEntryId)
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // verify that the new user is no longer associated with COOL_APP
+        MvcResult finalDetails = mockMvc.perform(get(ENDPOINT + "apps/{appId}", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ScratchStorageAppRegistryDto finalDetailsDto = OBJECT_MAPPER.readValue(
+                finalDetails.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class);
+
+        // sift thru the COOL_APP's record and make sure the new guy is listed (created) with SCRATCH_READ privs
+        boolean userIsPresent = false;
+        for (ScratchStorageAppRegistryDto.UserWithPrivs user : finalDetailsDto.getUserPrivs()) {
+            if (user.getEmailAddress().equals(newGuyEmail)) {
+                userIsPresent = true;
+                break;
+            }
+            if (userIsPresent) break;
+        }
+
+        assertFalse(userIsPresent);
+
+        // verify the new user is still in the system though, gotta use our Dashboard_Admin creds for this request
+        MvcResult allUsers = mockMvc.perform(get(ENDPOINT + "users")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ScratchStorageUser[] allUsersArray = OBJECT_MAPPER.readValue(allUsers.getResponse().getContentAsString(),
+                ScratchStorageUser[].class);
+
+        // make sure the new guy is still in scratch space universe
+        boolean newGuyExists = false;
+        for (ScratchStorageUser u : allUsersArray) {
+            if (u.getEmail().equals(newGuyEmail)) {
+                newGuyExists = true;
+                break;
+            }
+            if (newGuyExists) break;
+        }
+
+        assertTrue(newGuyExists);
+    }
+
     @Transactional
     @Rollback
     @Test
@@ -634,10 +876,38 @@ public class ScratchStorageIntegrationTest {
         //  these will be PATCH to the endpoint in a ScratchStorageAppUserPrivDto
         ScratchStorageAppUserPrivDto user3PrivDto =
                 ScratchStorageAppUserPrivDto.builder()
-                        .userId(user3.getId())
+                        .email(null)
                         .privilegeId(writePrivId)
                         .build();
 
+        // null email in the priv dto should fail
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", app3Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3PrivDto)))
+                .andExpect(status().isBadRequest());
+
+        // blank email in the priv dto should fail
+        user3PrivDto.setEmail("");
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", app3Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3PrivDto)))
+                .andExpect(status().isBadRequest());
+
+        // malformed email in the priv dto should fail
+        user3PrivDto.setEmail("blah");
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", app3Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(user3PrivDto)))
+                .andExpect(status().isBadRequest());
+
+        // email with spaces and in all caps in the priv dto should be OK
+        user3PrivDto.setEmail(user3.getEmail().toUpperCase());
         mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", app3Id)
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)

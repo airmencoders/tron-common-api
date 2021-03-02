@@ -18,7 +18,6 @@ import mil.tron.commonapi.service.PrivilegeService;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/privilege")
-@PreAuthorizeDashboardAdmin
 public class PrivilegeController {
 	
 	private PrivilegeService privilegeService;

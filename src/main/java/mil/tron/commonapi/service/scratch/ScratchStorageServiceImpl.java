@@ -26,6 +26,7 @@ import java.util.stream.StreamSupport;
 @Service
 public class ScratchStorageServiceImpl implements ScratchStorageService {
     private static final String SCRATCH_WRITE_PRIV = "SCRATCH_WRITE";
+    private static final String SCRATCH_ADMIN_PRIV = "SCRATCH_ADMIN";
     private ScratchStorageRepository repository;
     private ScratchStorageAppRegistryEntryRepository appRegistryRepo;
     private ScratchStorageUserRepository scratchUserRepo;
@@ -154,6 +155,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     }
 
     @Override
+    public ScratchStorageAppRegistryDto getRegisteredScratchApp(UUID appId) {
+        ScratchStorageAppRegistryEntry entry = appRegistryRepo.findById(appId).orElseThrow(() ->
+            new RecordNotFoundException("App with ID " + appId + " not found"));
+
+        return dtoMapper.map(entry, ScratchStorageAppRegistryDto.class);
+    }
+
+    @Override
     public ScratchStorageAppRegistryEntry addNewScratchAppName(ScratchStorageAppRegistryEntry entry) {
         if (entry.getId() == null) {
             entry.setId(UUID.randomUUID());
@@ -214,10 +223,18 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         ScratchStorageAppRegistryEntry app = appRegistryRepo.findById(appId)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot find app with UUID: " + appId));
 
-        // make sure this user-priv set doesn't already exist
-        for (ScratchStorageAppUserPriv item : app.getUserPrivs()) {
-            if (item.getPrivilege().getId().equals(priv.getPrivilegeId()) && item.getUser().getId().equals(priv.getUserId())) {
-                throw new ResourceAlreadyExistsException("A User-Privilege set already exists for given App Id");
+        for (ScratchStorageAppUserPriv item : new HashSet<>(app.getUserPrivs())) {
+            // make sure this unique user-priv set doesn't already exist
+            if (item.getPrivilege().getId().equals(priv.getPrivilegeId()) && item.getUser().getEmail().equalsIgnoreCase(priv.getEmail())) {
+                throw new ResourceAlreadyExistsException("A User-Privilege entry already exists for given App Id");
+            }
+
+            // see if this priv id and the user id are the same -- if they are then we're UPDATING a privilege
+            //  delete the existing priv so that it'll be added again below (effectively overwriting) - otherwise you
+            //  get a unique key exception
+            if (item.getUser().getEmail().equalsIgnoreCase(priv.getEmail()) && item.getId().equals(priv.getId())) {
+                app.removeUserAndPriv(item);
+                appPrivRepo.deleteById(item.getId()); // delete the user-priv in the db
             }
         }
 
@@ -255,8 +272,23 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      */
     private ScratchStorageAppUserPriv mapUserPrivDtoToEntity(ScratchStorageAppUserPrivDto dto) {
 
-        ScratchStorageUser user = scratchUserRepo.findById(dto.getUserId())
-                .orElseThrow(() -> new RecordNotFoundException("User for privilege not found"));
+        Optional<ScratchStorageUser> user = scratchUserRepo.findByEmailIgnoreCase(dto.getEmail());
+        ScratchStorageUser appUser;
+        if (user.isEmpty()) {
+            // user didn't exist, create them in the scratch space universe, and attach only to
+            //  this current app
+            appUser = this.addNewScratchUser(ScratchStorageUser.
+                    builder()
+                    .id(UUID.randomUUID())
+                    .email(dto.getEmail())
+                    .build());
+
+        }
+        else {
+            // user existed already, no worries, just use the return from the db
+            appUser = user.get();
+        }
+
 
         Privilege priv = privRepo.findById(dto.getPrivilegeId())
                 .orElseThrow(() -> new RecordNotFoundException("Could not find privilege with ID: " + dto.getPrivilegeId()));
@@ -264,7 +296,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         return ScratchStorageAppUserPriv
                 .builder()
                 .id(dto.getId())
-                .user(user)
+                .user(appUser)
                 .privilege(priv)
                 .build();
 
@@ -320,6 +352,13 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         return user;
     }
 
+    /**
+     * Utility function used by the controller to check if a given user email has
+     * write access to the given appId's space
+     * @param appId the appId to check against
+     * @param email the email to check for write access
+     * @return true if user has write access else false
+     */
     @Override
     public boolean userCanWriteToAppId(UUID appId, String email) {
 
@@ -329,8 +368,33 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
             if (priv.getUser().getEmail().equalsIgnoreCase(email)
-                && priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV))
-                    return true;
+                    // check for WRITE or ADMIN access...
+                && (priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV)
+                    || priv.getPrivilege().getName().equals(SCRATCH_ADMIN_PRIV)))
+                        return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Utility function to check if given email is registered as a SCRATCH_ADMIN
+     * to given appId's space
+     * @param appId the appId to check against
+     * @param email the email to check for ADMIN status
+     * @return true if admin else false
+     */
+    @Override
+    public boolean userHasAdminWithAppId(UUID appId, String email) {
+
+        // get the appId after validating its a real app ID that's registered
+        ScratchStorageAppRegistryEntry appEntry = appRegistryRepo.findById(appId)
+                .orElseThrow(() -> new RecordNotFoundException("Application with ID " + appId + " doesn't exist"));
+
+        for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
+            if (priv.getUser().getEmail().equalsIgnoreCase(email)
+                    && priv.getPrivilege().getName().equals(SCRATCH_ADMIN_PRIV))
+                return true;
         }
 
         return false;

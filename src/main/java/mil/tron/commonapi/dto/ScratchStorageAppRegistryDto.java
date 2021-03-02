@@ -1,6 +1,7 @@
 package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.*;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
@@ -47,9 +48,9 @@ public class ScratchStorageAppRegistryDto {
      * so that a user/priv for a given app can easily be manipulated
      */
     @Builder
-    @Getter
-    @Setter
-    private static class PrivilegeIdPair {
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class PrivilegeIdPair {
 
         @Getter
         @Setter
@@ -67,7 +68,7 @@ public class ScratchStorageAppRegistryDto {
     @Builder
     @AllArgsConstructor
     @NoArgsConstructor
-    private static class UserWithPrivs {
+    public static class UserWithPrivs {
 
         @Getter
         @Setter
@@ -100,6 +101,11 @@ public class ScratchStorageAppRegistryDto {
 
     @Getter
     private Set<UserWithPrivs> userPrivs;
+
+    @JsonSetter("userPrivs")
+    public void setJsonUserPrivs(Set<UserWithPrivs> privs) {
+        this.userPrivs = privs;
+    }
 
     /**
      * Sets the userAppPrivs field by taking a Set of ScratchStorageAppUserPriv pairs

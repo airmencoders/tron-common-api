@@ -239,6 +239,22 @@ public class ScratchStorageControllerTest {
     }
 
     @Test
+    void testGetAppsRecordById() throws Exception {
+        // test we can get a single app's record by its ID
+
+        DtoMapper mapper = new DtoMapper();
+        ScratchStorageAppRegistryDto dto = mapper.map(registeredApps.get(0), ScratchStorageAppRegistryDto.class);
+        Mockito.when(service.getRegisteredScratchApp(Mockito.any(UUID.class))).thenReturn(dto);
+
+        Mockito.when(service.userHasAdminWithAppId(Mockito.any(UUID.class), Mockito.anyString())).thenReturn(true);
+
+        mockMvc.perform(get(SCRATCH_ENDPOINT + "{appId}", registeredApps.get(0).getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(dto.getId().toString())));
+
+    }
+
+    @Test
     void testAddNewRegisteredApp() throws Exception {
         // test we can add a new app
 
@@ -310,12 +326,21 @@ public class ScratchStorageControllerTest {
         ScratchStorageAppUserPrivDto priv = ScratchStorageAppUserPrivDto
                 .builder()
                 .id(UUID.randomUUID())
-                .userId(UUID.randomUUID())
+                .email("test@test.net")
                 .privilegeId(1L)
                 .build();
 
         Mockito.when(service.addUserPrivToApp(Mockito.any(UUID.class), Mockito.any(ScratchStorageAppUserPrivDto.class)))
                 .thenReturn(newEntry);
+
+        Mockito.when(service.userHasAdminWithAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(false)
+                .thenReturn(true);
+
+        mockMvc.perform(patch(SCRATCH_ENDPOINT + "{appId}/user", UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(priv)))
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(patch(SCRATCH_ENDPOINT + "{appId}/user", UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -341,6 +366,15 @@ public class ScratchStorageControllerTest {
 
         Mockito.when(service.removeUserPrivFromApp(Mockito.any(UUID.class), Mockito.any(UUID.class)))
                 .thenReturn(newEntry);
+
+        Mockito.when(service.userHasAdminWithAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(false)
+                .thenReturn(true);
+
+        mockMvc.perform(delete(SCRATCH_ENDPOINT + "{appId}/user/{privId}", UUID.randomUUID(), UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(priv)))
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(delete(SCRATCH_ENDPOINT + "{appId}/user/{privId}", UUID.randomUUID(), UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
