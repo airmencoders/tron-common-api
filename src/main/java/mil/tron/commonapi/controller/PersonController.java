@@ -88,7 +88,7 @@ public class PersonController {
 	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody PersonDto person) {
 		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
-	
+
 	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",

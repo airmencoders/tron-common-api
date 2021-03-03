@@ -152,6 +152,7 @@ public class PersonServiceImpl implements PersonService {
 	public Person applyPatchToPerson(JsonPatch patch, Person person) {
 		try {
 			JsonNode patched = patch.apply(objMapper.convertValue(person, JsonNode.class));
+
 			return objMapper.treeToValue(patched, Person.class);
 		}
 		catch (JsonPatchException | JsonProcessingException e) {
