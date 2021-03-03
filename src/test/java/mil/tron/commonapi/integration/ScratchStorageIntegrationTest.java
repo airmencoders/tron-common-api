@@ -483,7 +483,7 @@ public class ScratchStorageIntegrationTest {
 
 
         // get the priv ID of SCRATCH_ADMIN from the REST interface
-        MvcResult privList = mockMvc.perform(get("/v1/privilege")
+        MvcResult privList = mockMvc.perform(get("/v1/scratch/users/privs")
                 .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())

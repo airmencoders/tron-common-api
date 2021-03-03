@@ -1,6 +1,7 @@
 package mil.tron.commonapi.controller.scratch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -9,6 +10,7 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
+import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +48,9 @@ public class ScratchStorageControllerTest {
 
     @MockBean
     private ScratchStorageService service;
+
+    @MockBean
+    private PrivilegeService privService;
 
     private List<ScratchStorageEntry> entries = new ArrayList<>();
     private List<ScratchStorageAppRegistryEntry> registeredApps = new ArrayList<>();
@@ -431,5 +436,26 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(delete(SCRATCH_USERS_ENDPOINT + "{id}", user1.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", equalTo(user1.getId().toString())));
+    }
+
+    @Test
+    void testGetScratchPrivs() throws Exception {
+        // test fetching scratch privileges, controller will return only privs with /^SCRATCH_/
+
+
+        PrivilegeDto dto1 = new PrivilegeDto();
+        dto1.setId(1L);
+        dto1.setName("WRITE");
+
+        PrivilegeDto dto2 = new PrivilegeDto();
+        dto2.setId(2L);
+        dto2.setName("SCRATCH_WRITE");
+
+        Mockito.when(privService.getPrivileges())
+                .thenReturn(Lists.newArrayList(dto1, dto2));
+
+        mockMvc.perform(get("/v1/scratch/users/privs"))
+                .andExpect(status().isOk())
+                .andExpect(result -> jsonPath("$", hasSize(1)));
     }
 }

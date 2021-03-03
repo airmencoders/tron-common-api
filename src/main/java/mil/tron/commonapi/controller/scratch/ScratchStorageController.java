@@ -1,12 +1,15 @@
 package mil.tron.commonapi.controller.scratch;
 
+import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
@@ -16,6 +19,7 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,11 +37,13 @@ import java.util.stream.Collectors;
 @RequestMapping("${api-prefix.v1}/scratch")
 public class ScratchStorageController {
     private ScratchStorageService scratchStorageService;
+    private PrivilegeService privilegeService;
     private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
     private static final String INVALID_PERMS = "Invalid User Permissions";
 
-    public ScratchStorageController(ScratchStorageService scratchStorageService) {
+    public ScratchStorageController(ScratchStorageService scratchStorageService, PrivilegeService privilegeService) {
         this.scratchStorageService = scratchStorageService;
+        this.privilegeService = privilegeService;
     }
 
     private void checkUserIsDashBoardAdminOrScratchAdmin(UUID appId) {
@@ -83,7 +89,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntry.class)))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
@@ -98,7 +104,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntry.class)))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
@@ -209,7 +215,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class)))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
@@ -366,7 +372,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageUser.class))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageUser.class)))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
@@ -444,5 +450,22 @@ public class ScratchStorageController {
     public ResponseEntity<Object> deleteScratchUser(
             @Parameter(name = "id", description = "Scratch User Id", required = true) @PathVariable UUID id) {
         return new ResponseEntity<>(scratchStorageService.deleteScratchUser(id), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Gets all SCRATCH space privileges available",
+            description = "Gets all the SCRATCH space privileges so that privilege names can be mapped to their IDs")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Operation Successful",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PrivilegeDto.class))))
+    })
+    @GetMapping("/users/privs")
+    public ResponseEntity<Object> getScratchPrivs() {
+        List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
+                .stream()
+                .filter(item -> item.getName().startsWith("SCRATCH_"))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(scratchPrivs, HttpStatus.OK);
     }
 }
