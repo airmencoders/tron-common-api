@@ -15,6 +15,7 @@ import mil.tron.commonapi.validations.ValidPhoneNumber;
 import javax.validation.constraints.Email;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -132,6 +133,22 @@ public class PersonDto {
     @Getter
     @Setter
     private String dutyTitle;
+
+    /**
+     * The organizations this person is a member of
+     */
+    @Getter
+    @Setter
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Set<UUID> organizationMemberships;
+
+    /**
+     * The organizations this person is the leader of
+     */
+    @Getter
+    @Setter
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Set<UUID> organizationLeaderships;
 
     @JsonIgnore
     private Map<String, String> meta;

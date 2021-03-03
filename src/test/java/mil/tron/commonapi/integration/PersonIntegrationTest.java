@@ -2,8 +2,12 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
+
+import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.orgtypes.Unit;
+
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +24,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -31,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class PersonIntegrationTest {
     private static final String ENDPOINT = "/v1/person/";
+    private static final String ORGANIZATION = "/v1/organization/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -86,6 +91,68 @@ public class PersonIntegrationTest {
         mockMvc.perform(get(ENDPOINT + "?page=2&limit=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    public void testPersonMemberships() throws Exception {
+        String userId = OBJECT_MAPPER.readTree(
+            mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(
+                PersonDto.builder()
+                    .firstName("test")
+                    .lastName("member")
+                    .email("test@member.com")
+                    .rank("CIV")
+                    .branch(Branch.USAF)
+                    .build())))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()
+            ).get("id").asText();
+
+        String orgId = OBJECT_MAPPER.readTree(
+            mockMvc.perform(post(ORGANIZATION).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(
+                OrganizationDto.builder()
+                    .name("member test org")
+                    .orgType(Unit.ORGANIZATION)
+                    .branchType(Branch.USAF)
+                    .build())))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()
+            ).get("id").asText();
+
+        mockMvc.perform(get(ENDPOINT + userId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("organizationMemberships").doesNotExist())
+            .andExpect(jsonPath("organizationLeaderships").doesNotExist());
+            
+        mockMvc.perform(get(ENDPOINT + userId + "?memberships=true"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("organizationMemberships").isArray())
+            .andExpect(jsonPath("organizationMemberships", hasSize(0)));
+            
+        mockMvc.perform(get(ENDPOINT + userId + "?leaderships=true"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("organizationLeaderships").isArray())
+            .andExpect(jsonPath("organizationLeaderships", hasSize(0)));
+        
+        mockMvc.perform(patch(ORGANIZATION + orgId + "/members").contentType(MediaType.APPLICATION_JSON).content("[\"" + userId + "\"]"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get(ENDPOINT + userId + "?memberships=true"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("organizationMemberships").isArray())
+            .andExpect(jsonPath("organizationMemberships", hasItem(orgId)));
+
+        mockMvc.perform(patch(ORGANIZATION + orgId).contentType(MediaType.APPLICATION_JSON).content("{\"leader\":\"" + userId + "\"}"))
+            .andExpect(status().isOk());
+            
+        mockMvc.perform(get(ENDPOINT + userId + "?leaderships=true"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("organizationLeaderships").isArray())
+            .andExpect(jsonPath("organizationLeaderships", hasItem(orgId)));
+
+        //cleanup
+        mockMvc.perform(delete(ORGANIZATION + orgId)).andExpect(status().is2xxSuccessful());
+        mockMvc.perform(delete(ENDPOINT + userId)).andExpect(status().is2xxSuccessful());
     }
 
     @Test

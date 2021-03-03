@@ -47,6 +47,9 @@ public class PersonServiceImpl implements PersonService {
 		this.personMetadataRepository = personMetadataRepository;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+        modelMapper.typeMap(Person.class, PersonDto.class)
+            .addMappings(m -> m.skip(PersonDto::setOrganizationLeaderships))
+            .addMappings(m -> m.skip(PersonDto::setOrganizationMemberships));
 	}
 
 	@Override
@@ -60,7 +63,7 @@ public class PersonServiceImpl implements PersonService {
 
 		checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
 		Person resultEntity = repository.save(entity);
-		PersonDto result = convertToDto(resultEntity);
+		PersonDto result = convertToDto(resultEntity, null);
 		if (dto.getMeta() != null) {
 			dto.getMeta().forEach((key, value) -> {
 				resultEntity.getMetadata().add(new PersonMetadata(result.getId(), key, value));
@@ -117,7 +120,7 @@ public class PersonServiceImpl implements PersonService {
 		}
 		// we have to save the person entity first, then try to delete metadata: hibernate seems to get confused
 		// if we try to remove metadata rows from the person's metadata property and it generates invalid SQL
-		PersonDto result = convertToDto(repository.save(updatedEntity));
+		PersonDto result = convertToDto(repository.save(updatedEntity), null);
 		personMetadataRepository.deleteAll(toDelete);
 		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
 		return result;
@@ -151,10 +154,10 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public Iterable<PersonDto> getPersons() {
+	public Iterable<PersonDto> getPersons(PersonConversionOptions options) {
 		return StreamSupport
 				.stream(repository.findAll().spliterator(), false)
-				.map(this::convertToDto)
+				.map(p -> convertToDto(p, options))
 				.collect(Collectors.toList());
 	}
 
@@ -164,8 +167,8 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto getPersonDto(UUID id) {
-		return convertToDto(getPerson(id));
+	public PersonDto getPersonDto(UUID id, PersonConversionOptions options) {
+		return convertToDto(getPerson(id), options);
 	}
 
 	@Override
@@ -183,14 +186,25 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto convertToDto(Person entity) {
+	public PersonDto convertToDto(Person entity, PersonConversionOptions options) {
+        if (options == null) {
+            options = new PersonConversionOptions();
+        }
 		PersonDto dto = modelMapper.map(entity, PersonDto.class);
 		Rank rank = entity.getRank();
 		if (rank != null) {
 			dto.setRank(rank.getAbbreviation());
 			dto.setBranch(entity.getRank().getBranchType());
 		}
-		entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
+        if (options.isMetadataIncluded()) {
+		    entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
+        }
+        if (options.isLeadershipsIncluded()) {
+            dto.setOrganizationLeaderships(entity.getOrganizationLeaderships().stream().map(x -> x.getId()).collect(Collectors.toSet()));
+        }
+        if (options.isMembershipsIncluded()) {
+            dto.setOrganizationMemberships(entity.getOrganizationMemberships().stream().map(x -> x.getId()).collect(Collectors.toSet()));
+        }
 		return dto;
 	}
 
