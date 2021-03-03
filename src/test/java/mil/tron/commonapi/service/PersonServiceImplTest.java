@@ -71,7 +71,7 @@ class PersonServiceImplTest {
 				new PersonMetadata(testPerson.getId(), "afsc", "value1"),
 				new PersonMetadata(testPerson.getId(), "admin", "value2")
 		));
-		testDto = personService.convertToDto(testPerson);
+		testDto = personService.convertToDto(testPerson, null);
 	}
 
 	@Nested
@@ -194,7 +194,7 @@ class PersonServiceImplTest {
     @Test
     void getPersonsTest() {
     	Mockito.when(repository.findAll()).thenReturn(Arrays.asList(testPerson));
-    	Iterable<PersonDto> persons = personService.getPersons();
+    	Iterable<PersonDto> persons = personService.getPersons(null);
     	assertThat(persons).hasSize(1);
     }
 
@@ -233,7 +233,7 @@ class PersonServiceImplTest {
 		void noRank() {
 			PersonDto dto = personService.convertToDto(Person.builder()
 					.firstName("first")
-					.build());
+					.build(), null);
 
 			assertThat(dto.getFirstName()).isEqualTo("first");
 			assertThat(dto.getRank()).isNull();
@@ -242,7 +242,7 @@ class PersonServiceImplTest {
 
 		@Test
 		void rank() {
-			PersonDto dto = personService.convertToDto(testPerson);
+			PersonDto dto = personService.convertToDto(testPerson, null);
 
 			assertThat(dto.getAddress()).isEqualTo(testPerson.getAddress());
 			assertThat(dto.getDodid()).isEqualTo(testPerson.getDodid());
@@ -263,7 +263,7 @@ class PersonServiceImplTest {
 			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop1", "value1"));
 			testPerson.getMetadata().add(new PersonMetadata(testPerson.getId(), "prop2", "value2"));
 
-			PersonDto dto = personService.convertToDto(testPerson);
+			PersonDto dto = personService.convertToDto(testPerson, null);
 
 			assertThat(dto.getMetaProperty("prop1")).isEqualTo("value1");
 			assertThat(dto.getMetaProperty("prop2")).isEqualTo("value2");

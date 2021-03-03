@@ -77,6 +77,19 @@ public class Person {
 
     @Getter
     @Builder.Default
+    @ManyToMany
+    @JoinTable(name = "organization_members", 
+        joinColumns = @JoinColumn(name = "members_id"),
+        inverseJoinColumns = @JoinColumn(name = "organization_id"))
+    private Set<Organization> organizationMemberships = new HashSet<>();
+
+    @Getter
+    @Builder.Default
+    @OneToMany(mappedBy = "leader")
+    private Set<Organization> organizationLeaderships = new HashSet<>();
+
+    @Getter
+    @Builder.Default
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name="personId")
     private Set<PersonMetadata> metadata = new HashSet<>();

@@ -12,6 +12,7 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.pagination.Paginator;
+import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,9 +45,13 @@ public class PersonController {
 			@Parameter(name = "page", description = "Page of content to retrieve", required = false)
 				@RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
 			@Parameter(name = "limit", description = "Size of each page", required = false)
-				@RequestParam(name = "limit", required = false) Long pageSize) {
+				@RequestParam(name = "limit", required = false) Long pageSize,
+            @Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
+				@RequestParam(name = "memberships", required = false) boolean memberships,
+            @Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
+                @RequestParam(name = "leaderships", required = false) boolean leaderships) {
 
-		return new ResponseEntity<>(pager.paginate(personService.getPersons(), pageNumber, pageSize), HttpStatus.OK);
+		return new ResponseEntity<>(pager.paginate(personService.getPersons(PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build()), pageNumber, pageSize), HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Retrieves a person by ID", description = "Retrieves a person by ID")
@@ -64,9 +69,13 @@ public class PersonController {
 	@PreAuthorizeRead
 	@GetMapping(value = "/{id}")
 	public ResponseEntity<PersonDto> getPerson(
-			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId) {
+			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId,
+            @Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
+				@RequestParam(name = "memberships", required = false) boolean memberships,
+            @Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
+                @RequestParam(name = "leaderships", required = false) boolean leaderships) {
 
-		PersonDto person = personService.getPersonDto(personId);
+		PersonDto person = personService.getPersonDto(personId, PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build());
 		return new ResponseEntity<>(person, HttpStatus.OK);
 	}
 	
