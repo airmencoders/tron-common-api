@@ -2,6 +2,7 @@ package mil.tron.commonapi.service.scratch;
 
 
 import com.google.common.collect.Lists;
+import liquibase.pro.packaged.R;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -56,13 +57,19 @@ public class ScratchStorageServiceImplTest {
     private Privilege privRead = Privilege
             .builder()
             .id(10L)
-            .name("READ")
+            .name("SCRATCH_READ")
             .build();
 
     private Privilege privWrite = Privilege
             .builder()
             .id(11L)
-            .name("WRITE")
+            .name("SCRATCH_WRITE")
+            .build();
+
+    private Privilege privAdmin = Privilege
+            .builder()
+            .id(12L)
+            .name("SCRATCH_ADMIN")
             .build();
 
     private List<ScratchStorageEntry> entries = new ArrayList<>();
@@ -96,7 +103,7 @@ public class ScratchStorageServiceImplTest {
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("Area51")
-                .userPrivs(Set.of(
+                .userPrivs(Sets.newLinkedHashSet(
                         ScratchStorageAppUserPriv
                             .builder()
                             .user(user1)
@@ -144,6 +151,17 @@ public class ScratchStorageServiceImplTest {
     }
 
     @Test
+    void testGetSingleAppById() {
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenThrow(new RecordNotFoundException("Record not found"));
+
+        assertEquals(registeredApps.get(0).getId(), service.getRegisteredScratchApp(registeredApps.get(0).getId()).getId());
+        assertThrows(RecordNotFoundException.class, () -> service.getRegisteredScratchApp(registeredApps.get(0).getId()));
+
+    }
+
+    @Test
     void testGetEntryById() {
         Mockito.when(repository.findById(entries.get(0).getId()))
                 .thenReturn(Optional.of(entries.get(0)))
@@ -151,8 +169,6 @@ public class ScratchStorageServiceImplTest {
 
         assertEquals(entries.get(0), service.getEntryById(entries.get(0).getId()));
         assertThrows(RecordNotFoundException.class, () -> service.getEntryById(entries.get(0).getId()));
-
-        // test bogus Id
 
     }
 
@@ -289,8 +305,8 @@ public class ScratchStorageServiceImplTest {
         ScratchStorageAppUserPrivDto dto = ScratchStorageAppUserPrivDto
                 .builder()
                 .id(UUID.randomUUID())
-                .userId(UUID.randomUUID())
-                .privilegeId(1L)
+                .email(user1.getEmail())
+                .privilegeId(privRead.getId())
                 .build();
 
         ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
@@ -299,17 +315,34 @@ public class ScratchStorageServiceImplTest {
                 .appName("TestApp")
                 .build();
 
-        Mockito.when(appPrivRepo.save(Mockito.any(ScratchStorageAppUserPriv.class))).then(returnsFirstArg());
-        Mockito.when(scratchUserRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(user1));
-        Mockito.when(privRepo.findById(Mockito.any(Long.class))).thenReturn(Optional.of(privRead));
+        Mockito.when(appPrivRepo.save(Mockito.any(ScratchStorageAppUserPriv.class)))
+                .then(returnsFirstArg());
 
-        Mockito.when(appRegistryRepo.save(Mockito.any(ScratchStorageAppRegistryEntry.class))).then(returnsFirstArg());
+        Mockito.when(scratchUserRepo.findByEmailIgnoreCase(Mockito.anyString()))
+                .thenReturn(Optional.of(user1));
+
+        Mockito.when(privRepo.findById(Mockito.any(Long.class)))
+                .thenReturn(Optional.of(privRead))
+                .thenReturn(Optional.of(privWrite));
+
+        Mockito.when(appRegistryRepo.save(Mockito.any(ScratchStorageAppRegistryEntry.class)))
+                .then(returnsFirstArg());
 
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(newEntry))
+                .thenReturn(Optional.of(newEntry))
                 .thenReturn(Optional.of(newEntry))
                 .thenReturn(Optional.empty());
 
         assertEquals(1, service.addUserPrivToApp(newEntry.getId(), dto).getUserPrivs().size());
+
+        // adding same user/priv combo fails (cause it already exists)
+        assertThrows(ResourceAlreadyExistsException.class, () -> service.addUserPrivToApp(newEntry.getId(), dto).getUserPrivs().size());
+
+        // now change the same priv id to have write vice read (upgrade from read to write), should be good to go
+        dto.setPrivilegeId(privWrite.getId());
+        assertEquals(1, service.addUserPrivToApp(newEntry.getId(), dto).getUserPrivs().size());
+
         assertThrows(RecordNotFoundException.class, () -> service.addUserPrivToApp(newEntry.getId(), dto));
     }
 
@@ -333,7 +366,7 @@ public class ScratchStorageServiceImplTest {
         ScratchStorageAppUserPrivDto dto = ScratchStorageAppUserPrivDto
                 .builder()
                 .id(priv.getId())
-                .userId(user1.getId())
+                .email(user1.getEmail())
                 .privilegeId(privRead.getId())
                 .build();
 
@@ -406,5 +439,78 @@ public class ScratchStorageServiceImplTest {
 
         assertEquals(user1.getId(), service.deleteScratchUser(user1.getId()).getId());
         assertThrows(RecordNotFoundException.class, () -> service.deleteScratchUser(user1.getId()));
+    }
+
+    @Test
+    void testUserCanWriteToAppSpace() {
+        // tests logic of the utility function
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.empty()); // not valid on subsequent
+
+        ScratchStorageUser adminUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("admin@test.com")
+                .build();
+
+        ScratchStorageUser someOtherNonRegisteredUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("dude@test.com")
+                .build();
+
+        // add the admin guy to the app with ADMIN privs -- admin users will have implicit write access
+        registeredApps.get(0).addUserAndPriv(ScratchStorageAppUserPriv
+                .builder()
+                .user(adminUser)
+                .privilege(privAdmin)
+                .build());
+
+        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
+        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), user1.getEmail()));
+        assertFalse(service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertThrows(RecordNotFoundException.class,
+                () -> service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+    }
+
+    @Test
+    void testUserHasAdminAccessToAppSpace() {
+         // tests logic of the utility function
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.empty()); // not valid on subsequent
+
+        ScratchStorageUser adminUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("admin@test.com")
+                .build();
+
+        ScratchStorageUser someOtherNonRegisteredUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("dude@test.com")
+                .build();
+
+        // add the admin guy to the app with ADMIN privs
+        registeredApps.get(0).addUserAndPriv(ScratchStorageAppUserPriv
+                .builder()
+                .user(adminUser)
+                .privilege(privAdmin)
+                .build());
+
+        assertTrue(service.userHasAdminWithAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
+        assertFalse(service.userHasAdminWithAppId(registeredApps.get(0).getId(), user1.getEmail()));
+        assertFalse(service.userHasAdminWithAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertThrows(RecordNotFoundException.class,
+                () -> service.userHasAdminWithAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+
     }
 }

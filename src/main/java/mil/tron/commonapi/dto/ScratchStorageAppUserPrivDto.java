@@ -3,11 +3,13 @@ package mil.tron.commonapi.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.util.UUID;
 
 /**
- * Used to set/define priv (by id) to assign to a user (by user id)
+ * Used to set/define priv (by its Privilege id) to assign to a user (by user email)
  * which will then be bound to a scratch space application entry
  * in the ScratchStorageAppRegistry table
  */
@@ -24,9 +26,14 @@ public class ScratchStorageAppUserPrivDto {
     private UUID id = UUID.randomUUID();
 
     @Getter
-    @Setter
+    @NotBlank
     @NotNull
-    private UUID userId;
+    @Email(message="Malformed email address")
+    private String email;
+
+    public void setEmail(String email) {
+        this.email = email.trim().toLowerCase();
+    }
 
     @Getter
     @Setter

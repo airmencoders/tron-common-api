@@ -19,6 +19,7 @@ public interface ScratchStorageService {
 
     // scratch storage app management...
     Iterable<ScratchStorageAppRegistryDto> getAllRegisteredScratchApps();
+    ScratchStorageAppRegistryDto getRegisteredScratchApp(UUID appId);
     ScratchStorageAppRegistryEntry addNewScratchAppName(ScratchStorageAppRegistryEntry entry);
     ScratchStorageAppRegistryEntry editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryEntry entry);
     ScratchStorageAppRegistryEntry deleteScratchStorageApp(UUID id);
@@ -30,5 +31,7 @@ public interface ScratchStorageService {
     ScratchStorageUser editScratchUser(UUID id, ScratchStorageUser user);
     ScratchStorageUser addNewScratchUser(ScratchStorageUser user);
     ScratchStorageUser deleteScratchUser(UUID id);
+
     boolean userCanWriteToAppId(UUID appId, String email);
+    boolean userHasAdminWithAppId(UUID appId, String email);
 }

@@ -1,12 +1,15 @@
 package mil.tron.commonapi.controller.scratch;
 
+import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
@@ -16,34 +19,68 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/scratch")
 public class ScratchStorageController {
     private ScratchStorageService scratchStorageService;
+    private PrivilegeService privilegeService;
+    private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
+    private static final String INVALID_PERMS = "Invalid User Permissions";
 
-    public ScratchStorageController(ScratchStorageService scratchStorageService) {
+    public ScratchStorageController(ScratchStorageService scratchStorageService, PrivilegeService privilegeService) {
         this.scratchStorageService = scratchStorageService;
+        this.privilegeService = privilegeService;
+    }
+
+    private void checkUserIsDashBoardAdminOrScratchAdmin(UUID appId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        List<GrantedAuthority> auths = authentication
+                .getAuthorities()
+                .stream()
+                .filter(item -> item.getAuthority().equals(DASHBOARD_ADMIN))
+                .collect(Collectors.toList());
+
+        if (auths.isEmpty()) {
+            // user wasn't a dashboard admin, so see if they're a SCRATCH_ADMIN for given appId...
+            validateScratchAdminAccessForUser(appId);
+        }
     }
 
     /**
-     * Private helper to authorize a user to a scratch space identified by the app UUID
+     * Private helper to authorize a user to a scratch space identified by the app UUID for write access
      * @param appId the appid of the app's data user/request is trying to access
      */
     private void validateScratchWriteAccessForUser(UUID appId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getCredentials().toString();  // get the JWT email string
         if (!scratchStorageService.userCanWriteToAppId(appId, userEmail)) {
-            throw new InvalidScratchSpacePermissions("Invalid User Permissions");
+            throw new InvalidScratchSpacePermissions(INVALID_PERMS);
+        }
+    }
+
+    /**
+     * Private helper to authorize a user to a scratch space identified by the app UUID for admin access
+     * @param appId the appid of the app's data user/request is trying to access
+     */
+    private void validateScratchAdminAccessForUser(UUID appId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getCredentials().toString();  // get the JWT email string
+        if (!scratchStorageService.userHasAdminWithAppId(appId, userEmail)) {
+            throw new InvalidScratchSpacePermissions(INVALID_PERMS);
         }
     }
 
@@ -52,7 +89,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntry.class)))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
@@ -67,7 +104,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntry.class)))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
@@ -178,7 +215,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class)))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
@@ -186,6 +223,22 @@ public class ScratchStorageController {
     @GetMapping("/apps")
     public ResponseEntity<Object> getScratchSpaceApps() {
         return new ResponseEntity<>(scratchStorageService.getAllRegisteredScratchApps(), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Gets a single Scratch Storage app's record that is registered with Common API",
+            description = "Requester has to have DASHBOARD_ADMIN rights or have SCRATCH_ADMIN rights for given app ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privilege for given app ID.")
+    })
+    @GetMapping("/apps/{appId}")
+    public ResponseEntity<Object> getScratchAppById(@PathVariable UUID appId) {
+
+        checkUserIsDashBoardAdminOrScratchAdmin(appId);
+        return new ResponseEntity<>(scratchStorageService.getRegisteredScratchApp(appId), HttpStatus.OK);
     }
 
     @Operation(summary = "Adds a new Scratch Strorage consuming app name to the Common API scratch storage space",
@@ -237,7 +290,7 @@ public class ScratchStorageController {
     }
 
     @Operation(summary = "Adds a user privilege to this app's data",
-            description = "Requester has to have DASHBOARD_ADMIN rights")
+            description = "Requester has to have DASHBOARD_ADMIN rights, or have SCRATCH_ADMIN rights for given app ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Priv Added OK",
@@ -249,16 +302,17 @@ public class ScratchStorageController {
                     description = "Application ID not found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges"),
+                    description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privileges for given app id"),
             @ApiResponse(responseCode = "409",
                     description = "This app/user/priv combo already exists",
                     content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
-    @PreAuthorizeDashboardAdmin
     @PatchMapping("/apps/{id}/user")
     public ResponseEntity<Object> addUserPriv(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
             @Parameter(name = "priv", description = "Application User-Priv Object", required = true) @Valid @RequestBody ScratchStorageAppUserPrivDto priv) {
+
+        checkUserIsDashBoardAdminOrScratchAdmin(id);
         ScratchStorageAppRegistryEntry p = scratchStorageService.addUserPrivToApp(id, priv);
         return new ResponseEntity<>(p, HttpStatus.OK);
     }
@@ -276,13 +330,14 @@ public class ScratchStorageController {
                     description = "Application ID not found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privileges for given app id")
     })
-    @PreAuthorizeDashboardAdmin
     @DeleteMapping("/apps/{id}/user/{appPrivIdEntry}")
     public ResponseEntity<Object> removeUserPriv(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
             @Parameter(name = "appPrivIdEntry", description = "UUID of the User-Priv set to remove", required = true) @PathVariable UUID appPrivIdEntry) {
+
+        checkUserIsDashBoardAdminOrScratchAdmin(id);
         return new ResponseEntity<>(scratchStorageService.removeUserPrivFromApp(id, appPrivIdEntry), HttpStatus.OK);
     }
 
@@ -305,6 +360,7 @@ public class ScratchStorageController {
     @DeleteMapping("/apps/{id}")
     public ResponseEntity<Object> deleteExistingAppEntry(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id) {
+
         return new ResponseEntity<>(scratchStorageService.deleteScratchStorageApp(id), HttpStatus.OK);
     }
 
@@ -316,7 +372,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageUser.class))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageUser.class)))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
@@ -394,5 +450,22 @@ public class ScratchStorageController {
     public ResponseEntity<Object> deleteScratchUser(
             @Parameter(name = "id", description = "Scratch User Id", required = true) @PathVariable UUID id) {
         return new ResponseEntity<>(scratchStorageService.deleteScratchUser(id), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Gets all SCRATCH space privileges available",
+            description = "Gets all the SCRATCH space privileges so that privilege names can be mapped to their IDs")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Operation Successful",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PrivilegeDto.class))))
+    })
+    @GetMapping("/users/privs")
+    public ResponseEntity<Object> getScratchPrivs() {
+        List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
+                .stream()
+                .filter(item -> item.getName().startsWith("SCRATCH_"))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(scratchPrivs, HttpStatus.OK);
     }
 }
