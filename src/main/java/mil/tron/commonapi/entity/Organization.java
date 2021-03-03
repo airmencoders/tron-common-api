@@ -46,12 +46,14 @@ public class Organization {
     @Getter
     @Builder.Default
     @ManyToMany
+    @JoinTable(name = "organization_members", 
+        joinColumns = @JoinColumn(name = "organization_id"),
+        inverseJoinColumns = @JoinColumn(name = "members_id"))
     private Set<Person> members = new HashSet<>();
 
     public void setMembers(Set<Person> members) {
         this.members = members;
     }
-
 
     @Getter
     @ManyToOne
@@ -69,11 +71,13 @@ public class Organization {
 
     @Getter
     @Setter
+    @Builder.Default
     @Enumerated(value = EnumType.STRING)
     private Unit orgType = Unit.ORGANIZATION;
 
     @Getter
     @Setter
+    @Builder.Default
     @Enumerated(value = EnumType.STRING)
     protected Branch branchType = Branch.OTHER;
 

@@ -5,13 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
+import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -72,7 +74,7 @@ public class PersonControllerTest {
 			List<PersonDto> persons = new ArrayList<>();
 			persons.add(testPerson);
 
-			Mockito.when(personService.getPersons()).thenReturn(persons);
+			Mockito.when(personService.getPersons(Mockito.any())).thenReturn(persons);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
@@ -81,7 +83,7 @@ public class PersonControllerTest {
 
 		@Test
 		void testGetById() throws Exception {
-			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class))).thenReturn(testPerson);
+			Mockito.when(personService.getPersonDto(Mockito.any(UUID.class), Mockito.any())).thenReturn(testPerson);
 
 			mockMvc.perform(get(ENDPOINT + "{id}", testPerson.getId()))
 				.andExpect(status().isOk())
@@ -95,6 +97,38 @@ public class PersonControllerTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
 		}
+
+        @Captor ArgumentCaptor<PersonConversionOptions> optionsCaptor;
+
+        @Test
+        void testGetWithMemberships() throws Exception {
+            mockMvc.perform(get(ENDPOINT + "?memberships=true"))
+                .andExpect(status().isOk());
+
+            Mockito.verify(personService).getPersons(optionsCaptor.capture());
+            assertEquals(true, optionsCaptor.getValue().isMembershipsIncluded());
+            assertEquals(false, optionsCaptor.getValue().isLeadershipsIncluded());
+        }
+
+        @Test
+        void testGetWithLeaderships() throws Exception {
+            mockMvc.perform(get(ENDPOINT + "?leaderships=true"))
+                .andExpect(status().isOk());
+
+            Mockito.verify(personService).getPersons(optionsCaptor.capture());
+            assertEquals(false, optionsCaptor.getValue().isMembershipsIncluded());
+            assertEquals(true, optionsCaptor.getValue().isLeadershipsIncluded());
+        }
+
+        @Test
+        void testGetWithMembershipsAndLeaderships() throws Exception {
+            mockMvc.perform(get(ENDPOINT + "?memberships=true&leaderships=true"))
+                .andExpect(status().isOk());
+
+            Mockito.verify(personService).getPersons(optionsCaptor.capture());
+            assertEquals(true, optionsCaptor.getValue().isMembershipsIncluded());
+            assertEquals(true, optionsCaptor.getValue().isLeadershipsIncluded());
+        }
 	}
 	
 	@Nested
