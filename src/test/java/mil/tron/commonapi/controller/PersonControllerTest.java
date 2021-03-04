@@ -9,6 +9,7 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.PersonService;
 import org.assertj.core.util.Lists;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -39,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockUser(username = "guardianangel", authorities = { "READ", "WRITE" })
 public class PersonControllerTest {
 	private static final String ENDPOINT = "/v1/person/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -191,21 +194,26 @@ public class PersonControllerTest {
 	}
 
 	@Nested
+	@WithMockUser(username = "guardianangel", authorities = { "READ", "WRITE" })
 	class TestPatch {
 		@Test
 		void testPatchValidJsonBody() throws Exception {
 			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
 
-			JSONObject patchContent = new JSONObject();
-			patchContent.put("op","replace");
-			patchContent.put("path","/email");
-			patchContent.put("value",testPerson.getEmail());
+			JSONObject content = new JSONObject();
+			content.put("op","replace");
+			content.put("path","/firstName");
+			content.put("value",testPerson.getFirstName());
+			JSONArray patch = new JSONArray();
+			patch.put(content);
 
 			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
-						.accept(MediaType.APPLICATION_JSON_VALUE)
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(patchContent.toString()))
+						.contentType(MediaType.APPLICATION_JSON_VALUE)
+						.accept(MediaType.APPLICATION_JSON)
+						.characterEncoding("UTF-8")
+						.content(patch.toString()))
 					.andExpect(status().isOk())
+
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
 		}
 
