@@ -22,5 +22,5 @@ public interface PersonService {
 
 	PersonDto convertToDto(Person entity);
 	Person convertToEntity(PersonDto dto);
-	Person applyPatchToPerson(JsonPatch patch, Person person);
+	PersonDto applyPatchToPerson(JsonPatch patch, PersonDto person);
 }

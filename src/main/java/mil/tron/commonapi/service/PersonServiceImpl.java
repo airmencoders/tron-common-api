@@ -82,10 +82,17 @@ public class PersonServiceImpl implements PersonService {
 		if (dbPerson.isEmpty()) {
 			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
 		}
+		// patch must be done using a DTO
+		PersonDto dbPersonDto = convertToDto(dbPerson.get());
+		PersonDto patchedPersonDto = applyPatchToPerson(patch, dbPersonDto);
+		Person patchedPerson = convertToEntity(patchedPersonDto);
 
-		Person patchedPerson = applyPatchToPerson(patch, dbPerson.get());
+		if (!personChecksService.personEmailIsUnique(patchedPerson)) {
+			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", patchedPerson.getEmail()));
+		}
 
-		return convertToDto(repository.save(patchedPerson));
+		repository.save(patchedPerson);
+		return patchedPersonDto;
 	}
 
 	@Override
@@ -149,14 +156,13 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public Person applyPatchToPerson(JsonPatch patch, Person person) {
+	public PersonDto applyPatchToPerson(JsonPatch patch, PersonDto personDto) {
 		try {
-			JsonNode patched = patch.apply(objMapper.convertValue(person, JsonNode.class));
-
-			return objMapper.treeToValue(patched, Person.class);
+			JsonNode patched = patch.apply(objMapper.convertValue(personDto, JsonNode.class));
+			return objMapper.treeToValue(patched, PersonDto.class);
 		}
 		catch (JsonPatchException | JsonProcessingException e) {
-			throw new InvalidRecordUpdateRequest(String.format("Error patching person with email %s.", person.getEmail()));
+			throw new InvalidRecordUpdateRequest(String.format("Error patching person with email %s.", personDto.getEmail()));
 		}
 	}
 }

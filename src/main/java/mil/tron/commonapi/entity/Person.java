@@ -106,7 +106,7 @@ public class Person {
      */
     @Getter
     @Setter
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne
     private Rank rank;
 
     @Getter

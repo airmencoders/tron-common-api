@@ -2,12 +2,14 @@ package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.PersonService;
 import org.assertj.core.util.Lists;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -186,6 +188,57 @@ public class PersonControllerTest {
 					.content(testPersonJson))
 				.andExpect(status().isNotFound());
 		}
+	}
+
+	@Nested
+	class TestPatch {
+		@Test
+		void testPatchValidJsonBody() throws Exception {
+			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
+
+			JSONObject patchContent = new JSONObject();
+			patchContent.put("op","replace");
+			patchContent.put("path","/email");
+			patchContent.put("value",testPerson.getEmail());
+
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+						.accept(MediaType.APPLICATION_JSON_VALUE)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(patchContent.toString()))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
+		}
+
+//		@Test
+//		void testPutInvalidJsonBody() throws Exception {
+//			// Send empty string as bad json data
+//			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
+//					.accept(MediaType.APPLICATION_JSON)
+//					.contentType(MediaType.APPLICATION_JSON)
+//					.content(""))
+//					.andExpect(status().isBadRequest())
+//					.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
+//		}
+//
+//		@Test
+//		void testPutInvalidBadPathVariable() throws Exception {
+//			// Send an invalid UUID as ID path variable
+//			mockMvc.perform(put(ENDPOINT + "{id}", "asdf1234"))
+//					.andExpect(status().isBadRequest())
+//					.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
+//		}
+//
+//		@Test
+//		void testPutResourceDoesNotExist() throws Exception {
+//			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).thenThrow(new RecordNotFoundException("Record not found"));
+//
+//			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
+//					.accept(MediaType.APPLICATION_JSON)
+//					.contentType(MediaType.APPLICATION_JSON)
+//					.content(testPersonJson))
+//					.andExpect(status().isNotFound());
+//		}
+
 	}
 	
 	@Nested
