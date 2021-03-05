@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.PersonService;
@@ -41,7 +40,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-@WithMockUser(username = "guardianangel", authorities = { "READ", "WRITE" })
 public class PersonControllerTest {
 	private static final String ENDPOINT = "/v1/person/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -51,9 +49,6 @@ public class PersonControllerTest {
 	
 	@MockBean
 	private PersonService personService;
-	
-	@MockBean
-	private AppClientUserPreAuthenticatedService appClientUserPreAuthenticatedService;
 
 	private PersonDto testPerson;
 	private String testPersonJson;
@@ -71,6 +66,7 @@ public class PersonControllerTest {
 	}
 
 	@Nested
+	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestGet {
 		@Test
 		void testGetAll() throws Exception {
@@ -103,6 +99,7 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
+	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
@@ -149,6 +146,7 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
+	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
@@ -194,7 +192,7 @@ public class PersonControllerTest {
 	}
 
 	@Nested
-	@WithMockUser(username = "guardianangel", authorities = { "READ", "WRITE" })
+	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestPatch {
 		@Test
 		void testPatchValidJsonBody() throws Exception {
@@ -208,25 +206,25 @@ public class PersonControllerTest {
 			patch.put(content);
 
 			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
-						.contentType(MediaType.APPLICATION_JSON_VALUE)
+						.contentType("application/json-patch+json")
 						.accept(MediaType.APPLICATION_JSON)
-						.characterEncoding("UTF-8")
 						.content(patch.toString()))
 					.andExpect(status().isOk())
-
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
 		}
 
-//		@Test
-//		void testPutInvalidJsonBody() throws Exception {
-//			// Send empty string as bad json data
-//			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
-//					.accept(MediaType.APPLICATION_JSON)
-//					.contentType(MediaType.APPLICATION_JSON)
-//					.content(""))
-//					.andExpect(status().isBadRequest())
+		@Test
+		void testPatchInvalidJsonBody() throws Exception {
+//			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
+			// Send empty string as bad json data
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+						.contentType("application/json-patch+json")
+						.accept(MediaType.APPLICATION_JSON)
+						.content(""));
+//					.andDo(MockMvcResultHandlers.print());
+//					.andExpect(status().isBadRequest());
 //					.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
-//		}
+		}
 //
 //		@Test
 //		void testPutInvalidBadPathVariable() throws Exception {
@@ -250,6 +248,7 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
+	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {

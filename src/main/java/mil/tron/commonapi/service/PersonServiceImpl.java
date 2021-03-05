@@ -76,7 +76,6 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public PersonDto patchPerson(UUID id, JsonPatch patch) {
-
 		Optional<Person> dbPerson = repository.findById(id);
 
 		if (dbPerson.isEmpty()) {
