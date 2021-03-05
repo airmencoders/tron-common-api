@@ -13,14 +13,14 @@ public interface PersonService {
 	PersonDto patchPerson(UUID id, JsonPatch patch);
 
 	void deletePerson(UUID id);
-	Iterable<PersonDto> getPersons();
-	PersonDto getPersonDto(UUID id);
+	Iterable<PersonDto> getPersons(PersonConversionOptions options);
+	PersonDto getPersonDto(UUID id, PersonConversionOptions options);
 	Person getPerson(UUID id);
 	boolean exists(UUID id);
 
 	List<PersonDto> bulkAddPeople(List<PersonDto> dtos);
 
-	PersonDto convertToDto(Person entity);
+	PersonDto convertToDto(Person entity, PersonConversionOptions options);
 	Person convertToEntity(PersonDto dto);
 	PersonDto applyPatchToPerson(JsonPatch patch, PersonDto person);
 }

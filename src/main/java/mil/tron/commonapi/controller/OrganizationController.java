@@ -3,6 +3,7 @@ package mil.tron.commonapi.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -46,7 +47,7 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+					content = @Content(array = @ArraySchema(schema = @Schema(implementation = OrganizationDto.class)))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad Request - likely due to invalid unit type or branch of service specified",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class)))
@@ -322,7 +323,7 @@ public class OrganizationController {
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
 
-			return new ResponseEntity<>(organizationService.modifyAttributes(organizationId, attribs), HttpStatus.OK);
+			return new ResponseEntity<>(organizationService.modify(organizationId, attribs), HttpStatus.OK);
 	}
 
 	@Operation(summary = "Adds one or more organization entities",

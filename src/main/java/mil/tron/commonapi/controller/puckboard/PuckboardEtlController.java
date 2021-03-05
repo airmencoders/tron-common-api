@@ -62,7 +62,7 @@ public class PuckboardEtlController {
         JsonNode orgs;
         try {
             ResponseEntity<String> orgsString = restTemplate.exchange(
-                    this.puckboardUrl + "/organizations",
+                    this.puckboardUrl + "/organizations?isSchedulingUnit=true",
                     HttpMethod.GET,
                     entity,
                     String.class);

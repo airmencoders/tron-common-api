@@ -195,7 +195,7 @@ public class GroupController {
                                                       @Parameter(description = "Object with key value pairs of the attributes to update", required = true) @RequestBody Map<String, String> attribs) {
         OrganizationDto org = organizationService.getOrganization(id);
         if (org.getOrgType().equals(Unit.GROUP))
-            return new ResponseEntity<>(organizationService.modifyAttributes(id, attribs), HttpStatus.OK);
+            return new ResponseEntity<>(organizationService.modify(id, attribs), HttpStatus.OK);
         else
             throw new InvalidRecordUpdateRequest(GroupController.UNIT_NOT_A_GROUP);
     }

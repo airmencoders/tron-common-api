@@ -322,7 +322,7 @@ public class OrganizationControllerTest {
 			newOrg.setId(testOrgDto.getId());
 			newOrg.setName("test org");
 
-			Mockito.when(organizationService.modifyAttributes(Mockito.any(UUID.class), Mockito.any(Map.class))).thenReturn(newOrg);
+			Mockito.when(organizationService.modify(Mockito.any(UUID.class), Mockito.any(Map.class))).thenReturn(newOrg);
 			MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)

@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.DashboardUserDto;
+
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -16,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.*;
 
@@ -57,7 +59,7 @@ public class DashboardUserServiceImplTest {
             // Test successful save
             Mockito.when(dashboardUserRepo.save(Mockito.any(DashboardUser.class))).thenReturn(testDashboardUser);
             Mockito.when(dashboardUserRepo.existsById(Mockito.any(UUID.class))).thenReturn(false);
-            Mockito.when(uniqueChecksService.UserEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
+            Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
             DashboardUserDto createdDashboardUserDto = dashboardUserService.createDashboardUserDto(testDashboardUserDto);
             assertThat(createdDashboardUserDto.getId()).isEqualTo(testDashboardUser.getId());
         }
@@ -65,7 +67,7 @@ public class DashboardUserServiceImplTest {
         @Test
         void idAlreadyExists() {
             // Test id already exists
-            Mockito.when(uniqueChecksService.UserEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
+            Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
             Mockito.when(dashboardUserRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
             assertThrows(ResourceAlreadyExistsException.class, () -> dashboardUserService.createDashboardUserDto(testDashboardUserDto));
         }
@@ -77,7 +79,7 @@ public class DashboardUserServiceImplTest {
             userWithEmail.setEmail(testDashboardUser.getEmail());
             userWithEmail.setPrivileges(testDashboardUser.getPrivileges());
 
-            Mockito.when(uniqueChecksService.UserEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(false);
+            Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(false);
             assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
                 dashboardUserService.createDashboardUserDto(testDashboardUserDto);
             });
@@ -112,7 +114,7 @@ public class DashboardUserServiceImplTest {
             existingUserWithEmail.setPrivileges(new ArrayList<>(testDashboardUser.getPrivileges()));
 
             Mockito.when(dashboardUserRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testDashboardUser));
-            Mockito.when(uniqueChecksService.UserEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(false);
+            Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(false);
             assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
                 dashboardUserService.updateDashboardUserDto(testId, userWithEmail);
             });
@@ -123,7 +125,7 @@ public class DashboardUserServiceImplTest {
             // Successful update
 //            Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
             Mockito.when(dashboardUserRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testDashboardUser));
-            Mockito.when(uniqueChecksService.UserEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
+            Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
             Mockito.when(dashboardUserRepo.save(Mockito.any(DashboardUser.class))).thenReturn(testDashboardUser);
             DashboardUserDto updatedDashboardUser = dashboardUserService.updateDashboardUserDto(testDashboardUserDto.getId(), testDashboardUserDto);
             assertThat(updatedDashboardUser.getId()).isEqualTo(testDashboardUser.getId());
@@ -156,5 +158,20 @@ public class DashboardUserServiceImplTest {
         // Test person not exists
         Mockito.when(dashboardUserRepo.findById(testDashboardUserDto.getId())).thenReturn(Optional.ofNullable(null));
         assertThrows(RecordNotFoundException.class, () -> dashboardUserService.getDashboardUserDto(testDashboardUserDto.getId()));
+    }
+    
+    @Test
+    void getSelfTestExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(testDashboardUser));
+    	
+    	DashboardUserDto retrievedDashboardUserDto = dashboardUserService.getSelf(testDashboardUserDto.getEmail());
+    	assertThat(retrievedDashboardUserDto).isEqualTo(testDashboardUserDto);
+    }
+    
+    @Test
+    void getSelfTestNotExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenThrow(new UsernameNotFoundException("Not found"));
+    	
+    	assertThrows(UsernameNotFoundException.class, () -> dashboardUserService.getSelf(testDashboardUserDto.getEmail()));
     }
 }

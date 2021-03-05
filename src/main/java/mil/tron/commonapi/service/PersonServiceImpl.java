@@ -1,9 +1,6 @@
 package mil.tron.commonapi.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -14,9 +11,14 @@ import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.dto.persons.*;
+import mil.tron.commonapi.entity.PersonMetadata;
+import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
+import static mil.tron.commonapi.service.utility.ReflectionUtils.*;
 import org.modelmapper.Conditions;
 import org.springframework.stereotype.Service;
 
@@ -31,15 +33,30 @@ public class PersonServiceImpl implements PersonService {
 	private PersonRepository repository;
 	private PersonUniqueChecksService personChecksService;
 	private RankRepository rankRepository;
+	private PersonMetadataRepository personMetadataRepository;
 	private final DtoMapper modelMapper;
 	private final ObjectMapper objMapper;
+	private static final Map<Branch, Set<String>> validProperties = Map.of(
+			Branch.USAF, fields(Airman.class),
+			Branch.USCG, fields(CoastGuardsman.class),
+			Branch.USMC, fields(Marine.class),
+			Branch.USN, fields(Sailor.class),
+			Branch.USA, fields(Soldier.class),
+			Branch.USSF, fields(Spaceman.class),
+			Branch.OTHER, Collections.emptySet()
+	);
 
-	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository) {
+	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository, PersonMetadataRepository personMetadataRepository) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
+		this.personMetadataRepository = personMetadataRepository;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+
+        modelMapper.typeMap(Person.class, PersonDto.class)
+            .addMappings(m -> m.skip(PersonDto::setOrganizationLeaderships))
+            .addMappings(m -> m.skip(PersonDto::setOrganizationMemberships));
 		objMapper = new ObjectMapper();
 	}
 
@@ -49,10 +66,20 @@ public class PersonServiceImpl implements PersonService {
 		if (repository.existsById(entity.getId()))
 			throw new ResourceAlreadyExistsException("Person resource with the id: " + entity.getId() + " already exists.");
 
-		if(!personChecksService.personEmailIsUnique(entity))
+		if (!personChecksService.personEmailIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
-			
-		return convertToDto(repository.save(entity));
+
+		checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
+		Person resultEntity = repository.save(entity);
+		PersonDto result = convertToDto(resultEntity, null);
+		if (dto.getMeta() != null) {
+			dto.getMeta().forEach((key, value) -> {
+				resultEntity.getMetadata().add(new PersonMetadata(result.getId(), key, value));
+				result.setMetaProperty(key, value);
+			});
+			personMetadataRepository.saveAll(resultEntity.getMetadata());
+		}
+		return result;
 	}
 
 	@Override
@@ -61,17 +88,68 @@ public class PersonServiceImpl implements PersonService {
 		// Ensure the id given matches the id of the object given
 		if (!id.equals(entity.getId()))
 			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, entity.getId()));
-		
+
 		Optional<Person> dbPerson = repository.findById(id);
-		
+
 		if (dbPerson.isEmpty())
 			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
-		
+
 		if (!personChecksService.personEmailIsUnique(entity)) {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
-		
-		return convertToDto(repository.save(entity));
+
+		return updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+	}
+
+	private PersonDto updateMetadata(Branch branch, Person updatedEntity, Optional<Person> dbEntity, Map<String, String> metadata) {
+		checkValidMetadataProperties(branch, metadata);
+		List<PersonMetadata> toDelete = new ArrayList<>();
+		if(dbEntity.isPresent()) {
+			dbEntity.get().getMetadata().forEach(m -> {
+				updatedEntity.getMetadata().add(m);
+				if (metadata == null || !metadata.containsKey(m.getKey())) {
+					toDelete.add(m);
+				}
+			});
+		}
+		if (metadata != null) {
+			metadata.forEach((key, value) -> {
+				Optional<PersonMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
+				if (match.isPresent()) {
+					if (value == null) {
+						toDelete.add(match.get());
+					} else {
+						match.get().setValue(value);
+					}
+				} else if (value != null) {
+					updatedEntity.getMetadata().add(personMetadataRepository.save(new PersonMetadata(updatedEntity.getId(), key, value)));
+				}
+			});
+		}
+		// we have to save the person entity first, then try to delete metadata: hibernate seems to get confused
+		// if we try to remove metadata rows from the person's metadata property and it generates invalid SQL
+		PersonDto result = convertToDto(repository.save(updatedEntity), null);
+		personMetadataRepository.deleteAll(toDelete);
+		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
+		return result;
+	}
+
+	private void checkValidMetadataProperties(Branch branch, Map<String, String> metadata) {
+		if (metadata != null) {
+			if (branch == null) {
+				branch = Branch.OTHER;
+			}
+			Set<String> properties = validProperties.get(branch);
+			Set<String> unknownProperties = new HashSet<>();
+			metadata.forEach((key, value) -> {
+				if (!properties.contains(key)) {
+					unknownProperties.add(key);
+				}
+			});
+			if (unknownProperties.size() > 0) {
+				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", branch, String.join(", ", unknownProperties)));
+			}
+		}
 	}
 
 	@Override
@@ -82,7 +160,10 @@ public class PersonServiceImpl implements PersonService {
 			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
 		}
 		// patch must be done using a DTO
-		PersonDto dbPersonDto = convertToDto(dbPerson.get());
+		PersonConversionOptions options = new PersonConversionOptions();
+		options.setMembershipsIncluded(true);
+		options.setLeadershipsIncluded(true);
+		PersonDto dbPersonDto = convertToDto(dbPerson.get(),options);
 		PersonDto patchedPersonDto = applyPatchToPerson(patch, dbPersonDto);
 		Person patchedPerson = convertToEntity(patchedPersonDto);
 
@@ -98,17 +179,16 @@ public class PersonServiceImpl implements PersonService {
 	public void deletePerson(UUID id) {
 		if (repository.existsById(id)) {
 			repository.deleteById(id);
-		}
-		else {
+		} else {
 			throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
 		}
 	}
 
 	@Override
-	public Iterable<PersonDto> getPersons() {
+	public Iterable<PersonDto> getPersons(PersonConversionOptions options) {
 		return StreamSupport
 				.stream(repository.findAll().spliterator(), false)
-				.map(this::convertToDto)
+				.map(p -> convertToDto(p, options))
 				.collect(Collectors.toList());
 	}
 
@@ -118,12 +198,12 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto getPersonDto(UUID id) {
-		return convertToDto(getPerson(id));
+	public PersonDto getPersonDto(UUID id, PersonConversionOptions options) {
+		return convertToDto(getPerson(id), options);
 	}
 
 	@Override
-	public boolean exists(UUID id){
+	public boolean exists(UUID id) {
 		return repository.existsById(id);
 	}
 
@@ -137,13 +217,25 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto convertToDto(Person entity) {
+	public PersonDto convertToDto(Person entity, PersonConversionOptions options) {
+        if (options == null) {
+            options = new PersonConversionOptions();
+        }
 		PersonDto dto = modelMapper.map(entity, PersonDto.class);
 		Rank rank = entity.getRank();
 		if (rank != null) {
 			dto.setRank(rank.getAbbreviation());
 			dto.setBranch(entity.getRank().getBranchType());
 		}
+        if (options.isMetadataIncluded()) {
+		    entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
+        }
+        if (options.isLeadershipsIncluded()) {
+            dto.setOrganizationLeaderships(entity.getOrganizationLeaderships().stream().map(x -> x.getId()).collect(Collectors.toSet()));
+        }
+        if (options.isMembershipsIncluded()) {
+            dto.setOrganizationMemberships(entity.getOrganizationMemberships().stream().map(x -> x.getId()).collect(Collectors.toSet()));
+        }
 		return dto;
 	}
 
@@ -151,6 +243,9 @@ public class PersonServiceImpl implements PersonService {
 	public Person convertToEntity(PersonDto dto) {
 		Person entity = modelMapper.map(dto, Person.class);
 		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
+
+//		entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
+//		dto.getMeta().forEach(m -> entity.setMetadata());
 		return entity;
 	}
 

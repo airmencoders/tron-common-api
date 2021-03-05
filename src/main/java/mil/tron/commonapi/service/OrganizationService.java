@@ -17,18 +17,17 @@ public interface OrganizationService {
 	Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
 	Organization removeMember(UUID organizationId, List<UUID> personIds);
 	Organization addMember(UUID organizationId, List<UUID> personIds);
-	Organization modify(UUID organizationId, Map<String, String> attribs);
 	Organization addOrg(UUID organizationId, List<UUID> orgIds);
 	Organization removeOrg(UUID organizationId, List<UUID> orgIds);
 
 	// methods dealing only with DTO (service <--> controller)
 	OrganizationDto createOrganization(OrganizationDto organization);
 	OrganizationDto updateOrganization(UUID id, OrganizationDto organization);
+	OrganizationDto modify(UUID organizationId, Map<String, String> attribs);
 	void deleteOrganization(UUID id);
 	Iterable<OrganizationDto> getOrganizations(String searchQuery);
 	Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
 	OrganizationDto getOrganization(UUID id);
-	OrganizationDto modifyAttributes(UUID organizationId, Map<String, String> attribs);
 	OrganizationDto removeOrganizationMember(UUID organizationId, List<UUID> personIds);
 	OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds);
 	OrganizationDto addSubordinateOrg(UUID organizationId, List<UUID> orgIds);

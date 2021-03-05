@@ -2,16 +2,14 @@ package mil.tron.commonapi.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardUser;
-import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.DashboardUserDto;
-import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.springframework.http.HttpStatus;
@@ -19,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+
+import java.security.Principal;
 import java.util.UUID;
 
 @RestController
@@ -31,6 +31,12 @@ public class DashboardUserController {
         this.dashboardUserService = dashboardUserService;
     }
 
+    @Operation(summary = "Retrieves all Dashboard Users", description = "Retrieves all Dashboard Users")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+						content = @Content(array = @ArraySchema(schema = @Schema(implementation = DashboardUserDto.class))))
+	})
     @PreAuthorizeDashboardUser
     @GetMapping("")
     public ResponseEntity<Iterable<DashboardUserDto>> getAllDashboardUsers() {
@@ -41,7 +47,7 @@ public class DashboardUserController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = PersonDto.class))),
+                    content = @Content(schema = @Schema(implementation = DashboardUserDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -52,12 +58,25 @@ public class DashboardUserController {
     @PreAuthorizeDashboardUser
     @GetMapping(value = "/{id}")
     public ResponseEntity<DashboardUserDto> getDashboardUser(
-            @Parameter(description = "Dashboard User ID to retrieve", required = true) @PathVariable("id") UUID Id) {
+            @Parameter(description = "Dashboard User ID to retrieve", required = true) @PathVariable("id") UUID id) {
 
-        DashboardUserDto dashboardUser = dashboardUserService.getDashboardUserDto(Id);
+        DashboardUserDto dashboardUser = dashboardUserService.getDashboardUserDto(id);
         return new ResponseEntity<>(dashboardUser, HttpStatus.OK);
     }
 
+    
+    @Operation(summary = "Adds a Dashboard User", description = "Adds a Dashboard User")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = DashboardUserDto.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Resource already exists with the email provided",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
     @PreAuthorizeDashboardAdmin
     @PostMapping("")
     public ResponseEntity<DashboardUserDto> addDashboardUser(@Parameter(description = "Dashboard user to add", required = true) @Valid @RequestBody DashboardUserDto dashboardUser) {
@@ -68,7 +87,7 @@ public class DashboardUserController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = PersonDto.class))),
+                    content = @Content(schema = @Schema(implementation = DashboardUserDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
@@ -76,10 +95,10 @@ public class DashboardUserController {
     @PreAuthorizeDashboardAdmin
     @PutMapping(value = "/{id}")
     public ResponseEntity<DashboardUserDto> updateDashboardUser(
-            @Parameter(description = "Dashboard User ID to update", required = true) @PathVariable("id") UUID Id,
+            @Parameter(description = "Dashboard User ID to update", required = true) @PathVariable("id") UUID id,
             @Parameter(description = "Updated person", required = true) @Valid @RequestBody DashboardUserDto dashboardUserDto) {
 
-        DashboardUserDto updatedDashboardUser = dashboardUserService.updateDashboardUserDto(Id, dashboardUserDto);
+        DashboardUserDto updatedDashboardUser = dashboardUserService.updateDashboardUserDto(id, dashboardUserDto);
         return new ResponseEntity<>(updatedDashboardUser, HttpStatus.OK);
     }
 
@@ -95,8 +114,24 @@ public class DashboardUserController {
     @PreAuthorizeDashboardAdmin
     @DeleteMapping(value = "/{id}")
     public ResponseEntity<Object> deleteDashboardUser(
-            @Parameter(description = "Dashboard ID to delete", required = true) @PathVariable("id") UUID Id) {
-        dashboardUserService.deleteDashboardUser(Id);
+            @Parameter(description = "Dashboard ID to delete", required = true) @PathVariable("id") UUID id) {
+        dashboardUserService.deleteDashboardUser(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    
+    
+    @Operation(summary = "Retrieves the currently authorized dashboard user", description = "Retrieves the authorized dashboard user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = DashboardUserDto.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Forbidden (user does not exist)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+    })
+    @GetMapping(value = "/self")
+    public ResponseEntity<DashboardUserDto> getSelfDashboardUser(Principal principal) {
+        DashboardUserDto dashboardUser = dashboardUserService.getSelf(principal.getName());
+        return new ResponseEntity<>(dashboardUser, HttpStatus.OK);
     }
 }
