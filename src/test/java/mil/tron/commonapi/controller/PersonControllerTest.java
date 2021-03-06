@@ -69,7 +69,6 @@ public class PersonControllerTest {
 	}
 
 	@Nested
-	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestGet {
 		@Test
 		void testGetAll() throws Exception {
@@ -134,7 +133,6 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
-	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
@@ -181,7 +179,6 @@ public class PersonControllerTest {
 	}
 	
 	@Nested
-	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
@@ -227,7 +224,6 @@ public class PersonControllerTest {
 	}
 
 	@Nested
-	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestPatch {
 		@Test
 		void testPatchValidJsonBody() throws Exception {
@@ -248,42 +244,48 @@ public class PersonControllerTest {
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
 		}
 
-		@Test
-		void testPatchInvalidJsonBody() throws Exception {
+//		@Test
+//		void testPatchInvalidJsonBody() throws Exception {
 //			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
-			// Send empty string as bad json data
-			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
-						.contentType("application/json-patch+json")
-						.accept(MediaType.APPLICATION_JSON)
-						.content(""));
+//			// Send empty string as bad json data
+//			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+//						.contentType("application/json-patch+json")
+//						.accept(MediaType.APPLICATION_JSON)
+//						.content(""));
 //					.andDo(MockMvcResultHandlers.print());
 //					.andExpect(status().isBadRequest());
 //					.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
-		}
+//		}
 //
 //		@Test
-//		void testPutInvalidBadPathVariable() throws Exception {
+//		void testPatchInvalidBadPathVariable() throws Exception {
 //			// Send an invalid UUID as ID path variable
-//			mockMvc.perform(put(ENDPOINT + "{id}", "asdf1234"))
+//			mockMvc.perform(patch(ENDPOINT + "{id}", "asdf1234"))
 //					.andExpect(status().isBadRequest())
 //					.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
 //		}
 //
-//		@Test
-//		void testPutResourceDoesNotExist() throws Exception {
-//			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).thenThrow(new RecordNotFoundException("Record not found"));
-//
-//			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
-//					.accept(MediaType.APPLICATION_JSON)
-//					.contentType(MediaType.APPLICATION_JSON)
-//					.content(testPersonJson))
-//					.andExpect(status().isNotFound());
-//		}
+		@Test
+		void testPatchResourceDoesNotExist() throws Exception {
+			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenThrow(new RecordNotFoundException("Record not found"));
+
+			JSONObject content = new JSONObject();
+			content.put("op","replace");
+			content.put("path","/firstName");
+			content.put("value",testPerson.getFirstName());
+			JSONArray patch = new JSONArray();
+			patch.put(content);
+
+			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
+						.contentType("application/json-patch+json")
+						.accept(MediaType.APPLICATION_JSON)
+						.content(patch.toString()))
+					.andExpect(status().isNotFound());
+		}
 
 	}
 	
 	@Nested
-	@WithMockUser(username = "test", authorities = { "READ", "WRITE" })
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {

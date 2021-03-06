@@ -160,10 +160,7 @@ public class PersonServiceImpl implements PersonService {
 			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
 		}
 		// patch must be done using a DTO
-		PersonConversionOptions options = new PersonConversionOptions();
-		options.setMembershipsIncluded(true);
-		options.setLeadershipsIncluded(true);
-		PersonDto dbPersonDto = convertToDto(dbPerson.get(),options);
+		PersonDto dbPersonDto = convertToDto(dbPerson.get(),null);
 		PersonDto patchedPersonDto = applyPatchToPerson(patch, dbPersonDto);
 		Person patchedPerson = convertToEntity(patchedPersonDto);
 
@@ -171,8 +168,7 @@ public class PersonServiceImpl implements PersonService {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", patchedPerson.getEmail()));
 		}
 
-		repository.save(patchedPerson);
-		return patchedPersonDto;
+		return updateMetadata(patchedPersonDto.getBranch(), patchedPerson, dbPerson, patchedPersonDto.getMeta());
 	}
 
 	@Override
@@ -243,9 +239,6 @@ public class PersonServiceImpl implements PersonService {
 	public Person convertToEntity(PersonDto dto) {
 		Person entity = modelMapper.map(dto, Person.class);
 		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
-
-//		entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
-//		dto.getMeta().forEach(m -> entity.setMetadata());
 		return entity;
 	}
 
