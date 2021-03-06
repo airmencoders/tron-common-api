@@ -4,12 +4,16 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.google.common.collect.Sets;
 import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.persons.*;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
+import mil.tron.commonapi.pubsub.messages.PersonDeleteMessage;
 import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.pubsub.EventManagerService;
 import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
@@ -29,6 +33,7 @@ public class PersonServiceImpl implements PersonService {
 	private PersonUniqueChecksService personChecksService;
 	private RankRepository rankRepository;
 	private PersonMetadataRepository personMetadataRepository;
+	private EventManagerService eventManagerService;
 	private final DtoMapper modelMapper;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
 			Branch.USAF, fields(Airman.class),
@@ -40,11 +45,16 @@ public class PersonServiceImpl implements PersonService {
 			Branch.OTHER, Collections.emptySet()
 	);
 
-	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository, PersonMetadataRepository personMetadataRepository) {
+	public PersonServiceImpl(PersonRepository repository,
+							 PersonUniqueChecksService personChecksService,
+							 RankRepository rankRepository,
+							 PersonMetadataRepository personMetadataRepository,
+							 EventManagerService eventManagerService) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
 		this.personMetadataRepository = personMetadataRepository;
+		this.eventManagerService = eventManagerService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
         modelMapper.typeMap(Person.class, PersonDto.class)
@@ -71,6 +81,11 @@ public class PersonServiceImpl implements PersonService {
 			});
 			personMetadataRepository.saveAll(resultEntity.getMetadata());
 		}
+
+		PersonChangedMessage message = new PersonChangedMessage();
+		message.addPersonId(result.getId());
+		eventManagerService.recordEventAndPublish(message);
+
 		return result;
 	}
 
@@ -90,7 +105,13 @@ public class PersonServiceImpl implements PersonService {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
 
-		return updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+		PersonDto updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+
+		PersonChangedMessage message = new PersonChangedMessage();
+		message.addPersonId(updatedPerson.getId());
+		eventManagerService.recordEventAndPublish(message);
+
+		return updatedPerson;
 	}
 
 	private PersonDto updateMetadata(Branch branch, Person updatedEntity, Optional<Person> dbEntity, Map<String, String> metadata) {
@@ -148,6 +169,11 @@ public class PersonServiceImpl implements PersonService {
 	public void deletePerson(UUID id) {
 		if (repository.existsById(id)) {
 			repository.deleteById(id);
+
+			PersonDeleteMessage message = new PersonDeleteMessage();
+			message.addPersonId(id);
+			eventManagerService.recordEventAndPublish(message);
+
 		} else {
 			throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
 		}
@@ -182,6 +208,13 @@ public class PersonServiceImpl implements PersonService {
 		for (PersonDto dto : dtos) {
 			added.add(this.createPerson(dto));
 		}
+
+		List<UUID> addedIds = added.stream().map(PersonDto::getId).collect(Collectors.toList());
+
+		PersonChangedMessage message = new PersonChangedMessage();
+		message.setPersonIds(Sets.newHashSet(addedIds));
+		eventManagerService.recordEventAndPublish(message);
+
 		return added;
 	}
 

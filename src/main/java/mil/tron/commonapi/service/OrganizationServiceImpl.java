@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import com.google.common.collect.Sets;
 import mil.tron.commonapi.controller.OrganizationController;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -22,11 +23,12 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.pubsub.EventManagerService;
+import mil.tron.commonapi.pubsub.messages.*;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
-import static mil.tron.commonapi.service.utility.ReflectionUtils.*;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
@@ -39,6 +41,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
+
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationRepository repository;
@@ -46,6 +50,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final PersonRepository personRepository;
 	private final OrganizationUniqueChecksService orgChecksService;
 	private final OrganizationMetadataRepository organizationMetadataRepository;
+	private final EventManagerService eventManagerService;
 	private final DtoMapper modelMapper;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
@@ -63,13 +68,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 			PersonRepository personRepository,
 			PersonService personService,
 			OrganizationUniqueChecksService orgChecksService,
-			OrganizationMetadataRepository organizationMetadataRepository) {
+			OrganizationMetadataRepository organizationMetadataRepository,
+			EventManagerService eventManagerService) {
 
 		this.repository = repository;
 		this.personRepository = personRepository;
 		this.personService = personService;
 		this.orgChecksService = orgChecksService;
 		this.organizationMetadataRepository = organizationMetadataRepository;
+		this.eventManagerService = eventManagerService;
 		this.modelMapper = new DtoMapper();
 	}
 
@@ -108,7 +115,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 			}
 		}
 
-		return repository.save(organization);
+		Organization result = repository.save(organization);
+
+		SubOrgAddMessage message = new SubOrgAddMessage();
+		message.setParentOrgId(organizationId);
+		message.setSubOrgsAdded(Sets.newHashSet(orgIds));
+		eventManagerService.recordEventAndPublish(message);
+
+		return result;
 	}
 
 	/**
@@ -131,7 +145,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 			organization.removeSubordinateOrganization(subordinate);
 		}
 
-		return repository.save(organization);
+		Organization result = repository.save(organization);
+
+		SubOrgRemoveMessage message = new SubOrgRemoveMessage();
+		message.setParentOrgId(organizationId);
+		message.setSubOrgsRemoved(Sets.newHashSet(orgIds));
+		eventManagerService.recordEventAndPublish(message);
+
+		return result;
 	}
 
 	/**
@@ -153,7 +174,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 			organization.removeMember(person);
 		}
 
-		return repository.save(organization);
+		Organization result = repository.save(organization);
+
+		PersonOrgRemoveMessage message = new PersonOrgRemoveMessage();
+		message.setParentOrgId(organizationId);
+		message.setMemberRemoved(Sets.newHashSet(personIds));
+		eventManagerService.recordEventAndPublish(message);
+
+		return result;
 	}
 
 	/**
@@ -176,7 +204,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 			organization.addMember(person);
 		}
 
-		return repository.save(organization);
+		Organization result = repository.save(organization);
+
+		PersonOrgAddMessage message = new PersonOrgAddMessage();
+		message.setParentOrgId(organizationId);
+		message.setMembersAdded(Sets.newHashSet(personIds));
+		eventManagerService.recordEventAndPublish(message);
+
+		return result;
 	}
 
 	/**
@@ -298,6 +333,11 @@ public class OrganizationServiceImpl implements OrganizationService {
 			});
 			organizationMetadataRepository.saveAll(resultEntity.getMetadata());
 		}
+
+		OrganizationChangedMessage message = new OrganizationChangedMessage();
+		message.setOrgIds(Sets.newHashSet(result.getId()));
+		eventManagerService.recordEventAndPublish(message);
+
 		return result;
 	}
 
@@ -332,7 +372,13 @@ public class OrganizationServiceImpl implements OrganizationService {
 			}
 		}
 
-		return updateMetadata(entity, dbEntity, organization.getMeta());
+		OrganizationDto result =  updateMetadata(entity, dbEntity, organization.getMeta());
+
+		OrganizationChangedMessage message = new OrganizationChangedMessage();
+		message.setOrgIds(Sets.newHashSet(result.getId()));
+		eventManagerService.recordEventAndPublish(message);
+
+		return result;
 	}
 
 	private OrganizationDto updateMetadata(Organization updatedEntity, Optional<Organization> dbEntity, Map<String, String> metadata) {
@@ -373,10 +419,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 */
 	@Override
 	public void deleteOrganization(UUID id) {
-		if (repository.existsById(id))
+		if (repository.existsById(id)) {
 			repository.deleteById(id);
-		else
+
+			OrganizationDeleteMessage message = new OrganizationDeleteMessage();
+			message.setOrgIds(Sets.newHashSet(id));
+			eventManagerService.recordEventAndPublish(message);
+		}
+		else {
 			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
+		}
 	}
 
 	/**

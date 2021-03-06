@@ -2,7 +2,7 @@ package mil.tron.commonapi.pubsub;
 
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
-import mil.tron.commonapi.entity.pubsub.events.EventType;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.logging.CommonApiLogger;
 import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
@@ -17,15 +17,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Service that fires off messages to subscribers for various events.  Entity listeners
- * call {@link EventPublisher#publishEvent(EventType, String, String, Object, String)} to launch an asynchronous
+ * call {@link EventPublisher#publishEvent(PubSubMessage, String)} to launch an asynchronous
  * broadcast to subscribers to the provided event type.
  */
 @Service
@@ -64,28 +62,25 @@ public class EventPublisher {
 
     /**
      * Called by the publishEvent async method.
-     * @param type
      * @param message
-     * @param className
-     * @param data
      * @param xfccHeader
      */
     @Async
-    public void publishEvent(EventType type, String message, String className, Object data, String xfccHeader) {
+    public void publishEvent(PubSubMessage message, String xfccHeader) {
+
+        // get the cluster-namespace of the requester from headers who is driving this change, so we don't
+        //  send them the change - which wouldn't make any sense
         String requesterNamespace = extractNamespace(xfccHeader);
 
-        List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(type));
-        Map<String, Object> messageDetails = new HashMap<>();
-        messageDetails.put("event", type.toString());
-        messageDetails.put("type", className);
-        messageDetails.put("message", message);
-        messageDetails.put("data", data);
+        // get the list of subscribers for this type of eventType
+        List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(message.getEventType()));
+
+        // start publish loop - only push to everyone but the requester (...if the requester is a subscriber)
         for (Subscriber s : subscribers) {
-            // only push to everyone but the requester (if the requester is a subscriber)
             if (!extractSubscriberNamespace(s.getSubscriberAddress()).equals(requesterNamespace)) {
-                publisherLog.info("[PUBLISH BROADCAST] - Event: " + type.toString() + " Message: " + message + " to Subscriber: " + s.getSubscriberAddress());
+                publisherLog.info("[PUBLISH BROADCAST] - Event: " + message.getEventType().toString() + " to Subscriber: " + s.getSubscriberAddress());
                 try {
-                    publisherSender.postForLocation(s.getSubscriberAddress(), messageDetails);
+                    publisherSender.postForLocation(s.getSubscriberAddress(), message);
                     publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + s.getSubscriberAddress());
                 } catch (Exception e) {
                     publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + s.getSubscriberAddress() + " failed.  Exception: " + e.getMessage());

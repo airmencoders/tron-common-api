@@ -7,15 +7,16 @@ import lombok.*;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
-import mil.tron.commonapi.pubsub.listeners.OrganizationEntityListener;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-@EntityListeners(OrganizationEntityListener.class)
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -106,6 +107,17 @@ public class Organization {
     public void setLeader(Person leader) {
         this.setLeaderAndUpdateMembers(leader);
     }
+
+
+    @CreationTimestamp
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "date_created")
+    private Date dateCreated;
+
+    @UpdateTimestamp
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "date_modified")
+    private Date dateModified;
 
     /**
      * This method will be performed before database operations.

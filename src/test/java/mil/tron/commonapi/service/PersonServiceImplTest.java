@@ -4,10 +4,12 @@ import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.pubsub.EventManagerServiceImpl;
 import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
@@ -42,6 +44,9 @@ class PersonServiceImplTest {
 
 	@Mock
 	private PersonMetadataRepository personMetadataRepository;
+
+	@Mock
+	private EventManagerServiceImpl eventManagerService;
 	
 	@InjectMocks
 	private PersonServiceImpl personService;
@@ -83,6 +88,7 @@ class PersonServiceImplTest {
 	        Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 	        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	        PersonDto createdPerson = personService.createPerson(testDto);
 	        assertThat(createdPerson.getId()).isEqualTo(testPerson.getId());
 	    }
@@ -166,6 +172,7 @@ class PersonServiceImplTest {
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
+			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	    	PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
 	    	assertThat(updatedPerson.getId()).isEqualTo(testPerson.getId());
 		}
@@ -185,7 +192,7 @@ class PersonServiceImplTest {
     @Test
     void deletePersonTest() {
 		assertThrows(RecordNotFoundException.class, () -> personService.deletePerson(testPerson.getId()));
-
+		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
         personService.deletePerson(testPerson.getId());
         Mockito.verify(repository, Mockito.times(1)).deleteById(testPerson.getId());    
@@ -222,6 +229,8 @@ class PersonServiceImplTest {
 				new PersonDto(),
 				new PersonDto()
 		);
+
+		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 
 		List<PersonDto> createdPeople = personService.bulkAddPeople(people);
 		assertThat(createdPeople).hasSize(4);
