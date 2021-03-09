@@ -17,11 +17,18 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 
+/**
+ * This service manages the launching of the pubsub events, its methods
+ * are called from the various services that send out pubsub messages.
+ *
+ * This service will then use {@link EventPublisher} class to launch the asynchronous sending
+ * of the messages.
+ */
 @Service
 public class EventManagerServiceImpl implements EventManagerService {
 
     private static final Log APP_LOGGER = LogFactory.getLog(CommonApiLogger.class);
-    private final static String LEDGER_ERROR = "Error pushing changes to pub-sub ledger";
+    private static final String LEDGER_ERROR = "Error pushing changes to pub-sub ledger";
 
     @Autowired
     private PubSubLedgerRepository pubSubLedgerRepository;
@@ -88,6 +95,10 @@ public class EventManagerServiceImpl implements EventManagerService {
         return pubSubLedgerRepository.findByDateCreatedGreaterThan(timeDateStamp);
     }
 
+    /**
+     * Gets the latest counts from the database for the various PubSub messages
+     * @return a Map of the counts with the event names being the keys
+     */
     @Override
     public Map<String, Long> getEventTypeCounts() {
         Map<String, Long> counts = new HashMap<>();

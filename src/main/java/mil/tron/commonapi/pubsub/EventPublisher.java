@@ -22,9 +22,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Service that fires off messages to subscribers for various events.  Entity listeners
- * call {@link EventPublisher#publishEvent(PubSubMessage, String)} to launch an asynchronous
- * broadcast to subscribers to the provided event type.
+ * A Service that fires off messages to subscribers for various events.
+ *
+ * The EventManagerService calls {@link EventPublisher#publishEvent(PubSubMessage, String)} to launch an asynchronous
+ * broadcast to subscribers for the provided event type.
  */
 @Service
 public class EventPublisher {
