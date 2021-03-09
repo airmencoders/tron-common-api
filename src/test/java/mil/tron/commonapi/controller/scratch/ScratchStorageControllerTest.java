@@ -21,6 +21,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -456,6 +457,6 @@ public class ScratchStorageControllerTest {
 
         mockMvc.perform(get("/v1/scratch/users/privs"))
                 .andExpect(status().isOk())
-                .andExpect(result -> jsonPath("$", hasSize(1)));
+                .andExpect(MockMvcResultMatchers.jsonPath("$", hasSize(1)));
     }
 }

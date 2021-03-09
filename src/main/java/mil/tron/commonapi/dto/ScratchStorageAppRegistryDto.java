@@ -2,6 +2,7 @@ package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.google.common.collect.Lists;
 import lombok.*;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
@@ -80,7 +81,7 @@ public class ScratchStorageAppRegistryDto {
 
         @Getter
         @Setter
-        private Set<PrivilegeIdPair> privs;
+        private List<PrivilegeIdPair> privs;
     }
 
     /**
@@ -100,10 +101,10 @@ public class ScratchStorageAppRegistryDto {
     private String appName;
 
     @Getter
-    private Set<UserWithPrivs> userPrivs;
+    private List<UserWithPrivs> userPrivs;
 
     @JsonSetter("userPrivs")
-    public void setJsonUserPrivs(Set<UserWithPrivs> privs) {
+    public void setJsonUserPrivs(List<UserWithPrivs> privs) {
         this.userPrivs = privs;
     }
 
@@ -112,7 +113,7 @@ public class ScratchStorageAppRegistryDto {
      * and reducing them by user email address into a set of UserWithPrivs types
      * @param privs
      */
-    public void setUserPrivs(Set<ScratchStorageAppUserPriv> privs) {
+    public void setUserPrivs(List<ScratchStorageAppUserPriv> privs) {
 
         Map<ScratchStorageUser, Set<PrivilegeIdPair>> privHash = new HashMap<>();
 
@@ -144,10 +145,10 @@ public class ScratchStorageAppRegistryDto {
                     .builder()
                     .userId(pair.getKey().getId())
                     .emailAddress(pair.getKey().getEmail())
-                    .privs(pair.getValue())
+                    .privs(Lists.newArrayList(pair.getValue()))
                     .build());
         }
 
-        this.userPrivs = userPrivsSet;
+        this.userPrivs = Lists.newArrayList(userPrivsSet);
     }
 }
