@@ -178,7 +178,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		PersonOrgRemoveMessage message = new PersonOrgRemoveMessage();
 		message.setParentOrgId(organizationId);
-		message.setMemberRemoved(Sets.newHashSet(personIds));
+		message.setMembersRemoved(Sets.newHashSet(personIds));
 		eventManagerService.recordEventAndPublish(message);
 
 		return result;
@@ -299,13 +299,11 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Creates a new organization and returns the DTO representation of which
-	 *
-	 * @param organization The DTO containing the new Org information with an optional UUID (one will be assigned if omitted)
-	 * @return The new organization in DTO form
+	 * Private helper to actually do the persisting of the Organization entity to database.  This is
+	 * broken out for pub-sub purposes.  This helper does NOT invoke a pub-sub message
+	 * @param organization OrganizationDto entity to persist
 	 */
-	@Override
-	public OrganizationDto createOrganization(OrganizationDto organization) {
+	private OrganizationDto persistOrganization(OrganizationDto organization) {
 		Organization org = this.convertToEntity(organization);
 
 		if (repository.existsById(org.getId()))
@@ -333,6 +331,19 @@ public class OrganizationServiceImpl implements OrganizationService {
 			});
 			organizationMetadataRepository.saveAll(resultEntity.getMetadata());
 		}
+
+		return result;
+	}
+
+	/**
+	 * Creates a new organization and returns the DTO representation of which
+	 *
+	 * @param organization The DTO containing the new Org information with an optional UUID (one will be assigned if omitted)
+	 * @return The new organization in DTO form
+	 */
+	@Override
+	public OrganizationDto createOrganization(OrganizationDto organization) {
+		OrganizationDto result = this.persistOrganization(organization);
 
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.setOrgIds(Sets.newHashSet(result.getId()));
@@ -506,7 +517,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Adds a list of Org DTOs as new entities in the database
+	 * Adds a list of Org DTOs as new entities in the database.  Only fires one pub-sub event
+	 * containing the UUIDs of the newly created Organizations.
 	 *
 	 * @param newOrgs List of Organization DTOs to add
 	 * @return Same list of input Org DTOs (if they were all successfully created)
@@ -515,8 +527,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 	public List<OrganizationDto> bulkAddOrgs(List<OrganizationDto> newOrgs) {
 		List<OrganizationDto> addedOrgs = new ArrayList<>();
 		for (OrganizationDto org : newOrgs) {
-			addedOrgs.add(this.createOrganization(org));
+			addedOrgs.add(this.persistOrganization(org));
 		}
+
+		// only send one pub-sub message for all added orgs (new org Ids will be an array in the message body)
+		List<UUID> addedIds = addedOrgs.stream().map(OrganizationDto::getId).collect(Collectors.toList());
+		OrganizationChangedMessage message = new OrganizationChangedMessage();
+		message.setOrgIds(Sets.newHashSet(addedIds));
+		eventManagerService.recordEventAndPublish(message);
 
 		return addedOrgs;
 	}

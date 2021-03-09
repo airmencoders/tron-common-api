@@ -31,22 +31,4 @@
             <column name="date_modified" type="timestamp"/>
         </addColumn>
     </changeSet>
-    <changeSet author="christopherzell (generated)" id="1614972829447-1">
-        <alterSequence sequenceName="hibernate_sequence"/>
-    </changeSet>
-    <changeSet author="christopherzell (generated)" id="1614972829447-2">
-        <dropDefaultValue columnDataType="varchar(255)" columnName="branch_type" tableName="organization"/>
-    </changeSet>
-    <changeSet author="christopherzell (generated)" id="1614972829447-3">
-        <addNotNullConstraint columnDataType="varchar(255)" columnName="email" tableName="dashboard_user" validate="true"/>
-    </changeSet>
-    <changeSet author="christopherzell (generated)" id="1614972829447-4">
-        <dropDefaultValue columnDataType="varchar(255)" columnName="org_type" tableName="organization"/>
-    </changeSet>
-    <changeSet author="christopherzell (generated)" id="1614972829447-5">
-        <addNotNullConstraint columnDataType="varchar(255)" columnName="subscribed_event" tableName="subscriber" validate="true"/>
-    </changeSet>
-    <changeSet author="christopherzell (generated)" id="1614972829447-6">
-        <addNotNullConstraint columnDataType="varchar(255)" columnName="subscriber_address" tableName="subscriber" validate="true"/>
-    </changeSet>
 </databaseChangeLog>

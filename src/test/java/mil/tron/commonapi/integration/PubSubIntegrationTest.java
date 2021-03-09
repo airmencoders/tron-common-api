@@ -5,13 +5,10 @@ import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
-import org.aspectj.lang.annotation.After;
-import org.hamcrest.core.AnyOf;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.internal.matchers.Any;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,8 +16,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.SimpleDateFormat;
@@ -33,7 +32,6 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
@@ -110,16 +108,16 @@ public class PubSubIntegrationTest {
 
         mockServer.expect(once(), requestTo(endsWith("/changed")))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(result -> jsonPath("$.eventType", containsString("PERSON_CHANGE")))
-                .andExpect(result -> jsonPath("$.eventType", not(containsString("ORGANIZATION_CHANGE"))))
+                .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", containsString("PERSON_CHANGE")))
+                .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", not(containsString("ORGANIZATION_CHANGE"))))
                 .andRespond(withSuccess());
 
         // make a new person
         PersonDto p = PersonDto
                 .builder()
-                .firstName("Joe")
-                .lastName("Public")
-                .email("jp@test.com")
+                .firstName("Montgomery")
+                .lastName("Burns")
+                .email("mb@test.com")
                 .rank("Capt")
                 .branch(Branch.USAF)
                 .build();
@@ -143,16 +141,16 @@ public class PubSubIntegrationTest {
 
         mockServer.expect(once(), requestTo(endsWith("/changed")))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(result -> jsonPath("$.eventType", containsString("PERSON_CHANGE")))
-                .andExpect(result -> jsonPath("$.eventType", not(containsString("ORGANIZATION_CHANGE"))))
+                .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", containsString("PERSON_CHANGE")))
+                .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", not(containsString("ORGANIZATION_CHANGE"))))
                 .andRespond(withSuccess());
 
         // make a new person
         PersonDto p = PersonDto
                 .builder()
-                .firstName("Joe")
-                .lastName("Public")
-                .email("jp2@test.com")
+                .firstName("Homer")
+                .lastName("Simpson")
+                .email("hjs@test.com")
                 .rank("Capt")
                 .branch(Branch.USAF)
                 .build();
@@ -192,15 +190,54 @@ public class PubSubIntegrationTest {
 
         // come back up online, we should only get one change since our last communication time
         mockMvc.perform(get(ENDPOINT + "/events/replay?sinceDateTime={stamp}", df.format(downTime)))
-                .andExpect(result -> jsonPath("$", hasSize(1)))
-                .andExpect(result -> jsonPath("$[0].eventType", equalTo("PERSON_CHANGE")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$", hasSize(1)))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].eventType", equalTo("PERSON_CHANGE")))
                 .andExpect(status().isOk());
 
     }
 
     @Test
-    void testSubscriberGetsOneMessageForBulkAdd() throws Exception {
+    void testSubscriberGetsOneMessageForBulkPersonAdd() throws Exception {
 
+        // test that we get only ONE pub sub message for a bulk person and
+        //  bulk organization add (message body though contains numerous UUIDs of the new entities)
+
+        mockServer.expect(once(), requestTo(endsWith("/changed")))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", containsString("PERSON_CHANGE")))
+                .andExpect(MockRestRequestMatchers.jsonPath("$.personIds", hasSize(2)))
+                .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", not(containsString("ORGANIZATION_CHANGE"))))
+                .andRespond(withSuccess());
+
+        // make a new person
+        PersonDto p1 = PersonDto
+                .builder()
+                .firstName("Joe")
+                .lastName("Public")
+                .email("jp@test.com")
+                .rank("Capt")
+                .branch(Branch.USAF)
+                .build();
+
+        // make a another new person
+        PersonDto p2 = PersonDto
+                .builder()
+                .firstName("Joe")
+                .lastName("Public2")
+                .email("jp2@test.com")
+                .rank("Capt")
+                .branch(Branch.USAF)
+                .build();
+
+        mockMvc.perform(post("/v1/person/persons")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(new PersonDto[] { p1, p2 })))
+                .andExpect(status().isCreated());
+
+        // must sleep a little since the broadcast is an async event, 1000ms is overkill but ok for test
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+
+        mockServer.verify();
     }
 
 }

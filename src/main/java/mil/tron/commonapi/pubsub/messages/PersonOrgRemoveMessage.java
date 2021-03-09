@@ -25,9 +25,9 @@ public class PersonOrgRemoveMessage extends PubSubMessage {
     @Getter
     @Setter
     @Builder.Default
-    private Set<UUID> memberRemoved = new HashSet<>();
+    private Set<UUID> membersRemoved = new HashSet<>();
 
     public void addMember(UUID member) {
-        this.memberRemoved.add(member);
+        this.membersRemoved.add(member);
     }
 }
