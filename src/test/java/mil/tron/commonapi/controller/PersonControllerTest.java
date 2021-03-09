@@ -27,6 +27,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.ArrayList;
@@ -244,27 +245,27 @@ public class PersonControllerTest {
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
 		}
 
-//		@Test
-//		void testPatchInvalidJsonBody() throws Exception {
-//			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
-//			// Send empty string as bad json data
-//			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
-//						.contentType("application/json-patch+json")
-//						.accept(MediaType.APPLICATION_JSON)
-//						.content(""));
-//					.andDo(MockMvcResultHandlers.print());
-//					.andExpect(status().isBadRequest());
-//					.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
-//		}
-//
-//		@Test
-//		void testPatchInvalidBadPathVariable() throws Exception {
-//			// Send an invalid UUID as ID path variable
-//			mockMvc.perform(patch(ENDPOINT + "{id}", "asdf1234"))
-//					.andExpect(status().isBadRequest())
-//					.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
-//		}
-//
+		@Test
+		void testPatchInvalidJsonBody() throws Exception {
+			// Send empty string as bad json data
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+						.contentType("application/json-patch+json")
+						.accept(MediaType.APPLICATION_JSON)
+						.content(""))
+					.andExpect(status().isBadRequest())
+					.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
+		}
+
+		@Test
+		void testPatchInvalidBadPathVariable() throws Exception {
+			// Send an invalid UUID as ID path variable
+			mockMvc.perform(patch(ENDPOINT + "{id}", "asdf1234")
+						.contentType("application/json-patch+json")
+						.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
+		}
+
 		@Test
 		void testPatchResourceDoesNotExist() throws Exception {
 			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenThrow(new RecordNotFoundException("Record not found"));
@@ -276,7 +277,7 @@ public class PersonControllerTest {
 			JSONArray patch = new JSONArray();
 			patch.put(content);
 
-			mockMvc.perform(put(ENDPOINT + "{id}", testPerson.getId())
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
 						.contentType("application/json-patch+json")
 						.accept(MediaType.APPLICATION_JSON)
 						.content(patch.toString()))

@@ -122,6 +122,9 @@ public class PersonController {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
@@ -130,7 +133,7 @@ public class PersonController {
 	@PatchMapping(path = "/{id}", consumes = "application/json-patch+json")
 	public ResponseEntity<PersonDto> patchPerson(
 			@Parameter(description = "Person ID to patch", required = true) @PathVariable("id") UUID personId,
-			@Parameter(description = "Patched person", required = true) @Valid @RequestBody JsonPatch patch) {
+			@Parameter(description = "Patched person", required = true) @RequestBody JsonPatch patch) {
 		PersonDto updatedPerson = personService.patchPerson(personId, patch);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 	}
