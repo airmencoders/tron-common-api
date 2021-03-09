@@ -49,13 +49,13 @@ Some database migrations are simple (e.g. adding a single column), and you may c
 1. Checkout the current master and run it using the production profile to get a snapshot of the current database in your local postgresql:
 `mvn spring-boot:run -Pproduction`
 2. Checkout branch with your changes
-3. In the `liquibase-*.properties` files, update the `diffChangeLogFile` property to increment the version number to 1 greater than the current changeset (the newly generated changeset will take this file name, so you don't want to overwrite any existing ones)
-4. Run the following command to tell liquibase to generate a diff between your current postgres database and the hibernate generated H2 database *(replace the parameters as appropriate to match your environment)*:
+3. Run the following command to tell liquibase to generate a diff between your current postgres database and the hibernate generated H2 database *(replace the parameters as appropriate to match your environment)*:
 ```
 mvnw -Dliquibase.url=jdbc:postgresql://localhost:5432/<dbname> -Dliquibase.username=<username> -Dliquibase.password=<password> liquibase:diff
 ```
+4. The generated diff changelog file will have .XXX in the name, change this as appropriate to the next available version number
 5. Make any appropriate changes or customizations to the generated file
-6. Don't forget to add the new changelog file to the `db.changelog-master.xml`
+6. You no longer have to add the new changelog file to the `db.changelog-master.xml`, it will be included automatically
 
 
 ### docker
