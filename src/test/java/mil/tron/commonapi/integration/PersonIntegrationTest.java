@@ -23,6 +23,7 @@ import javax.transaction.Transactional;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,6 +47,7 @@ public class PersonIntegrationTest {
     @Test
     public void testBulkAddPeople() throws Exception {
         PersonDto person = new PersonDto();
+        person.setId(UUID.randomUUID());
         person.setFirstName("John");
         person.setMiddleName("Hero");
         person.setLastName("Public");
@@ -55,6 +57,7 @@ public class PersonIntegrationTest {
         person.setBranch(Branch.USAF);
 
         PersonDto a2 = new PersonDto();
+        a2.setId(UUID.randomUUID());
         a2.setEmail("test1@test.com");
         a2.setTitle("SSGT");
         a2.setRank("SSgt");
@@ -83,8 +86,14 @@ public class PersonIntegrationTest {
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(a3))))
                 .andExpect(status().isConflict());
 
+        // make sure the entities we added were actually created
+        mockMvc.perform(get(ENDPOINT + "/" + person.getId()))
+            .andExpect(status().isOk());
+        mockMvc.perform(get(ENDPOINT + "/" + a2.getId()))
+            .andExpect(status().isOk());
+            
         // test pagination
-        mockMvc.perform(get(ENDPOINT + "?page=1&limit=4"))
+        mockMvc.perform(get(ENDPOINT + "?page=1&limit=2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
 
