@@ -3,6 +3,7 @@ package mil.tron.commonapi.integration;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import lombok.val;
@@ -13,6 +14,7 @@ import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -31,6 +33,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.util.Assert;
 
 import javax.transaction.Transactional;
 import java.lang.reflect.Array;
@@ -38,14 +41,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ActiveProfiles("development")
 @SpringBootTest(properties = { "security.enabled=true" })
 @AutoConfigureMockMvc
-public class AppSourceIntegrtionTest {
+public class AppSourceIntegrationTest {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";
@@ -134,10 +137,7 @@ public class AppSourceIntegrtionTest {
                 AppClientUserPrivDto
                         .builder()
                         .appClientUser(appClientUserUuid)
-                        .privileges(Arrays.asList(
-                                Privilege.builder()
-                                        .id(1L).build()
-                        ))
+                        .privilegeIds(Arrays.asList(1L))
                         .build()
         );
         AppSourceDetailsDto appSource = AppSourceDetailsDto.builder()
@@ -182,9 +182,65 @@ public class AppSourceIntegrtionTest {
                 .name("App Source Test")
                 .appClients(Arrays.asList(AppClientUserPrivDto.builder()
                         .appClientUser(appClientId)
-                        .privileges(Arrays.asList(Privilege.builder()
-                                .id(0L)
-                                .build()))
+                        .privilegeIds(Arrays.asList(0L))
+                        .build()))
+                .build();
+
+        val result = mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(appSource)))
+                .andExpect(status().is4xxClientError())
+                .andReturn();
+
+        String content = result.getResponse().getContentAsString();
+        Assert.hasText("permission", content);
+    }
+
+    // test bad app client id
+    @Transactional
+    @Rollback
+    @Test
+    void testBadAppClientId() throws Exception {
+
+        val appClientId = UUID.randomUUID();
+        val appSource = AppSourceDetailsDto.builder()
+                .name("App Source Test")
+                .appClients(Arrays.asList(AppClientUserPrivDto.builder()
+                        .appClientUser(appClientId)
+                        .privilegeIds(Arrays.asList(1L))
+                        .build()))
+                .build();
+
+        val result = mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(appSource)))
+                .andExpect(status().is4xxClientError())
+                .andReturn();
+
+        String content = result.getResponse().getContentAsString();
+        Assert.hasText("app client", content);
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void successfulCreateRequest() throws Exception {
+
+        val appClientId = UUID.randomUUID();
+        val testAppClient = AppClientUser.builder()
+                .id(appClientId)
+                .name("Test App Client")
+                .build();
+        appClientUserRespository.save(testAppClient);
+        val appSource = AppSourceDetailsDto.builder()
+                .name("App Source Test")
+                .appClients(Arrays.asList(AppClientUserPrivDto.builder()
+                        .appClientUser(appClientId)
+                        .privilegeIds(Arrays.asList(1L))
                         .build()))
                 .build();
 
@@ -193,12 +249,100 @@ public class AppSourceIntegrtionTest {
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(appSource)))
+                .andExpect(status().isCreated());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void getDetailsRequestWithInvalidId() throws Exception {
+
+        val appClientId = UUID.randomUUID();
+
+        mockMvc.perform(get(ENDPOINT + "{id}", appClientId)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().is4xxClientError());
     }
 
-    // test bad app client id
+    @Transactional
+    @Rollback
+    @Test
+    void successfulUpdateRequest() throws Exception {
 
-    // test with app client and permission
+        val appClientId = UUID.randomUUID();
+        val testAppClient = AppClientUser.builder()
+                .id(appClientId)
+                .name("Test App Client")
+                .build();
+        appClientUserRespository.save(testAppClient);
+        val appSource = AppSourceDetailsDto.builder()
+                .name("App Source Test")
+                .appClients(Arrays.asList(AppClientUserPrivDto.builder()
+                        .appClientUser(appClientId)
+                        .privilegeIds(Arrays.asList(1L))
+                        .build()))
+                .build();
+        val createdAppSource = appSourceServiceImpl.createAppSource(appSource);
 
+        createdAppSource.setName("New App Source Name");
+        mockMvc.perform(put(ENDPOINT + "/{id}", createdAppSource.getId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(appSource)))
+                .andExpect(status().isOk());
 
+        val storedAppSourceResponse = appSourceRepository.findById(createdAppSource.getId());
+        assertTrue(storedAppSourceResponse.isPresent());
+        val storedAppSource = storedAppSourceResponse.get();
+        assertEquals("New App Source Name", storedAppSource.getName());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void successfulDeleteRequest() throws Exception {
+
+        val appClientId = UUID.randomUUID();
+        val testAppClient = AppClientUser.builder()
+                .id(appClientId)
+                .name("Test App Client")
+                .build();
+        appClientUserRespository.save(testAppClient);
+        val appClient2Id = UUID.randomUUID();
+        val testAppClient2 = AppClientUser.builder()
+                .id(appClient2Id)
+                .name("Test App Client 2")
+                .build();
+        appClientUserRespository.save(testAppClient2);
+        val appSource = AppSourceDetailsDto.builder()
+                .name("App Source Test")
+                .appClients(Arrays.asList(
+                    AppClientUserPrivDto.builder()
+                        .appClientUser(appClientId)
+                        .privilegeIds(Arrays.asList(1L))
+                        .build(),
+                    AppClientUserPrivDto.builder()
+                            .appClientUser(appClient2Id)
+                            .privilegeIds(Arrays.asList(1L))
+                            .build()
+                ))
+                .build();
+        val createdAppSource = appSourceServiceImpl.createAppSource(appSource);
+
+        mockMvc.perform(delete(ENDPOINT + "/{id}", createdAppSource.getId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(appSource)))
+                .andExpect(status().isOk());
+
+        val storedAppSourceResponse = appSourceRepository.findById(createdAppSource.getId());
+        assertTrue(storedAppSourceResponse.isEmpty());
+        val storedAppSourcePrivileges = appSourcePrivRepository
+                .findAllByAppSource(AppSource.builder().id(createdAppSource.getId()).build());
+        assertTrue(Iterables.size(storedAppSourcePrivileges) == 0);
+    }
 }

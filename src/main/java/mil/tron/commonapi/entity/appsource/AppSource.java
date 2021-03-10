@@ -35,13 +35,6 @@ public class AppSource {
     @PreUpdate
     public void sanitize() {
         trimStringFields();
-        sanitizeNameForUniqueConstraint();
-    }
-
-
-
-    private void sanitizeNameForUniqueConstraint() {
-        name = name == null ? null : name.toLowerCase();
     }
 
     private void trimStringFields() {

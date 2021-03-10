@@ -17,5 +17,5 @@ public class AppClientUserPrivDto {
 
     private UUID appClientUser;
 
-    private List<Privilege> privileges;
+    private List<Long> privilegeIds;
 }

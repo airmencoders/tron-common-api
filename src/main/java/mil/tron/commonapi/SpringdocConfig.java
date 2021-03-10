@@ -46,6 +46,7 @@ public class SpringdocConfig {
 			String.format("%s/list-request-headers", apiPrefix),
 			String.format("%s/logfile/**", apiPrefix),
 			String.format("%s/dashboard-users/**", apiPrefix),
+			String.format("%s/app-source/**", apiPrefix),
 		};
     	return GroupedOpenApi.builder().group("dashboard-api").pathsToMatch(paths).build();
     }
