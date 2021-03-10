@@ -10,16 +10,18 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Getter
-@Setter
 @EqualsAndHashCode
 public class AppSourceDto {
 
+    @Getter
+    @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
     private String name;
 
+    @Getter
+    @Setter
     @Builder.Default
     private Integer clientCount = 0;
 }

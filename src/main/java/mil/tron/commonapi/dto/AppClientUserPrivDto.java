@@ -10,12 +10,14 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Getter
-@Setter
 @EqualsAndHashCode
 public class AppClientUserPrivDto {
 
+    @Getter
+    @Setter
     private UUID appClientUser;
 
+    @Getter
+    @Setter
     private List<Long> privilegeIds;
 }

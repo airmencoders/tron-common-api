@@ -98,7 +98,7 @@ public class Person {
      * Converted value of {@link Person#email} to lowercase.
      * This is used for a unique constraint in the database for emails.
      */
-    private String emailAsLower;
+    private String emailAsLower; //NOSONAR ignore as this is used to generate a column for uniqueness
 
     @Override
     public boolean equals(Object other) {
