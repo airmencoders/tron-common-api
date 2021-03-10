@@ -5,6 +5,7 @@ import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
+import mil.tron.commonapi.repository.PersonRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,9 @@ public class PubSubIntegrationTest {
     @Autowired
     private RestTemplate eventSender;
 
+    @Autowired
+    private PersonRepository personRepo;
+
     private MockRestServiceServer mockServer;
 
     private final static String SUB1_ADDRESS = "http://localhost:5005/changed";
@@ -99,6 +103,7 @@ public class PubSubIntegrationTest {
 
         mockMvc.perform(delete(ENDPOINT + "{id}", sub1Id)).andExpect(status().isNoContent());
         mockMvc.perform(delete(ENDPOINT + "{id}", sub2Id)).andExpect(status().isNoContent());
+        personRepo.deleteAll();
     }
 
     @Test
