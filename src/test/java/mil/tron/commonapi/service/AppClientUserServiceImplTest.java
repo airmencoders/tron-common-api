@@ -138,4 +138,19 @@ class AppClientUserServiceImplTest {
 	    	assertThat(updatedUser).isEqualTo(MODEL_MAPPER.map(user, AppClientUserDto.class));
 		}
 	}
+	
+	@Nested
+	class DeleteAppClientTest {
+		@Test
+	    void deleteAppClient_notExists() {
+			assertThrows(RecordNotFoundException.class, () -> userService.deleteAppClientUser(userDto.getId())); 
+	    }
+		
+		@Test
+		void deleteAppClient() {
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+			userService.deleteAppClientUser(userDto.getId());
+	        Mockito.verify(repository, Mockito.times(1)).deleteById(userDto.getId());  
+		}
+	}
 }

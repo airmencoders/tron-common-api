@@ -2,6 +2,7 @@ package mil.tron.commonapi.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -151,6 +152,26 @@ class AppClientControllerTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(OBJECT_MAPPER.writeValueAsString(userDto)))
 				.andExpect(status().isNotFound());
+		}
+	}
+	
+	@Nested
+	class TestDelete {
+		@Test
+		void testDelete() throws Exception {
+			Mockito.doNothing().when(userService).deleteAppClientUser(userDto.getId());
+			
+			mockMvc.perform(delete(ENDPOINT + "{id}", userDto.getId()))
+				.andExpect(status().isNoContent());
+		}
+		
+		@Test
+		void testDeleteBadPathVariable() throws Exception {
+			Mockito.doNothing().when(userService).deleteAppClientUser(userDto.getId());
+			
+			mockMvc.perform(delete(ENDPOINT + "{id}", "asdf1234"))
+				.andExpect(status().isBadRequest())
+				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
 		}
 	}
 }

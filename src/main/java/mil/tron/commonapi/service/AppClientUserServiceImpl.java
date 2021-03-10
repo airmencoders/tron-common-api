@@ -85,6 +85,16 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 			
 	}
 	
+	@Override
+    public void deleteAppClientUser(UUID id) {
+        if (userRepository.existsById(id)) {
+        	userRepository.deleteById(id);
+        }
+        else {
+            throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
+        }
+    }
+	
 	private boolean isNameUnique(AppClientUserDto appClient, Optional<AppClientUser> dbUser) {
 		return (dbUser.isPresent() && appClient.getName().equalsIgnoreCase(dbUser.get().getName())) 
 				|| userRepository.findByNameIgnoreCase(appClient.getName()).isEmpty();
