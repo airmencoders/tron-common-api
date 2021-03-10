@@ -18,6 +18,8 @@ public class AppSourceDto {
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    @Getter
+    @Setter
     private String name;
 
     @Getter
