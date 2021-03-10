@@ -13,16 +13,18 @@ import java.util.UUID;
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
 @Builder
 @Table(name="app_source", uniqueConstraints = { @UniqueConstraint(columnNames = "name")})
 public class AppSource {
 
     @Id
+    @Getter
+    @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    @Getter
+    @Setter
     private String name;
 
     @Getter
