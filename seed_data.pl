@@ -5,7 +5,9 @@
 # `sudo cpan install Mojolicious`
 #
 # then, with Common Running locally on port 8088, do:
-# `perl seed_data.pl`
+# `perl seed_data.pl` or it also respects the PROXY ENV VAR if present
+# like this `PROXY=http://localhost:9000/api/v1 perl seed_data.pl` if you wanna use it with
+# something like JWT CLI utility, etc
 
 use Mojo::UserAgent -signatures;
 
