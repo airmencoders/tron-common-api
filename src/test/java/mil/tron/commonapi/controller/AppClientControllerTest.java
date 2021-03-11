@@ -159,16 +159,15 @@ class AppClientControllerTest {
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {
-			Mockito.doNothing().when(userService).deleteAppClientUser(userDto.getId());
+			Mockito.when(userService.deleteAppClientUser(userDto.getId())).thenReturn(userDto);
 			
 			mockMvc.perform(delete(ENDPOINT + "{id}", userDto.getId()))
-				.andExpect(status().isNoContent());
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(userDto)));
 		}
 		
 		@Test
 		void testDeleteBadPathVariable() throws Exception {
-			Mockito.doNothing().when(userService).deleteAppClientUser(userDto.getId());
-			
 			mockMvc.perform(delete(ENDPOINT + "{id}", "asdf1234"))
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));

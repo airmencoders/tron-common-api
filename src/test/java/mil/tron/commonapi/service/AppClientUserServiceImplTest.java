@@ -148,9 +148,9 @@ class AppClientUserServiceImplTest {
 		
 		@Test
 		void deleteAppClient() {
-			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
-			userService.deleteAppClientUser(userDto.getId());
-	        Mockito.verify(repository, Mockito.times(1)).deleteById(userDto.getId());  
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(user));
+			AppClientUserDto deletedDto = userService.deleteAppClientUser(userDto.getId());
+			assertThat(deletedDto).isEqualTo(userDto);
 		}
 	}
 }

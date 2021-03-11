@@ -94,9 +94,9 @@ public class AppClientController {
 	
 	@Operation(summary = "Deletes an App Client", description = "Deletes an existing App Client")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204",
+            @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content),
+            		content = @Content(schema = @Schema(implementation = AppClientUserDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
@@ -104,7 +104,6 @@ public class AppClientController {
     @DeleteMapping(value = "/{id}")
     public ResponseEntity<Object> deleteAppClient(
             @Parameter(description = "App Client ID to delete", required = true) @PathVariable("id") UUID id) {
-		userService.deleteAppClientUser(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(userService.deleteAppClientUser(id), HttpStatus.OK);
     }
 }
