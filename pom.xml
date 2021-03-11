@@ -16,15 +16,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <sonarqube.cpd.exclusions>
-            src/main/java/mil/tron/commonapi/dto/PersonDto.java,
-            src/main/java/mil/tron/commonapi/entity/Person.java,
-            src/main/java/mil/tron/commonapi/entity/PersonMetadata.java,
-            src/main/java/mil/tron/commonapi/entity/OrganizationMetadata.java
-        </sonarqube.cpd.exclusions>
     </properties>
-
-
 
     <dependencies>
         <dependency>
