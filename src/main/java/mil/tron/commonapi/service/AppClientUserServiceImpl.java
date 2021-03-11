@@ -88,10 +88,10 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	@Override
     public AppClientUserDto deleteAppClientUser(UUID id) {
 		AppClientUser dbUser = userRepository.findById(id).orElseThrow(() -> new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
-		
+		AppClientUserDto dto = convertToDto(dbUser);
     	userRepository.deleteById(id);
 
-    	return convertToDto(dbUser);
+    	return dto;
     }
 	
 	private boolean isNameUnique(AppClientUserDto appClient, Optional<AppClientUser> dbUser) {
