@@ -1,0 +1,39 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet context="dev" author="dmilligan" id="jwt-admin-user">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM dashboard_user WHERE email='bb@gmail.com';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="dashboard_user">
+            <column name="id" value="034c63a3-d8a9-4f71-92c4-db1c8dc07809"/>
+            <column name="email" value="bb@gmail.com"/>
+            <column name="email_as_lower" value="bb@gmail.com"/>
+        </insert>
+        <insert tableName="dashboard_user_privileges">
+            <column name="dashboard_user_id" value="034c63a3-d8a9-4f71-92c4-db1c8dc07809"/>
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='DASHBOARD_ADMIN')"/>
+        </insert>
+        <insert tableName="dashboard_user_privileges">
+            <column name="dashboard_user_id" value="034c63a3-d8a9-4f71-92c4-db1c8dc07809"/>
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='DASHBOARD_USER')"/>
+        </insert>
+    </changeSet>
+    <changeSet context="dev" author="dmilligan" id="jwt-user-user">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM dashboard_user WHERE email='jj@gmail.com';
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="dashboard_user">
+            <column name="id" value="fb58be31-ab38-4e28-b288-920269115bc7"/>
+            <column name="email" value="jj@gmail.com"/>
+            <column name="email_as_lower" value="jj@gmail.com"/>
+        </insert>
+        <insert tableName="dashboard_user_privileges">
+            <column name="dashboard_user_id" value="fb58be31-ab38-4e28-b288-920269115bc7"/>
+            <column name="privileges_id" valueComputed="(SELECT id FROM privilege WHERE name='DASHBOARD_USER')"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

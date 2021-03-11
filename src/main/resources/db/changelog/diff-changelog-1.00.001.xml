@@ -1,17 +1,38 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
-<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
-    <changeSet author="Dylan (generated)" id="1608204133532-1">
+<databaseChangeLog logicalFilePath="db/./changelog/diff-changelog-1.0.1.xml" xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="christopherzell (generated)" id="1608688106743-1">
         <createTable tableName="airman">
+            <column name="address" type="VARCHAR(255)"/>
+            <column name="admin" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
             <column name="afsc" type="VARCHAR(255)"/>
+            <column name="approved" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deros" type="VARCHAR(255)"/>
             <column name="dodid" type="VARCHAR(255)"/>
-            <column name="ets_date" type="TIMESTAMP WITHOUT TIME ZONE"/>
-            <column name="pt_date" type="TIMESTAMP WITHOUT TIME ZONE"/>
+            <column name="dor" type="TIMESTAMP"/>
+            <column name="duty_phone" type="VARCHAR(255)"/>
+            <column name="duty_title" type="VARCHAR(255)"/>
+            <column name="ets_date" type="TIMESTAMP"/>
+            <column name="flt_chief" type="VARCHAR(255)"/>
+            <column name="go81" type="VARCHAR(255)"/>
+            <column name="gp" type="VARCHAR(255)"/>
+            <column name="imds" type="VARCHAR(255)"/>
+            <column name="man_number" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(255)"/>
+            <column name="pt_date" type="TIMESTAMP"/>
+            <column name="squadron" type="VARCHAR(255)"/>
+            <column name="unit" type="VARCHAR(255)"/>
+            <column name="wc" type="VARCHAR(255)"/>
+            <column name="wing" type="VARCHAR(255)"/>
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="airmanPK"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-2">
+    <changeSet author="christopherzell (generated)" id="1608688106743-2">
         <createTable tableName="organization">
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="organizationPK"/>
@@ -21,7 +42,7 @@
             <column name="parent_organization_id" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-3">
+    <changeSet author="christopherzell (generated)" id="1608688106743-3">
         <createTable tableName="organization_members">
             <column name="organization_id" type="UUID">
                 <constraints nullable="false" primaryKey="true"/>
@@ -31,7 +52,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-4">
+    <changeSet author="christopherzell (generated)" id="1608688106743-4">
         <createTable tableName="organization_subordinate_organizations">
             <column name="organization_id" type="UUID">
                 <constraints nullable="false" primaryKey="true"/>
@@ -41,7 +62,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-5">
+    <changeSet author="christopherzell (generated)" id="1608688106743-5">
         <createTable tableName="person">
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="personPK"/>
@@ -53,7 +74,7 @@
             <column name="title" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-6">
+    <changeSet author="christopherzell (generated)" id="1608688106743-6">
         <createTable tableName="squadron">
             <column name="base_name" type="VARCHAR(255)"/>
             <column name="major_command" type="VARCHAR(255)"/>
@@ -64,40 +85,40 @@
             <column name="operations_director_id" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-7">
+    <changeSet author="christopherzell (generated)" id="1608688106743-7">
         <addUniqueConstraint columnNames="members_id" constraintName="UK_3qoxo6mk3ake4mept5t1krtm3" tableName="organization_members"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-8">
+    <changeSet author="christopherzell (generated)" id="1608688106743-8">
         <addUniqueConstraint columnNames="subordinate_organizations_id" constraintName="UK_4e93l3qvpbprrhgllufmx67v1" tableName="organization_subordinate_organizations"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-9">
+    <changeSet author="christopherzell (generated)" id="1608688106743-9">
         <addForeignKeyConstraint baseColumnNames="parent_organization_id" baseTableName="organization" constraintName="FK58g5hrlhy91008gw2qpjj92td" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="organization" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-10">
+    <changeSet author="christopherzell (generated)" id="1608688106743-10">
         <addForeignKeyConstraint baseColumnNames="organization_id" baseTableName="organization_subordinate_organizations" constraintName="FK8o5wkofu6krxlm4gvfntb7979" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="organization" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-11">
+    <changeSet author="christopherzell (generated)" id="1608688106743-11">
         <addForeignKeyConstraint baseColumnNames="operations_director_id" baseTableName="squadron" constraintName="FK9ksdeb2fvjenuctyuioqmgk1b" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="person" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-12">
+    <changeSet author="christopherzell (generated)" id="1608688106743-12">
         <addForeignKeyConstraint baseColumnNames="id" baseTableName="squadron" constraintName="FKbyq4ibwr60q6w7o92jvuyl6vu" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="organization" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-13">
+    <changeSet author="christopherzell (generated)" id="1608688106743-13">
         <addForeignKeyConstraint baseColumnNames="chief_id" baseTableName="squadron" constraintName="FKeflfam68aiuy7c2cif2s6nw6" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="person" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-14">
+    <changeSet author="christopherzell (generated)" id="1608688106743-14">
         <addForeignKeyConstraint baseColumnNames="organization_id" baseTableName="organization_members" constraintName="FKl40alv514imwvjr8fn96m0ysc" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="organization" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-15">
+    <changeSet author="christopherzell (generated)" id="1608688106743-15">
         <addForeignKeyConstraint baseColumnNames="subordinate_organizations_id" baseTableName="organization_subordinate_organizations" constraintName="FKlwgehjfafk600a4mwcv4jwalh" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="organization" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-16">
+    <changeSet author="christopherzell (generated)" id="1608688106743-16">
         <addForeignKeyConstraint baseColumnNames="id" baseTableName="airman" constraintName="FKnhnnva29xg5gk1p4lalng3y8j" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="person" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-17">
+    <changeSet author="christopherzell (generated)" id="1608688106743-17">
         <addForeignKeyConstraint baseColumnNames="leader_id" baseTableName="organization" constraintName="FKqlyg8damucorlbgbvm68dbb03" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="person" validate="true"/>
     </changeSet>
-    <changeSet author="Dylan (generated)" id="1608204133532-18">
+    <changeSet author="christopherzell (generated)" id="1608688106743-18">
         <addForeignKeyConstraint baseColumnNames="members_id" baseTableName="organization_members" constraintName="FKsryhxbelv0adpllqsic7yd2t0" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="person" validate="true"/>
     </changeSet>
 </databaseChangeLog>
