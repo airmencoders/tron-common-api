@@ -19,9 +19,9 @@
     </properties>
 
     <sonarcube.cpd.exclusions>
-        src/main/java/mil/tron/commonapi/dto/PersonDto.java
-        src/main/java/mil/tron/commonapi/entity/Person.java
-        src/main/java/mil/tron/commonapi/entity/PersonMetadata.java
+        src/main/java/mil/tron/commonapi/dto/PersonDto.java,
+        src/main/java/mil/tron/commonapi/entity/Person.java,
+        src/main/java/mil/tron/commonapi/entity/PersonMetadata.java,
         src/main/java/mil/tron/commonapi/entity/OrganizationMetadata.java
     </sonarcube.cpd.exclusions>
 
