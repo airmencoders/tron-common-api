@@ -41,6 +41,7 @@ public class PubSubLedger {
      */
     @Getter
     @Setter
+    @Column(columnDefinition="TEXT")
     private String data;
 
     @CreationTimestamp
