@@ -1,27 +1,31 @@
 package mil.tron.commonapi.service;
 
+import com.google.common.collect.Sets;
+import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.dto.persons.*;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.PersonMetadata;
+import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.pubsub.EventManagerService;
+import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
+import mil.tron.commonapi.pubsub.messages.PersonDeleteMessage;
+import mil.tron.commonapi.repository.PersonMetadataRepository;
+import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.ranks.RankRepository;
+import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
+import org.modelmapper.Conditions;
+import org.springframework.stereotype.Service;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import mil.tron.commonapi.dto.*;
-import mil.tron.commonapi.dto.mapper.DtoMapper;
-import mil.tron.commonapi.dto.persons.*;
-import mil.tron.commonapi.entity.PersonMetadata;
-import mil.tron.commonapi.entity.branches.Branch;
-import mil.tron.commonapi.entity.ranks.Rank;
-import mil.tron.commonapi.repository.PersonMetadataRepository;
-import mil.tron.commonapi.repository.ranks.RankRepository;
-import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
-import static mil.tron.commonapi.service.utility.ReflectionUtils.*;
-import org.modelmapper.Conditions;
-import org.springframework.stereotype.Service;
-
-import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.repository.PersonRepository;
+import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
 @Service
 public class PersonServiceImpl implements PersonService {
@@ -29,6 +33,7 @@ public class PersonServiceImpl implements PersonService {
 	private PersonUniqueChecksService personChecksService;
 	private RankRepository rankRepository;
 	private PersonMetadataRepository personMetadataRepository;
+	private EventManagerService eventManagerService;
 	private final DtoMapper modelMapper;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
 			Branch.USAF, fields(Airman.class),
@@ -40,11 +45,16 @@ public class PersonServiceImpl implements PersonService {
 			Branch.OTHER, Collections.emptySet()
 	);
 
-	public PersonServiceImpl(PersonRepository repository, PersonUniqueChecksService personChecksService, RankRepository rankRepository, PersonMetadataRepository personMetadataRepository) {
+	public PersonServiceImpl(PersonRepository repository,
+							 PersonUniqueChecksService personChecksService,
+							 RankRepository rankRepository,
+							 PersonMetadataRepository personMetadataRepository,
+							 EventManagerService eventManagerService) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
 		this.personMetadataRepository = personMetadataRepository;
+		this.eventManagerService = eventManagerService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
         modelMapper.typeMap(Person.class, PersonDto.class)
@@ -52,8 +62,12 @@ public class PersonServiceImpl implements PersonService {
             .addMappings(m -> m.skip(PersonDto::setOrganizationMemberships));
 	}
 
-	@Override
-	public PersonDto createPerson(PersonDto dto) {
+	/**
+	 * Private helper to actually do the persisting of the Person entity to database.  This is
+	 * broken out for pub-sub purposes.  This helper does NOT invoke a pub-sub message
+	 * @param dto PersonDto entity to persist
+	 */
+	private PersonDto persistPerson(PersonDto dto) {
 		Person entity = convertToEntity(dto);
 		if (repository.existsById(entity.getId()))
 			throw new ResourceAlreadyExistsException("Person resource with the id: " + entity.getId() + " already exists.");
@@ -71,6 +85,24 @@ public class PersonServiceImpl implements PersonService {
 			});
 			personMetadataRepository.saveAll(resultEntity.getMetadata());
 		}
+
+		return result;
+	}
+
+	/**
+	 * Creates a new person entity in the database.  Called from the controller for a POST to /person.
+	 * This method uses internal helper persistPerson() to actually persist the entity to the database.
+	 * This method is a wrapper around persistPerson() that fires a pub-sub message.
+	 * @param dto The Person dto to persist
+	 * @return the persisted Person Dto
+	 */
+	@Override
+	public PersonDto createPerson(PersonDto dto) {
+		PersonDto result = this.persistPerson(dto);
+		PersonChangedMessage message = new PersonChangedMessage();
+		message.addPersonId(result.getId());
+		eventManagerService.recordEventAndPublish(message);
+
 		return result;
 	}
 
@@ -90,7 +122,13 @@ public class PersonServiceImpl implements PersonService {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
 
-		return updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+		PersonDto updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+
+		PersonChangedMessage message = new PersonChangedMessage();
+		message.addPersonId(updatedPerson.getId());
+		eventManagerService.recordEventAndPublish(message);
+
+		return updatedPerson;
 	}
 
 	private PersonDto updateMetadata(Branch branch, Person updatedEntity, Optional<Person> dbEntity, Map<String, String> metadata) {
@@ -148,6 +186,11 @@ public class PersonServiceImpl implements PersonService {
 	public void deletePerson(UUID id) {
 		if (repository.existsById(id)) {
 			repository.deleteById(id);
+
+			PersonDeleteMessage message = new PersonDeleteMessage();
+			message.addPersonId(id);
+			eventManagerService.recordEventAndPublish(message);
+
 		} else {
 			throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
 		}
@@ -176,12 +219,26 @@ public class PersonServiceImpl implements PersonService {
 		return repository.existsById(id);
 	}
 
+	/**
+	 * Bulk creates new persons.  Only fires one pub-sub event containing all new Person UUIDs
+	 *
+	 * @param dtos new Persons to create
+	 * @return new Person dtos created
+	 */
 	@Override
 	public List<PersonDto> bulkAddPeople(List<PersonDto> dtos) {
 		List<PersonDto> added = new ArrayList<>();
 		for (PersonDto dto : dtos) {
-			added.add(this.createPerson(dto));
+			added.add(this.persistPerson(dto));
 		}
+
+		// only send one pub-sub message for all added persons (new org Ids will be an array in the message body)
+		List<UUID> addedIds = added.stream().map(PersonDto::getId).collect(Collectors.toList());
+
+		PersonChangedMessage message = new PersonChangedMessage();
+		message.setPersonIds(Sets.newHashSet(addedIds));
+		eventManagerService.recordEventAndPublish(message);
+
 		return added;
 	}
 

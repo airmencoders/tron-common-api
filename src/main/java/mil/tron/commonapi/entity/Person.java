@@ -3,14 +3,15 @@ package mil.tron.commonapi.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import mil.tron.commonapi.entity.ranks.Rank;
-import mil.tron.commonapi.pubsub.listeners.PersonEntityListener;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-@EntityListeners(PersonEntityListener.class)
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -99,6 +100,17 @@ public class Person {
      * This is used for a unique constraint in the database for emails.
      */
     private String emailAsLower; //NOSONAR ignore as this is used to generate a column for uniqueness
+
+
+    @CreationTimestamp
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "date_created")
+    private Date dateCreated;
+
+    @UpdateTimestamp
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "date_modified")
+    private Date dateModified;
 
     @Override
     public boolean equals(Object other) {

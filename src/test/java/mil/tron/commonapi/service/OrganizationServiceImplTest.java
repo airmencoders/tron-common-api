@@ -6,9 +6,11 @@ import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.pubsub.EventManagerServiceImpl;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
@@ -47,6 +49,9 @@ class OrganizationServiceImplTest {
 	private OrganizationMetadataRepository organizationMetadataRepository;
 
 	@Mock
+	private EventManagerServiceImpl eventManagerService;
+
+	@Mock
 	OrganizationUniqueChecksServiceImpl uniqueService;
 	
 	@InjectMocks
@@ -77,6 +82,7 @@ class OrganizationServiceImplTest {
 			// Test successful save
 			Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 			Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
+			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 			OrganizationDto createdOrg = organizationService.createOrganization(testOrgDto);
 			assertThat(createdOrg.getId()).isEqualTo(testOrgDto.getId());
 		}
@@ -154,6 +160,7 @@ class OrganizationServiceImplTest {
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
 	    	Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 			Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
+			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	    	OrganizationDto updatedOrganization = organizationService.updateOrganization(testOrg.getId(), organizationService.convertToDto(testOrg));
 	    	assertThat(updatedOrganization.getName()).isEqualTo(testOrgDto.getName());
 		}
@@ -164,6 +171,7 @@ class OrganizationServiceImplTest {
 		@Test
 		 void successfulDelete() {
 			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 			organizationService.deleteOrganization(testOrg.getId());
 			Mockito.verify(repository, Mockito.times(1)).deleteById(testOrg.getId());
 		}
@@ -309,7 +317,7 @@ class OrganizationServiceImplTest {
 				.thenThrow(new InvalidRecordUpdateRequest("Not Found"))
 				.thenReturn(Optional.of(newUnit))
 				.thenThrow(new RecordNotFoundException("Not Found"));
-
+		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 		Mockito.when(personRepository.findById(p.getId())).thenReturn(Optional.of(p));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(newUnit);
 
@@ -338,7 +346,7 @@ class OrganizationServiceImplTest {
 		Organization newUnit = new Organization();
 		newUnit.setId(testOrgDto.getId());
 		newUnit.addSubordinateOrganization(subOrg);
-
+		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 		Mockito.when(repository.findById(Mockito.any(UUID.class)))
 				.thenReturn(Optional.of(newUnit))
 				.thenReturn(Optional.of(subOrg))
@@ -378,7 +386,7 @@ class OrganizationServiceImplTest {
 				organizationService.convertToDto(new Organization()),
 				organizationService.convertToDto(new Organization())
 		);
-
+		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 		Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
 		List<OrganizationDto> addedOrgs = organizationService.bulkAddOrgs(newOrgs);
 		assertEquals(newOrgs, addedOrgs);

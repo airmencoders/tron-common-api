@@ -3,6 +3,7 @@ package mil.tron.commonapi.entity.scratch;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
@@ -40,5 +41,6 @@ public class ScratchStorageEntry {
 
     @Getter
     @Setter
+    @Column(length = 2097152)
     private String value;
 }

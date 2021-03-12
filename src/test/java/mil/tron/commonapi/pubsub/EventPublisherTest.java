@@ -4,6 +4,8 @@ import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
+import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,10 +83,13 @@ public class EventPublisherTest {
 
         Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventType.class)))
                 .thenReturn(Lists.newArrayList(subscriber, subscriber2));
-        Mockito.when(publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
+        Mockito.when(publisherSender.postForLocation(Mockito.anyString(), Mockito.any(PubSubMessage.class)))
                 .thenReturn(URI.create(subscriber.getSubscriberAddress()));
 
-        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person(), uri);
+        PersonChangedMessage message = new PersonChangedMessage();
+        message.addPersonId(new Person().getId());
+
+        publisher.publishEvent(message, uri);
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting captured
@@ -104,10 +109,13 @@ public class EventPublisherTest {
 
         Mockito.when(subService.getSubscriptionsByEventType(Mockito.any(EventType.class)))
                 .thenReturn(Lists.newArrayList(subscriber, subscriber2));
-        Mockito.when(publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
+        Mockito.when(publisherSender.postForLocation(Mockito.anyString(), Mockito.any(PubSubMessage.class)))
                 .thenReturn(URI.create(subscriber.getSubscriberAddress()));
 
-        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person(), "");
+        PersonChangedMessage message = new PersonChangedMessage();
+        message.addPersonId(new Person().getId());
+
+        publisher.publishEvent(message, "");
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting captured
@@ -128,10 +136,13 @@ public class EventPublisherTest {
                 .thenReturn(Lists.newArrayList(subscriber));
 
         Mockito.when(
-                publisherSender.postForLocation(Mockito.anyString(), Mockito.anyMap()))
+                publisherSender.postForLocation(Mockito.anyString(), Mockito.any(PubSubMessage.class)))
                 .thenThrow(new RestClientException("Exception"));
 
-        publisher.publishEvent(EventType.PERSON_CHANGE, "message", "Person", new Person(), uri);
+        PersonChangedMessage message = new PersonChangedMessage();
+        message.addPersonId(new Person().getId());
+
+        publisher.publishEvent(message, uri);
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting capture
