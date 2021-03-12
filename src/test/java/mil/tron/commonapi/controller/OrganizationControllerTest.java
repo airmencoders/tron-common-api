@@ -310,6 +310,13 @@ public class OrganizationControllerTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
 		}
+
+		@Test
+		void testDeleteOrgLeader() throws Exception {
+			Mockito.when(organizationService.modify(Mockito.any(UUID.class), Mockito.anyMap())).thenReturn(testOrgDto);
+			mockMvc.perform(delete(ENDPOINT + "{id}/leader", testOrgDto.getId()))
+					.andExpect(status().isOk());
+		}
 	}
 
 	@Nested

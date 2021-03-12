@@ -179,7 +179,9 @@ public class Organization {
     public void setLeaderAndUpdateMembers(Person leader) {
         this.members.remove(this.leader);
         this.leader = leader;
-        this.members.add(leader);
+        if (leader != null) {
+            this.members.add(leader);
+        }
     }
 
 
