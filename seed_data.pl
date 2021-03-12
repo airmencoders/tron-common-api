@@ -5,12 +5,14 @@
 # `sudo cpan install Mojolicious`
 #
 # then, with Common Running locally on port 8088, do:
-# `perl seed_data.pl`
+# `perl seed_data.pl` or it also respects the PROXY ENV VAR if present
+# like this `PROXY=http://localhost:9000/api/v1 perl seed_data.pl` if you wanna use it with
+# something like JWT CLI utility, etc
 
 use Mojo::UserAgent -signatures;
 
 my $ua = Mojo::UserAgent->new;
-my $url = "http://localhost:8088/api/v1";
+my $url = $ENV{PROXY} || "http://localhost:8088/api/v1";
 my $org_id;
 
 sub add_new_person($spec) {
@@ -38,16 +40,15 @@ sub add_new_person($spec) {
 # returns its UUID
 sub add_new_org($type, $name, $parent_id) {
 
-    my $url_string = "$url/squadron";
-    if ($type eq "WING" || $type eq "GROUP") {
-        $url_string = "$url/" . lc $type;
-    }
+    my $url_string = "$url/organization";
 
     my $super = $ua->post($url_string => json => {
         "name" => $name,
         "members" => [],
         "leader" => undef,
         "parentOrganization" => $parent_id,
+        "orgType" => uc $type,
+        "branchType" => "USAF",
     });
     die if $super->res->code != 201;
     return $super->res->json->{id};

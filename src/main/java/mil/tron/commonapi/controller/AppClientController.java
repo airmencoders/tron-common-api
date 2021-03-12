@@ -6,6 +6,7 @@ import javax.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -89,4 +90,20 @@ public class AppClientController {
 		AppClientUserDto updatedAppClientUser = userService.updateAppClientUser(appClientId, appClient);
 		return new ResponseEntity<>(updatedAppClientUser, HttpStatus.OK);
 	}
+	
+	
+	@Operation(summary = "Deletes an App Client", description = "Deletes an existing App Client")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+            		content = @Content(schema = @Schema(implementation = AppClientUserDto.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Resource not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @DeleteMapping(value = "/{id}")
+    public ResponseEntity<Object> deleteAppClient(
+            @Parameter(description = "App Client ID to delete", required = true) @PathVariable("id") UUID id) {
+        return new ResponseEntity<>(userService.deleteAppClientUser(id), HttpStatus.OK);
+    }
 }
