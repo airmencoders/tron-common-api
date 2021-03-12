@@ -41,6 +41,6 @@ public class ScratchStorageEntry {
 
     @Getter
     @Setter
-    @Column(columnDefinition="TEXT")
+    @Column(length = 2097152)
     private String value;
 }
