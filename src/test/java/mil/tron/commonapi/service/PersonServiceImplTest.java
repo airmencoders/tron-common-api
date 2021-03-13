@@ -1,5 +1,13 @@
 package mil.tron.commonapi.service;
 
+import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.github.fge.jsonpatch.JsonPatchException;
+import com.github.fge.jsonpatch.JsonPatchOperation;
+import liquibase.pro.packaged.J;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
@@ -15,6 +23,10 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
+import com.github.fge.jsonpatch.JsonPatch;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,6 +36,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -188,6 +201,82 @@ class PersonServiceImplTest {
 			});
 		}
  	}
+
+	@Nested
+	class PatchPersonTest {
+		@Test
+		void idsNotMatching() throws JSONException {
+			JSONObject content = new JSONObject();
+			content.put("op","replace");
+			content.put("path","/firstName");
+			content.put("value",testPerson.getFirstName());
+			JSONArray contentArr = new JSONArray();
+			contentArr.put(content);
+
+
+			JsonPatch patch = JsonPatch.fromJson(content);
+
+			PersonDto tempTestPersonDto = testDto;
+			testDto.setFirstName("patchFirst");
+
+			// Test id not matching person id
+			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(testPerson));
+
+			assertThrows(InvalidRecordUpdateRequest.class, () -> personService.patchPerson(UUID.randomUUID(), content));
+		}
+
+//		@Test
+//		void idNotExist() {
+//			// Test id not exist
+//			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+//			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
+//			assertThrows(RecordNotFoundException.class, () -> personService.updatePerson(testPerson.getId(), testDto));
+//		}
+//
+//		@Test
+//		void emailAlreadyExists() {
+//			// Test updating email to one that already exists in database
+//			PersonDto newPerson = new PersonDto();
+//			newPerson.setId(testPerson.getId());
+//			newPerson.setFirstName(testPerson.getFirstName());
+//			newPerson.setLastName(testPerson.getLastName());
+//			newPerson.setEmail("test@new.person");
+//			UUID testId = newPerson.getId();
+//
+//			Person existingPersonWithEmail = new Person();
+//			existingPersonWithEmail.setEmail(newPerson.getEmail());
+//
+//			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+//			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
+//			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
+//			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+//				personService.updatePerson(testId, newPerson);
+//			});
+//		}
+//
+//		@Test
+//		void successfulUpdate() {
+//			// Successful update
+//			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+//			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
+//			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+//			Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
+//			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
+//			PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
+//			assertThat(updatedPerson.getId()).isEqualTo(testPerson.getId());
+//		}
+//
+//		@Test
+//		void invalidProperty() {
+//			testDto.setMetaProperty("blahblah", "value");
+//			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+//			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
+//			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+//			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+//				personService.updatePerson(testPerson.getId(), testDto);
+//			});
+//		}
+	}
 
     @Test
     void deletePersonTest() {

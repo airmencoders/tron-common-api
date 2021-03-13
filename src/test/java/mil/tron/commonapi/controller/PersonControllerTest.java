@@ -224,7 +224,7 @@ public class PersonControllerTest {
 	@Nested
 	class TestPatch {
 		@Test
-		void testPatchValidJsonBody() throws Exception {
+		void testPatchReplaceValidJsonBody() throws Exception {
 			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
 
 			JSONObject content = new JSONObject();
