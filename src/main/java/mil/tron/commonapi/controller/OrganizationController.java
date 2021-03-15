@@ -227,6 +227,24 @@ public class OrganizationController {
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
+	@Operation(summary = "Deletes a leader from an organization", description = "Deletes/clears out the leader position with no one")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Organization not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeWrite
+	@DeleteMapping(value = "/{id}/leader")
+	public ResponseEntity<Object> deleteOrgLeader(
+			@Parameter(description = "Organization ID to delete the leader from", required = true) @PathVariable("id") UUID organizationId) {
+		Map<String, String> noLeaderMap = new HashMap<>();
+		noLeaderMap.put("leader", null);
+		return new ResponseEntity<>(organizationService.modify(organizationId, noLeaderMap), HttpStatus.OK);
+	}
+
 	@Operation(summary = "Deletes a member(s) from the organization", description = "Deletes a member(s) from an organization")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204",

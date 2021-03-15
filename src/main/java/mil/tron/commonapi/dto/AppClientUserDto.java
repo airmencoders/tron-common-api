@@ -18,13 +18,14 @@ public class AppClientUserDto {
     @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
-	
-	@Getter
-	@Setter
-	private String name;
-	
+
 	@Getter
 	@Setter
 	@Builder.Default
 	private List<Privilege> privileges = new ArrayList<>();
+
+	@Getter
+	@Setter
+	private String name;
+
 }

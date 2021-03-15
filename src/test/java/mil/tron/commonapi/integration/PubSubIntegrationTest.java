@@ -103,7 +103,7 @@ public class PubSubIntegrationTest {
 
         mockMvc.perform(delete(ENDPOINT + "{id}", sub1Id)).andExpect(status().isNoContent());
         mockMvc.perform(delete(ENDPOINT + "{id}", sub2Id)).andExpect(status().isNoContent());
-        personRepo.deleteAll();
+        personRepo.deleteAllInBatch();
     }
 
     @Test

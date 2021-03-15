@@ -246,6 +246,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 						ReflectionUtils.invokeMethod(setterMethod, organization, org);
 					} else if (field.getType().equals(String.class)) {
 						ReflectionUtils.invokeMethod(setterMethod, organization, v);
+					} else if (field.getType().equals(Branch.class)) {
+						ReflectionUtils.invokeMethod(setterMethod, organization, Branch.valueOf(v));
+					} else if (field.getType().equals(Unit.class)) {
+						ReflectionUtils.invokeMethod(setterMethod, organization, Unit.valueOf(v));
 					} else {
 						throw new InvalidRecordUpdateRequest("Field: " + field.getName() + " is not of recognized type");
 					}
