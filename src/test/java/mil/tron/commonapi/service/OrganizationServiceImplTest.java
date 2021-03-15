@@ -265,6 +265,19 @@ class OrganizationServiceImplTest {
 	}
 
 	@Test
+	void changeOrganizationBranchAndUnitType() {
+		Map<String, String> attribs = new HashMap<>();
+		attribs.put("branchType", Branch.USAF.toString());
+		attribs.put("orgType", Unit.OTHER_USAF.toString());
+
+		Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
+		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
+		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
+		assertThat(savedOrg.getBranchType()).isEqualTo(Branch.USAF);
+		assertThat(savedOrg.getOrgType()).isEqualTo(Unit.OTHER_USAF);
+	}
+
+	@Test
 	void changeOrganizationName() {
 		Map<String, String> attribs = new HashMap<>();
 		attribs.put("name", "test org");
