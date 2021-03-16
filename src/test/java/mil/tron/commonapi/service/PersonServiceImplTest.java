@@ -1,13 +1,8 @@
 package mil.tron.commonapi.service;
 
-import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
-import com.github.fge.jsonpatch.JsonPatchException;
-import com.github.fge.jsonpatch.JsonPatchOperation;
-import liquibase.pro.packaged.J;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
@@ -23,7 +18,6 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
-import com.github.fge.jsonpatch.JsonPatch;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -205,24 +199,27 @@ class PersonServiceImplTest {
 	@Nested
 	class PatchPersonTest {
 		@Test
-		void idsNotMatching() throws JSONException {
+		void successfulPatch() throws JSONException, IOException {
 			JSONObject content = new JSONObject();
 			content.put("op","replace");
 			content.put("path","/firstName");
 			content.put("value",testPerson.getFirstName());
-			JSONArray contentArr = new JSONArray();
-			contentArr.put(content);
+			JSONArray patch = new JSONArray();
+			patch.put(content);
 
+			ObjectMapper objectMapper = new ObjectMapper();
+			JsonNode newNode = objectMapper.readTree(patch.toString());
+			JsonPatch patch2 = JsonPatch.fromJson(newNode);
 
-			JsonPatch patch = JsonPatch.fromJson(content);
-
-			PersonDto tempTestPersonDto = testDto;
-			testDto.setFirstName("patchFirst");
+			Person tempTestPerson = testPerson;
+			tempTestPerson.setFirstName("patchFirst");
 
 			// Test id not matching person id
-			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(testPerson));
-
-			assertThrows(InvalidRecordUpdateRequest.class, () -> personService.patchPerson(UUID.randomUUID(), content));
+			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(tempTestPerson));
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+//			assertThrows(InvalidRecordUpdateRequest.class, () -> personService.patchPerson(UUID.randomUUID(), patch2));
+			PersonDto patchedPerson = personService.patchPerson(testPerson.getId(), patch2);
+			assertThat(patchedPerson.getId()).isEqualTo(testPerson.getId());
 		}
 
 //		@Test
