@@ -430,20 +430,29 @@ public class OrganizationServiceImpl implements OrganizationService {
 	/**
 	 * Deletes an organization by UUID (if it exists)
 	 *
-	 * @param id
+	 * @param id id of the Organization to delete
 	 */
 	@Override
 	public void deleteOrganization(UUID id) {
-		if (repository.existsById(id)) {
-			repository.deleteById(id);
+		Organization org = repository.findById(id)
+				.orElseThrow(() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
-			OrganizationDeleteMessage message = new OrganizationDeleteMessage();
-			message.setOrgIds(Sets.newHashSet(id));
-			eventManagerService.recordEventAndPublish(message);
+		// must delete the parent link (since parent depends on this org to exist by its foreign key)
+		if (org.getParentOrganization() != null) {
+			org.setParentOrganization(null);
+			repository.save(org);
 		}
-		else {
-			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
-		}
+
+		freeOrganizationFromLinks(org);
+
+		// now delete it
+		repository.deleteById(id);
+
+		// send the pub sub
+		OrganizationDeleteMessage message = new OrganizationDeleteMessage();
+		message.setOrgIds(Sets.newHashSet(id));
+		eventManagerService.recordEventAndPublish(message);
+
 	}
 
 	/**
@@ -726,6 +735,27 @@ public class OrganizationServiceImpl implements OrganizationService {
 			if (unknownProperties.size() > 0) {
 				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", orgType, String.join(", ", unknownProperties)));
 			}
+		}
+	}
+
+	/**
+	 * Private helper to make sure org specified by 'id' is not bound or referenced
+	 * by any other organization (used just prior to deletion).  If a link is found,
+	 * it is removed.
+	 * @param org organization to check for links to
+	 */
+	private void freeOrganizationFromLinks(Organization org) {
+
+		List<Organization> parentalOrgs = repository.findOrganizationsByParentOrganization(org);
+		for (Organization child: parentalOrgs) {
+			child.setParentOrganization(null);
+			repository.save(child);
+		}
+
+		List<Organization> orgsThatOwnThisOrg = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
+		for (Organization parent: orgsThatOwnThisOrg) {
+			parent.removeSubordinateOrganization(org);
+			repository.save(parent);
 		}
 	}
 }

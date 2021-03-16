@@ -170,15 +170,38 @@ class OrganizationServiceImplTest {
 	class DeleteOrganizationTest {
 		@Test
 		 void successfulDelete() {
-			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+
+			// tests we can delete a "nested" org that is linked as a parent somewhere
+			//  and as a subordinate org somewhere
+
+			Organization parent = new Organization();
+			Organization theOrg = new Organization();  // the org we're going to delete
+			Organization someDownStreamOrg = new Organization();
+			parent.addSubordinateOrganization(theOrg);
+			theOrg.setParentOrganization(parent);
+			theOrg.addSubordinateOrganization(someDownStreamOrg);
+			someDownStreamOrg.setParentOrganization(theOrg);
+
+			Mockito.when(repository.findOrganizationsByParentOrganization(theOrg))
+					.thenReturn(Lists.newArrayList(someDownStreamOrg));
+
+			Mockito.when(repository.findOrganizationsBySubordinateOrganizationsContaining(theOrg))
+					.thenReturn(Lists.newArrayList(parent));
+
+			Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(theOrg));
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
-			organizationService.deleteOrganization(testOrg.getId());
-			Mockito.verify(repository, Mockito.times(1)).deleteById(testOrg.getId());
+			organizationService.deleteOrganization(theOrg.getId());
+			Mockito.verify(repository, Mockito.times(1)).deleteById(theOrg.getId());
+
+			assertNull(theOrg.getParentOrganization());
+			assertFalse(parent.getSubordinateOrganizations().contains(theOrg));
+			assertNull(someDownStreamOrg.getParentOrganization());
 		}
 		
 		@Test
 		void deleteIdNotExist() {
-			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenThrow(new RecordNotFoundException("Not found"));
 			
 			assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
 				organizationService.deleteOrganization(testOrg.getId());
@@ -556,6 +579,7 @@ class OrganizationServiceImplTest {
 		assertFalse(node.get("parentOrganization").has("leader"));
 	}
 
+	@Test
 	void testThatOrgCantAssignSubordinateOrgThatsInItsAncestryChain() {
 
 		Organization greatGrandParent = new Organization();
@@ -580,4 +604,16 @@ class OrganizationServiceImplTest {
 		assertFalse(organizationService.orgIsInAncestryChain(legitSubOrg.getId(), theOrg));
 
 	}
+
+	@Test
+	void testThatParentFieldCanBeNulledOut() {
+
+		// null is a valid parent (no parent)
+		Organization parent = new Organization();
+		Organization theOrg = new Organization();
+		theOrg.setParentOrganization(parent);
+		theOrg.setParentOrganization(null);
+		assertNull(parent.getParentOrganization());
+	}
+
 }

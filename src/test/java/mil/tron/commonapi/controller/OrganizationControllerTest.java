@@ -317,6 +317,13 @@ public class OrganizationControllerTest {
 			mockMvc.perform(delete(ENDPOINT + "{id}/leader", testOrgDto.getId()))
 					.andExpect(status().isOk());
 		}
+
+		@Test
+		void testDeleteOrgParent() throws Exception {
+			Mockito.when(organizationService.modify(Mockito.any(UUID.class), Mockito.anyMap())).thenReturn(testOrgDto);
+			mockMvc.perform(delete(ENDPOINT + "{id}/parent", testOrgDto.getId()))
+					.andExpect(status().isOk());
+		}
 	}
 
 	@Nested
