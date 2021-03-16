@@ -704,12 +704,21 @@ public class OrganizationServiceImpl implements OrganizationService {
 		return accumulator;
 	}
 
-	/** Private helper to make sure prior to setting an orgs parent, that that propose parent
+	/**
+	 * Private helper to make sure prior to setting an orgs parent, that that propose parent
 	 * is not already in the descendents of said organization.
 	 * @param org the org we're modifying the parent for
 	 * @param parentUUIDCandidate the UUID of the proposed parent
 	 */
 	private void setOrgParentConditionally(Organization org, String parentUUIDCandidate) {
+
+		// if we're setting to just null, skip all checks below
+		if (parentUUIDCandidate == null) {
+			org.setParentOrganization(null);
+			repository.save(org);
+			return;
+		}
+
 		if (!this.parentOrgCandidateIsDescendent(
 				convertToDto(org), UUID.fromString(parentUUIDCandidate))) {
 
