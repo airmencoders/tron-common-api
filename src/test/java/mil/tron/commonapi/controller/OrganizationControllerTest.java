@@ -416,6 +416,13 @@ public class OrganizationControllerTest {
 			Person p2 = new Person();
 			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
 
+			Mockito.when(organizationService.flattenOrg(testOrgDto))
+					.thenReturn(OrganizationDto
+							.builder()
+							.id(testOrgDto.getId())
+							.members(newOrg.getMembers())
+							.subordinateOrganizations(Set.of(newOrg.getId()))
+							.build());
 			Mockito.when(organizationService.getOrganization(newOrg.getId())).thenReturn(newOrg);
 			Mockito.when(organizationService.getOrganization(testOrgDto.getId())).thenReturn(testOrgDto);
 			mockMvc.perform(get(ENDPOINT + "{id}?flatten=true", testOrg.getId()))

@@ -234,6 +234,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 					Method setterMethod = organization.getClass().getMethod(setterName, field.getType());
 					if (k.equals("id")) {
 						throw new InvalidRecordUpdateRequest("Cannot set/modify this record ID field");
+					} else if (k.equals("parentOrganization")) {
+						setOrgParentConditionally(organization, v);
 					} else if (v == null) {
 						ReflectionUtils.invokeMethod(setterMethod, organization, (Object) null);
 					} else if (field.getType().equals(Person.class)) {
@@ -622,7 +624,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Helper function that checks if a given org id is in the parental ancestry chain
-	 *
+	 * Primarily used before assigning an orgId as another org's subordinate org
+	 * (example - Org A can't be an org B's subordinate if Org A already upstream of Org B)
 	 * @param id          the org to check/vet is not already in the parental ancestry chain
 	 * @param startingOrg the org to start the upward-search from
 	 * @return true/false if 'id' is in the ancestry chain
@@ -633,6 +636,91 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (parentOrg == null) return false;
 		else if (parentOrg.getId().equals(id)) return true;
 		else return orgIsInAncestryChain(id, parentOrg);
+	}
+
+	/**
+	 * Helper function that checks if a given org parent candidate is already in the chosen org's
+	 * descendents (downstream of it).
+	 * Primarily used before assigning an org as a parent
+	 * (example - Org A can't be an org B's parent if Org A already downstream of Org B)
+	 * @param org          the org who wants to get a parent assigned to it
+	 * @param candidateParentId the org to start the downward-search from
+	 * @return true/false if 'id' is in the ancestry chain
+	 */
+	@Override
+	public boolean parentOrgCandidateIsDescendent(OrganizationDto org, UUID candidateParentId) {
+		return flattenOrg(org).getSubordinateOrganizations().contains(candidateParentId);
+	}
+
+	@Override
+	public OrganizationDto flattenOrg(OrganizationDto org) {
+		OrganizationDto flattenedOrg = new OrganizationDto();
+
+		// copy over the basic info first
+		flattenedOrg.setBranchType(org.getBranchType());
+		flattenedOrg.setOrgType(org.getOrgType());
+		flattenedOrg.setParentOrganizationUUID(org.getParentOrganization());
+		flattenedOrg.setId(org.getId());
+		flattenedOrg.setLeaderUUID(org.getLeader());
+		flattenedOrg.setName(org.getName());
+		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
+		if (org.getMembers() != null) {
+			flattenedOrg.setMembersUUID(new HashSet<>(org.getMembers()));
+		}
+		else {
+			flattenedOrg.setMembersUUID(new HashSet<>());
+		}
+		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), flattenedOrg.getMembers()));
+		return flattenedOrg;
+	}
+
+	// recursive helper function to dig deep on a units subordinates
+	private Set<UUID> harvestOrgSubordinateUnits(Set<UUID> orgIds, Set<UUID> accumulator) {
+
+		if (orgIds == null || orgIds.isEmpty()) return accumulator;
+
+		for (UUID orgId : orgIds) {
+			accumulator.add(orgId);
+			Set<UUID> ids = harvestOrgSubordinateUnits(getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			accumulator.addAll(ids);
+		}
+
+		return accumulator;
+	}
+
+	// recursive helper function to dig deep on a units members
+	private Set<UUID> harvestOrgMembers(Set<UUID> orgIds, Set<UUID> accumulator) {
+
+		if (orgIds == null || orgIds.isEmpty()) return accumulator;
+
+		for (UUID orgId : orgIds) {
+			OrganizationDto subOrg = getOrganization(orgId);
+			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
+			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
+			Set<UUID> ids = harvestOrgMembers(getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			accumulator.addAll(ids);
+		}
+
+		return accumulator;
+	}
+
+	/** Private helper to make sure prior to setting an orgs parent, that that propose parent
+	 * is not already in the descendents of said organization.
+	 * @param org the org we're modifying the parent for
+	 * @param parentUUIDCandidate the UUID of the proposed parent
+	 */
+	private void setOrgParentConditionally(Organization org, String parentUUIDCandidate) {
+		if (!this.parentOrgCandidateIsDescendent(
+				convertToDto(org), UUID.fromString(parentUUIDCandidate))) {
+
+			Organization parentOrg = repository.findById(UUID.fromString(parentUUIDCandidate)).orElseThrow(
+					() -> new InvalidRecordUpdateRequest("Provided org UUID " + parentUUIDCandidate + " does not match any existing records"));
+			org.setParentOrganization(parentOrg);
+			repository.save(org);
+		}
+		else {
+			throw new InvalidRecordUpdateRequest("Proposed Parent UUID is already a descendent of this organization");
+		}
 	}
 
 	/**
