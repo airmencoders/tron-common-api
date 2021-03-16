@@ -222,7 +222,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return The modified Organization entity object
 	 */
 	@Override
-	public OrganizationDto modify(UUID organizationId, Map<String, String> attribs) {
+	public OrganizationDto modify(UUID organizationId, Map<String, String> attribs) {  //NOSONAR
 		Organization organization = repository.findById(organizationId).orElseThrow(
 				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
 		Map<String, String> metadata = new HashMap<>();
@@ -714,7 +714,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 				convertToDto(org), UUID.fromString(parentUUIDCandidate))) {
 
 			Organization parentOrg = repository.findById(UUID.fromString(parentUUIDCandidate)).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("Provided org UUID " + parentUUIDCandidate + " does not match any existing records"));
+					() -> new InvalidRecordUpdateRequest("Provided org UUID " + parentUUIDCandidate + " was not found"));
 			org.setParentOrganization(parentOrg);
 			repository.save(org);
 		}
