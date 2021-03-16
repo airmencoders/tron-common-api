@@ -1,5 +1,6 @@
 package mil.tron.commonapi.pubsub;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.pubsub.messages.PubSubMessage;
@@ -10,8 +11,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -20,6 +25,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static mil.tron.commonapi.security.Utility.*;
 
 /**
  * A Service that fires off messages to subscribers for various events.
@@ -30,6 +37,9 @@ import java.util.regex.Pattern;
 @Service
 public class EventPublisher {
     private final Log publisherLog = LogFactory.getLog(CommonApiLogger.class);
+
+    @Value("${signature-header}")
+    private String signatureHeader;
 
     /**
      * Publisher REST bean that will timeout after 5secs to a subscriber so that
@@ -57,6 +67,8 @@ public class EventPublisher {
 
     private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     public EventPublisher(SubscriberService subService) {
         this.subService = subService;
     }
@@ -81,7 +93,13 @@ public class EventPublisher {
             if (!extractSubscriberNamespace(s.getSubscriberAddress()).equals(requesterNamespace)) {
                 publisherLog.info("[PUBLISH BROADCAST] - Event: " + message.getEventType().toString() + " to Subscriber: " + s.getSubscriberAddress());
                 try {
-                    publisherSender.postForLocation(s.getSubscriberAddress(), message);
+                    String json = OBJECT_MAPPER.writeValueAsString(message);
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.APPLICATION_JSON);
+                    if (s.getSecret() != null) {
+                        headers.set(signatureHeader, hmac(s.getSecret(), json));
+                    }
+                    publisherSender.postForLocation(s.getSubscriberAddress(), new HttpEntity<String>(json, headers));
                     publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + s.getSubscriberAddress());
                 } catch (Exception e) {
                     publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + s.getSubscriberAddress() + " failed.  Exception: " + e.getMessage());
