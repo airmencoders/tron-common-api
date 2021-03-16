@@ -21,7 +21,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -82,7 +81,7 @@ public class SubscriberControllerTests {
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(subscriber)))
-                    .andExpect(status().isCreated())
+                    .andExpect(status().isOk())
                     .andExpect(result ->
                         assertEquals(subscriber.getId(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Subscriber.class).getId()));
     }
