@@ -243,6 +243,25 @@ public class PersonControllerTest {
 		}
 
 		@Test
+		void testPatchInvalidOp() throws Exception {
+			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
+
+			JSONObject content = new JSONObject();
+			content.put("op","noop");
+			content.put("path","/firstName");
+			content.put("value","bad data");
+			JSONArray patch = new JSONArray();
+			patch.put(content);
+
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+					.contentType("application/json-patch+json")
+					.accept(MediaType.APPLICATION_JSON)
+					.content(patch.toString()))
+					.andExpect(status().isBadRequest())
+					.andExpect(result -> assertThat(result.getResolvedException() instanceof HttpMessageNotReadableException));
+		}
+
+		@Test
 		void testPatchInvalidJsonBody() throws Exception {
 			// Send empty string as bad json data
 			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
