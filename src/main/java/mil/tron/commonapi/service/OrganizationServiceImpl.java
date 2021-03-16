@@ -732,7 +732,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 					unknownProperties.add(key);
 				}
 			});
-			if (unknownProperties.size() > 0) {
+			if (!unknownProperties.isEmpty()) {
 				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", orgType, String.join(", ", unknownProperties)));
 			}
 		}
