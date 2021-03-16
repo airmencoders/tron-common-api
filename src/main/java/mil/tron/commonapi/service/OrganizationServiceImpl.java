@@ -222,7 +222,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return The modified Organization entity object
 	 */
 	@Override
-	public OrganizationDto modify(UUID organizationId, Map<String, String> attribs) {
+	public OrganizationDto modify(UUID organizationId, Map<String, String> attribs) {  //NOSONAR
 		Organization organization = repository.findById(organizationId).orElseThrow(
 				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
 		Map<String, String> metadata = new HashMap<>();
@@ -234,6 +234,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 					Method setterMethod = organization.getClass().getMethod(setterName, field.getType());
 					if (k.equals("id")) {
 						throw new InvalidRecordUpdateRequest("Cannot set/modify this record ID field");
+					} else if (k.equals("parentOrganization")) {
+						setOrgParentConditionally(organization, v);
 					} else if (v == null) {
 						ReflectionUtils.invokeMethod(setterMethod, organization, (Object) null);
 					} else if (field.getType().equals(Person.class)) {
@@ -430,20 +432,29 @@ public class OrganizationServiceImpl implements OrganizationService {
 	/**
 	 * Deletes an organization by UUID (if it exists)
 	 *
-	 * @param id
+	 * @param id id of the Organization to delete
 	 */
 	@Override
 	public void deleteOrganization(UUID id) {
-		if (repository.existsById(id)) {
-			repository.deleteById(id);
+		Organization org = repository.findById(id)
+				.orElseThrow(() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
-			OrganizationDeleteMessage message = new OrganizationDeleteMessage();
-			message.setOrgIds(Sets.newHashSet(id));
-			eventManagerService.recordEventAndPublish(message);
+		// must delete the parent link (since parent depends on this org to exist by its foreign key)
+		if (org.getParentOrganization() != null) {
+			org.setParentOrganization(null);
+			repository.save(org);
 		}
-		else {
-			throw new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id));
-		}
+
+		freeOrganizationFromLinks(org);
+
+		// now delete it
+		repository.deleteById(id);
+
+		// send the pub sub
+		OrganizationDeleteMessage message = new OrganizationDeleteMessage();
+		message.setOrgIds(Sets.newHashSet(id));
+		eventManagerService.recordEventAndPublish(message);
+
 	}
 
 	/**
@@ -613,7 +624,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Helper function that checks if a given org id is in the parental ancestry chain
-	 *
+	 * Primarily used before assigning an orgId as another org's subordinate org
+	 * (example - Org A can't be an org B's subordinate if Org A already upstream of Org B)
 	 * @param id          the org to check/vet is not already in the parental ancestry chain
 	 * @param startingOrg the org to start the upward-search from
 	 * @return true/false if 'id' is in the ancestry chain
@@ -624,6 +636,100 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (parentOrg == null) return false;
 		else if (parentOrg.getId().equals(id)) return true;
 		else return orgIsInAncestryChain(id, parentOrg);
+	}
+
+	/**
+	 * Helper function that checks if a given org parent candidate is already in the chosen org's
+	 * descendents (downstream of it).
+	 * Primarily used before assigning an org as a parent
+	 * (example - Org A can't be an org B's parent if Org A already downstream of Org B)
+	 * @param org          the org who wants to get a parent assigned to it
+	 * @param candidateParentId the org to start the downward-search from
+	 * @return true/false if 'id' is in the ancestry chain
+	 */
+	@Override
+	public boolean parentOrgCandidateIsDescendent(OrganizationDto org, UUID candidateParentId) {
+		return flattenOrg(org).getSubordinateOrganizations().contains(candidateParentId);
+	}
+
+	@Override
+	public OrganizationDto flattenOrg(OrganizationDto org) {
+		OrganizationDto flattenedOrg = new OrganizationDto();
+
+		// copy over the basic info first
+		flattenedOrg.setBranchType(org.getBranchType());
+		flattenedOrg.setOrgType(org.getOrgType());
+		flattenedOrg.setParentOrganizationUUID(org.getParentOrganization());
+		flattenedOrg.setId(org.getId());
+		flattenedOrg.setLeaderUUID(org.getLeader());
+		flattenedOrg.setName(org.getName());
+		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
+		if (org.getMembers() != null) {
+			flattenedOrg.setMembersUUID(new HashSet<>(org.getMembers()));
+		}
+		else {
+			flattenedOrg.setMembersUUID(new HashSet<>());
+		}
+		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), flattenedOrg.getMembers()));
+		return flattenedOrg;
+	}
+
+	// recursive helper function to dig deep on a units subordinates
+	private Set<UUID> harvestOrgSubordinateUnits(Set<UUID> orgIds, Set<UUID> accumulator) {
+
+		if (orgIds == null || orgIds.isEmpty()) return accumulator;
+
+		for (UUID orgId : orgIds) {
+			accumulator.add(orgId);
+			Set<UUID> ids = harvestOrgSubordinateUnits(getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			accumulator.addAll(ids);
+		}
+
+		return accumulator;
+	}
+
+	// recursive helper function to dig deep on a units members
+	private Set<UUID> harvestOrgMembers(Set<UUID> orgIds, Set<UUID> accumulator) {
+
+		if (orgIds == null || orgIds.isEmpty()) return accumulator;
+
+		for (UUID orgId : orgIds) {
+			OrganizationDto subOrg = getOrganization(orgId);
+			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
+			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
+			Set<UUID> ids = harvestOrgMembers(getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			accumulator.addAll(ids);
+		}
+
+		return accumulator;
+	}
+
+	/**
+	 * Private helper to make sure prior to setting an orgs parent, that that propose parent
+	 * is not already in the descendents of said organization.
+	 * @param org the org we're modifying the parent for
+	 * @param parentUUIDCandidate the UUID of the proposed parent
+	 */
+	private void setOrgParentConditionally(Organization org, String parentUUIDCandidate) {
+
+		// if we're setting to just null, skip all checks below
+		if (parentUUIDCandidate == null) {
+			org.setParentOrganization(null);
+			repository.save(org);
+			return;
+		}
+
+		if (!this.parentOrgCandidateIsDescendent(
+				convertToDto(org), UUID.fromString(parentUUIDCandidate))) {
+
+			Organization parentOrg = repository.findById(UUID.fromString(parentUUIDCandidate)).orElseThrow(
+					() -> new InvalidRecordUpdateRequest("Provided org UUID " + parentUUIDCandidate + " was not found"));
+			org.setParentOrganization(parentOrg);
+			repository.save(org);
+		}
+		else {
+			throw new InvalidRecordUpdateRequest("Proposed Parent UUID is already a descendent of this organization");
+		}
 	}
 
 	/**
@@ -723,9 +829,30 @@ public class OrganizationServiceImpl implements OrganizationService {
 					unknownProperties.add(key);
 				}
 			});
-			if (unknownProperties.size() > 0) {
+			if (!unknownProperties.isEmpty()) {
 				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", orgType, String.join(", ", unknownProperties)));
 			}
+		}
+	}
+
+	/**
+	 * Private helper to make sure org specified by 'id' is not bound or referenced
+	 * by any other organization (used just prior to deletion).  If a link is found,
+	 * it is removed.
+	 * @param org organization to check for links to
+	 */
+	private void freeOrganizationFromLinks(Organization org) {
+
+		List<Organization> parentalOrgs = repository.findOrganizationsByParentOrganization(org);
+		for (Organization child: parentalOrgs) {
+			child.setParentOrganization(null);
+			repository.save(child);
+		}
+
+		List<Organization> orgsThatOwnThisOrg = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
+		for (Organization parent: orgsThatOwnThisOrg) {
+			parent.removeSubordinateOrganization(org);
+			repository.save(parent);
 		}
 	}
 }

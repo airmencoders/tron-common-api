@@ -149,11 +149,11 @@ public class OrganizationController {
 				// flatten first, then customize that entity
 				return new ResponseEntity<>(
 						organizationService.customizeEntity(
-								initCustomizationOptions(peopleFields, orgFields), flattenOrg(org)), HttpStatus.OK);
+								initCustomizationOptions(peopleFields, orgFields), organizationService.flattenOrg(org)), HttpStatus.OK);
 			}
 
 			// otherwise return flattened org as a regular DTO
-			return new ResponseEntity<>(flattenOrg(org), HttpStatus.OK);
+			return new ResponseEntity<>(organizationService.flattenOrg(org), HttpStatus.OK);
 		}
 		else {
 			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
@@ -243,6 +243,24 @@ public class OrganizationController {
 		Map<String, String> noLeaderMap = new HashMap<>();
 		noLeaderMap.put("leader", null);
 		return new ResponseEntity<>(organizationService.modify(organizationId, noLeaderMap), HttpStatus.OK);
+	}
+
+	@Operation(summary = "Deletes a parent from a subordinate organization", description = "Deletes/clears out the parent org with no org")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Organization not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeWrite
+	@DeleteMapping(value = "/{id}/parent")
+	public ResponseEntity<Object> deleteOrgParent(
+			@Parameter(description = "Organization ID to delete the parent from", required = true) @PathVariable("id") UUID organizationId) {
+		Map<String, String> noParentMap = new HashMap<>();
+		noParentMap.put("parentOrganization", null);
+		return new ResponseEntity<>(organizationService.modify(organizationId, noParentMap), HttpStatus.OK);
 	}
 
 	@Operation(summary = "Deletes a member(s) from the organization", description = "Deletes a member(s) from an organization")
@@ -364,51 +382,6 @@ public class OrganizationController {
 	@PostMapping(value = "/organizations")
 	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
 		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
-	}
-
-	private OrganizationDto flattenOrg(OrganizationDto org) {
-		OrganizationDto flattenedOrg = new OrganizationDto();
-
-		// copy over the basic info first
-		flattenedOrg.setBranchType(org.getBranchType());
-		flattenedOrg.setOrgType(org.getOrgType());
-		flattenedOrg.setParentOrganizationUUID(org.getParentOrganization());
-		flattenedOrg.setId(org.getId());
-		flattenedOrg.setLeaderUUID(org.getLeader());
-		flattenedOrg.setName(org.getName());
-		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
-		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), new HashSet<>()));
-		return flattenedOrg;
-	}
-
-	// recursive helper function to dig deep on a units subordinates
-	private Set<UUID> harvestOrgSubordinateUnits(Set<UUID> orgIds, Set<UUID> accumulator) {
-
-		if (orgIds == null || orgIds.isEmpty()) return accumulator;
-
-		for (UUID orgId : orgIds) {
-			accumulator.add(orgId);
-			Set<UUID> ids = harvestOrgSubordinateUnits(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
-			accumulator.addAll(ids);
-		}
-
-		return accumulator;
-	}
-
-	// recursive helper function to dig deep on a units subordinates
-	private Set<UUID> harvestOrgMembers(Set<UUID> orgIds, Set<UUID> accumulator) {
-
-		if (orgIds == null || orgIds.isEmpty()) return accumulator;
-
-		for (UUID orgId : orgIds) {
-			OrganizationDto subOrg = organizationService.getOrganization(orgId);
-			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
-			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
-			Set<UUID> ids = harvestOrgMembers(organizationService.getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
-			accumulator.addAll(ids);
-		}
-
-		return accumulator;
 	}
 
 	// helper to build the options map for customization of return DTOs
