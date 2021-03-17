@@ -1,10 +1,7 @@
 package mil.tron.commonapi.dto.appsource;
 
 import lombok.*;
-import mil.tron.commonapi.dto.AppClientUserPrivDto;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @AllArgsConstructor

@@ -10,10 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
-import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
-import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
-import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppSourceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -43,7 +40,11 @@ public class AppSourceController {
             @ApiResponse(responseCode = "201",
                     description = "Successful creation"),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges"),
+                    description = "No DASHBOARD_ADMIN privileges",
+            		content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+					)),
             @ApiResponse(responseCode = "400",
                     description = "Malformed Request Body",
                     content = @Content(
@@ -66,7 +67,11 @@ public class AppSourceController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = AppSourceDto.class)))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges",
+            		content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+					))
     })
     @PreAuthorizeDashboardAdmin
     @GetMapping
@@ -82,7 +87,11 @@ public class AppSourceController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = AppSourceDetailsDto.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges"),
+                    description = "No DASHBOARD_ADMIN privileges",
+            		content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+					)),
             @ApiResponse(responseCode = "404",
                     description = "Requested App Source not found",
                     content = @Content(
@@ -111,7 +120,11 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
                     )),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges"),
+                    description = "No DASHBOARD_ADMIN privileges",
+            		content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+					)),
             @ApiResponse(responseCode = "400",
                     description = "Malformed Request Body",
                     content = @Content(
@@ -134,15 +147,19 @@ public class AppSourceController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Source Removed OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = AppSourceDetailsDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Id is malformed",
-                    content = @Content(schema = @Schema(implementation = BadRequestException.class))),
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "404",
                     description = "App Source Id not found",
-                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges",
+            		content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+					))
     })
     @PreAuthorizeDashboardAdmin
     @DeleteMapping("/{id}")
