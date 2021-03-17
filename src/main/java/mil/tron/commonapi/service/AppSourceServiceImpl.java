@@ -7,7 +7,6 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.entity.appsource.AppSourcePriv;
-import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
