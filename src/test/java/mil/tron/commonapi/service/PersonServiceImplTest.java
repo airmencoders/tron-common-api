@@ -287,32 +287,6 @@ class PersonServiceImplTest {
 				personService.patchPerson(testPerson.getId(), patch);
 			});
 		}
-
-		@Test
-		void invalidPatchOp() throws JSONException, IOException {
-			// move op
-			content = new JSONObject();
-			content.put("op","noop");
-			content.put("path","/firstName");
-			content.put("value","wut?");
-			// clear out test op
-			contentArr = new JSONArray();
-			contentArr.put(content);
-
-			JsonNode newNode = objectMapper.readTree(contentArr.toString());
-			patch = JsonPatch.fromJson(newNode);  // throws here instead.  can't build a bad patch to test
-
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
-			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(testPerson));
-//			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
-			// pass through the patched entity
-//			Mockito.when(repository.save(Mockito.any(Person.class))).thenAnswer(i -> i.getArguments()[0]);
-//			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
-
-			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
-				personService.patchPerson(testPerson.getId(), patch);
-			});
-		}
 	}
 
     @Test
