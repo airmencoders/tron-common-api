@@ -29,6 +29,10 @@ public class AppSource {
 
     @Getter
     @Setter
+    private String openApiSpecFilename;
+
+    @Getter
+    @Setter
     @Builder.Default
     @OneToMany(mappedBy = "appSource")
     private Set<AppSourcePriv> appSourcePrivs = new HashSet<>();

@@ -1,0 +1,6917 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8081
+  description: Generated server url
+paths:
+  /training-svc/add-training:
+    post:
+      tags:
+      - training-svc-controller
+      summary: Add Training Data
+      operationId: addTrainingData
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTrainingDataRequest'
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ADDTRAININGOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /flight-svc/add-flight:
+    post:
+      tags:
+      - flight-svc-controller
+      summary: Adds Flight records
+      operationId: addFlight
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddFlightRequest'
+        required: true
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /training-svc/training-task:
+    get:
+      tags:
+      - training-svc-controller
+      summary: Training Task Data
+      operationId: getTrainingTaskData
+      parameters:
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TRAININGTASKDATAOutput'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /training-svc/training-requirement:
+    get:
+      tags:
+      - training-svc-controller
+      summary: Training Requirement Data
+      operationId: getTrainingRequirementData
+      parameters:
+      - name: programCodes
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: profileNames
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TRAININGREQUIREMENTOBJIntType'
+  /training-svc/training-program:
+    get:
+      tags:
+      - training-svc-controller
+      summary: Training Program Data
+      operationId: getTrainingProgramData
+      parameters:
+      - name: programCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: programSearchString
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TRAININGPROGRAMOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /training-svc/training-profile:
+    get:
+      tags:
+      - training-svc-controller
+      summary: Training Profile Data
+      operationId: getTrainingProfileData
+      parameters:
+      - name: profileRecordNumber
+        in: query
+        required: true
+        schema:
+          type: number
+          format: double
+      - name: profileSearchString
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TRAININGPROFILEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /training-svc/profile-assignment:
+    get:
+      tags:
+      - training-svc-controller
+      summary: Profile Assignment Data
+      operationId: getProfileAssignmentData
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: profileRecordNumber
+        in: query
+        required: true
+        schema:
+          type: number
+          format: double
+      - name: profileSearchString
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PROFILEASSIGNMENTOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /training-svc/current-training:
+    get:
+      tags:
+      - training-svc-controller
+      summary: Current Training Data
+      operationId: getCurrentTraining
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: taskSearchString
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: programSearchString
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CURRENTTRAININGOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /training-svc/archive-training:
+    get:
+      tags:
+      - training-svc-controller
+      summary: Archive Training Data
+      operationId: archiveTrainingData
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: taskSearchString
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: programSearchString
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ARCHIVETRAININGOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /flight-svc/flight-data:
+    get:
+      tags:
+      - flight-svc-controller
+      summary: Requests Flight Data
+      operationId: getFlightData
+      parameters:
+      - name: flightFromDate
+        in: query
+        description: yyyy-MM-dd
+        required: false
+        schema:
+          type: string
+      - name: flightToDate
+        in: query
+        description: yyyy-MM-dd
+        required: false
+        schema:
+          type: string
+      - name: chargedOrgIds
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+      - name: flightIds
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: mdsTailNumbers
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+      - name: mdsList
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+      - name: mdsSimCodes
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLIGHTOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /flight-svc/flight-activity:
+    get:
+      tags:
+      - flight-svc-controller
+      summary: Requests Flight Activity data
+      operationId: getFlightActivityData
+      parameters:
+      - name: flightFromDate
+        in: query
+        description: yyyy-MM-dd
+        required: false
+        schema:
+          type: string
+      - name: flightToDate
+        in: query
+        description: yyyy-MM-dd
+        required: false
+        schema:
+          type: string
+      - name: flyerIds
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+      - name: crewPositionCodes
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+      - name: flightIds
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLIGHTACTIVITYOBJIntType'
+  /arms-table-svc/sonic-boom:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Sonic Boom Data
+      operationId: getSonicBoom
+      parameters:
+      - name: flightRecordNumberList
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SONICBOOMDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/ratings-data:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Ratings Data
+      operationId: getRatingsData
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RATINGSDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/rated-officer-data:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Rated Officer Data
+      operationId: getRatedOfficerData
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RATEDOFFICERDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/pqi-data:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests PQI Data
+      operationId: getPqiData
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PQIDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/personnel-info:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Personnel Info
+      operationId: getPersonnelInfo
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PERSONNELINFOOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/person-list:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Person List
+      operationId: getPersonListVw
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PERSONLISTVWOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/pcs-man-month:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests PCS Man Month Data
+      operationId: getPCSManMonth
+      parameters:
+      - name: manMonthRecordNumber
+        in: query
+        required: true
+        schema:
+          type: number
+          format: double
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PCSMANMONTHDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/passport-data:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Passport Data
+      operationId: getPassportData
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PASSPORTDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/organization-data:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Organization Data
+      operationId: getOrganizationData
+      parameters:
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ORGANIZATIONDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/max-min-ratings:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Max Min Ratings
+      operationId: getMaxMinRatings
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MAXMINRATINGSOBJIntType'
+  /arms-table-svc/max-incentive-pay:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Max Incentive Pay
+      operationId: getMaxIncentivePay
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MAXINCENTIVEPAYOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/max-badge:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Max Badge
+      operationId: getMaxBadge
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MAXBADGEOBJIntType'
+  /arms-table-svc/max-aviation:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Max Aviation Data
+      operationId: getMaxAviation
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MAXAVIATIONOBJIntType'
+  /arms-table-svc/man-month:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Man Month Data
+      operationId: getManMonth
+      parameters:
+      - name: manMonthRecordNumber
+        in: query
+        required: true
+        schema:
+          type: number
+          format: double
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MANMONTHDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/line-badge:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Line Badge Data
+      operationId: getLineBadge
+      parameters:
+      - name: lineBadgeIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LINEBADGEDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/jump:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Jump Data
+      operationId: getJump
+      parameters:
+      - name: jumpRecordNumber
+        in: query
+        required: true
+        schema:
+          type: number
+          format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JUMPDATAOBJIntType'
+  /arms-table-svc/jump-total:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Jump Data Total
+      operationId: getJumpTotal
+      parameters:
+      - name: jumpActivityDutyCode
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JUMPDATATOTALOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/jump-audit:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Jump Audit Data
+      operationId: getJumpAudit
+      parameters:
+      - name: jumpRecordNumber
+        in: query
+        required: true
+        schema:
+          type: number
+          format: double
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JUMPAUDITDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/jump-activity:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Jump Activity Data
+      operationId: getJumpActivity
+      parameters:
+      - name: jumpRecordNumber
+        in: query
+        required: true
+        schema:
+          type: number
+          format: double
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JUMPACTIVITYDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/incentive-pay:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Incentive Pay Data
+      operationId: getIncentivePay
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/INCENTIVEPAYOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/formal-training:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Formal Training Data
+      operationId: getFormalTraining
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FORMALTRAININGOBJIntType'
+  /arms-table-svc/enlisted-personnel:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Enlisted Personnel Data
+      operationId: getEnlistedPersonnnel
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ENLISTEDPERSONNELOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/crew-table:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Crew Table Data
+      operationId: getCrewTable
+      parameters:
+      - name: flyerAircraftMDS
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: flyerCrewId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CREWTABLEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/badge-award:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Badge Award Data
+      operationId: getBadgeAward
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BADGEAWARDOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /arms-table-svc/access-zone:
+    get:
+      tags:
+      - arms-table-svc-controller
+      summary: Requests Access Zone Data
+      operationId: getAccessZone
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ACCESSZONEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /aircrew-svc/ofda-waiver:
+    get:
+      tags:
+      - aircrew-svc-controller
+      summary: OFDA Waiver
+      operationId: getOfdaWaiver
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OFDAWAIVEROBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /aircrew-svc/flyer-current-status:
+    get:
+      tags:
+      - aircrew-svc-controller
+      summary: Flyer Current Status
+      operationId: getFlyerCurrentStatus
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLYERCURRENTSTATUSOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /aircrew-svc/flyer-aircraft-total:
+    get:
+      tags:
+      - aircrew-svc-controller
+      summary: Flyer Aircraft Total
+      operationId: getFlyerAircraftTotal
+      parameters:
+      - name: crewPositionIdList
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: mdsIdList
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: aircraftSequenceIdList
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: mdsSimCodeList
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLYERAIRCRAFTTOTALOBJIntType'
+  /aircrew-svc/flyer-7-30-60-90:
+    get:
+      tags:
+      - aircrew-svc-controller
+      summary: Flyer 7 30 60 90
+      operationId: getFlyer7_30_60_90
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLYER7306090OBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /aircrew-svc/flight-pay:
+    get:
+      tags:
+      - aircrew-svc-controller
+      summary: Flight Pay
+      operationId: getFlightPay
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLIGHTPAYOBJIntType'
+  /aircrew-svc/aviation-service:
+    get:
+      tags:
+      - aircrew-svc-controller
+      summary: Aviation Service
+      operationId: getAviationServiceData
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AVIATIONSERVICEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /aircrew-svc/aircrew-position-totals:
+    get:
+      tags:
+      - aircrew-svc-controller
+      summary: Aircrew Position Totals
+      operationId: getAircrewPositionTotals
+      parameters:
+      - name: crewPositionIdList
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIRCREWPOSITIONTOTALSOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /aircrew-svc/aircrew-personnel:
+    get:
+      tags:
+      - aircrew-svc-controller
+      summary: Requests Aircrew Personnel Data
+      operationId: getAircrewPersonnel
+      parameters:
+      - name: flyerIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: number
+            format: double
+      - name: orgIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: fromDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: toDate
+        in: query
+        description: yyyy-MM-dd
+        required: true
+        schema:
+          type: string
+      - name: harmCode
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: recStatus
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: inverse
+        in: query
+        required: true
+        schema:
+          type: boolean
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIRCREWPERSONNELOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+components:
+  schemas:
+    AddTrainingDataRequest:
+      required:
+      - harmCode
+      - systemId
+      - trainingData
+      type: object
+      properties:
+        trainingData:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingData'
+        harmCode:
+          type: string
+        systemId:
+          type: string
+    TrainingData:
+      required:
+      - accomplishmentMethod
+      - eventLogAccompDate
+      - lossReason
+      - trainingProgramCode
+      - trainingTaskId
+      type: object
+      properties:
+        flyerUniqueId:
+          type: number
+          format: double
+        trainingProgramCode:
+          type: string
+        eventLogAccompDate:
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9])"
+          type: string
+        trainingTaskId:
+          type: string
+        scheduledVolume:
+          type: number
+          format: double
+        accomplishmentMethod:
+          type: string
+        lossReason:
+          type: string
+        score:
+          type: number
+          format: double
+        numberAccomplished:
+          type: number
+          format: double
+        weaponAttempts:
+          type: number
+          format: double
+        weaponHits:
+          type: number
+          format: double
+    ADDTRAININGOBJIntType:
+      required:
+      - message
+      - recstatus
+      type: object
+      properties:
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+        message:
+          type: string
+          xml:
+            name: MESSAGE
+    ExceptionResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: string
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+    AddFlightRequest:
+      required:
+      - flightRecords
+      - harmcode
+      - systemid
+      type: object
+      properties:
+        harmcode:
+          type: string
+        systemid:
+          type: string
+        flightRecords:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlightRecord'
+    FlightActRecord:
+      required:
+      - flyerAuthorizedDutyCode
+      - flyerReserveStatusCode
+      - flyerUpdateDate
+      type: object
+      properties:
+        flyerUniqueId:
+          type: number
+          format: double
+        flyerAuthorizedDutyCode:
+          type: string
+        flyerPrimaryTime:
+          type: number
+          format: double
+        flyerSecondaryTime:
+          type: number
+          format: double
+        flyerInstructorTime:
+          type: number
+          format: double
+        flyerEvaluatorTime:
+          type: number
+          format: double
+        flyerOtherTime:
+          type: number
+          format: double
+        flyerTotalSorties:
+          type: number
+          format: double
+        flyerCombatTime:
+          type: number
+          format: double
+        flyerCombatSorties:
+          type: number
+          format: double
+        flyerCombatSupportTime:
+          type: number
+          format: double
+        flyerCombatSupportSorties:
+          type: number
+          format: double
+        flyerPrimaryNightTime:
+          type: number
+          format: double
+        flyerPrimaryInstrumentTime:
+          type: number
+          format: double
+        flyerSimInstrumentTime:
+          type: number
+          format: double
+        flyerNvgTime:
+          type: number
+          format: double
+        flyerRpalreTime:
+          type: number
+          format: double
+        flyerRpamceTime:
+          type: number
+          format: double
+        flyerReserveStatusCode:
+          type: string
+        flyerUpdateDate:
+          type: string
+    FlightRecord:
+      required:
+      - aircraftCallSign
+      - aircraftDepartedIcao
+      - aircraftFirstIcao
+      - aircraftFourthIcao
+      - aircraftMdsId
+      - aircraftSecondIcao
+      - aircraftTailNumber
+      - aircraftThirdIcao
+      - chargedOrgId
+      - flightActivities
+      - flightDate
+      - flightHarmCode
+      - flightMissionNumber
+      - flightRemarks
+      - flightSpecialInstructions
+      - flightStatusCode
+      - flightStopDate
+      - missionSymbolCode
+      - operationalUnitname
+      type: object
+      properties:
+        flightDate:
+          type: string
+        aircraftMdsId:
+          type: string
+        aircraftTailNumber:
+          type: string
+        chargedOrgId:
+          type: string
+        flightHarmCode:
+          type: string
+        flightTotalTime:
+          type: number
+          format: double
+        flightAuthorizedTime:
+          type: number
+          format: double
+        aircraftDepartedIcao:
+          type: string
+        aircraftFirstIcao:
+          type: string
+        aircraftSecondIcao:
+          type: string
+        aircraftThirdIcao:
+          type: string
+        aircraftFourthIcao:
+          type: string
+        missionSymbolCode:
+          type: string
+        flightMissionNumber:
+          type: string
+        aircraftCallSign:
+          type: string
+        flightSpecialInstructions:
+          type: string
+        flightRemarks:
+          type: string
+        flightStopDate:
+          type: string
+        operationalUnitname:
+          type: string
+        flightStatusCode:
+          type: string
+        flightActivities:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlightActRecord'
+    TRAININGTASKDATAOutput:
+      type: object
+      properties:
+        return:
+          $ref: '#/components/schemas/TRAININGTASKWSType'
+      xml:
+        name: TRAINING_TASK_DATAOutput
+    TRAININGTASKOBJIntType:
+      required:
+      - lastUpdated
+      - recStatus
+      - trainingTaskId
+      - trainingTaskName
+      type: object
+      properties:
+        trainingTaskId:
+          type: string
+          xml:
+            name: TrainingTaskId
+        trainingTaskName:
+          type: string
+          xml:
+            name: TrainingTaskName
+        lastUpdated:
+          type: string
+          xml:
+            name: LastUpdated
+        recStatus:
+          type: string
+          xml:
+            name: RecStatus
+        harmcode:
+          type: string
+    TRAININGTASKSERVICE:
+      type: object
+      properties:
+        trainingtaskobj:
+          type: array
+          xml:
+            name: TRAINING_TASK_OBJ
+          items:
+            $ref: '#/components/schemas/TRAININGTASKOBJIntType'
+    TRAININGTASKWS:
+      required:
+      - trainingtaskservice
+      type: object
+      properties:
+        trainingtaskservice:
+          $ref: '#/components/schemas/TRAININGTASKSERVICE'
+    TRAININGTASKWSType:
+      required:
+      - trainingtaskws
+      type: object
+      properties:
+        trainingtaskws:
+          $ref: '#/components/schemas/TRAININGTASKWS'
+    TRAININGREQUIREMENTOBJIntType:
+      required:
+      - calculatedduedate
+      - datelastaccomplished
+      - datepreviouslastaccomplished
+      - duedate
+      - flyerflyingorganizationid
+      - harmcode
+      - lastupdated
+      - profilename
+      - recstatus
+      - trainingprogramcode
+      - trainingtaskid
+      - waivereddate
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        profilerecordid:
+          type: number
+          format: double
+          xml:
+            name: PROFILERECORDID
+        profilename:
+          type: string
+          xml:
+            name: PROFILENAME
+        trainingprogramcode:
+          type: string
+          xml:
+            name: TRAININGPROGRAMCODE
+        trainingtaskid:
+          type: string
+          xml:
+            name: TRAININGTASKID
+        duedate:
+          type: string
+          xml:
+            name: DUEDATE
+        prorationminimum:
+          type: number
+          format: double
+          xml:
+            name: PRORATIONMINIMUM
+        volumeaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: VOLUMEACCOMPLISHEDTOTAL
+        datelastaccomplished:
+          type: string
+          xml:
+            name: DATELASTACCOMPLISHED
+        scheduledtotal:
+          type: number
+          format: double
+          xml:
+            name: SCHEDULEDTOTAL
+        calculatedduedate:
+          type: string
+          xml:
+            name: CALCULATEDDUEDATE
+        annualvolumeaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: ANNUALVOLUMEACCOMPLISHEDTOTAL
+        datepreviouslastaccomplished:
+          type: string
+          xml:
+            name: DATEPREVIOUSLASTACCOMPLISHED
+        methodacademictotal:
+          type: number
+          format: double
+          xml:
+            name: METHODACADEMICTOTAL
+        methodmaximumtotal:
+          type: number
+          format: double
+          xml:
+            name: METHODMAXIMUMTOTAL
+        methodinstructortotal:
+          type: number
+          format: double
+          xml:
+            name: METHODINSTRUCTORTOTAL
+        methodsimulatortotal:
+          type: number
+          format: double
+          xml:
+            name: METHODSIMULATORTOTAL
+        monthsprorated:
+          type: number
+          format: double
+          xml:
+            name: MONTHSPRORATED
+        monthlytotal:
+          type: number
+          format: double
+          xml:
+            name: MONTHLYTOTAL
+        quarterlytotal:
+          type: number
+          format: double
+          xml:
+            name: QUARTERLYTOTAL
+        semiannualtotal:
+          type: number
+          format: double
+          xml:
+            name: SEMIANNUALTOTAL
+        januaryaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: JANUARYACCOMPLISHEDTOTAL
+        februaryaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: FEBRUARYACCOMPLISHEDTOTAL
+        marchaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: MARCHACCOMPLISHEDTOTAL
+        aprilaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: APRILACCOMPLISHEDTOTAL
+        mayaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: MAYACCOMPLISHEDTOTAL
+        juneaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: JUNEACCOMPLISHEDTOTAL
+        julyaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: JULYACCOMPLISHEDTOTAL
+        augustaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: AUGUSTACCOMPLISHEDTOTAL
+        septemberaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: SEPTEMBERACCOMPLISHEDTOTAL
+        octoberaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: OCTOBERACCOMPLISHEDTOTAL
+        novemberaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: NOVEMBERACCOMPLISHEDTOTAL
+        decemberaccomplishedtotal:
+          type: number
+          format: double
+          xml:
+            name: DECEMBERACCOMPLISHEDTOTAL
+        qtr1ACCOMPLISHEDTOTAL:
+          type: number
+          format: double
+          xml:
+            name: QTR1ACCOMPLISHEDTOTAL
+        qtr2ACCOMPLISHEDTOTAL:
+          type: number
+          format: double
+          xml:
+            name: QTR2ACCOMPLISHEDTOTAL
+        qtr3ACCOMPLISHEDTOTAL:
+          type: number
+          format: double
+          xml:
+            name: QTR3ACCOMPLISHEDTOTAL
+        qtr4ACCOMPLISHEDTOTAL:
+          type: number
+          format: double
+          xml:
+            name: QTR4ACCOMPLISHEDTOTAL
+        semiannual1ACCOMPLISHEDTOTAL:
+          type: number
+          format: double
+          xml:
+            name: SEMIANNUAL1ACCOMPLISHEDTOTAL
+        semiannual2ACCOMPLISHEDTOTAL:
+          type: number
+          format: double
+          xml:
+            name: SEMIANNUAL2ACCOMPLISHEDTOTAL
+        lookbacktotal:
+          type: number
+          format: double
+          xml:
+            name: LOOKBACKTOTAL
+        waivereddate:
+          type: string
+          xml:
+            name: WAIVEREDDATE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    TRAININGPROGRAMOBJIntType:
+      required:
+      - lastUpdated
+      - nextTrainingProgramStartDate
+      - recStatus
+      - trainingProgramCode
+      - trainingProgramDuration
+      - trainingProgramName
+      - trainingProgramStartDate
+      - trainingProgramStopDate
+      type: object
+      properties:
+        trainingProgramCode:
+          type: string
+          xml:
+            name: TrainingProgramCode
+        trainingProgramName:
+          type: string
+          xml:
+            name: TrainingProgramName
+        trainingProgramStartDate:
+          type: string
+          xml:
+            name: TrainingProgramStartDate
+        trainingProgramDuration:
+          type: string
+          xml:
+            name: TrainingProgramDuration
+        trainingProgramStopDate:
+          type: string
+          xml:
+            name: TrainingProgramStopDate
+        nextTrainingProgramStartDate:
+          type: string
+          xml:
+            name: NextTrainingProgramStartDate
+        lastUpdated:
+          type: string
+          xml:
+            name: LastUpdated
+        recStatus:
+          type: string
+          xml:
+            name: RecStatus
+        harmcode:
+          type: string
+    TRAININGPROFILEOBJIntType:
+      required:
+      - academicFlag
+      - dualCreditTaskId
+      - dualCreditTypeCode
+      - instructorFlag
+      - lastUpdated
+      - prerequsiteTaskId
+      - profileName
+      - recStatus
+      - requirementsDuration
+      - requirementsFrequencyType
+      - requirementsPhasePeriodType
+      - restrictionCode
+      - simulatorFlag
+      - trainingProgramCode
+      - trainingTaskId
+      type: object
+      properties:
+        profileName:
+          type: string
+          xml:
+            name: ProfileName
+        profileRecordID:
+          type: number
+          format: double
+          xml:
+            name: ProfileRecordID
+        trainingProgramCode:
+          type: string
+          xml:
+            name: TrainingProgramCode
+        trainingTaskId:
+          type: string
+          xml:
+            name: TrainingTaskId
+        maximumRestriction:
+          type: number
+          format: double
+          xml:
+            name: MaximumRestriction
+        proficiencyFactorRestriction:
+          type: number
+          format: double
+          xml:
+            name: ProficiencyFactorRestriction
+        prorationMinRestriction:
+          type: number
+          format: double
+          xml:
+            name: ProrationMinRestriction
+        restrictionCode:
+          type: string
+          xml:
+            name: RestrictionCode
+        requirementsFrequencyNumber:
+          type: number
+          format: double
+          xml:
+            name: RequirementsFrequencyNumber
+        requirementsFrequencyType:
+          type: string
+          xml:
+            name: RequirementsFrequencyType
+        requirementsPhasePeriodNumber:
+          type: number
+          format: double
+          xml:
+            name: RequirementsPhasePeriodNumber
+        requirementsPhasePeriodType:
+          type: string
+          xml:
+            name: RequirementsPhasePeriodType
+        requirementsVolumeAnnual:
+          type: number
+          format: double
+          xml:
+            name: RequirementsVolumeAnnual
+        academicRestriction:
+          type: number
+          format: double
+          xml:
+            name: AcademicRestriction
+        instructorRestriction:
+          type: number
+          format: double
+          xml:
+            name: InstructorRestriction
+        simulatorRestriction:
+          type: number
+          format: double
+          xml:
+            name: SimulatorRestriction
+        requirementsDuration:
+          type: string
+          xml:
+            name: RequirementsDuration
+        requirementsVolumeMonthly:
+          type: number
+          format: double
+          xml:
+            name: RequirementsVolumeMonthly
+        requirementsVolumeQuarterly:
+          type: number
+          format: double
+          xml:
+            name: RequirementsVolumeQuarterly
+        requirementsVolumeSemiAnnua:
+          type: number
+          format: double
+          xml:
+            name: RequirementsVolumeSemiAnnua
+        requirementsVol3MonLookback:
+          type: number
+          format: double
+          xml:
+            name: RequirementsVol3MonLookback
+        academicFlag:
+          type: string
+          xml:
+            name: AcademicFlag
+        instructorFlag:
+          type: string
+          xml:
+            name: InstructorFlag
+        simulatorFlag:
+          type: string
+          xml:
+            name: SimulatorFlag
+        dualCreditTaskId:
+          type: string
+          xml:
+            name: DualCreditTaskId
+        dualCreditTypeCode:
+          type: string
+          xml:
+            name: DualCreditTypeCode
+        prerequsiteTaskId:
+          type: string
+          xml:
+            name: PrerequsiteTaskId
+        lastUpdated:
+          type: string
+          xml:
+            name: LastUpdated
+        recStatus:
+          type: string
+          xml:
+            name: RecStatus
+        harmcode:
+          type: string
+    PROFILEASSIGNMENTOBJIntType:
+      required:
+      - flyerflyingorganizationid
+      - harmcode
+      - lastupdated
+      - profilename
+      - recstatus
+      - trainingplaneffectivedate
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        profilerecordid:
+          type: number
+          format: double
+          xml:
+            name: PROFILERECORDID
+        profilename:
+          type: string
+          xml:
+            name: PROFILENAME
+        trainingplaneffectivedate:
+          type: string
+          xml:
+            name: TRAININGPLANEFFECTIVEDATE
+        trainingplanmonthsprorated:
+          type: number
+          format: double
+          xml:
+            name: TRAININGPLANMONTHSPRORATED
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    CURRENTTRAININGOBJIntType:
+      required:
+      - accomplishmentmethod
+      - eventaccomplisheddate
+      - evententereddate
+      - flyerflyingorganizationid
+      - harmcode
+      - lastupdated
+      - lossreason
+      - overridephaseflag
+      - recstatus
+      - trainingprogramcode
+      - trainingprogramname
+      - trainingtaskid
+      - trainingtaskname
+      - usernameentereddata
+      type: object
+      properties:
+        eventaccomplisheddate:
+          type: string
+          xml:
+            name: EVENTACCOMPLISHEDDATE
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        trainingprogramcode:
+          type: string
+          xml:
+            name: TRAININGPROGRAMCODE
+        trainingprogramname:
+          type: string
+          xml:
+            name: TRAININGPROGRAMNAME
+        trainingtaskid:
+          type: string
+          xml:
+            name: TRAININGTASKID
+        trainingtaskname:
+          type: string
+          xml:
+            name: TRAININGTASKNAME
+        scheduledvolume:
+          type: number
+          format: double
+          xml:
+            name: SCHEDULEDVOLUME
+        accomplishmentmethod:
+          type: string
+          xml:
+            name: ACCOMPLISHMENTMETHOD
+        lossreason:
+          type: string
+          xml:
+            name: LOSSREASON
+        score:
+          type: number
+          format: double
+          xml:
+            name: SCORE
+        numberaccomplished:
+          type: number
+          format: double
+          xml:
+            name: NUMBERACCOMPLISHED
+        weaponattempts:
+          type: number
+          format: double
+          xml:
+            name: WEAPONATTEMPTS
+        weaponhits:
+          type: number
+          format: double
+          xml:
+            name: WEAPONHITS
+        evententereddate:
+          type: string
+          xml:
+            name: EVENTENTEREDDATE
+        usernameentereddata:
+          type: string
+          xml:
+            name: USERNAMEENTEREDDATA
+        overridephaseflag:
+          type: string
+          xml:
+            name: OVERRIDEPHASEFLAG
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    ARCHIVETRAININGOBJIntType:
+      required:
+      - accomplishmentmethod
+      - eventaccomplisheddate
+      - evententereddate
+      - flyerflyingorganizationid
+      - harmcode
+      - lastupdated
+      - lossreason
+      - overridephaseflag
+      - recstatus
+      - trainingprogramcode
+      - trainingprogramname
+      - trainingtaskid
+      - trainingtaskname
+      - usernameentereddata
+      type: object
+      properties:
+        eventaccomplisheddate:
+          type: string
+          xml:
+            name: EVENTACCOMPLISHEDDATE
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        trainingprogramcode:
+          type: string
+          xml:
+            name: TRAININGPROGRAMCODE
+        trainingprogramname:
+          type: string
+          xml:
+            name: TRAININGPROGRAMNAME
+        trainingtaskid:
+          type: string
+          xml:
+            name: TRAININGTASKID
+        trainingtaskname:
+          type: string
+          xml:
+            name: TRAININGTASKNAME
+        scheduledvolume:
+          type: number
+          format: double
+          xml:
+            name: SCHEDULEDVOLUME
+        accomplishmentmethod:
+          type: string
+          xml:
+            name: ACCOMPLISHMENTMETHOD
+        lossreason:
+          type: string
+          xml:
+            name: LOSSREASON
+        score:
+          type: number
+          format: double
+          xml:
+            name: SCORE
+        numberaccomplished:
+          type: number
+          format: double
+          xml:
+            name: NUMBERACCOMPLISHED
+        weaponattempts:
+          type: number
+          format: double
+          xml:
+            name: WEAPONATTEMPTS
+        weaponhits:
+          type: number
+          format: double
+          xml:
+            name: WEAPONHITS
+        evententereddate:
+          type: string
+          xml:
+            name: EVENTENTEREDDATE
+        usernameentereddata:
+          type: string
+          xml:
+            name: USERNAMEENTEREDDATA
+        overridephaseflag:
+          type: string
+          xml:
+            name: OVERRIDEPHASEFLAG
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    FLIGHTOBJIntType:
+      required:
+      - aircraftCallsign
+      - aircraftDepartedIcao
+      - aircraftFirstIcao
+      - aircraftFourthIcao
+      - aircraftMds
+      - aircraftSecondIcao
+      - aircraftSimCode
+      - aircraftTailNumber
+      - aircraftThirdIcao
+      - chargedOrgId
+      - flightAuthorizedTime
+      - flightDate
+      - flightHarmCode
+      - flightMissionNumber
+      - flightRemarks
+      - flightSpecialInstructions
+      - flightStatusCode
+      - flightStopDate
+      - lastUpdated
+      - missionSymbolCode
+      - recStatus
+      type: object
+      properties:
+        flightGUID:
+          type: number
+          format: double
+          xml:
+            name: FlightGUID
+        flightHarmCode:
+          type: string
+          xml:
+            name: FlightHarmCode
+        aircraftMds:
+          type: string
+          xml:
+            name: AircraftMds
+        aircraftTailNumber:
+          type: string
+          xml:
+            name: AircraftTailNumber
+        aircraftSimCode:
+          type: string
+          xml:
+            name: AircraftSimCode
+        flightDate:
+          type: string
+          xml:
+            name: FlightDate
+        flightAuthorizedTime:
+          type: string
+          xml:
+            name: FlightAuthorizedTime
+        missionSymbolCode:
+          type: string
+          xml:
+            name: MissionSymbolCode
+        flightStopDate:
+          type: string
+          xml:
+            name: FlightStopDate
+        aircraftFourthIcao:
+          type: string
+          xml:
+            name: AircraftFourthIcao
+        aircraftSecondIcao:
+          type: string
+          xml:
+            name: AircraftSecondIcao
+        aircraftThirdIcao:
+          type: string
+          xml:
+            name: AircraftThirdIcao
+        aircraftCallsign:
+          type: string
+          xml:
+            name: AircraftCallsign
+        flightRemarks:
+          type: string
+          xml:
+            name: FlightRemarks
+        aircraftFirstIcao:
+          type: string
+          xml:
+            name: AircraftFirstIcao
+        aircraftDepartedIcao:
+          type: string
+          xml:
+            name: AircraftDepartedIcao
+        flightMissionNumber:
+          type: string
+          xml:
+            name: FlightMissionNumber
+        flightSpecialInstructions:
+          type: string
+          xml:
+            name: FlightSpecialInstructions
+        flightStatusCode:
+          type: string
+          xml:
+            name: FlightStatusCode
+        flightTotalTime:
+          type: number
+          format: double
+          xml:
+            name: FlightTotalTime
+        chargedOrgId:
+          type: string
+          xml:
+            name: ChargedOrgId
+        lastUpdated:
+          type: string
+          xml:
+            name: LastUpdated
+        recStatus:
+          type: string
+          xml:
+            name: RecStatus
+    FLIGHTACTIVITYOBJIntType:
+      required:
+      - flyerauthorizeddutycode
+      - flyerflyingorganizationid
+      - flyerreservestatuscode
+      - harmcode
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        armsflightnumber:
+          type: number
+          format: double
+          xml:
+            name: ARMSFLIGHTNUMBER
+        armsflightactivitysequenceid:
+          type: number
+          format: double
+          xml:
+            name: ARMSFLIGHTACTIVITYSEQUENCEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        flyerauthorizeddutycode:
+          type: string
+          xml:
+            name: FLYERAUTHORIZEDDUTYCODE
+        flyerrpalretime:
+          type: number
+          format: double
+          xml:
+            name: FLYERRPALRETIME
+        flyerrpamcetime:
+          type: number
+          format: double
+          xml:
+            name: FLYERRPAMCETIME
+        flyercombattime:
+          type: number
+          format: double
+          xml:
+            name: FLYERCOMBATTIME
+        flyercombatsorties:
+          type: number
+          format: double
+          xml:
+            name: FLYERCOMBATSORTIES
+        flyercombatsupporttime:
+          type: number
+          format: double
+          xml:
+            name: FLYERCOMBATSUPPORTTIME
+        flyerevaluatortime:
+          type: number
+          format: double
+          xml:
+            name: FLYEREVALUATORTIME
+        flyerinstructortime:
+          type: number
+          format: double
+          xml:
+            name: FLYERINSTRUCTORTIME
+        flyernvgtime:
+          type: number
+          format: double
+          xml:
+            name: FLYERNVGTIME
+        flyerothertime:
+          type: number
+          format: double
+          xml:
+            name: FLYEROTHERTIME
+        flyerprimaryinstrumenttime:
+          type: number
+          format: double
+          xml:
+            name: FLYERPRIMARYINSTRUMENTTIME
+        flyerprimarynighttime:
+          type: number
+          format: double
+          xml:
+            name: FLYERPRIMARYNIGHTTIME
+        flyerreservestatuscode:
+          type: string
+          xml:
+            name: FLYERRESERVESTATUSCODE
+        flyersecondarytime:
+          type: number
+          format: double
+          xml:
+            name: FLYERSECONDARYTIME
+        flyersiminstrumenttime:
+          type: number
+          format: double
+          xml:
+            name: FLYERSIMINSTRUMENTTIME
+        flyertotalsorties:
+          type: number
+          format: double
+          xml:
+            name: FLYERTOTALSORTIES
+        flyerprimarytime:
+          type: number
+          format: double
+          xml:
+            name: FLYERPRIMARYTIME
+        flyercombatsupportsorties:
+          type: number
+          format: double
+          xml:
+            name: FLYERCOMBATSUPPORTSORTIES
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    SONICBOOMDATAOBJIntType:
+      required:
+      - harmcode
+      - lastupdated
+      - recstatus
+      - sonicboomstartdate
+      - sonicboomstartlatitude
+      - sonicboomstartlongitude
+      - sonicboomstoplatitude
+      - sonicboomstoplongitute
+      - sonicboomstoptime
+      type: object
+      properties:
+        flightrecordnumber:
+          type: number
+          format: double
+          xml:
+            name: FLIGHTRECORDNUMBER
+        sonicboomstartdate:
+          type: string
+          xml:
+            name: SONICBOOMSTARTDATE
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        sonicboomaltitude:
+          type: number
+          format: double
+          xml:
+            name: SONICBOOMALTITUDE
+        sonicboommach:
+          type: number
+          format: double
+          xml:
+            name: SONICBOOMMACH
+        sonicboomstoplatitude:
+          type: string
+          xml:
+            name: SONICBOOMSTOPLATITUDE
+        sonicboomstoplongitute:
+          type: string
+          xml:
+            name: SONICBOOMSTOPLONGITUTE
+        sonicboomstoptime:
+          type: string
+          xml:
+            name: SONICBOOMSTOPTIME
+        sonicboomstartlatitude:
+          type: string
+          xml:
+            name: SONICBOOMSTARTLATITUDE
+        sonicboomstartlongitude:
+          type: string
+          xml:
+            name: SONICBOOMSTARTLONGITUDE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    RATINGSDATAOBJIntType:
+      required:
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - ratingawarddate
+      - ratingcode
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        ratingcode:
+          type: string
+          xml:
+            name: RATINGCODE
+        ratingawarddate:
+          type: string
+          xml:
+            name: RATINGAWARDDATE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    RATEDOFFICERDATAOBJIntType:
+      required:
+      - equivratingawarddt
+      - harmcode
+      - lastupdated
+      - ofdawaivercode
+      - officerservicedate
+      - orgunitid
+      - originalratingdate
+      - passportterminationdt
+      - ratingdate
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        ofdawaivercode:
+          type: string
+          xml:
+            name: OFDAWAIVERCODE
+        equivratingawarddt:
+          type: string
+          xml:
+            name: EQUIVRATINGAWARDDT
+        passportterminationdt:
+          type: string
+          xml:
+            name: PASSPORTTERMINATIONDT
+        officerservicedate:
+          type: string
+          xml:
+            name: OFFICERSERVICEDATE
+        originalratingdate:
+          type: string
+          xml:
+            name: ORIGINALRATINGDATE
+        ratingdate:
+          type: string
+          xml:
+            name: RATINGDATE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    PQIDATAOBJIntType:
+      required:
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - pqireasonstatuscode
+      - pqirequirementstatuscode
+      - pqitrainingcode
+      - pqitrainingdate
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        pqitrainingcode:
+          type: string
+          xml:
+            name: PQITRAININGCODE
+        pqitrainingdate:
+          type: string
+          xml:
+            name: PQITRAININGDATE
+        pqireasonstatuscode:
+          type: string
+          xml:
+            name: PQIREASONSTATUSCODE
+        pqirequirementstatuscode:
+          type: string
+          xml:
+            name: PQIREQUIREMENTSTATUSCODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    PERSONNELINFOOBJIntType:
+      required:
+      - flyeractivemilservicedate
+      - flyerafsc
+      - flyerafscsuffix
+      - flyerarrivalstatuscode
+      - flyerassignedflightcode
+      - flyerassignmentcode
+      - flyeraviationidentifier
+      - flyerawacsdate
+      - flyercategoryflyingwaivercd
+      - flyercbpocode
+      - flyerchamberwaivercode
+      - flyercrewpositioncode
+      - flyerdatearriveddutystation
+      - flyerdateofseparation
+      - flyerderos
+      - flyerdtdepartedlstdtystation
+      - flyerdutyeffectivedate
+      - flyerflyerindicatorcode
+      - flyerflyingorganizationid
+      - flyerhalocertificationcode
+      - flyerhorischangedate
+      - flyerhoriscode
+      - flyerjumpereffectivedate
+      - flyerjumpsflag
+      - flyerlastproductiveflightdate
+      - flyerlocalusecode
+      - flyerofficesymbol
+      - flyeroperatinglocationid
+      - flyeroutprocesscloseoutdate
+      - flyerparachutistidentifier
+      - flyerpascode
+      - flyerpdsrequestedindicator
+      - flyerphysicalavailabilitycode
+      - flyerphysicalavailabilitydate
+      - flyerphysicaldate
+      - flyerphysicalduedate
+      - flyerphysicalreasoncode
+      - flyerphysiologicaldate
+      - flyerphysiologicalduedate
+      - flyerphysiologicalrequired
+      - flyerpreviousexperienceflag
+      - flyerprimarydutyafsc
+      - flyerprimarydutyafscprefix
+      - flyerprimarydutyafscsuffix
+      - flyerprojectedafsc
+      - flyerprojectedafscprefix
+      - flyerprojectedafscsuffix
+      - flyerprojectedarrivaldate
+      - flyerprojectedcharmschangecd
+      - flyerprojecteddeparturedate
+      - flyerprojectedhosm
+      - flyerprojectedpascode
+      - flyerprvlastproductivefltdt
+      - flyerrecordreviewdate
+      - flyerrecordreviewduedate
+      - flyerrecordsreviewstatuscode
+      - flyerrecordstatuscode
+      - flyerretirementdate
+      - flyersecondaryafscprefix
+      - flyersecondarydutyafsc
+      - flyersecondarydutyafscprefix
+      - flyersecondarydutyafscsuffix
+      - flyerspecialcategorycode
+      - flyerunitmanningpositionname
+      - harmcode
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerassignmentcode:
+          type: string
+          xml:
+            name: FLYERASSIGNMENTCODE
+        flyerafsc:
+          type: string
+          xml:
+            name: FLYERAFSC
+        flyerafscsuffix:
+          type: string
+          xml:
+            name: FLYERAFSCSUFFIX
+        flyeraviationidentifier:
+          type: string
+          xml:
+            name: FLYERAVIATIONIDENTIFIER
+        flyerarrivalstatuscode:
+          type: string
+          xml:
+            name: FLYERARRIVALSTATUSCODE
+        flyerawacsdate:
+          type: string
+          xml:
+            name: FLYERAWACSDATE
+        flyerfpipmissionhours:
+          type: number
+          format: double
+          xml:
+            name: FLYERFPIPMISSIONHOURS
+        flyerlastproductiveflightdate:
+          type: string
+          xml:
+            name: FLYERLASTPRODUCTIVEFLIGHTDATE
+        flyermissionhours:
+          type: number
+          format: double
+          xml:
+            name: FLYERMISSIONHOURS
+        flyerpreviousexperienceflag:
+          type: string
+          xml:
+            name: FLYERPREVIOUSEXPERIENCEFLAG
+        flyerprvlastproductivefltdt:
+          type: string
+          xml:
+            name: FLYERPRVLASTPRODUCTIVEFLTDT
+        flyercrewid:
+          type: number
+          format: double
+          xml:
+            name: FLYERCREWID
+        flyerphysiologicaldate:
+          type: string
+          xml:
+            name: FLYERPHYSIOLOGICALDATE
+        flyerphysicalduedate:
+          type: string
+          xml:
+            name: FLYERPHYSICALDUEDATE
+        flyerphysicaldate:
+          type: string
+          xml:
+            name: FLYERPHYSICALDATE
+        flyerphysicalreasoncode:
+          type: string
+          xml:
+            name: FLYERPHYSICALREASONCODE
+        flyerphysicalavailabilitycode:
+          type: string
+          xml:
+            name: FLYERPHYSICALAVAILABILITYCODE
+        flyeractivemilservicedate:
+          type: string
+          xml:
+            name: FLYERACTIVEMILSERVICEDATE
+        flyerphysicalavailabilitydate:
+          type: string
+          xml:
+            name: FLYERPHYSICALAVAILABILITYDATE
+        flyercbpocode:
+          type: string
+          xml:
+            name: FLYERCBPOCODE
+        flyeroutprocesscloseoutdate:
+          type: string
+          xml:
+            name: FLYEROUTPROCESSCLOSEOUTDATE
+        flyerdutyeffectivedate:
+          type: string
+          xml:
+            name: FLYERDUTYEFFECTIVEDATE
+        flyerdatearriveddutystation:
+          type: string
+          xml:
+            name: FLYERDATEARRIVEDDUTYSTATION
+        flyerderos:
+          type: string
+          xml:
+            name: FLYERDEROS
+        flyererrorindicator:
+          type: number
+          format: double
+          xml:
+            name: FLYERERRORINDICATOR
+        flyerhoriscode:
+          type: string
+          xml:
+            name: FLYERHORISCODE
+        flyerhorischangedate:
+          type: string
+          xml:
+            name: FLYERHORISCHANGEDATE
+        flyerflyerindicatorcode:
+          type: string
+          xml:
+            name: FLYERFLYERINDICATORCODE
+        flyerjumpsflag:
+          type: string
+          xml:
+            name: FLYERJUMPSFLAG
+        flyerlocalusecode:
+          type: string
+          xml:
+            name: FLYERLOCALUSECODE
+        flyerdtdepartedlstdtystation:
+          type: string
+          xml:
+            name: FLYERDTDEPARTEDLSTDTYSTATION
+        flyerpascode:
+          type: string
+          xml:
+            name: FLYERPASCODE
+        flyerphysiologicalduedate:
+          type: string
+          xml:
+            name: FLYERPHYSIOLOGICALDUEDATE
+        flyerchamberwaivercode:
+          type: string
+          xml:
+            name: FLYERCHAMBERWAIVERCODE
+        flyerprojectedarrivaldate:
+          type: string
+          xml:
+            name: FLYERPROJECTEDARRIVALDATE
+        flyerprojecteddeparturedate:
+          type: string
+          xml:
+            name: FLYERPROJECTEDDEPARTUREDATE
+        flyerprojectedhosm:
+          type: string
+          xml:
+            name: FLYERPROJECTEDHOSM
+        flyerprojectedpascode:
+          type: string
+          xml:
+            name: FLYERPROJECTEDPASCODE
+        flyerrecordstatuscode:
+          type: string
+          xml:
+            name: FLYERRECORDSTATUSCODE
+        flyerrecordreviewdate:
+          type: string
+          xml:
+            name: FLYERRECORDREVIEWDATE
+        flyerrecordreviewduedate:
+          type: string
+          xml:
+            name: FLYERRECORDREVIEWDUEDATE
+        flyerretirementdate:
+          type: string
+          xml:
+            name: FLYERRETIREMENTDATE
+        flyerspecialcategorycode:
+          type: string
+          xml:
+            name: FLYERSPECIALCATEGORYCODE
+        flyerdateofseparation:
+          type: string
+          xml:
+            name: FLYERDATEOFSEPARATION
+        flyercrewpositioncode:
+          type: string
+          xml:
+            name: FLYERCREWPOSITIONCODE
+        flyerrecordsreviewstatuscode:
+          type: string
+          xml:
+            name: FLYERRECORDSREVIEWSTATUSCODE
+        flyerpdsrequestedindicator:
+          type: string
+          xml:
+            name: FLYERPDSREQUESTEDINDICATOR
+        flyerofficesymbol:
+          type: string
+          xml:
+            name: FLYEROFFICESYMBOL
+        flyerhalocertificationcode:
+          type: string
+          xml:
+            name: FLYERHALOCERTIFICATIONCODE
+        flyerparachutistidentifier:
+          type: string
+          xml:
+            name: FLYERPARACHUTISTIDENTIFIER
+        flyerprimarydutyafsc:
+          type: string
+          xml:
+            name: FLYERPRIMARYDUTYAFSC
+        flyerprimarydutyafscsuffix:
+          type: string
+          xml:
+            name: FLYERPRIMARYDUTYAFSCSUFFIX
+        flyerprimarydutyafscprefix:
+          type: string
+          xml:
+            name: FLYERPRIMARYDUTYAFSCPREFIX
+        flyerprojectedafsc:
+          type: string
+          xml:
+            name: FLYERPROJECTEDAFSC
+        flyerprojectedafscsuffix:
+          type: string
+          xml:
+            name: FLYERPROJECTEDAFSCSUFFIX
+        flyerprojectedcharmschangecd:
+          type: string
+          xml:
+            name: FLYERPROJECTEDCHARMSCHANGECD
+        flyerprojectedafscprefix:
+          type: string
+          xml:
+            name: FLYERPROJECTEDAFSCPREFIX
+        flyercategoryflyingwaivercd:
+          type: string
+          xml:
+            name: FLYERCATEGORYFLYINGWAIVERCD
+        flyersecondarydutyafsc:
+          type: string
+          xml:
+            name: FLYERSECONDARYDUTYAFSC
+        flyersecondarydutyafscsuffix:
+          type: string
+          xml:
+            name: FLYERSECONDARYDUTYAFSCSUFFIX
+        flyersecondarydutyafscprefix:
+          type: string
+          xml:
+            name: FLYERSECONDARYDUTYAFSCPREFIX
+        flyersecondaryafscprefix:
+          type: string
+          xml:
+            name: FLYERSECONDARYAFSCPREFIX
+        flyerunitmanningpositionnum:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNITMANNINGPOSITIONNUM
+        flyerunitmanningpositionname:
+          type: string
+          xml:
+            name: FLYERUNITMANNINGPOSITIONNAME
+        flyerassignedflightcode:
+          type: string
+          xml:
+            name: FLYERASSIGNEDFLIGHTCODE
+        flyeroperatinglocationid:
+          type: string
+          xml:
+            name: FLYEROPERATINGLOCATIONID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        flyerjumpereffectivedate:
+          type: string
+          xml:
+            name: FLYERJUMPEREFFECTIVEDATE
+        flyerphysiologicalrequired:
+          type: string
+          xml:
+            name: FLYERPHYSIOLOGICALREQUIRED
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    PERSONLISTVWOBJIntType:
+      required:
+      - flyerfirstname
+      - flyerhoriscode
+      - flyerlastname
+      - flyermiddlename
+      - flyerservicecomponentcode
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        flyerfirstname:
+          type: string
+          xml:
+            name: FLYERFIRSTNAME
+        flyermiddlename:
+          type: string
+          xml:
+            name: FLYERMIDDLENAME
+        flyerlastname:
+          type: string
+          xml:
+            name: FLYERLASTNAME
+        flyerhoriscode:
+          type: string
+          xml:
+            name: FLYERHORISCODE
+        flyerservicecomponentcode:
+          type: string
+          xml:
+            name: FLYERSERVICECOMPONENTCODE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    PCSMANMONTHDATAOBJIntType:
+      required:
+      - flyerfirstname
+      - flyerlastname
+      - flyermiddlename
+      - flyersuffix
+      - gradeabbreviatedname
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        manmonthrecordnbr:
+          type: number
+          format: double
+          xml:
+            name: MANMONTHRECORDNBR
+        manmonthspaid:
+          type: number
+          format: double
+          xml:
+            name: MANMONTHSPAID
+        manmonthissued:
+          type: number
+          format: double
+          xml:
+            name: MANMONTHISSUED
+        flyerfirstname:
+          type: string
+          xml:
+            name: FLYERFIRSTNAME
+        flyermiddlename:
+          type: string
+          xml:
+            name: FLYERMIDDLENAME
+        flyerlastname:
+          type: string
+          xml:
+            name: FLYERLASTNAME
+        flyersuffix:
+          type: string
+          xml:
+            name: FLYERSUFFIX
+        gradeabbreviatedname:
+          type: string
+          xml:
+            name: GRADEABBREVIATEDNAME
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    PASSPORTDATAOBJIntType:
+      required:
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - passportid
+      - passportissuedate
+      - passportterminationdate
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        passportid:
+          type: string
+          xml:
+            name: PASSPORTID
+        passportissuedate:
+          type: string
+          xml:
+            name: PASSPORTISSUEDATE
+        passportterminationdate:
+          type: string
+          xml:
+            name: PASSPORTTERMINATIONDATE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    ORGANIZATIONDATAOBJIntType:
+      required:
+      - componentcode
+      - harmcode
+      - lastupdated
+      - majcomcode
+      - organizationname
+      - orgunitid
+      - parentharmcode
+      - parentorganizationunitid
+      - recstatus
+      - streetaddress
+      type: object
+      properties:
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        orgdsnextension:
+          type: number
+          format: double
+          xml:
+            name: ORGDSNEXTENSION
+        orgdsnprefix:
+          type: number
+          format: double
+          xml:
+            name: ORGDSNPREFIX
+        orgfaxextension:
+          type: number
+          format: double
+          xml:
+            name: ORGFAXEXTENSION
+        orgfaxregioncode:
+          type: number
+          format: double
+          xml:
+            name: ORGFAXREGIONCODE
+        orgfaxexchenge:
+          type: number
+          format: double
+          xml:
+            name: ORGFAXEXCHENGE
+        orgtelephonecommercialext:
+          type: number
+          format: double
+          xml:
+            name: ORGTELEPHONECOMMERCIALEXT
+        orgtelephonecommercialcode:
+          type: number
+          format: double
+          xml:
+            name: ORGTELEPHONECOMMERCIALCODE
+        orgtelephoneexchange:
+          type: number
+          format: double
+          xml:
+            name: ORGTELEPHONEEXCHANGE
+        componentcode:
+          type: string
+          xml:
+            name: COMPONENTCODE
+        majcomcode:
+          type: string
+          xml:
+            name: MAJCOMCODE
+        organizationname:
+          type: string
+          xml:
+            name: ORGANIZATIONNAME
+        streetaddress:
+          type: string
+          xml:
+            name: STREETADDRESS
+        parentorganizationunitid:
+          type: string
+          xml:
+            name: PARENTORGANIZATIONUNITID
+        parentharmcode:
+          type: string
+          xml:
+            name: PARENTHARMCODE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    MAXMINRATINGSOBJIntType:
+      required:
+      - harmcode
+      - maxlastupdated
+      - maxratingaeroorderawarddate
+      - maxratingcode
+      - maxratingname
+      - maxrecstatus
+      - minlastupdated
+      - minratingaeroorderawarddate
+      - minratingcode
+      - minratingname
+      - minrecstatus
+      - orgunitid
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        minratingcode:
+          type: string
+          xml:
+            name: MINRATINGCODE
+        minratingname:
+          type: string
+          xml:
+            name: MINRATINGNAME
+        minratingaeroorderawarddate:
+          type: string
+          xml:
+            name: MINRATINGAEROORDERAWARDDATE
+        minlastupdated:
+          type: string
+          xml:
+            name: MINLASTUPDATED
+        minrecstatus:
+          type: string
+          xml:
+            name: MINRECSTATUS
+        maxratingcode:
+          type: string
+          xml:
+            name: MAXRATINGCODE
+        maxratingname:
+          type: string
+          xml:
+            name: MAXRATINGNAME
+        maxratingaeroorderawarddate:
+          type: string
+          xml:
+            name: MAXRATINGAEROORDERAWARDDATE
+        maxlastupdated:
+          type: string
+          xml:
+            name: MAXLASTUPDATED
+        maxrecstatus:
+          type: string
+          xml:
+            name: MAXRECSTATUS
+    MAXINCENTIVEPAYOBJIntType:
+      required:
+      - activeduty
+      - harmcode
+      - inactiveduty
+      - lastupdated
+      - orgunitid
+      - payactioncode
+      - payactioneffectivedate
+      - payactionterminationdate
+      - paycode
+      - payrequestdate
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        payactioncode:
+          type: string
+          xml:
+            name: PAYACTIONCODE
+        payactioneffectivedate:
+          type: string
+          xml:
+            name: PAYACTIONEFFECTIVEDATE
+        payactionterminationdate:
+          type: string
+          xml:
+            name: PAYACTIONTERMINATIONDATE
+        paycode:
+          type: string
+          xml:
+            name: PAYCODE
+        payrequestdate:
+          type: string
+          xml:
+            name: PAYREQUESTDATE
+        activeduty:
+          type: string
+          xml:
+            name: ACTIVEDUTY
+        inactiveduty:
+          type: string
+          xml:
+            name: INACTIVEDUTY
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    MAXBADGEOBJIntType:
+      required:
+      - badgecode
+      - badgename
+      - harmcode
+      - lastupdated
+      - maxbadgeawarddate
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        maxbadgeawarddate:
+          type: string
+          xml:
+            name: MAXBADGEAWARDDATE
+        badgecode:
+          type: string
+          xml:
+            name: BADGECODE
+        badgename:
+          type: string
+          xml:
+            name: BADGENAME
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    MAXAVIATIONOBJIntType:
+      required:
+      - harmcode
+      - lastupdated
+      - maxaviationservicedate
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        maxaviationservicedate:
+          type: string
+          xml:
+            name: MAXAVIATIONSERVICEDATE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    MANMONTHDATAOBJIntType:
+      required:
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        manmonthrecordnbr:
+          type: number
+          format: double
+          xml:
+            name: MANMONTHRECORDNBR
+        manmonthissued:
+          type: number
+          format: double
+          xml:
+            name: MANMONTHISSUED
+        manmonthspaid:
+          type: number
+          format: double
+          xml:
+            name: MANMONTHSPAID
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    LINEBADGEDATAOBJIntType:
+      required:
+      - harmcode
+      - lastupdated
+      - linebadgeid
+      - linebadgeissuedate
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        linebadgeid:
+          type: string
+          xml:
+            name: LINEBADGEID
+        linebadgeissuedate:
+          type: string
+          xml:
+            name: LINEBADGEISSUEDATE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    JUMPDATAOBJIntType:
+      required:
+      - aircraftmds
+      - harmcode
+      - jumpdate
+      - jumplocationname
+      - lastupdated
+      - organizationunitid
+      - parachutedesignation
+      - recstatus
+      type: object
+      properties:
+        jumpuniqueid:
+          type: number
+          format: double
+          xml:
+            name: JUMPUNIQUEID
+        jumpdate:
+          type: string
+          xml:
+            name: JUMPDATE
+        aircraftmds:
+          type: string
+          xml:
+            name: AIRCRAFTMDS
+        organizationunitid:
+          type: string
+          xml:
+            name: ORGANIZATIONUNITID
+        jumplocationname:
+          type: string
+          xml:
+            name: JUMPLOCATIONNAME
+        parachutedesignation:
+          type: string
+          xml:
+            name: PARACHUTEDESIGNATION
+        jumpaltitude:
+          type: number
+          format: double
+          xml:
+            name: JUMPALTITUDE
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    JUMPDATATOTALOBJIntType:
+      required:
+      - firstjumpdate
+      - harmcode
+      - jumpactivedutycode
+      - lastjumpdate
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        jumpactivedutycode:
+          type: string
+          xml:
+            name: JUMPACTIVEDUTYCODE
+        jumptotals:
+          type: number
+          format: double
+          xml:
+            name: JUMPTOTALS
+        firstjumpdate:
+          type: string
+          xml:
+            name: FIRSTJUMPDATE
+        lastjumpdate:
+          type: string
+          xml:
+            name: LASTJUMPDATE
+        jumpadmintotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPADMINTOTAL
+        jumphahototal:
+          type: number
+          format: double
+          xml:
+            name: JUMPHAHOTOTAL
+        jumpejectionseattotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPEJECTIONSEATTOTAL
+        jumphalototal:
+          type: number
+          format: double
+          xml:
+            name: JUMPHALOTOTAL
+        jumpmasstacoroptotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPMASSTACOROPTOTAL
+        jumptacticalopstotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPTACTICALOPSTOTAL
+        jumpexperimentaltesttot:
+          type: number
+          format: double
+          xml:
+            name: JUMPEXPERIMENTALTESTTOT
+        jumpothertotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPOTHERTOTAL
+        jumpcombattotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPCOMBATTOTAL
+        jumpequipmenttotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPEQUIPMENTTOTAL
+        jumpfreefalltotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPFREEFALLTOTAL
+        jumpnighttotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPNIGHTTOTAL
+        jumpoxygentotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPOXYGENTOTAL
+        jumpscubatotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPSCUBATOTAL
+        jumpwatertotal:
+          type: number
+          format: double
+          xml:
+            name: JUMPWATERTOTAL
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    JUMPAUDITDATAOBJIntType:
+      required:
+      - aircraftmds
+      - harmcode
+      - jumpactivedutycode
+      - jumpactivitydate
+      - jumpactivityupdatedate
+      - jumplocationname
+      - jumpremarks
+      - lastupdated
+      - orgunitid
+      - parachutedesignation
+      - recstatus
+      type: object
+      properties:
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        jumpuniqueid:
+          type: number
+          format: double
+          xml:
+            name: JUMPUNIQUEID
+        jumpactivitydate:
+          type: string
+          xml:
+            name: JUMPACTIVITYDATE
+        aircraftmds:
+          type: string
+          xml:
+            name: AIRCRAFTMDS
+        jumplocationname:
+          type: string
+          xml:
+            name: JUMPLOCATIONNAME
+        parachutedesignation:
+          type: string
+          xml:
+            name: PARACHUTEDESIGNATION
+        jumpaltitude:
+          type: number
+          format: double
+          xml:
+            name: JUMPALTITUDE
+        jumptypeadmincode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEADMINCODE
+        jumptypehahocode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEHAHOCODE
+        jumptypeejectseatcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEEJECTSEATCODE
+        jumptypehalocode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEHALOCODE
+        jumpmasscode:
+          type: number
+          format: double
+          xml:
+            name: JUMPMASSCODE
+        jumptacticaloperationscode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTACTICALOPERATIONSCODE
+        jumptesttot:
+          type: number
+          format: double
+          xml:
+            name: JUMPTESTTOT
+        jumptypeothercode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEOTHERCODE
+        jumpconditioncombatcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONCOMBATCODE
+        jumpconditionequipmentcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONEQUIPMENTCODE
+        jumpconditionfreefallcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONFREEFALLCODE
+        jumpconditionnightcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONNIGHTCODE
+        jumpconditionoxygencode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONOXYGENCODE
+        jumpconditionscubacode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONSCUBACODE
+        jumpconditionwatercode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONWATERCODE
+        jumpactivedutycode:
+          type: string
+          xml:
+            name: JUMPACTIVEDUTYCODE
+        jumpremarks:
+          type: string
+          xml:
+            name: JUMPREMARKS
+        jumpactivityupdatedate:
+          type: string
+          xml:
+            name: JUMPACTIVITYUPDATEDATE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    JUMPACTIVITYDATAOBJIntType:
+      required:
+      - harmcode
+      - jumpactivedutycode
+      - jumpactivityupdatedate
+      - jumpremarks
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        jumpuniqueid:
+          type: number
+          format: double
+          xml:
+            name: JUMPUNIQUEID
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        jumptypeadmincode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEADMINCODE
+        jumptypehahocode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEHAHOCODE
+        jumptypeejectseatcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEEJECTSEATCODE
+        jumptypehalocode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEHALOCODE
+        jumpmasscode:
+          type: number
+          format: double
+          xml:
+            name: JUMPMASSCODE
+        jumptacticaloperationscode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTACTICALOPERATIONSCODE
+        jumptesttot:
+          type: number
+          format: double
+          xml:
+            name: JUMPTESTTOT
+        jumptypeothercode:
+          type: number
+          format: double
+          xml:
+            name: JUMPTYPEOTHERCODE
+        jumpconditioncombatcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONCOMBATCODE
+        jumpconditionequipmentcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONEQUIPMENTCODE
+        jumpconditionfreefallcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONFREEFALLCODE
+        jumpconditionnightcode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONNIGHTCODE
+        jumpconditionoxygencode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONOXYGENCODE
+        jumpconditionscubacode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONSCUBACODE
+        jumpconditionwatercode:
+          type: number
+          format: double
+          xml:
+            name: JUMPCONDITIONWATERCODE
+        jumpactivedutycode:
+          type: string
+          xml:
+            name: JUMPACTIVEDUTYCODE
+        jumpremarks:
+          type: string
+          xml:
+            name: JUMPREMARKS
+        jumpactivityupdatedate:
+          type: string
+          xml:
+            name: JUMPACTIVITYUPDATEDATE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    INCENTIVEPAYOBJIntType:
+      required:
+      - flyerpayaction
+      - flyerpayactioneffectivedate
+      - flyerpayactiontermdate
+      - flyerpayactiveduty
+      - flyerpayinactiveduty
+      - flyerpayrequestdate
+      - harmcode
+      - incentivepaycode
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyerpayactioneffectivedate:
+          type: string
+          xml:
+            name: FLYERPAYACTIONEFFECTIVEDATE
+        incentivepaycode:
+          type: string
+          xml:
+            name: INCENTIVEPAYCODE
+        flyerpayaction:
+          type: string
+          xml:
+            name: FLYERPAYACTION
+        flyerpayactiontermdate:
+          type: string
+          xml:
+            name: FLYERPAYACTIONTERMDATE
+        flyerpayrequestdate:
+          type: string
+          xml:
+            name: FLYERPAYREQUESTDATE
+        flyerpayactiveduty:
+          type: string
+          xml:
+            name: FLYERPAYACTIVEDUTY
+        flyerpayinactiveduty:
+          type: string
+          xml:
+            name: FLYERPAYINACTIVEDUTY
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    FORMALTRAININGOBJIntType:
+      required:
+      - formaltrngcoursecompletedt
+      - formaltrngcourseid
+      - formaltrngcoursenumber
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        formaltrngcourseid:
+          type: string
+          xml:
+            name: FORMALTRNGCOURSEID
+        formaltrngcoursecompletedt:
+          type: string
+          xml:
+            name: FORMALTRNGCOURSECOMPLETEDT
+        formaltrngcoursenumber:
+          type: string
+          xml:
+            name: FORMALTRNGCOURSENUMBER
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    ENLISTEDPERSONNELOBJIntType:
+      required:
+      - flyerdateofseparation
+      - flyerenlistmentdate
+      - flyerprojectedenlistmentdate
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyerenlistmentdate:
+          type: string
+          xml:
+            name: FLYERENLISTMENTDATE
+        flyerprojectedenlistmentdate:
+          type: string
+          xml:
+            name: FLYERPROJECTEDENLISTMENTDATE
+        flyerdateofseparation:
+          type: string
+          xml:
+            name: FLYERDATEOFSEPARATION
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    CREWTABLEOBJIntType:
+      required:
+      - crewaircraftmds
+      - crewdatefromed
+      - crewhosmcode
+      - crewid
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        crewaircraftmds:
+          type: string
+          xml:
+            name: CREWAIRCRAFTMDS
+        crewid:
+          type: string
+          xml:
+            name: CREWID
+        crewhosmcode:
+          type: string
+          xml:
+            name: CREWHOSMCODE
+        crewdatefromed:
+          type: string
+          xml:
+            name: CREWDATEFROMED
+        crewuniqueid:
+          type: number
+          format: double
+          xml:
+            name: CREWUNIQUEID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    BADGEAWARDOBJIntType:
+      required:
+      - badgeawarddate
+      - badgecode
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        badgecode:
+          type: string
+          xml:
+            name: BADGECODE
+        badgeawarddate:
+          type: string
+          xml:
+            name: BADGEAWARDDATE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    ACCESSZONEOBJIntType:
+      required:
+      - flyeraccesszoneidentifier
+      - flyerescortpriveledgecode
+      - harmcode
+      - lastupdated
+      - orgunitid
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyeraccesszoneidentifier:
+          type: string
+          xml:
+            name: FLYERACCESSZONEIDENTIFIER
+        flyerescortpriveledgecode:
+          type: string
+          xml:
+            name: FLYERESCORTPRIVELEDGECODE
+        orgunitid:
+          type: string
+          xml:
+            name: ORGUNITID
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    OFDAWAIVEROBJIntType:
+      required:
+      - flyerflyingorganizationid
+      - flyerofdawaiverdate
+      - flyerofdawaivertype
+      - harmcode
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyerofdawaivertype:
+          type: string
+          xml:
+            name: FLYEROFDAWAIVERTYPE
+        flyerofdawaiverdate:
+          type: string
+          xml:
+            name: FLYEROFDAWAIVERDATE
+        flyerofdawaivergate:
+          type: number
+          format: double
+          xml:
+            name: FLYEROFDAWAIVERGATE
+        flyerofdawaivercount:
+          type: number
+          format: double
+          xml:
+            name: FLYEROFDAWAIVERCOUNT
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    FLYERCURRENTSTATUSOBJIntType:
+      required:
+      - flyeradditionalratingawarddt
+      - flyeradditionalratingcode
+      - flyercurasceffectivedate
+      - flyercurascterminationdate
+      - flyercurbadge
+      - flyercurentitlementstatuscode
+      - flyercurflyingstatuscode
+      - flyercurrentbadgedate
+      - flyercurrentratingawarddate
+      - flyercurrentratingcode
+      - flyerflyingorganizationid
+      - flyerinitalratingawarddate
+      - harmcode
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyercurrentratingcode:
+          type: string
+          xml:
+            name: FLYERCURRENTRATINGCODE
+        flyercurrentratingawarddate:
+          type: string
+          xml:
+            name: FLYERCURRENTRATINGAWARDDATE
+        flyeradditionalratingcode:
+          type: string
+          xml:
+            name: FLYERADDITIONALRATINGCODE
+        flyeradditionalratingawarddt:
+          type: string
+          xml:
+            name: FLYERADDITIONALRATINGAWARDDT
+        flyerinitalratingawarddate:
+          type: string
+          xml:
+            name: FLYERINITALRATINGAWARDDATE
+        flyercurentitlementstatuscode:
+          type: string
+          xml:
+            name: FLYERCURENTITLEMENTSTATUSCODE
+        flyercurflyingstatuscode:
+          type: string
+          xml:
+            name: FLYERCURFLYINGSTATUSCODE
+        flyercurascterminationdate:
+          type: string
+          xml:
+            name: FLYERCURASCTERMINATIONDATE
+        flyercurbadge:
+          type: string
+          xml:
+            name: FLYERCURBADGE
+        flyercurrentbadgedate:
+          type: string
+          xml:
+            name: FLYERCURRENTBADGEDATE
+        flyercurasceffectivedate:
+          type: string
+          xml:
+            name: FLYERCURASCEFFECTIVEDATE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    FLYERAIRCRAFTTOTALOBJIntType:
+      required:
+      - airccraftmajcomcode
+      - aircraftcomponentcode
+      - certrecordchangedate
+      - flyeraircraftassigndate
+      - flyeraircraftassignevent
+      - flyeraircraftcertcode
+      - flyeraircraftdescsimcode
+      - flyeraircraftmds
+      - flyercrewpositioncode
+      - flyercrewpositionexperience
+      - flyerfirstflowndate
+      - flyerflyingorganizationid
+      - flyerlastflowndate
+      - harmcode
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyeraircraftmds:
+          type: string
+          xml:
+            name: FLYERAIRCRAFTMDS
+        flyercrewpositioncode:
+          type: string
+          xml:
+            name: FLYERCREWPOSITIONCODE
+        flyercrewpositionexperience:
+          type: string
+          xml:
+            name: FLYERCREWPOSITIONEXPERIENCE
+        aircraftcomponentcode:
+          type: string
+          xml:
+            name: AIRCRAFTCOMPONENTCODE
+        airccraftmajcomcode:
+          type: string
+          xml:
+            name: AIRCCRAFTMAJCOMCODE
+        certrecordchangedate:
+          type: string
+          xml:
+            name: CERTRECORDCHANGEDATE
+        flyeraircraftassigndate:
+          type: string
+          xml:
+            name: FLYERAIRCRAFTASSIGNDATE
+        flyeraircraftassignevent:
+          type: string
+          xml:
+            name: FLYERAIRCRAFTASSIGNEVENT
+        flyeraircraftdescsimcode:
+          type: string
+          xml:
+            name: FLYERAIRCRAFTDESCSIMCODE
+        flyeraircraftcertcode:
+          type: string
+          xml:
+            name: FLYERAIRCRAFTCERTCODE
+        flyerprimaryhours:
+          type: number
+          format: double
+          xml:
+            name: FLYERPRIMARYHOURS
+        flyersecondaryhours:
+          type: number
+          format: double
+          xml:
+            name: FLYERSECONDARYHOURS
+        flyerinstructorhours:
+          type: number
+          format: double
+          xml:
+            name: FLYERINSTRUCTORHOURS
+        flyerevaluatorhours:
+          type: number
+          format: double
+          xml:
+            name: FLYEREVALUATORHOURS
+        flyerotherhours:
+          type: number
+          format: double
+          xml:
+            name: FLYEROTHERHOURS
+        flyertotalsorties:
+          type: number
+          format: double
+          xml:
+            name: FLYERTOTALSORTIES
+        flyerprimarynighthours:
+          type: number
+          format: double
+          xml:
+            name: FLYERPRIMARYNIGHTHOURS
+        flyerprimaryinstrumenthours:
+          type: number
+          format: double
+          xml:
+            name: FLYERPRIMARYINSTRUMENTHOURS
+        flyerprimarysiminstrmnthours:
+          type: number
+          format: double
+          xml:
+            name: FLYERPRIMARYSIMINSTRMNTHOURS
+        flyernightvisiongoggleshours:
+          type: number
+          format: double
+          xml:
+            name: FLYERNIGHTVISIONGOGGLESHOURS
+        flyercombathours:
+          type: number
+          format: double
+          xml:
+            name: FLYERCOMBATHOURS
+        flyercombatsorties:
+          type: number
+          format: double
+          xml:
+            name: FLYERCOMBATSORTIES
+        flyerrpalretime:
+          type: number
+          format: double
+          xml:
+            name: FLYERRPALRETIME
+        flyerrpamcetime:
+          type: number
+          format: double
+          xml:
+            name: FLYERRPAMCETIME
+        flyercombatsupporthours:
+          type: number
+          format: double
+          xml:
+            name: FLYERCOMBATSUPPORTHOURS
+        flyercombatsupportsorties:
+          type: number
+          format: double
+          xml:
+            name: FLYERCOMBATSUPPORTSORTIES
+        flyerfirstflowndate:
+          type: string
+          xml:
+            name: FLYERFIRSTFLOWNDATE
+        flyerlastflowndate:
+          type: string
+          xml:
+            name: FLYERLASTFLOWNDATE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    FLYER7306090OBJIntType:
+      required:
+      - flyerflyingorganizationid
+      - flyerlastproductiveflight
+      - harmcode
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyerhours7:
+          type: number
+          format: double
+          xml:
+            name: FLYERHOURS7
+        flyerhours30:
+          type: number
+          format: double
+          xml:
+            name: FLYERHOURS30
+        flyerhours60:
+          type: number
+          format: double
+          xml:
+            name: FLYERHOURS60
+        flyerhours90:
+          type: number
+          format: double
+          xml:
+            name: FLYERHOURS90
+        flyerlastproductiveflight:
+          type: string
+          xml:
+            name: FLYERLASTPRODUCTIVEFLIGHT
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    FLIGHTPAYOBJIntType:
+      required:
+      - aviationpositionindicatordate
+      - flyeraviationpositioncode
+      - flyeraviationservicedate
+      - flyerflyingactivitycode
+      - flyerflyingorganizationid
+      - flyerofficerservicedate
+      - flyerratedtype
+      - flyertransitionstatuscode
+      - flyerweathercategorycode
+      - flyingactivitycode
+      - harmcode
+      - lastupdated
+      - ofdagate1ENDDATE
+      - ofdagate2ENDDATE
+      - ofdagate3ENDDATE
+      - ofdawaiverdate
+      - originalasd
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyertotalofda:
+          type: number
+          format: double
+          xml:
+            name: FLYERTOTALOFDA
+        flyertransitionstatuscode:
+          type: string
+          xml:
+            name: FLYERTRANSITIONSTATUSCODE
+        flyertransitionstatuscodetotl:
+          type: number
+          format: double
+          xml:
+            name: FLYERTRANSITIONSTATUSCODETOTL
+        flyerofdagate1TOTAL:
+          type: number
+          format: double
+          xml:
+            name: FLYEROFDAGATE1TOTAL
+        flyerofdagate2TOTAL:
+          type: number
+          format: double
+          xml:
+            name: FLYEROFDAGATE2TOTAL
+        flyerofdagate3TOTAL:
+          type: number
+          format: double
+          xml:
+            name: FLYEROFDAGATE3TOTAL
+        flyerflyingactivitycode:
+          type: string
+          xml:
+            name: FLYERFLYINGACTIVITYCODE
+        flyeraviationservicedate:
+          type: string
+          xml:
+            name: FLYERAVIATIONSERVICEDATE
+        flyeraviationpositioncode:
+          type: string
+          xml:
+            name: FLYERAVIATIONPOSITIONCODE
+        ofdagate1ENDDATE:
+          type: string
+          xml:
+            name: OFDAGATE1ENDDATE
+        ofdagate2ENDDATE:
+          type: string
+          xml:
+            name: OFDAGATE2ENDDATE
+        ofdagate3ENDDATE:
+          type: string
+          xml:
+            name: OFDAGATE3ENDDATE
+        preacipmonths:
+          type: number
+          format: double
+          xml:
+            name: PREACIPMONTHS
+        ofdawaiverdate:
+          type: string
+          xml:
+            name: OFDAWAIVERDATE
+        ofdawaivermonths:
+          type: number
+          format: double
+          xml:
+            name: OFDAWAIVERMONTHS
+        ofdauav:
+          type: number
+          format: double
+          xml:
+            name: OFDAUAV
+        flyingactivitycode:
+          type: string
+          xml:
+            name: FLYINGACTIVITYCODE
+        aviationpositionindicatordate:
+          type: string
+          xml:
+            name: AVIATIONPOSITIONINDICATORDATE
+        originalasd:
+          type: string
+          xml:
+            name: ORIGINALASD
+        flyerratedtype:
+          type: string
+          xml:
+            name: FLYERRATEDTYPE
+        flyerofficerservicedate:
+          type: string
+          xml:
+            name: FLYEROFFICERSERVICEDATE
+        flyerweathercategorycode:
+          type: string
+          xml:
+            name: FLYERWEATHERCATEGORYCODE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    AVIATIONSERVICEOBJIntType:
+      required:
+      - aviationserviceeffectivedt
+      - aviationserviceterminationdt
+      - flyeradjustedaviationsvcflag
+      - flyeraviationsvcflyingstatus
+      - flyeraviationsvcjumpstatus
+      - flyerentitlementstatuscode
+      - flyerflyingorganizationid
+      - flyerflyingstatuscode
+      - harmcode
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        flyerentitlementstatuscode:
+          type: string
+          xml:
+            name: FLYERENTITLEMENTSTATUSCODE
+        aviationserviceeffectivedt:
+          type: string
+          xml:
+            name: AVIATIONSERVICEEFFECTIVEDT
+        flyeraviationsvcflyingstatus:
+          type: string
+          xml:
+            name: FLYERAVIATIONSVCFLYINGSTATUS
+        flyeraviationsvcjumpstatus:
+          type: string
+          xml:
+            name: FLYERAVIATIONSVCJUMPSTATUS
+        aviationserviceterminationdt:
+          type: string
+          xml:
+            name: AVIATIONSERVICETERMINATIONDT
+        flyerflyingstatuscode:
+          type: string
+          xml:
+            name: FLYERFLYINGSTATUSCODE
+        flyeradjustedaviationsvcflag:
+          type: string
+          xml:
+            name: FLYERADJUSTEDAVIATIONSVCFLAG
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    AIRCREWPOSITIONTOTALSOBJIntType:
+      required:
+      - flyercrewpositioncode
+      - flyerfirstflowndate
+      - flyerflyingorganizationid
+      - flyerlastflowndate
+      - harmcode
+      - lastupdated
+      - recstatus
+      type: object
+      properties:
+        flyeruniqueid:
+          type: number
+          format: double
+          xml:
+            name: FLYERUNIQUEID
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        flyerflyingorganizationid:
+          type: string
+          xml:
+            name: FLYERFLYINGORGANIZATIONID
+        flyercrewpositioncode:
+          type: string
+          xml:
+            name: FLYERCREWPOSITIONCODE
+        flyerciviliantotal:
+          type: number
+          format: double
+          xml:
+            name: FLYERCIVILIANTOTAL
+        flyerstudenttotal:
+          type: number
+          format: double
+          xml:
+            name: FLYERSTUDENTTOTAL
+        flyerothermilitarytotal:
+          type: number
+          format: double
+          xml:
+            name: FLYEROTHERMILITARYTOTAL
+        flyerforeignmilitarytotal:
+          type: number
+          format: double
+          xml:
+            name: FLYERFOREIGNMILITARYTOTAL
+        flyerfirstflowndate:
+          type: string
+          xml:
+            name: FLYERFIRSTFLOWNDATE
+        flyerlastflowndate:
+          type: string
+          xml:
+            name: FLYERLASTFLOWNDATE
+        lastupdated:
+          type: string
+          xml:
+            name: LASTUPDATED
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+    AIRCREWPERSONNELOBJIntType:
+      required:
+      - dodPerRecordChangeDate
+      - flyerAfsc
+      - flyerAfscPrefix
+      - flyerAfscSuffix
+      - flyerAssignedFlightCode
+      - flyerCitizenCountryCode
+      - flyerCrewPositionCode
+      - flyerDateOfBirth
+      - flyerDutyEffectiveDate
+      - flyerDutyTitle
+      - flyerFirstName
+      - flyerFlyingOrganizationId
+      - flyerGender
+      - flyerGradeCode
+      - flyerHorisChangeCode
+      - flyerLastName
+      - flyerMajcom
+      - flyerMiddleInitial
+      - flyerNameSuffix
+      - flyerOfficeSymbol
+      - flyerOrganization
+      - flyerPasCode
+      - flyerPhysicalAvailabilityCode
+      - flyerPhysicalAvailabilityDate
+      - flyerPhysicalDate
+      - flyerPhysicalDueDate
+      - flyerPhysiologicalDate
+      - flyerPhysiologicalDueDate
+      - flyerPhysiologicalRequired
+      - flyerPreviousExperienceFlag
+      - flyerPreviousHARM
+      - flyerRankDate
+      - flyerRecordReviewDate
+      - flyerRecordReviewDueDate
+      - flyerSecurityAccess
+      - flyerServiceComponentCode
+      - fyerFlyingHARMCode
+      - lastUpdated
+      - recStatus
+      - securityClearanceDate
+      type: object
+      properties:
+        flyerUniqueId:
+          type: number
+          format: double
+        flyerFirstName:
+          type: string
+        flyerMiddleInitial:
+          type: string
+        flyerLastName:
+          type: string
+        flyerNameSuffix:
+          type: string
+        flyerFlyingOrganizationId:
+          type: string
+        fyerFlyingHARMCode:
+          type: string
+        flyerPreviousHARM:
+          type: string
+        flyerRankDate:
+          type: string
+        flyerGradeCode:
+          type: string
+        flyerCitizenCountryCode:
+          type: string
+        dodPerRecordChangeDate:
+          type: string
+          xml:
+            name: DodPerRecordChangeDate
+        flyerDsnPrefix:
+          type: number
+          format: double
+        flyerDsnExtension:
+          type: number
+          format: double
+        flyerOrganization:
+          type: string
+        flyerMajcom:
+          type: string
+        flyerSecurityAccess:
+          type: string
+        securityClearanceDate:
+          type: string
+          xml:
+            name: SecurityClearanceDate
+        flyerDateOfBirth:
+          type: string
+        flyerGender:
+          type: string
+        flyerServiceComponentCode:
+          type: string
+        flyerAfscPrefix:
+          type: string
+        flyerAfsc:
+          type: string
+        flyerAfscSuffix:
+          type: string
+        flyerPreviousExperienceFlag:
+          type: string
+        flyerHorisChangeCode:
+          type: string
+        flyerPasCode:
+          type: string
+        flyerDutyEffectiveDate:
+          type: string
+        flyerPhysicalAvailabilityCode:
+          type: string
+        flyerAssignedFlightCode:
+          type: string
+        flyerOfficeSymbol:
+          type: string
+        flyerPhysicalDueDate:
+          type: string
+        flyerPhysicalDate:
+          type: string
+        flyerPhysicalAvailabilityDate:
+          type: string
+        flyerPhysiologicalDueDate:
+          type: string
+        flyerPhysiologicalDate:
+          type: string
+        flyerRecordReviewDueDate:
+          type: string
+        flyerRecordReviewDate:
+          type: string
+        flyerPhysiologicalRequired:
+          type: string
+        flyerCrewPositionCode:
+          type: string
+        flyerDutyTitle:
+          type: string
+        flyerCrewId:
+          type: number
+          format: double
+        lastUpdated:
+          type: string
+          xml:
+            name: LastUpdated
+        recStatus:
+          type: string
+          xml:
+            name: RecStatus
