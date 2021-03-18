@@ -9,8 +9,7 @@ public interface SubscriberService {
 
     Iterable<Subscriber> getAllSubscriptions();
     Subscriber getSubscriberById(UUID id);
-    Subscriber createSubscription(Subscriber subscriber);
-    Subscriber updateSubscription(UUID id, Subscriber subscriber);
+    Subscriber upsertSubscription(Subscriber subscriber);
     void cancelSubscription(UUID id);
 
     Iterable<Subscriber> getSubscriptionsByEventType(EventType type);

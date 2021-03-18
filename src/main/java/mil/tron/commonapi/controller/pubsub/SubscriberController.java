@@ -48,18 +48,15 @@ public class SubscriberController {
     }
 
     //
-    @Operation(summary = "Adds a new subscription", description = "Adds a new subscription.  Duplicates for the same address/event type won't be accepted")
+    @Operation(summary = "Adds/updates a subscription", description = "Adds a new subscription, or updates an existing subscription")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201",
+            @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Subscriber.class))),
-            @ApiResponse(responseCode = "409",
-                    description = "Subscription already exists",
-                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+                    content = @Content(schema = @Schema(implementation = Subscriber.class)))
     })
     @PostMapping("")
     public ResponseEntity<Subscriber> createSubscription(@Valid @RequestBody Subscriber subscriber) {
-        return new ResponseEntity<>(subService.createSubscription(subscriber), HttpStatus.CREATED);
+        return new ResponseEntity<>(subService.upsertSubscription(subscriber), HttpStatus.OK);
     }
 
     //
@@ -75,27 +72,6 @@ public class SubscriberController {
     @GetMapping("/{id}")
     public ResponseEntity<Subscriber> getSubscription(@PathVariable UUID id) {
         return new ResponseEntity<>(subService.getSubscriberById(id), HttpStatus.OK);
-    }
-
-    //
-    @Operation(summary = "Edits an existing subscription", description = "Edits an existing subscription")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Subscriber.class))),
-            @ApiResponse(responseCode = "400",
-                    description = "UUID given does not match UUID in Subscriber entity object",
-                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-            @ApiResponse(responseCode = "404",
-                    description = "Record not found",
-                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-            @ApiResponse(responseCode = "409",
-                    description = "Subscription exists with address/event type pair",
-                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-    })
-    @PutMapping("/{id}")
-    public ResponseEntity<Subscriber> updateSubscription(@PathVariable UUID id, @Valid @RequestBody Subscriber subscriber) {
-        return new ResponseEntity<>(subService.updateSubscription(id, subscriber), HttpStatus.OK);
     }
 
     //
