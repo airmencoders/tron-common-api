@@ -21,6 +21,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import javax.transaction.Transactional;
+
 @Service
 public class AppSourceServiceImpl implements AppSourceService {
 
@@ -94,6 +96,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         return this.saveAppSource(id, appSourceDetailsDto);
     }
 
+    @Transactional
     @Override
     public AppSourceDetailsDto deleteAppSource(UUID id) {
         // validate id
@@ -159,8 +162,13 @@ public class AppSourceServiceImpl implements AppSourceService {
                             .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
                             .privileges(this.buildPrivilegeSet(privDto.getPrivilegeIds(), privDto.getAppClientUser()))
                             .build()).collect(Collectors.toSet());
+            
             AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceToSave);
+            
+            Iterable<AppSourcePriv> existingPrivileges = this.appSourcePrivRepository.findAllByAppSource(appSourceToSave);
+            this.appSourcePrivRepository.deleteAll(existingPrivileges);
             this.appSourcePrivRepository.saveAll(appSourcePrivs);
+            
             appSource.setId(savedAppSource.getId());
         }
         catch (RecordNotFoundException exception) {
