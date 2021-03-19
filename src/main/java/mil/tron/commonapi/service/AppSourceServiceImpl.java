@@ -71,6 +71,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .appClients(appSource.getAppSourcePrivs().stream()
                         .map(appSourcePriv -> AppClientUserPrivDto.builder()
                                 .appClientUser(appSourcePriv.getAppClientUser().getId())
+                                .appClientUserName(appSourcePriv.getAppClientUser().getName())
                                 .privilegeIds(this.buildPrivilegeIds(appSourcePriv.getPrivileges()))
                                 .build()).collect(Collectors.toList()))
                 .build();
@@ -121,11 +122,10 @@ public class AppSourceServiceImpl implements AppSourceService {
     }
 
     private AppClientUser buildAppClientUser(UUID appClientId) throws RecordNotFoundException {
-        if (!this.appClientUserRespository.existsById(appClientId)) {
-            throw new RecordNotFoundException(String.format("No app client with id %s found.",
-                    appClientId));
-        }
-        return AppClientUser.builder().id(appClientId).build();
+        AppClientUser appClientUser = this.appClientUserRespository.findById(appClientId)
+        		.orElseThrow(() -> new RecordNotFoundException(String.format("No app client with id %s found.", appClientId)));
+        
+        return AppClientUser.builder().id(appClientUser.getId()).name(appClientUser.getName()).build();
     }
 
     private List<Long> buildPrivilegeIds(Set<Privilege> privileges) {

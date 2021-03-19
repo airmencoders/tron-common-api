@@ -106,7 +106,7 @@ public class AppSourceController {
         return new ResponseEntity<>(this.appSourceService.getAppSource(id), HttpStatus.OK);
     }
 
-    @Operation(summary = "Returns the details for an App Source")
+    @Operation(summary = "Updates the details for an App Source")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
@@ -137,8 +137,8 @@ public class AppSourceController {
     public ResponseEntity<AppSourceDetailsDto> updateAppSourceDetails(
             @Parameter(name = "id", description = "App Source id to update", required = true)
                     @PathVariable UUID id,
-            @Parameter(name = "id", description = "App Source Dto", required = true)
-            @RequestBody AppSourceDetailsDto appSourceDetailsDto) {
+            @Parameter(description = "App Source Dto", required = true)
+            @Valid @RequestBody AppSourceDetailsDto appSourceDetailsDto) {
         return new ResponseEntity<>(this.appSourceService.updateAppSource(id, appSourceDetailsDto), HttpStatus.OK);
     }
 
