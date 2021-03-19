@@ -17,6 +17,8 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +64,7 @@ public class AppSourceEndpointsBuilder {
         }
     }
 
-    private void initializeWithAppSourceDef(AppSourceInterfaceDefinition appDef) {
+    public void initializeWithAppSourceDef(AppSourceInterfaceDefinition appDef) {
         try {
             List<AppSourceEndpoint> appSourceEndpoints = this.parseAppSourceEndpoints(appDef.getOpenApiSpecFilename());
             this.appGatewayService.addSourceDefMapping(appDef.getAppSourcePath(),
@@ -70,6 +72,10 @@ public class AppSourceEndpointsBuilder {
             for (AppSourceEndpoint appEndpoint: appSourceEndpoints) {
                 this.addMapping(appDef.getAppSourcePath(), appEndpoint);
             }
+        }
+        catch (FileNotFoundException e) {
+            log.warn(String.format("Endpoints for %s could not be loaded from %s. File not found.", appDef.getName(),
+                    appDef.getOpenApiSpecFilename()), e);
         }
         catch (IOException e) {
             log.warn(String.format("Endpoints for %s could not be loaded from %s", appDef.getName(),
@@ -137,7 +143,7 @@ public class AppSourceEndpointsBuilder {
             requestMappingHandlerMapping.
                     registerMapping(requestMappingInfo, queryController,
                             AppGatewayController.class.getDeclaredMethod("handleGetRequests",
-                                    HttpServletRequest.class, Map.class)
+                                    HttpServletRequest.class, HttpServletResponse.class, Map.class)
                     );
         }
     }

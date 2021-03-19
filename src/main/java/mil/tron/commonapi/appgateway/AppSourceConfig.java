@@ -23,12 +23,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AppSourceConfig {
 
-//    private final List<AppSourceInterfaceDefinition> appSourceDefs = Arrays.asList(
-//            new AppSourceInterfaceDefinition("Puckboard",
-//                    "puckboard.yml",
-//                    "")
-//    );
-
     private AppSourceInterfaceDefinition[] appSourceDefs;
 
     private AppSourceRepository appSourceRepository;
@@ -39,7 +33,6 @@ public class AppSourceConfig {
         this.appSourceRepository = appSourceRepository;
         this.appSourceDefs = this.parseAppSourceDefs(appSourceDefFile);
         this.registerAppSources(this.appSourceDefs);
-        System.out.println(appSourceDefFile);
     }
 
     private AppSourceInterfaceDefinition[] parseAppSourceDefs(String configFile) {
@@ -62,8 +55,10 @@ public class AppSourceConfig {
 
     private void registerAppSources(AppSourceInterfaceDefinition[] appSourceDefs) {
         // attempt adding
-        for (AppSourceInterfaceDefinition appDef : appSourceDefs) {
-            this.registerAppSource(appDef);
+        if (appSourceDefs != null) {
+            for (AppSourceInterfaceDefinition appDef : appSourceDefs) {
+                this.registerAppSource(appDef);
+            }
         }
     }
 

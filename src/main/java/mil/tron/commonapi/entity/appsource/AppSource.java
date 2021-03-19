@@ -14,6 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@EqualsAndHashCode
 @Table(name="app_source", uniqueConstraints = { @UniqueConstraint(columnNames = "name")})
 public class AppSource {
 

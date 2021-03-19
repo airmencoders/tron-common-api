@@ -4,12 +4,13 @@ import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import org.apache.camel.FluentProducerTemplate;
 import org.apache.camel.Produce;
 import org.apache.camel.http.base.HttpOperationFailedException;
-import org.apache.http.client.HttpResponseException;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,19 +23,22 @@ public class AppGatewayServiceImpl implements AppGatewayService {
 
     Map<String, AppSourceInterfaceDefinition> appSourceDefMap = new HashMap<>();
 
-    public String sendRequestToAppSource(HttpServletRequest request) throws HttpResponseException {
+    public InputStreamResource sendRequestToAppSource(HttpServletRequest request) throws HttpOperationFailedException {
         String sendToPath = this.buildPathForAppSource(request.getRequestURI());
         String appPath = this.buildAppPath(request.getRequestURI());
         // use producer to send
         AppSourceInterfaceDefinition appSourceDef = this.appSourceDefMap.get(appPath);
         String endpointString = appSourceDef.getSourceUrl() + sendToPath + "?" + request.getQueryString() +
                 "&bridgeEndpoint=true";
-        String response = null;
+        InputStreamResource response = null;
         try {
-            response = producer.to(endpointString).request(String.class);
+            InputStream streamResponse = (InputStream) producer.to("direct:app-gateway").withBody(endpointString)
+                    .request();
+            response = new InputStreamResource(streamResponse);
         } catch (Exception e) {
             HttpOperationFailedException exception = (HttpOperationFailedException) e.getCause();
-            throw new HttpResponseException(exception.getStatusCode(),
+            throw new ResponseStatusException(
+                    HttpStatus.valueOf(exception.getStatusCode()),
                     exception.getResponseBody());
 
         }
