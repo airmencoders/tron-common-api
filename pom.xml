@@ -115,6 +115,7 @@
             <artifactId>json-patch</artifactId>
             <version>1.12</version>
         </dependency>
+    </dependencies>
     <build>
     	<resources>
 	        <resource>
