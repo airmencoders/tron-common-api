@@ -38,6 +38,7 @@ public class SubscriberServiceImplTest {
                 .id(UUID.randomUUID())
                 .subscriberAddress("some.address")
                 .subscribedEvent(EventType.PERSON_CHANGE)
+                .secret("secret")
                 .build();
 
 
@@ -60,54 +61,39 @@ public class SubscriberServiceImplTest {
     }
 
     @Test
-    void testCreateSubscription() {
+    void testUpsertSubscriptionNew() {
         Mockito.when(subscriberRepository
                 .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
                 .thenReturn(Optional.empty());
-
-        Mockito.when(subscriberRepository.existsById(Mockito.any(UUID.class)))
-                .thenReturn(false);
 
         Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class)))
-                .thenReturn(subscriber);
+            .thenAnswer(s -> s.getArgument(0));
 
-        assertEquals(subscriber.getId(), subscriberService.createSubscription(subscriber).getId());
-
-        Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
-                .thenReturn(Optional.of(subscriber));
-
-        assertThrows(ResourceAlreadyExistsException.class, () -> subscriberService.createSubscription(subscriber));
-
-        Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
-                .thenReturn(Optional.empty());
-
-        Mockito.when(subscriberRepository.existsById(Mockito.any(UUID.class)))
-                .thenReturn(true);
-
-        assertThrows(ResourceAlreadyExistsException.class, () -> subscriberService.createSubscription(subscriber));
+        var result = subscriberService.upsertSubscription(subscriber);
+        assertEquals(subscriber.getSecret(), result.getSecret());
+        assertEquals(subscriber.getSubscribedEvent(), result.getSubscribedEvent());
+        assertEquals(subscriber.getSubscriberAddress(), result.getSubscriberAddress());
     }
 
     @Test
-    void testUpdateSubscription() {
-        Mockito.when(subscriberRepository.existsById(Mockito.any(UUID.class))).thenReturn(false);
-        assertThrows(RecordNotFoundException.class, () -> subscriberService.updateSubscription(subscriber.getId(), subscriber));
-
-        Mockito.when(subscriberRepository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+    void testUpsertSubscriptionExisting() {
         Mockito.when(subscriberRepository
                 .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
                 .thenReturn(Optional.of(subscriber));
-        assertThrows(ResourceAlreadyExistsException.class, () -> subscriberService.updateSubscription(subscriber.getId(), subscriber));
 
-        Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
-                .thenReturn(Optional.empty());
+        Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class)))
+            .thenAnswer(s -> s.getArgument(0));
 
-        assertThrows(InvalidRecordUpdateRequest.class, () -> subscriberService.updateSubscription(UUID.randomUUID(), subscriber));
-
-        Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class))).thenReturn(subscriber);
-        assertEquals(subscriber.getId(), subscriberService.updateSubscription(subscriber.getId(), subscriber).getId());
+        var result = subscriberService.upsertSubscription(Subscriber.builder()
+            .subscribedEvent(subscriber.getSubscribedEvent())
+            .subscriberAddress(subscriber.getSubscriberAddress())
+            .secret("new secret")
+            .build());
+        
+        assertEquals(subscriber.getId(), result.getId());
+        assertEquals("new secret", result.getSecret());
+        assertEquals(subscriber.getSubscribedEvent(), result.getSubscribedEvent());
+        assertEquals(subscriber.getSubscriberAddress(), result.getSubscriberAddress());
     }
 
     @Test

@@ -312,6 +312,20 @@ public class OrganizationControllerTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
 		}
+
+		@Test
+		void testDeleteOrgLeader() throws Exception {
+			Mockito.when(organizationService.modify(Mockito.any(UUID.class), Mockito.anyMap())).thenReturn(testOrgDto);
+			mockMvc.perform(delete(ENDPOINT + "{id}/leader", testOrgDto.getId()))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		void testDeleteOrgParent() throws Exception {
+			Mockito.when(organizationService.modify(Mockito.any(UUID.class), Mockito.anyMap())).thenReturn(testOrgDto);
+			mockMvc.perform(delete(ENDPOINT + "{id}/parent", testOrgDto.getId()))
+					.andExpect(status().isOk());
+		}
 	}
 
 	@Nested
@@ -404,6 +418,13 @@ public class OrganizationControllerTest {
 			Person p2 = new Person();
 			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
 
+			Mockito.when(organizationService.flattenOrg(testOrgDto))
+					.thenReturn(OrganizationDto
+							.builder()
+							.id(testOrgDto.getId())
+							.members(newOrg.getMembers())
+							.subordinateOrganizations(Set.of(newOrg.getId()))
+							.build());
 			Mockito.when(organizationService.getOrganization(newOrg.getId())).thenReturn(newOrg);
 			Mockito.when(organizationService.getOrganization(testOrgDto.getId())).thenReturn(testOrgDto);
 			mockMvc.perform(get(ENDPOINT + "{id}?flatten=true", testOrg.getId()))

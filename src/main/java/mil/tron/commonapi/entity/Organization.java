@@ -93,7 +93,7 @@ public class Organization {
      * @param parent Organization to add as the parent entity
      */
     public void setParentOrganization(Organization parent) {
-        if (parent.getId().equals(this.getId())) {
+        if (parent != null && parent.getId().equals(this.getId())) {
             throw new InvalidRecordUpdateRequest("An organization cannot add itself as its parent");
         }
         this.parentOrganization = parent;
@@ -179,7 +179,9 @@ public class Organization {
     public void setLeaderAndUpdateMembers(Person leader) {
         this.members.remove(this.leader);
         this.leader = leader;
-        this.members.add(leader);
+        if (leader != null) {
+            this.members.add(leader);
+        }
     }
 
 

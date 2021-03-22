@@ -6,11 +6,11 @@ import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
-import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.pubsub.EventManagerServiceImpl;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
@@ -170,15 +170,38 @@ class OrganizationServiceImplTest {
 	class DeleteOrganizationTest {
 		@Test
 		 void successfulDelete() {
-			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+
+			// tests we can delete a "nested" org that is linked as a parent somewhere
+			//  and as a subordinate org somewhere
+
+			Organization parent = new Organization();
+			Organization theOrg = new Organization();  // the org we're going to delete
+			Organization someDownStreamOrg = new Organization();
+			parent.addSubordinateOrganization(theOrg);
+			theOrg.setParentOrganization(parent);
+			theOrg.addSubordinateOrganization(someDownStreamOrg);
+			someDownStreamOrg.setParentOrganization(theOrg);
+
+			Mockito.when(repository.findOrganizationsByParentOrganization(theOrg))
+					.thenReturn(Lists.newArrayList(someDownStreamOrg));
+
+			Mockito.when(repository.findOrganizationsBySubordinateOrganizationsContaining(theOrg))
+					.thenReturn(Lists.newArrayList(parent));
+
+			Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(theOrg));
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
-			organizationService.deleteOrganization(testOrg.getId());
-			Mockito.verify(repository, Mockito.times(1)).deleteById(testOrg.getId());
+			organizationService.deleteOrganization(theOrg.getId());
+			Mockito.verify(repository, Mockito.times(1)).deleteById(theOrg.getId());
+
+			assertNull(theOrg.getParentOrganization());
+			assertFalse(parent.getSubordinateOrganizations().contains(theOrg));
+			assertNull(someDownStreamOrg.getParentOrganization());
 		}
 		
 		@Test
 		void deleteIdNotExist() {
-			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenThrow(new RecordNotFoundException("Not found"));
 			
 			assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
 				organizationService.deleteOrganization(testOrg.getId());
@@ -265,6 +288,19 @@ class OrganizationServiceImplTest {
 	}
 
 	@Test
+	void changeOrganizationBranchAndUnitType() {
+		Map<String, String> attribs = new HashMap<>();
+		attribs.put("branchType", Branch.USAF.toString());
+		attribs.put("orgType", Unit.OTHER_USAF.toString());
+
+		Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
+		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
+		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
+		assertThat(savedOrg.getBranchType()).isEqualTo(Branch.USAF);
+		assertThat(savedOrg.getOrgType()).isEqualTo(Unit.OTHER_USAF);
+	}
+
+	@Test
 	void changeOrganizationName() {
 		Map<String, String> attribs = new HashMap<>();
 		attribs.put("name", "test org");
@@ -281,15 +317,31 @@ class OrganizationServiceImplTest {
 		Map<String, String> attribs = new HashMap<>();
 		attribs.put("parentOrganization", newUnit.getId().toString());
 
-		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg), Optional.of(newUnit));
-		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
+		Mockito.when(repository.findById(newUnit.getId()))
+				.thenReturn(Optional.of(newUnit));
+		Mockito.when(repository.findById(testOrg.getId()))
+				.thenReturn(Optional.of(testOrg));
+
+		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
+
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getParentOrganization()).isEqualTo(newUnit.getId());
 
+		// now test that adding a parent that's already a descendent fails
+		testOrg.addSubordinateOrganization(newUnit);
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.modify(testOrg.getId(), attribs));
+
 		// test bogus parent
-		attribs.put("parentOrganization", new Organization().getId().toString());
+		Organization bogus = new Organization();
+		attribs.put("parentOrganization", bogus.getId().toString());
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg)).thenThrow(new RecordNotFoundException("Not Found"));
 		assertThrows(RecordNotFoundException.class, () -> organizationService.modify(testOrgDto.getId(), attribs));
+
+		// test we can do null
+		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
+		attribs.put("parentOrganization", null);
+		organizationService.modify(testOrg.getId(), attribs);
+		assertNull(testOrg.getParentOrganization());
 	}
 
 	@Test
@@ -543,6 +595,7 @@ class OrganizationServiceImplTest {
 		assertFalse(node.get("parentOrganization").has("leader"));
 	}
 
+	@Test
 	void testThatOrgCantAssignSubordinateOrgThatsInItsAncestryChain() {
 
 		Organization greatGrandParent = new Organization();
@@ -567,4 +620,104 @@ class OrganizationServiceImplTest {
 		assertFalse(organizationService.orgIsInAncestryChain(legitSubOrg.getId(), theOrg));
 
 	}
+
+	@Test
+	void testThatParentFieldCanBeNulledOut() {
+
+		// null is a valid parent (no parent)
+		Organization parent = new Organization();
+		Organization theOrg = new Organization();
+		theOrg.setParentOrganization(parent);
+		theOrg.setParentOrganization(null);
+		assertNull(parent.getParentOrganization());
+	}
+
+	@Test
+	void testOrgFlattenerAndDescendentChecker() {
+
+		// test the org flattener-
+		//  setup is a Parent with two sub orgs... the second of those
+		//  sub orgs has one sub org if its own...
+
+		// final flattened org should have 3 suborgs
+		//  and 6 people total
+
+		// this test also checks that the 'parentOrgCandidateIsDescendent'
+		//   service method
+
+		Person p1 = new Person();
+		Person p2 = new Person();
+		Person p3 = new Person();
+		Person p4 = new Person();
+		Person p5 = new Person();
+		Person p6 = new Person();
+
+		OrganizationDto child1 = new OrganizationDto();
+		child1.setLeaderUUID(p3.getId());
+		child1.setMembersUUID(Set.of(p3.getId(), p4.getId()));
+		OrganizationDto child2 = new OrganizationDto();
+		child2.setLeaderUUID(p5.getId());
+		child2.setMembersUUID(Set.of(p5.getId(), p6.getId()));
+		OrganizationDto child3 = new OrganizationDto();
+
+		child2.setSubOrgsUUID(Set.of(child3.getId()));
+		child3.setParentOrganizationUUID(child2.getId());
+
+		OrganizationDto parent = new OrganizationDto();
+		parent.setMembersUUID(Set.of(p1.getId(), p2.getId()));
+		parent.setSubOrgsUUID(Set.of(child1.getId(), child2.getId()));
+
+		child1.setParentOrganizationUUID(parent.getId());
+		child2.setParentOrganizationUUID(parent.getId());
+
+		Organization child1Full = Organization
+				.builder()
+				.id(child1.getId())
+				.leader(p3)
+				.members(Set.of(p3, p4))
+				.build();
+
+		Organization child2Full = Organization
+				.builder()
+				.id(child2.getId())
+				.leader(p5)
+				.members(Set.of(p5, p6))
+				.build();
+
+		Organization child3Full = Organization
+				.builder()
+				.id(child3.getId())
+				.parentOrganization(child2Full)
+				.build();
+
+		child2Full.addSubordinateOrganization(child3Full);
+
+		Mockito.when(repository.findById(child1.getId())).thenReturn(Optional.of(child1Full));
+		Mockito.when(repository.findById(child2.getId())).thenReturn(Optional.of(child2Full));
+		Mockito.when(repository.findById(child3.getId())).thenReturn(Optional.of(child3Full));
+
+		OrganizationDto flat = organizationService.flattenOrg(parent);
+
+		// assert returned Dto has org's members + all attached (downstream) orgs members
+		assertTrue(flat.getMembers().contains(p1.getId())
+				&& flat.getMembers().contains(p2.getId())
+				&& flat.getMembers().contains(p3.getId())
+				&& flat.getMembers().contains(p4.getId())
+				&& flat.getMembers().contains(p5.getId())
+				&& flat.getMembers().contains(p6.getId()));
+
+		// assert returned Dto has org's suborgs + all attached (downstream) suborgs
+		assertTrue(flat.getSubordinateOrganizations().contains(child1.getId())
+				&& flat.getSubordinateOrganizations().contains(child2.getId())
+				&& flat.getSubordinateOrganizations().contains(child3.getId()));
+
+
+		// now try to assign child3 as the parent of parent... shouldn't work
+		assertTrue(organizationService.parentOrgCandidateIsDescendent(parent, child3.getId()));
+
+		// now do some non attached org - its a freelancer and can go anywhere
+		assertFalse(organizationService.parentOrgCandidateIsDescendent(parent, UUID.randomUUID()));
+	}
+
+
 }

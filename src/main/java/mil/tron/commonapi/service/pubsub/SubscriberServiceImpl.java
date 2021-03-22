@@ -32,42 +32,15 @@ public class SubscriberServiceImpl implements SubscriberService {
     }
 
     @Override
-    public Subscriber createSubscription(Subscriber subscriber) {
+    public Subscriber upsertSubscription(Subscriber subscriber) {
         if (subscriber.getId() == null) {
             subscriber.setId(UUID.randomUUID());
         }
 
-         // Ensure no duplicate subscriptions exist
-         subRepo.findBySubscriberAddressAndSubscribedEvent(subscriber.getSubscriberAddress(), subscriber.getSubscribedEvent()).ifPresent(item -> {
-            throw new ResourceAlreadyExistsException("Subscription already exists for that address and event type under ID: " + item.getId());
-        });
+        Subscriber existing = subRepo.findBySubscriberAddressAndSubscribedEvent(subscriber.getSubscriberAddress(), subscriber.getSubscribedEvent()).orElseGet(() -> subscriber);
+        existing.setSecret(subscriber.getSecret());
 
-        if (!subRepo.existsById(subscriber.getId())) {
-            return subRepo.save(subscriber);
-        }
-
-        throw new ResourceAlreadyExistsException("Subscription already exists by ID: " + subscriber.getId().toString());
-    }
-
-    @Override
-    public Subscriber updateSubscription(UUID id, Subscriber subscriber) {
-        if(!subRepo.existsById(id)) {
-            throw new RecordNotFoundException("Provided subscription UUID: " + id.toString() + " does not match any existing records");
-        }
-
-        // Ensure no duplicate subscriptions exist
-        subRepo.findBySubscriberAddressAndSubscribedEvent(subscriber.getSubscriberAddress(), subscriber.getSubscribedEvent()).ifPresent(item -> {
-            throw new ResourceAlreadyExistsException("Subscription already exists for that address and event type under ID: " + item.getId());
-        });
-
-        // the subscription object's id better match the id given,
-        //  otherwise hibernate will save under whatever id's inside the object
-        if (!subscriber.getId().equals(id)) {
-            throw new InvalidRecordUpdateRequest(
-                    "Provided subscription UUID " + subscriber.getId() + " mismatched UUID in subscription object");
-        }
-
-        return subRepo.save(subscriber);
+        return subRepo.save(existing);
     }
 
     @Override

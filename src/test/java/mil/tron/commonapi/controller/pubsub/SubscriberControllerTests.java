@@ -22,7 +22,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -80,23 +79,12 @@ public class SubscriberControllerTests {
 
     @Test
     void testCreateSubscription() throws Exception {
-        Mockito.when(subService.createSubscription(subscriber)).thenReturn(subscriber);
+        Mockito.when(subService.upsertSubscription(subscriber)).thenReturn(subscriber);
         mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(subscriber)))
-                    .andExpect(status().isCreated())
+                    .andExpect(status().isOk())
                     .andExpect(result ->
-                        assertEquals(subscriber.getId(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Subscriber.class).getId()));
-    }
-
-    @Test
-    void testUpdateSubscription() throws Exception {
-        Mockito.when(subService.updateSubscription(subscriber.getId(), subscriber)).thenReturn(subscriber);
-        mockMvc.perform(put(ENDPOINT + "/{id}", subscriber.getId().toString())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(subscriber)))
-                .andExpect(status().isOk())
-                .andExpect(result ->
                         assertEquals(subscriber.getId(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), Subscriber.class).getId()));
     }
 

@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -28,7 +29,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
 
+import static mil.tron.commonapi.security.Utility.*;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -63,6 +66,8 @@ public class PubSubIntegrationTest {
 
     private final static String SUB1_ADDRESS = "http://localhost:5005/changed";
 
+    private final static String secret = "secret";
+
     private UUID sub1Id;
     private UUID sub2Id;
 
@@ -74,6 +79,7 @@ public class PubSubIntegrationTest {
                 .builder()
                 .subscribedEvent(EventType.PERSON_CHANGE)
                 .subscriberAddress(SUB1_ADDRESS)
+                .secret(secret)
                 .build();
 
         Subscriber personDeleteSub = Subscriber
@@ -87,12 +93,12 @@ public class PubSubIntegrationTest {
         MvcResult res1 = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personChangeSub)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andReturn();
         MvcResult res2 = mockMvc.perform(post(ENDPOINT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDeleteSub)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andReturn();
 
         sub1Id = OBJECT_MAPPER.readValue(res1.getResponse().getContentAsString(), Subscriber.class).getId();
@@ -117,6 +123,13 @@ public class PubSubIntegrationTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", containsString("PERSON_CHANGE")))
                 .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", not(containsString("ORGANIZATION_CHANGE"))))
+                .andExpect(request -> {
+                    // verify the hmac is present and correct
+                    MockClientHttpRequest mockRequest = (MockClientHttpRequest) request;
+                    String body = mockRequest.getBodyAsString();
+                    String signature = mockRequest.getHeaders().get("x-webhook-signature").stream().findFirst().orElseThrow(() -> new AssertionError("Missing signature header"));
+                    assertEquals(hmac(secret, body), signature);
+                })
                 .andRespond(withSuccess());
 
         // make a new person

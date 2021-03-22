@@ -138,7 +138,7 @@ public class EventPublisherTest {
                 .thenReturn(Lists.newArrayList(subscriber));
 
         Mockito.when(
-                publisherSender.postForLocation(Mockito.anyString(), Mockito.any(PubSubMessage.class)))
+                publisherSender.postForLocation(Mockito.anyString(), Mockito.any()))
                 .thenThrow(new RestClientException("Exception"));
 
         PersonChangedMessage message = new PersonChangedMessage();

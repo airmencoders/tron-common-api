@@ -3,6 +3,7 @@ package mil.tron.commonapi.dto.appsource;
 import lombok.*;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -29,5 +30,6 @@ public class AppSourceDetailsDto {
     @Getter
     @Setter
     @Builder.Default
+    @Valid
     private List<AppClientUserPrivDto> appClients = new ArrayList<>();
 }

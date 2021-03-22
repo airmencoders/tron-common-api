@@ -59,6 +59,7 @@ public class CommonApiLoggerTest {
     @AfterEach
     public void tearDown() throws Exception {
         System.setOut(originalSystemOut);
+        System.setOut(originalSystemOut);
     }
 
     @Test
@@ -76,6 +77,7 @@ public class CommonApiLoggerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(p)));
         assertEquals(true, outputStreamCaptor.toString().contains("PUT request"));
+        assertEquals(true, outputStreamCaptor.toString().contains(MockToken.EMAIL_MD5));
     }
 
     @Test

@@ -4,8 +4,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
@@ -59,6 +58,19 @@ class OrganizationTest {
         assertEquals(testPerson1, testOrg.getLeader());
         testOrg.setLeaderAndUpdateMembers(testPerson2);
         assertEquals(false, testOrg.getMembers().contains(testPerson1));
+    }
+
+    @Test
+    void canNullOutLeader() {
+        // test if leader is nulled out (to no one), that previous guy is removed
+
+        Organization testOrg = new Organization();
+        Person testPerson1 = new Person();
+        testOrg.setLeader(testPerson1);
+        assertEquals(true, testOrg.getMembers().contains(testPerson1));
+        testOrg.setLeader(null);
+        assertFalse(testOrg.getMembers().contains(testPerson1));
+        assertEquals(0, testOrg.getMembers().size());
     }
 
     @Test
