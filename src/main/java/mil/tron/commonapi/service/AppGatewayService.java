@@ -1,14 +1,15 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
-import org.apache.camel.http.base.HttpOperationFailedException;
-import org.apache.http.client.HttpResponseException;
-import org.springframework.core.io.InputStreamResource;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 
 public interface AppGatewayService {
-    InputStreamResource sendRequestToAppSource(HttpServletRequest request) throws HttpOperationFailedException;
-    void addSourceDefMapping(String appSourceName, AppSourceInterfaceDefinition appDef);
+    byte[] sendRequestToAppSource(HttpServletRequest request) throws ResponseStatusException,
+            IOException;
+    boolean addSourceDefMapping(String appSourcePath, AppSourceInterfaceDefinition appDef);
 
+    void clearAppSourceDefs();
 }

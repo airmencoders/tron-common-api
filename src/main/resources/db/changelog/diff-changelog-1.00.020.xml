@@ -15,4 +15,22 @@
             />
         </addColumn>
     </changeSet>
+    <changeSet author="ckumabe" id="100019-12">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="app_source" columnName="app_source_path" />
+            </not>
+        </preConditions>
+        <addColumn
+                tableName="app_source"
+        >
+            <column
+                    name="app_source_path"
+                    type="varchar(255)"
+            />
+        </addColumn>
+    </changeSet>
+    <changeSet author="ckumabs03" id="100019-13">
+        <addUniqueConstraint columnNames="app_source_path" constraintName="UK100019-12" tableName="app_source"/>
+    </changeSet>
 </databaseChangeLog>

@@ -67,10 +67,12 @@ public class AppSourceEndpointsBuilder {
     public void initializeWithAppSourceDef(AppSourceInterfaceDefinition appDef) {
         try {
             List<AppSourceEndpoint> appSourceEndpoints = this.parseAppSourceEndpoints(appDef.getOpenApiSpecFilename());
-            this.appGatewayService.addSourceDefMapping(appDef.getAppSourcePath(),
+            boolean newMapping = this.appGatewayService.addSourceDefMapping(appDef.getAppSourcePath(),
                     appDef);
-            for (AppSourceEndpoint appEndpoint: appSourceEndpoints) {
-                this.addMapping(appDef.getAppSourcePath(), appEndpoint);
+            if (newMapping) {
+                for (AppSourceEndpoint appEndpoint: appSourceEndpoints) {
+                    this.addMapping(appDef.getAppSourcePath(), appEndpoint);
+                }
             }
         }
         catch (FileNotFoundException e) {
@@ -128,12 +130,12 @@ public class AppSourceEndpointsBuilder {
         return converted;
     }
 
-    private void addMapping(String appSource, AppSourceEndpoint endpoint) throws NoSuchMethodException {
+    private void addMapping(String appSourcePath, AppSourceEndpoint endpoint) throws NoSuchMethodException {
 
         RequestMappingInfo requestMappingInfo = RequestMappingInfo
                 .paths(String.format("%s/app/%s%s",
                         this.apiVersionPrefix,
-                        appSource,
+                        appSourcePath,
                         endpoint.getPath()))
                 .methods(endpoint.getMethod())
                 .produces(MediaType.APPLICATION_JSON_VALUE)

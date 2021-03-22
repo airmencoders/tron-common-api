@@ -1,13 +1,11 @@
 package mil.tron.commonapi.appgateway;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import liquibase.pro.packaged.O;
 import lombok.extern.slf4j.Slf4j;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -15,9 +13,6 @@ import org.springframework.stereotype.Service;
 import javax.transaction.Transactional;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -69,8 +64,14 @@ public class AppSourceConfig {
             AppSource newAppSource = AppSource.builder()
                     .name(appDef.getName())
                     .openApiSpecFilename(appDef.getOpenApiSpecFilename())
+                    .appSourcePath(appDef.getAppSourcePath())
                     .build();
-            this.appSourceRepository.save(newAppSource);
+            try {
+                this.appSourceRepository.save(newAppSource);
+            }
+            catch (Exception e) {
+                log.warn(String.format("Unable to add app source %s.", appDef.getName()), e);
+            }
         }
     }
 
