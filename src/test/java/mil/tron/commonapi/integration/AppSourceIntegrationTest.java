@@ -32,6 +32,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.util.Assert;
 
@@ -45,8 +46,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ActiveProfiles("development")
 @SpringBootTest(properties = { "security.enabled=true" })
+@TestPropertySource(locations = "classpath:application-test.properties")
 @AutoConfigureMockMvc
 public class AppSourceIntegrationTest {
 
@@ -124,7 +125,7 @@ public class AppSourceIntegrationTest {
     @Transactional
     @Rollback
     @Test
-    void testCreatAppSource() {
+    void testCreateAppSource() {
         val appClientUserUuid = UUID.randomUUID();
         appClientUserRespository.save(
                 AppClientUser.builder()

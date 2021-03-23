@@ -14,7 +14,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name="app_source", uniqueConstraints = { @UniqueConstraint(columnNames = "name")})
+@EqualsAndHashCode
+@Table(name="app_source")
 public class AppSource {
 
     @Id
@@ -25,7 +26,17 @@ public class AppSource {
 
     @Getter
     @Setter
+    @Column(unique = true)
     private String name;
+
+    @Getter
+    @Setter
+    private String openApiSpecFilename;
+
+    @Getter
+    @Setter
+    @Column(unique = true)
+    private String appSourcePath;
 
     @Getter
     @Setter
