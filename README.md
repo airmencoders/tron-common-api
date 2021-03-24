@@ -87,3 +87,6 @@ The identity is obtained by parsing down the URI field of the header to obtain t
 
 ### Current Privileges
 Current privileges include `READ`/`WRITE` (access to endpoints like /persons and /organization), and `DASHBOARD_USER`/`DASHBOARD_ADMIN` (access to endpoints specifically for dashboard app).
+
+### App Source configuration for local development
+To populate your App Sources when running in the "development" profile, you'll need to create an `appSourceConfig.local.json` file. To create this file, copy the appSourceConfig.example.json file and fill in with your local App Source configuration.
