@@ -28,12 +28,16 @@ public class WebConfig implements WebMvcConfigurer {
         String[] scratchUrlOrigins = new String[urlOrigins.length + 1];
         scratchUrlOrigins = scratchUrlList.toArray(scratchUrlOrigins);
 
-        registry.addMapping("/v1/scratch")
+        registry.addMapping("/v1/scratch/**")
                 .allowedMethods("*")
-                .allowedOriginPatterns(scratchUrlOrigins);
+                .allowedHeaders("*")
+                .allowedOriginPatterns(scratchUrlOrigins)
+                .allowCredentials(true);
 
         registry.addMapping("/**")
                 .allowedMethods("*")
-                .allowedOrigins(origins.split(","));
+                .allowedHeaders("*")
+                .allowedOrigins(origins.split(","))
+                .allowCredentials(true);
     }
 }
