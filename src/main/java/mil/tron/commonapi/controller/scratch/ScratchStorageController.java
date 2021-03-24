@@ -212,7 +212,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "400",
                     description = "Malformed Request Body")
     })
-    @DeleteMapping("/{appId}/{key}")
+    @DeleteMapping("/{appId}/key/{key}")
     public ResponseEntity<Object> deleteKeyValuePair(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "key", description = "Key name of the key-value pair to delete", required = true) @PathVariable String key) {

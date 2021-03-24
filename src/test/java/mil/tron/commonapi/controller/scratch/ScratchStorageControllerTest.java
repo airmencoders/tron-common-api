@@ -246,11 +246,11 @@ public class ScratchStorageControllerTest {
 
         Mockito.when(service.deleteKeyValuePair(entries.get(0).getAppId(), "hello")).thenReturn(entries.get(0));
 
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appId", equalTo(entries.get(0).getAppId().toString())));
 
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
                 .andExpect(status().isForbidden());
 
     }

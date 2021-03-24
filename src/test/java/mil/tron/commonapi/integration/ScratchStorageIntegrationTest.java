@@ -429,7 +429,7 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(jsonPath("$.appId", equalTo(entry1.getAppId().toString())));
 
         // delete just one key value pairs from TEST_APP
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyValue}", entry2.getAppId(), entry2.getKey())
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry2.getAppId(), entry2.getKey())
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isOk())
@@ -443,13 +443,13 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)));
 
         // delete COOL_APP's key as user2 - should be forbidden
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyValue}", entry1.getAppId(), "hello")
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry1.getAppId(), "hello")
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isForbidden());
 
         // delete bogus key
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyValue}", entry2.getAppId(), "bogus key")
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry2.getAppId(), "bogus key")
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isNotFound());
