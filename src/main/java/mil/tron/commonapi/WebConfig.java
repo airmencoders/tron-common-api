@@ -29,19 +29,19 @@ public class WebConfig implements WebMvcConfigurer {
         scratchUrlOrigins = scratchUrlList.toArray(scratchUrlOrigins);
 
         registry.addMapping("/v1/scratch/**")
-                .allowedMethods("*")
+                .allowedMethods("GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
                 .allowedOriginPatterns(scratchUrlOrigins)
                 .allowCredentials(true);
 
         registry.addMapping("/v1/userinfo/**")
-                .allowedMethods("*")
+                .allowedMethods("GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
                 .allowedOriginPatterns(scratchUrlOrigins)
                 .allowCredentials(true);
 
         registry.addMapping("/**")
-                .allowedMethods("*")
+                .allowedMethods("GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
                 .allowedOrigins(origins.split(","))
                 .allowCredentials(true);
