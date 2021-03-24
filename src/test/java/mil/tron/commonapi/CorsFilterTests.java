@@ -81,9 +81,10 @@ public class CorsFilterTests {
     @Test
     void testScratchSpaceCors() throws Exception {
 
-        // test that the scratch area is accessible from any dso.mil subdomain
+        // test that the scratch and userinfo area is accessible from any dso.mil subdomain
 
         final String SCRATCH_ENDPOINT = "/v1/scratch/apps";
+        final String USERINFO_ENDPOINT = "/v1/userinfo";
         mockMvc.perform(get(SCRATCH_ENDPOINT)
                 .header("Origin", "http://localhost:9000"))
                 .andExpect(status().isForbidden());
@@ -93,6 +94,12 @@ public class CorsFilterTests {
                 .andExpect(status().isOk());
 
         mockMvc.perform(get(SCRATCH_ENDPOINT)
+                .header("Origin", "https://someapp.staging.dso.mil")
+                .header("authorization", MockToken.token))
+                .andExpect(result -> assertThat(result.getResponse().getHeader("Access-Control-Allow-Origin")).isEqualTo("https://someapp.staging.dso.mil"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(USERINFO_ENDPOINT)
                 .header("Origin", "https://someapp.staging.dso.mil")
                 .header("authorization", MockToken.token))
                 .andExpect(result -> assertThat(result.getResponse().getHeader("Access-Control-Allow-Origin")).isEqualTo("https://someapp.staging.dso.mil"))

@@ -34,6 +34,12 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns(scratchUrlOrigins)
                 .allowCredentials(true);
 
+        registry.addMapping("/v1/userinfo/**")
+                .allowedMethods("*")
+                .allowedHeaders("*")
+                .allowedOriginPatterns(scratchUrlOrigins)
+                .allowCredentials(true);
+
         registry.addMapping("/**")
                 .allowedMethods("*")
                 .allowedHeaders("*")
