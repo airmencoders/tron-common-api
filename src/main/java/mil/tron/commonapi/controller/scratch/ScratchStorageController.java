@@ -61,6 +61,18 @@ public class ScratchStorageController {
     }
 
     /**
+     * Private helper to authorize a user to a scratch space identified by the app UUID for read access
+     * @param appId the appid of the app's data user/request is trying to access
+     */
+    private void validateScratchReadAccessForUser(UUID appId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getCredentials().toString();  // get the JWT email string
+        if (!scratchStorageService.userCanReadFromAppId(appId, userEmail)) {
+            throw new InvalidScratchSpacePermissions(INVALID_PERMS);
+        }
+    }
+
+    /**
      * Private helper to authorize a user to a scratch space identified by the app UUID for write access
      * @param appId the appid of the app's data user/request is trying to access
      */
@@ -114,6 +126,8 @@ public class ScratchStorageController {
     @GetMapping("/{appId}")
     public ResponseEntity<Object> getAllKeyValuePairsForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
+
+        validateScratchReadAccessForUser(appId);
         return new ResponseEntity<>(scratchStorageService.getAllEntriesByApp(appId), HttpStatus.OK);
     }
 
@@ -132,6 +146,8 @@ public class ScratchStorageController {
     @GetMapping("/apps/{appId}/keys")
     public ResponseEntity<Object> getAllKeysForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
+
+        validateScratchReadAccessForUser(appId);
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
 
@@ -151,6 +167,8 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getKeyValueByKeyName(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName) {
+
+        validateScratchReadAccessForUser(appId);
         return new ResponseEntity<>(scratchStorageService.getKeyValueEntryByAppId(appId, keyName), HttpStatus.OK);
     }
 
@@ -194,7 +212,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "400",
                     description = "Malformed Request Body")
     })
-    @DeleteMapping("/{appId}/{key}")
+    @DeleteMapping("/{appId}/key/{key}")
     public ResponseEntity<Object> deleteKeyValuePair(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "key", description = "Key name of the key-value pair to delete", required = true) @PathVariable String key) {
@@ -332,6 +350,32 @@ public class ScratchStorageController {
 
         checkUserIsDashBoardAdminOrScratchAdmin(id);
         ScratchStorageAppRegistryEntry p = scratchStorageService.addUserPrivToApp(id, priv);
+        return new ResponseEntity<>(p, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Sets or un-sets the app's implicit read field",
+            description = "Requester has to have DASHBOARD_ADMIN rights, or have SCRATCH_ADMIN rights for given app ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "App Modified OK",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed appId or query parameter",
+                    content = @Content(schema = @Schema(implementation = BadRequestException.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID not found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privileges for given app id")
+    })
+    @PatchMapping("/apps/{id}/implicitRead")
+    public ResponseEntity<Object> setImplicitReadSetting(
+            @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
+            @Parameter(name = "priv", description = "Application User-Priv Object", required = true)
+                @RequestParam(name = "value", required = false, defaultValue = "false") boolean implicitRead) {
+
+        checkUserIsDashBoardAdminOrScratchAdmin(id);
+        ScratchStorageAppRegistryEntry p = scratchStorageService.setImplicitReadForApp(id, implicitRead);
         return new ResponseEntity<>(p, HttpStatus.OK);
     }
 

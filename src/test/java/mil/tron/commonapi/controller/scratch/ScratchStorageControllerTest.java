@@ -135,6 +135,8 @@ public class ScratchStorageControllerTest {
         // test we can get all entries belonging to an App ID UUID
 
         UUID appId = entries.get(0).getAppId();
+        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true); // let user have the privs to read
         Mockito.when(service.getAllEntriesByApp(appId)).thenReturn(Lists.newArrayList(entries.get(0)));
         mockMvc.perform(get(ENDPOINT  +"{appId}", appId))
                 .andExpect(status().isOk())
@@ -142,11 +144,26 @@ public class ScratchStorageControllerTest {
                 .andExpect(jsonPath("$[0].appId", equalTo(appId.toString())));
     }
 
+    @Test
+    void testSetImplicitReadByAppId() throws Exception {
+        // test we can access the implicit read setter route
+        UUID appId = entries.get(0).getAppId();
+        Mockito.when(service.setImplicitReadForApp(Mockito.any(UUID.class), Mockito.anyBoolean()))
+                .thenReturn(registeredApps.get(0));
+        Mockito.when(service.userHasAdminWithAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true);
+
+        mockMvc.perform(patch(ENDPOINT  +"apps/{appId}/implicitRead?value=true", appId))
+                .andExpect(status().isOk());
+    }
+
 
     @Test
     void testGetAllAppKeys() throws Exception {
         // test getting just the keys for a given app
         UUID appId = entries.get(0).getAppId();
+        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true); // let user have the privs to read
         Mockito.when(service.getAllKeysForAppId(appId)).thenReturn(Lists.newArrayList(entries.get(0).getKey()));
         mockMvc.perform(get(ENDPOINT  +"apps/{appId}/keys", appId))
                 .andExpect(status().isOk())
@@ -161,6 +178,8 @@ public class ScratchStorageControllerTest {
 
         UUID appId = entries.get(0).getAppId();
         String keyValue = "hello";
+        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true); // let user have the privs to read
         Mockito.when(service.getKeyValueEntryByAppId(appId, keyValue)).thenReturn(entries.get(0));
         mockMvc.perform(get(ENDPOINT  + "{appId}/{keyValue}", appId, keyValue))
                 .andExpect(status().isOk())
@@ -227,11 +246,11 @@ public class ScratchStorageControllerTest {
 
         Mockito.when(service.deleteKeyValuePair(entries.get(0).getAppId(), "hello")).thenReturn(entries.get(0));
 
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appId", equalTo(entries.get(0).getAppId().toString())));
 
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyName}", entries.get(0).getAppId(), entries.get(0).getKey()))
                 .andExpect(status().isForbidden());
 
     }
