@@ -117,6 +117,12 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getAllEntriesByApp(appId), HttpStatus.OK);
     }
 
+    @GetMapping("/apps/{appId}/keys")
+    public ResponseEntity<Object> getAllKeysForAppId(
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
+        return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
+    }
+
     @Operation(summary = "Retrieves a singe key-value pair for for a single app",
             description = "App ID is the UUID of the owning application")
     @ApiResponses(value = {

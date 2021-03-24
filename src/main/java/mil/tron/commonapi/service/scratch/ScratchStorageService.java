@@ -16,6 +16,7 @@ public interface ScratchStorageService {
     ScratchStorageEntry setKeyValuePair(UUID appId, String key, String value);
     ScratchStorageEntry deleteKeyValuePair(UUID appId, String key);
     Iterable<ScratchStorageEntry> deleteAllKeyValuePairsForAppId(UUID appId);
+    Iterable<String> getAllKeysForAppId(UUID appId);
 
     // scratch storage app management...
     Iterable<ScratchStorageAppRegistryDto> getAllRegisteredScratchApps();

@@ -69,6 +69,12 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     }
 
     @Override
+    public Iterable<String> getAllKeysForAppId(UUID appId) {
+        validateAppId(appId);
+        return repository.findAllKeysForAppId(appId);
+    }
+
+    @Override
     public ScratchStorageEntry getEntryById(UUID id) {
         return repository.findById(id).orElseThrow(() -> new RecordNotFoundException("Cannot find record with that UUID"));
     }
