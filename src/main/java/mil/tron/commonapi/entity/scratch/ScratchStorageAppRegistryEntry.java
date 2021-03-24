@@ -43,6 +43,10 @@ public class ScratchStorageAppRegistryEntry {
     @JsonIgnore
     private String appNameAsLower;
 
+    @Getter
+    @Setter
+    private boolean appHasImplicitRead = false;
+
     /**
      * Collection of user privs for this registered app name
      */
