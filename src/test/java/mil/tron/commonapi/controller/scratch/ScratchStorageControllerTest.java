@@ -142,6 +142,19 @@ public class ScratchStorageControllerTest {
                 .andExpect(jsonPath("$[0].appId", equalTo(appId.toString())));
     }
 
+
+    @Test
+    void testGetAllAppKeys() throws Exception {
+        // test getting just the keys for a given app
+        UUID appId = entries.get(0).getAppId();
+        Mockito.when(service.getAllKeysForAppId(appId)).thenReturn(Lists.newArrayList(entries.get(0).getKey()));
+        mockMvc.perform(get(ENDPOINT  +"apps/{appId}/keys", appId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0]", equalTo(entries.get(0).getKey())));
+
+    }
+
     @Test
     void testGetByAppIdAndKeyValue() throws Exception {
         // test we can get a discrete entry by its key name within a given app id

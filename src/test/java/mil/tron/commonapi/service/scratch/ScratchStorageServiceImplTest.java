@@ -151,6 +151,14 @@ public class ScratchStorageServiceImplTest {
     }
 
     @Test
+    void testGetAllKeysForApp() {
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(repository.findAllKeysForAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0).getKey()));
+        assertEquals(Lists.newArrayList(entries.get(0).getKey()), service.getAllKeysForAppId(entries.get(0).getAppId()));
+    }
+
+
+    @Test
     void testGetSingleAppById() {
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
                 .thenReturn(Optional.of(registeredApps.get(0)))
