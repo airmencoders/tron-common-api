@@ -1,0 +1,368 @@
+openapi: 3.0.2
+info:
+    title: puckboardStableV2
+    version: 2.0.4
+    description: Puckboard's stable API definitions.
+servers:
+    -
+        url: 'http://PatLovesSneks.com/v2'
+paths:
+    /events:
+        summary: Path used to manage the list of Events.
+        description: >-
+            The REST endpoint/path used to list `EventBase` entities.  This path contains a `GET` perform the
+            list.
+        get:
+            parameters:
+                -
+                    name: startTime
+                    description: Filter by event start time
+                    schema:
+                        format: Date
+                        type: string
+                    in: query
+                    required: true
+                -
+                    name: endTime
+                    description: Filter by event end time
+                    schema:
+                        format: Date
+                        type: string
+                    in: query
+                    required: true
+                -
+                    name: organizationId
+                    description: Get event by organizationId
+                    schema:
+                        format: UUID
+                        type: string
+                    in: query
+                    required: true
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/EventBaseListResult'
+                    description: Successful response - returns an array of `Event` entities.
+            operationId: getEvents
+            summary: List Events Events
+            description: >-
+                Gets a list of `EventBase` entities between specified startTime and endTime for a given
+                organization
+    '/jobRole/{jobRoleId}':
+        get:
+            parameters:
+                -
+                    name: jobRoleId
+                    description: 'id of jobRole '
+                    schema:
+                        type: integer
+                    in: path
+                    required: true
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/JobRole'
+                    description: OK!
+        parameters:
+            -
+                name: jobRoleId
+                description: 'id of jobRole '
+                schema:
+                    type: integer
+                in: path
+                required: true
+    '/roleAssignment/{roleAssignmentId}':
+        get:
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RoleAssignment'
+                    description: Ok!
+        parameters:
+            -
+                name: roleAssignmentId
+                description: id of roleAssignment
+                schema:
+                    format: uuid
+                    type: string
+                in: path
+                required: true
+    /organizations:
+        get:
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/OrganizationListResult'
+                    description: Returns a list of organizations
+            summary: Gets organization info
+    /personnel:
+        get:
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PersonResultList'
+                    description: gets all personnel across puckboard
+    '/personnel/{personId}':
+        get:
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Person'
+                    description: gets person
+                '400':
+                    description: person for given id not found
+            summary: gets person for given id
+        parameters:
+            -
+                name: personId
+                schema:
+                    format: uuid
+                    type: string
+                in: path
+                required: true
+    '/organizations/{organizationId}/personnel':
+        get:
+            parameters:
+                -
+                    name: isActive
+                    description: ''
+                    schema:
+                        type: boolean
+                    in: query
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PersonResultList'
+                    description: got personnel for organization
+                '400':
+                    description: 'bad request, organization not found'
+            summary: gets personnel in organization
+        parameters:
+            -
+                name: organizationId
+                schema:
+                    format: uuid
+                    type: string
+                in: path
+                required: true
+components:
+    schemas:
+        JobRole:
+            description: ''
+            required:
+                - organizationId
+                - roleType
+                - roleName
+            type: object
+            properties:
+                roleType:
+                    description: ''
+                    type: string
+                roleName:
+                    description: ''
+                    type: string
+                id:
+                    description: ''
+                    type: integer
+                organizationId:
+                    format: uuid
+                    description: ''
+                    type: string
+                abbreviation:
+                    description: Custom abbreviation of role name for display
+                    type: string
+        EventBaseListResult:
+            description: ''
+            required:
+                - result
+            type: object
+            properties:
+                result:
+                    description: ''
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/EventBase'
+        EventBase:
+            title: Root Type for Event
+            description: The root of the Event type's schema.
+            required:
+                - eventTypeId
+                - organizationId
+            type: object
+            properties:
+                name:
+                    type: string
+                id:
+                    format: uuid
+                    type: string
+                startTime:
+                    format: Date
+                    type: string
+                endTime:
+                    format: Date
+                    type: string
+                organizationId:
+                    format: uuid
+                    description: Id of organization this event belongs to
+                    type: string
+                roleAssignmentIds:
+                    description: Set of RoleAssignments
+                    type: array
+                    items:
+                        format: uuid
+                        type: string
+                eventTypeId:
+                    type: integer
+        RoleAssignment:
+            title: RoleAssignment
+            description: An object for containing assignments of personnel to a specific role on an event.
+            required:
+                - event
+                - jobRoleId
+            type: object
+            properties:
+                personId:
+                    format: uuid
+                    type: string
+                eventId:
+                    format: uuid
+                    type: string
+                id:
+                    format: uuid
+                    description: role assignment id
+                    type: string
+                index:
+                    description: integer to keep track of index number for sorting
+                    type: integer
+                confirmationStatus:
+                    description: Status of confirmation on a role assignment
+                    enum:
+                        - NOT_CONTACTED
+                        - CONTACTED
+                        - CONFIRMED
+                    type: string
+                jobRoleId:
+                    format: uuid
+                    type: string
+        Organization:
+            discriminator:
+                propertyName: classType
+            description: An entity that contains people and events
+            required:
+                - organizationName
+                - organizationId
+            type: object
+            properties:
+                organizationId:
+                    format: uuid
+                    description: ''
+                    type: string
+                organizationName:
+                    description: ''
+                    type: string
+                isSchedulingUnit:
+                    description: whether or not the organization is a scheduling unit
+                    type: boolean
+                branchId:
+                    description: Branch ID (not an object)
+                    type: integer
+        OrganizationListResult:
+            description: ''
+            required:
+                - result
+            type: object
+            properties:
+                result:
+                    description: ''
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Organization'
+        Person:
+            title: Root Type for Person
+            description: Data type for a person.
+            required:
+                - isPlaceholder
+                - organizationStatus
+            type: object
+            properties:
+                id:
+                    format: uuid
+                    type: string
+                callSign:
+                    description: Person's call sign
+                    type: string
+                lastName:
+                    type: string
+                firstName:
+                    description: ''
+                    type: string
+                contactNumber:
+                    description: 10-digit phone contact number
+                    type: string
+                email:
+                    description: ''
+                    type: string
+                dodId:
+                    format: int64
+                    description: Department of Defense ID
+                    type: integer
+                isPlaceholder:
+                    description: is Person a placeholder with no DODID
+                    type: boolean
+                rankId:
+                    description: ''
+                    type: integer
+                primaryOrganizationId:
+                    format: uuid
+                    description: Primary Organization Obj of the Person
+                    type: string
+                organizationStatus:
+                    description: ''
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/OrganizationStatus'
+        PersonResultList:
+            description: ''
+            required:
+                - result
+            type: object
+            properties:
+                result:
+                    description: ''
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Person'
+        OrganizationStatus:
+            title: Organization Status
+            description: An entity that shows the relationship between people and organizations
+            required:
+                - active
+                - id
+            type: object
+            properties:
+                active:
+                    description: >-
+                        boolean to determine the status of a person for an organization from the person's
+                        perspective.
+                    type: boolean
+                organizationId:
+                    format: uuid
+                    description: ''
+                    type: string
+                jobRoleId:
+                    description: ''
+                    type: integer
