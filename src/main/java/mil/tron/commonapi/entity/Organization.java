@@ -57,6 +57,11 @@ public class Organization {
     }
 
     @Getter
+    @Builder.Default
+    @OneToMany(mappedBy = "primaryOrganization")
+    private Set<Person> primaryMembers = new HashSet<>();
+
+    @Getter
     @ManyToOne
     private Person leader;
 

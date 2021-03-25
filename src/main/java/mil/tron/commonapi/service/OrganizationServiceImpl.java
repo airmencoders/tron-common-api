@@ -38,7 +38,6 @@ import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -181,7 +180,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		}
 
         Organization result = repository.save(organization);
-        
+
         if (updatedPersons.size() > 0) {
             personRepository.saveAll(updatedPersons);
         }
@@ -456,13 +455,19 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public void deleteOrganization(UUID id) {
 		Organization org = repository.findById(id)
-				.orElseThrow(() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id)));
+
+        for (Person member : org.getPrimaryMembers()) {
+            member.setPrimaryOrganization(null);
+        }
+        personRepository.saveAll(org.getPrimaryMembers());
 
 		// must delete the parent link (since parent depends on this org to exist by its foreign key)
-		if (org.getParentOrganization() != null) {
-			org.setParentOrganization(null);
-			repository.save(org);
-		}
+        if (org.getParentOrganization() != null) {
+            org.setParentOrganization(null);
+        }
+        
+        repository.save(org);
 
 		freeOrganizationFromLinks(org);
 
