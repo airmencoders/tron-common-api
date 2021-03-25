@@ -5,6 +5,9 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 
 import javax.persistence.*;
+
+import org.hibernate.validator.internal.util.stereotypes.Lazy;
+
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,11 +30,13 @@ public class AppSourcePriv {
 
     @ManyToOne
     @JoinColumn(name = "app_source_id", nullable = false)
+    @EqualsAndHashCode.Exclude
     private AppSource appSource;
 
     @ManyToMany
     private Set<Privilege> privileges;
 
     @ManyToOne
+    @EqualsAndHashCode.Exclude
     private AppClientUser appClientUser;
 }

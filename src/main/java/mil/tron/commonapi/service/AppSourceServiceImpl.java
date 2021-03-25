@@ -148,10 +148,11 @@ public class AppSourceServiceImpl implements AppSourceService {
     }
 
     private AppSourceDetailsDto saveAppSource(UUID uuid, AppSourceDetailsDto appSource) {
-        AppSource appSourceToSave = AppSource.builder()
-                .id(uuid != null ? uuid : UUID.randomUUID())
-                .name(appSource.getName())
-                .build();
+        AppSource appSourceToSave = uuid != null ? 
+            this.appSourceRepository.findById(uuid).orElse(AppSource.builder().id(uuid).build()) :
+            AppSource.builder().id(UUID.randomUUID()).build();
+
+        appSourceToSave.setName(appSource.getName());
 
         Set<AppSourcePriv> appSourcePrivs = appSource.getAppClients()
                 .stream().map((privDto) -> AppSourcePriv.builder()

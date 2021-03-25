@@ -1,6 +1,10 @@
 package mil.tron.commonapi.controller;
 
-import mil.tron.commonapi.service.AppGatewayService;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -8,10 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.ByteArrayOutputStream;
-import java.util.Map;
+import mil.tron.commonapi.annotation.security.PreAuthorizeGatewayRead;
+import mil.tron.commonapi.service.AppGatewayService;
 
 @Controller
 public class AppGatewayController {
@@ -23,7 +25,7 @@ public class AppGatewayController {
         this.appGatewayService = appGatewayService;
     }
 
-    // add annotation for authorization wrt client app request
+    @PreAuthorizeGatewayRead()
     public ResponseEntity<byte[]> handleGetRequests(HttpServletRequest requestObject,
                                                     HttpServletResponse responseObject, @PathVariable Map<String, String> vars) throws Exception {
         HttpHeaders headers = new HttpHeaders();
@@ -35,8 +37,4 @@ public class AppGatewayController {
         byte[] emptyArray = new byte[0];
         return new ResponseEntity<>(emptyArray, headers, HttpStatus.NO_CONTENT);
     }
-
-
-
-
 }
