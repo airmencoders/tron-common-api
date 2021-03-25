@@ -15,29 +15,11 @@ import java.util.List;
 @PropertySource("classpath:application.properties")
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${origins}")
-    private String origins;
-
-    @Value("${scratch-origin}")
-    private String scratchOrigin;
-
     @Override
     public void addCorsMappings(CorsRegistry registry) {
 
-        // list of origins for everything but scratch space
-        String[] urlOrigins = origins.split(",");
+        registry.addMapping("/**").allowedOriginPatterns("*").allowedHeaders("*")
+                .allowedMethods("GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH").allowCredentials(true);
 
-        // list of origins for scratch space
-        List<String> scratchUrlList = Lists.asList(scratchOrigin, urlOrigins);
-        String[] scratchUrlOrigins = new String[urlOrigins.length + 1];
-        scratchUrlOrigins = scratchUrlList.toArray(scratchUrlOrigins);
-
-        registry.addMapping("/v1/scratch")
-                .allowedMethods("*")
-                .allowedOriginPatterns(scratchUrlOrigins);
-
-        registry.addMapping("/**")
-                .allowedMethods("*")
-                .allowedOrigins(origins.split(","));
     }
 }
