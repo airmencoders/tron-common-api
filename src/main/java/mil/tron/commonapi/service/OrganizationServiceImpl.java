@@ -38,6 +38,7 @@ import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -167,14 +168,23 @@ public class OrganizationServiceImpl implements OrganizationService {
 		Organization organization = repository.findById(organizationId).orElseThrow(
 				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
 
+        List<Person> updatedPersons = new ArrayList<>();
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
 					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
-			organization.removeMember(person);
+            organization.removeMember(person);
+            if (person.getPrimaryOrganization() != null && person.getPrimaryOrganization().getId() == organizationId) {
+                person.setPrimaryOrganization(null);
+                updatedPersons.add(person);
+            }
 		}
 
-		Organization result = repository.save(organization);
+        Organization result = repository.save(organization);
+        
+        if (updatedPersons.size() > 0) {
+            personRepository.saveAll(updatedPersons);
+        }
 
 		PersonOrgRemoveMessage message = new PersonOrgRemoveMessage();
 		message.setParentOrgId(organizationId);
@@ -185,26 +195,35 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Adds members from an organization and re-persists it to db.
-	 *
-	 * @param organizationId UUID of the organization
-	 * @param personIds      List of Person UUIDs to remove
-	 * @return Organization entity object
-	 */
+     * Adds members from an organization and re-persists it to db.
+     *
+     * @param organizationId UUID of the organization
+     * @param personIds      List of Person UUIDs to remove
+     * @param primary        Whether to set the org as the persons' primary org
+     * @return Organization entity object
+     */
 	@Override
-	public Organization addMember(UUID organizationId, List<UUID> personIds) {
+	public Organization addMember(UUID organizationId, List<UUID> personIds, boolean primary) {
 		Organization organization = repository.findById(organizationId)
 				.orElseThrow(() -> new RecordNotFoundException(
-						String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
-
-		for (UUID id : personIds) {
+                        String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
+                        
+        List<Person> updatedPersons = personIds.stream().map(id -> {
 			Person person = personRepository.findById(id).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("Provided person UUID " + id.toString() + " does not exist"));
+                    () -> new InvalidRecordUpdateRequest("Provided person UUID " + id.toString() + " does not exist"));
 
+            if (primary) {
+                person.setPrimaryOrganization(organization);
+            }
 			organization.addMember(person);
-		}
+            return person;
+        }).collect(Collectors.toList());
 
-		Organization result = repository.save(organization);
+        Organization result = repository.save(organization);
+        
+        if (primary) {
+            personRepository.saveAll(updatedPersons);
+        }
 
 		PersonOrgAddMessage message = new PersonOrgAddMessage();
 		message.setParentOrgId(organizationId);
@@ -491,8 +510,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return The updated OrganizationDTO object
 	 */
 	@Override
-	public OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds) {
-		return this.convertToDto(this.addMember(organizationId, personIds));
+	public OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds, boolean primary) {
+		return this.convertToDto(this.addMember(organizationId, personIds, primary));
 	}
 
 	/**

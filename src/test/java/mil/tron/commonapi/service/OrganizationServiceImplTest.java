@@ -373,11 +373,12 @@ class OrganizationServiceImplTest {
 		Mockito.when(personRepository.findById(p.getId())).thenReturn(Optional.of(p));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(newUnit);
 
-		OrganizationDto savedOrg = organizationService.addOrganizationMember(testOrgDto.getId(), Lists.newArrayList(p.getId()));
-		assertThat(savedOrg.getMembers().size()).isEqualTo(1);
+		OrganizationDto savedOrg = organizationService.addOrganizationMember(testOrgDto.getId(), Lists.newArrayList(p.getId()), true);
+        assertThat(savedOrg.getMembers().size()).isEqualTo(1);
+        assertEquals(testOrgDto.getId(), p.getPrimaryOrganization().getId());
 
 		// test fails to add bogus person
-		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.addOrganizationMember(newUnit.getId(), Lists.newArrayList(new Person().getId())));
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.addOrganizationMember(newUnit.getId(), Lists.newArrayList(new Person().getId()), true));
 
 		// test fails to remove bogus person
 		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.removeOrganizationMember(newUnit.getId(), Lists.newArrayList(new Person().getId())));
@@ -385,10 +386,11 @@ class OrganizationServiceImplTest {
 		// remove like normal
 		newUnit.removeMember(p);
 		savedOrg = organizationService.removeOrganizationMember(newUnit.getId(), Lists.newArrayList(p.getId()));
-		assertThat(savedOrg.getMembers().size()).isEqualTo(0);
+        assertThat(savedOrg.getMembers().size()).isEqualTo(0);
+        assertNull(p.getPrimaryOrganization());
 
 		// test bogus org Id
-		assertThrows(RecordNotFoundException.class, () -> organizationService.addOrganizationMember(new Organization().getId(), Lists.newArrayList(p.getId())));
+		assertThrows(RecordNotFoundException.class, () -> organizationService.addOrganizationMember(new Organization().getId(), Lists.newArrayList(p.getId()), true));
 	}
 
 	@Test
