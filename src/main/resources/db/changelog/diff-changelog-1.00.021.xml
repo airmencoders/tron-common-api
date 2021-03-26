@@ -30,7 +30,21 @@
             />
         </addColumn>
     </changeSet>
+    <changeSet id="43424234" author="czell">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="postgres" />
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*)
+                FROM pg_constraint
+                WHERE conname='UK100019-12'
+            </sqlCheck>
+        </preConditions>
+        <dropUniqueConstraint
+                constraintName="UK100019-12"
+                tableName="app_source"
+                uniqueColumns="app_source_path" />
+    </changeSet>
     <changeSet author="ckumabs03" id="100021-13">
-        <addUniqueConstraint columnNames="app_source_path" constraintName="UK100019-12" tableName="app_source"/>
+        <addUniqueConstraint columnNames="app_source_path" constraintName="UK100019-12" tableName="app_source" />
     </changeSet>
 </databaseChangeLog>
