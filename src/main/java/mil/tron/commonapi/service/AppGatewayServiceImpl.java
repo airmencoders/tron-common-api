@@ -4,7 +4,6 @@ import mil.tron.commonapi.appgateway.AppGatewayRouteBuilder;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.FluentProducerTemplate;
-import org.apache.camel.Produce;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -98,9 +98,8 @@ public class AppGatewayServiceImpl implements AppGatewayService {
         String[] requestUri = uriRequest.split("/");
         String[] appSourcePathParts = Arrays.asList(requestUri).subList(5, requestUri.length)
                 .toArray(new String[0]);
-        String sendToPath = "/" + String.join("/", appSourcePathParts);
 
-        return sendToPath;
+        return File.separator + String.join(File.separator, appSourcePathParts);
     }
 
     /***

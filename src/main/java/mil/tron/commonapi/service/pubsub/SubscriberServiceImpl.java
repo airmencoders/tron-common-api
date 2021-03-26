@@ -2,9 +2,7 @@ package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
-import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

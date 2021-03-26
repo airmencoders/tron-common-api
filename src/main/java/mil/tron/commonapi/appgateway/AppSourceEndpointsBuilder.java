@@ -96,12 +96,11 @@ public class AppSourceEndpointsBuilder {
                 .map(path -> {
                     String pathString = path.getKey();
                     // get operations from paths.. .readOperations
-                    List<AppSourceEndpoint> operations = path.getValue().readOperationsMap()
+                    return path.getValue().readOperationsMap()
                             // build pojo for path and operations
                             .keySet().stream().map(method -> new AppSourceEndpoint(pathString,
                                     AppSourceEndpointsBuilder.convertMethod(method)))
                             .collect(Collectors.toList());
-                    return operations;
                 }).flatMap(List::stream).collect(Collectors.toList());
     }
 
