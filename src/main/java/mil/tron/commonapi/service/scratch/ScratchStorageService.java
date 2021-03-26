@@ -16,6 +16,7 @@ public interface ScratchStorageService {
     ScratchStorageEntry setKeyValuePair(UUID appId, String key, String value);
     ScratchStorageEntry deleteKeyValuePair(UUID appId, String key);
     Iterable<ScratchStorageEntry> deleteAllKeyValuePairsForAppId(UUID appId);
+    Iterable<String> getAllKeysForAppId(UUID appId);
 
     // scratch storage app management...
     Iterable<ScratchStorageAppRegistryDto> getAllRegisteredScratchApps();
@@ -25,6 +26,7 @@ public interface ScratchStorageService {
     ScratchStorageAppRegistryEntry deleteScratchStorageApp(UUID id);
     ScratchStorageAppRegistryEntry addUserPrivToApp(UUID appId, ScratchStorageAppUserPrivDto priv);
     ScratchStorageAppRegistryEntry removeUserPrivFromApp(UUID appId, UUID appPrivIdEntry);
+    ScratchStorageAppRegistryEntry setImplicitReadForApp(UUID appId, boolean implicitRead);
 
     // scratch storage users management
     Iterable<ScratchStorageUser> getAllScratchUsers();
@@ -32,6 +34,7 @@ public interface ScratchStorageService {
     ScratchStorageUser addNewScratchUser(ScratchStorageUser user);
     ScratchStorageUser deleteScratchUser(UUID id);
 
+    boolean userCanReadFromAppId(UUID appId, String email);
     boolean userCanWriteToAppId(UUID appId, String email);
     boolean userHasAdminWithAppId(UUID appId, String email);
 }

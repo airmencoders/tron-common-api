@@ -1,0 +1,8 @@
+[
+  {
+    "name": "ARMS Gateway - local",
+    "openApiSpecFilename": "arms-gateway.yml",
+    "sourceUrl": "http://localhost:8081",
+    "appSourcePath": "arms-gateway-local"
+  }
+]

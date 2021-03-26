@@ -11,8 +11,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 
 @Service
 @Slf4j
@@ -31,15 +30,24 @@ public class AppSourceConfig {
     }
 
     private AppSourceInterfaceDefinition[] parseAppSourceDefs(String configFile) {
-        Resource appSourceDefResource = new ClassPathResource(configFile);
         ObjectMapper objectMapper = new ObjectMapper();
         AppSourceInterfaceDefinition[] defs = null;
         try {
-             defs = objectMapper.readValue(new File(appSourceDefResource.getURI()),
-                    AppSourceInterfaceDefinition[].class);
+            InputStream in = getClass().getResourceAsStream(configFile);
+            if (in == null) {
+                throw new NullPointerException(String.format("Unable to find config for %s",
+                        configFile));
+            }
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            defs = objectMapper.readValue(reader, AppSourceInterfaceDefinition[].class);
+            in.close();
+            reader.close();
         }
         catch (IOException e) {
             log.warn("Could not parse app source file config.");
+        }
+        catch (NullPointerException e) {
+            log.warn("Could not find resource file.", e);
         }
         return defs;
     }

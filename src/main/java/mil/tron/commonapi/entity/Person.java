@@ -3,6 +3,9 @@ package mil.tron.commonapi.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.validations.ValidDodId;
+import mil.tron.commonapi.validations.ValidPhoneNumber;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -57,14 +60,17 @@ public class Person {
      */
     @Getter
     @Setter
+    @ValidDodId
     private String dodid;
 
     @Getter
     @Setter
+    @ValidPhoneNumber
     private String phone;
 
     @Getter
     @Setter
+    @ValidPhoneNumber
     private String dutyPhone;
 
     @Getter
