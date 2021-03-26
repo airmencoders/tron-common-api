@@ -32,7 +32,7 @@
     </changeSet>
     <changeSet id="43424234" author="czell">
         <preConditions onFail="MARK_RAN">
-            <dbms type="postgres" />
+            <dbms type="postgresql" />
             <sqlCheck expectedResult="1">
                 SELECT COUNT(*)
                 FROM pg_constraint
