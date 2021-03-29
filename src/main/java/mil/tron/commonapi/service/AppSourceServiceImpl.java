@@ -45,13 +45,12 @@ public class AppSourceServiceImpl implements AppSourceService {
     @Override
     public List<AppSourceDto> getAppSources() {
         Iterable<AppSource> appSources = this.appSourceRepository.findAll();
-        List<AppSourceDto> appSourceDtos = StreamSupport
+        return StreamSupport
                 .stream(appSources.spliterator(), false)
                 .map(appSource -> AppSourceDto.builder().id(appSource.getId())
                         .name(appSource.getName())
                         .clientCount(appSource.getAppSourcePrivs().size())
                         .build()).collect(Collectors.toList());
-        return appSourceDtos;
     }
 
     public AppSourceDetailsDto createAppSource(AppSourceDetailsDto appSource) {
@@ -105,12 +104,11 @@ public class AppSourceServiceImpl implements AppSourceService {
         // remove privileges associated with the app source
         this.appSourcePrivRepository.removeAllByAppSource(AppSource.builder().id(id).build());
         this.appSourceRepository.deleteById(toRemove.getId());
-        AppSourceDetailsDto removedAppSourceDetails = this.buildAppSourceDetailsDto(toRemove);
-        return removedAppSourceDetails;
+        return this.buildAppSourceDetailsDto(toRemove);
     }
 
     private Set<Privilege> buildPrivilegeSet(List<Long> privilegeIds, UUID appClientId) throws RecordNotFoundException {
-        return privilegeIds.stream().map((privId) -> {
+        return privilegeIds.stream().map(privId -> {
             if (!this.privilegeRepository.existsById(privId)) {
                 throw new RecordNotFoundException(String.format("No privilege %x found for" +
                         "client app with id %s.", privId, appClientId.toString()));
@@ -155,7 +153,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         appSourceToSave.setName(appSource.getName());
 
         Set<AppSourcePriv> appSourcePrivs = appSource.getAppClients()
-                .stream().map((privDto) -> AppSourcePriv.builder()
+                .stream().map(privDto -> AppSourcePriv.builder()
                         .appSource(appSourceToSave)
                         .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
                         .privileges(this.buildPrivilegeSet(privDto.getPrivilegeIds(), privDto.getAppClientUser()))

@@ -17,6 +17,7 @@
     <properties>
         <java.version>11</java.version>
         <camel.version>3.5.0</camel.version>
+        <spring-security.version>5.4.5</spring-security.version>
     </properties>
 
     <dependencies>

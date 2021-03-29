@@ -5,9 +5,6 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 
 import javax.persistence.*;
-
-import org.hibernate.validator.internal.util.stereotypes.Lazy;
-
 import java.util.Set;
 import java.util.UUID;
 
