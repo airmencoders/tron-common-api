@@ -134,7 +134,10 @@ public class PersonController {
 	@PatchMapping(path = "/{id}", consumes = "application/json-patch+json")
 	public ResponseEntity<PersonDto> patchPerson(
 			@Parameter(description = "Person ID to patch", required = true) @PathVariable("id") UUID personId,
-			@Parameter(description = "Patched person", required = true, schema=@Schema(example="[ {'op':'add','path':'/hello','value':'world'} ]" ,implementation = JsonPatchAnnotated.class)) @RequestBody JsonPatch patch) {
+			@Parameter(description = "Patched person",
+					required = true,
+					schema = @Schema(example="[ {'op':'add','path':'/hello','value':'world'} ]",
+							implementation = JsonPatchAnnotated.class)) @RequestBody JsonPatch patch) {
 		PersonDto updatedPerson = personService.patchPerson(personId, patch);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 	}

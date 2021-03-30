@@ -124,7 +124,7 @@ public class PersonServiceImpl implements PersonService {
 		Optional<Person> dbPerson = repository.findById(id);
 
 		if (dbPerson.isEmpty())
-			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
+			throw this.buildRecordNotFoundForPerson(id);
 
 		if (!personChecksService.personEmailIsUnique(entity)) {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
@@ -195,7 +195,7 @@ public class PersonServiceImpl implements PersonService {
 		Optional<Person> dbPerson = repository.findById(id);
 
 		if (dbPerson.isEmpty()) {
-			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
+			throw this.buildRecordNotFoundForPerson(id);
 		}
 		// patch must be done using a DTO
 		PersonDto dbPersonDto = convertToDto(dbPerson.get(),null);
@@ -239,7 +239,7 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public Person getPerson(UUID id) {
-		return repository.findById(id).orElseThrow(() -> new RecordNotFoundException("Person resource with ID: " + id + " does not exist."));
+		return repository.findById(id).orElseThrow(() -> this.buildRecordNotFoundForPerson(id));
 	}
 
 	@Override
@@ -314,5 +314,9 @@ public class PersonServiceImpl implements PersonService {
 		catch (JsonPatchException | JsonProcessingException e) {
 			throw new InvalidRecordUpdateRequest(String.format("Error patching person with email %s.", personDto.getEmail()));
 		}
+	}
+
+	private RecordNotFoundException buildRecordNotFoundForPerson(UUID personId) {
+		return new RecordNotFoundException("Person resource with ID: " + personId + " does not exist.");
 	}
 }
