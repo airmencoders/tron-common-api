@@ -21,6 +21,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import javax.transaction.Transactional;
+
 @Service
 public class AppSourceServiceImpl implements AppSourceService {
 
@@ -43,13 +45,12 @@ public class AppSourceServiceImpl implements AppSourceService {
     @Override
     public List<AppSourceDto> getAppSources() {
         Iterable<AppSource> appSources = this.appSourceRepository.findAll();
-        List<AppSourceDto> appSourceDtos = StreamSupport
+        return StreamSupport
                 .stream(appSources.spliterator(), false)
                 .map(appSource -> AppSourceDto.builder().id(appSource.getId())
                         .name(appSource.getName())
                         .clientCount(appSource.getAppSourcePrivs().size())
                         .build()).collect(Collectors.toList());
-        return appSourceDtos;
     }
 
     public AppSourceDetailsDto createAppSource(AppSourceDetailsDto appSource) {
@@ -69,6 +70,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .appClients(appSource.getAppSourcePrivs().stream()
                         .map(appSourcePriv -> AppClientUserPrivDto.builder()
                                 .appClientUser(appSourcePriv.getAppClientUser().getId())
+                                .appClientUserName(appSourcePriv.getAppClientUser().getName())
                                 .privilegeIds(this.buildPrivilegeIds(appSourcePriv.getPrivileges()))
                                 .build()).collect(Collectors.toList()))
                 .build();
@@ -81,10 +83,8 @@ public class AppSourceServiceImpl implements AppSourceService {
             throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s",
                     id, appSourceDetailsDto.getId()));
         }
-        if (!this.appSourceRepository.existsById(id)) {
-            throw new RecordNotFoundException(String.format("No App Source found with id %s.", id));
-        }
-        AppSource existingAppSource = this.appSourceRepository.findById(id).get();
+
+        AppSource existingAppSource = this.appSourceRepository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", id)));
         // Name has changed. Make sure the new name doesn't exist
         if (!existingAppSource.getName().equals(appSourceDetailsDto.getName().trim()) &&
             this.appSourceRepository.existsByNameIgnoreCase(appSourceDetailsDto.getName().trim())) {
@@ -94,6 +94,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         return this.saveAppSource(id, appSourceDetailsDto);
     }
 
+    @Transactional
     @Override
     public AppSourceDetailsDto deleteAppSource(UUID id) {
         // validate id
@@ -103,12 +104,11 @@ public class AppSourceServiceImpl implements AppSourceService {
         // remove privileges associated with the app source
         this.appSourcePrivRepository.removeAllByAppSource(AppSource.builder().id(id).build());
         this.appSourceRepository.deleteById(toRemove.getId());
-        AppSourceDetailsDto removedAppSourceDetails = this.buildAppSourceDetailsDto(toRemove);
-        return removedAppSourceDetails;
+        return this.buildAppSourceDetailsDto(toRemove);
     }
 
     private Set<Privilege> buildPrivilegeSet(List<Long> privilegeIds, UUID appClientId) throws RecordNotFoundException {
-        return privilegeIds.stream().map((privId) -> {
+        return privilegeIds.stream().map(privId -> {
             if (!this.privilegeRepository.existsById(privId)) {
                 throw new RecordNotFoundException(String.format("No privilege %x found for" +
                         "client app with id %s.", privId, appClientId.toString()));
@@ -118,11 +118,10 @@ public class AppSourceServiceImpl implements AppSourceService {
     }
 
     private AppClientUser buildAppClientUser(UUID appClientId) throws RecordNotFoundException {
-        if (!this.appClientUserRespository.existsById(appClientId)) {
-            throw new RecordNotFoundException(String.format("No app client with id %s found.",
-                    appClientId));
-        }
-        return AppClientUser.builder().id(appClientId).build();
+        AppClientUser appClientUser = this.appClientUserRespository.findById(appClientId)
+        		.orElseThrow(() -> new RecordNotFoundException(String.format("No app client with id %s found.", appClientId)));
+        
+        return AppClientUser.builder().id(appClientUser.getId()).name(appClientUser.getName()).build();
     }
 
     private List<Long> buildPrivilegeIds(Set<Privilege> privileges) {
@@ -147,25 +146,27 @@ public class AppSourceServiceImpl implements AppSourceService {
     }
 
     private AppSourceDetailsDto saveAppSource(UUID uuid, AppSourceDetailsDto appSource) {
-        AppSource appSourceToSave = AppSource.builder()
-                .id(uuid != null ? uuid : UUID.randomUUID())
-                .name(appSource.getName())
-                .build();
-        try {
+        AppSource appSourceToSave = uuid != null ? 
+            this.appSourceRepository.findById(uuid).orElse(AppSource.builder().id(uuid).build()) :
+            AppSource.builder().id(UUID.randomUUID()).build();
 
-            Set<AppSourcePriv> appSourcePrivs = appSource.getAppClients()
-                    .stream().map((privDto) -> AppSourcePriv.builder()
-                            .appSource(appSourceToSave)
-                            .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
-                            .privileges(this.buildPrivilegeSet(privDto.getPrivilegeIds(), privDto.getAppClientUser()))
-                            .build()).collect(Collectors.toSet());
-            AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceToSave);
-            this.appSourcePrivRepository.saveAll(appSourcePrivs);
-            appSource.setId(savedAppSource.getId());
-        }
-        catch (RecordNotFoundException exception) {
-            throw exception;
-        }
+        appSourceToSave.setName(appSource.getName());
+
+        Set<AppSourcePriv> appSourcePrivs = appSource.getAppClients()
+                .stream().map(privDto -> AppSourcePriv.builder()
+                        .appSource(appSourceToSave)
+                        .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
+                        .privileges(this.buildPrivilegeSet(privDto.getPrivilegeIds(), privDto.getAppClientUser()))
+                        .build()).collect(Collectors.toSet());
+        
+        AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceToSave);
+        
+        Iterable<AppSourcePriv> existingPrivileges = this.appSourcePrivRepository.findAllByAppSource(appSourceToSave);
+        this.appSourcePrivRepository.deleteAll(existingPrivileges);
+        this.appSourcePrivRepository.saveAll(appSourcePrivs);
+        
+        appSource.setId(savedAppSource.getId());
+
         return appSource;
     }
 }

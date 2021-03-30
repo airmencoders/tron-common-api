@@ -26,6 +26,7 @@ import java.util.stream.StreamSupport;
 @Service
 public class ScratchStorageServiceImpl implements ScratchStorageService {
     private static final String SCRATCH_WRITE_PRIV = "SCRATCH_WRITE";
+    private static final String SCRATCH_READ_PRIV = "SCRATCH_READ";
     private static final String SCRATCH_ADMIN_PRIV = "SCRATCH_ADMIN";
     private ScratchStorageRepository repository;
     private ScratchStorageAppRegistryEntryRepository appRegistryRepo;
@@ -66,6 +67,12 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     public Iterable<ScratchStorageEntry> getAllEntriesByApp(UUID appId) {
         validateAppId(appId);
         return repository.findAllByAppId(appId);
+    }
+
+    @Override
+    public Iterable<String> getAllKeysForAppId(UUID appId) {
+        validateAppId(appId);
+        return repository.findAllKeysForAppId(appId);
     }
 
     @Override
@@ -364,6 +371,19 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     }
 
     /**
+     * Private helper to validate a given appId is real and registered as a scratch app
+     * @param appId UUID of the app to check
+     * @return the app's record or throws a RecordNotFoundException
+     */
+    private ScratchStorageAppRegistryEntry validateAppIsRealAndRegistered(UUID appId) {
+
+        // get the appId after validating its a real app ID that's registered
+        return appRegistryRepo.findById(appId)
+                .orElseThrow(() -> new RecordNotFoundException("Application with ID " + appId + " doesn't exist"));
+
+    }
+
+    /**
      * Utility function used by the controller to check if a given user email has
      * write access to the given appId's space
      * @param appId the appId to check against
@@ -373,9 +393,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     @Override
     public boolean userCanWriteToAppId(UUID appId, String email) {
 
-        // get the appId after validating its a real app ID that's registered
-        ScratchStorageAppRegistryEntry appEntry = appRegistryRepo.findById(appId)
-                .orElseThrow(() -> new RecordNotFoundException("Application with ID " + appId + " doesn't exist"));
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
 
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
             if (priv.getUser().getEmail().equalsIgnoreCase(email)
@@ -383,6 +401,45 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 && (priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV)
                     || priv.getPrivilege().getName().equals(SCRATCH_ADMIN_PRIV)))
                         return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Utility function to set/un-set the implicit read property for a given app
+     * @param appId UUID of app to modify
+     * @param implicitRead value to set the implicit read field to
+     * @return the modified App record or throws exception if appId wasn't valid
+     */
+    @Override
+    public ScratchStorageAppRegistryEntry setImplicitReadForApp(UUID appId, boolean implicitRead) {
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+        appEntry.setAppHasImplicitRead(implicitRead);
+        return appRegistryRepo.save(appEntry);
+    }
+
+    /**
+     * Utility function used by the controller to check if a given user email has
+     * read access to the given appId's space
+     * @param appId the appId to check against
+     * @param email the email to check for read access
+     * @return true if user has read access else false
+     */
+    @Override
+    public boolean userCanReadFromAppId(UUID appId, String email) {
+
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+
+        // if this app has implicit read set to True, then we're done here...
+        if (appEntry.isAppHasImplicitRead()) return true;
+
+        for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
+            if (priv.getUser().getEmail().equalsIgnoreCase(email)
+                    && (priv.getPrivilege().getName().equals(SCRATCH_READ_PRIV)
+                    || priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV)
+                    || priv.getPrivilege().getName().equals(SCRATCH_ADMIN_PRIV)))
+                return true;
         }
 
         return false;
@@ -398,9 +455,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     @Override
     public boolean userHasAdminWithAppId(UUID appId, String email) {
 
-        // get the appId after validating its a real app ID that's registered
-        ScratchStorageAppRegistryEntry appEntry = appRegistryRepo.findById(appId)
-                .orElseThrow(() -> new RecordNotFoundException("Application with ID " + appId + " doesn't exist"));
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
 
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
             if (priv.getUser().getEmail().equalsIgnoreCase(email)

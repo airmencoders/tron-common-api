@@ -27,11 +27,13 @@ public class AppSourcePriv {
 
     @ManyToOne
     @JoinColumn(name = "app_source_id", nullable = false)
+    @EqualsAndHashCode.Exclude
     private AppSource appSource;
 
     @ManyToMany
     private Set<Privilege> privileges;
 
     @ManyToOne
+    @EqualsAndHashCode.Exclude
     private AppClientUser appClientUser;
 }

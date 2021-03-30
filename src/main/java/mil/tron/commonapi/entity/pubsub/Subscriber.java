@@ -37,6 +37,10 @@ public class Subscriber {
     @Enumerated(EnumType.STRING)
     private EventType subscribedEvent;
 
+    @Getter
+    @Setter
+    private String secret;
+
     @Override
     public String toString() {
         return String.format("Subscriber - %s :: %s", this.subscriberAddress, this.subscribedEvent);

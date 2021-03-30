@@ -25,6 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -60,6 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(properties = { "security.enabled=true" })
+@TestPropertySource(locations = "classpath:application-test.properties")
 @AutoConfigureMockMvc
 public class ScratchStorageIntegrationTest {
 
@@ -375,6 +377,17 @@ public class ScratchStorageIntegrationTest {
     @Transactional
     @Rollback
     @Test
+    void getAllKeysForApp() throws Exception {
+        mockMvc.perform(get(ENDPOINT + "/apps/{appId}/keys", entry2.getAppId())
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]", equalTo(entry2.getKey())));
+    }
+
+    @Transactional
+    @Rollback
+    @Test
     void deleteKeyValuePairsByAppId() throws Exception {
 
         // add key value pair to COOL_APP, should have 3 TOTAL key value pairs
@@ -400,6 +413,13 @@ public class ScratchStorageIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
+
+        // test that the get all keys return is empty array
+        mockMvc.perform(get(ENDPOINT + "apps/{appId}/keys", entry2.getAppId())
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Transactional
@@ -418,7 +438,7 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(jsonPath("$.appId", equalTo(entry1.getAppId().toString())));
 
         // delete just one key value pairs from TEST_APP
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyValue}", entry2.getAppId(), entry2.getKey())
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry2.getAppId(), entry2.getKey())
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isOk())
@@ -432,13 +452,13 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)));
 
         // delete COOL_APP's key as user2 - should be forbidden
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyValue}", entry1.getAppId(), "hello")
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry1.getAppId(), "hello")
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isForbidden());
 
         // delete bogus key
-        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyValue}", entry2.getAppId(), "bogus key")
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry2.getAppId(), "bogus key")
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isNotFound());
@@ -614,7 +634,7 @@ public class ScratchStorageIntegrationTest {
                 .content(OBJECT_MAPPER.writeValueAsString(newUserDto)))
                 .andExpect(status().isOk());
 
-        // make sure that the new guy we just added is there and has SCRATCH_WRITE privs
+        // make sure that the new guy we just added is there and has SCRATCH_READ privs
         MvcResult readOnlyDetails = mockMvc.perform(get(ENDPOINT + "apps/{appId}", entry1.getAppId())
                 .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
@@ -641,6 +661,12 @@ public class ScratchStorageIntegrationTest {
         }
 
         assertTrue(userHasReadPriv);
+
+        // make sure the READ priv works - get the app's key names
+        mockMvc.perform(get(ENDPOINT + "/apps/{appId}/keys", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(newUserDto.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
 
         // finally revoke the new guys privs - but the system will not delete that user from the
         //   scratch space universe, since they may be referenced for other apps!
@@ -694,6 +720,36 @@ public class ScratchStorageIntegrationTest {
         }
 
         assertTrue(newGuyExists);
+
+        // make sure the new guy cannot read from app anymore since no privs for it
+        mockMvc.perform(get(ENDPOINT + "/apps/{appId}/keys", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(newUserDto.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
+
+        // as admin turn ON implicit read
+        mockMvc.perform(patch(ENDPOINT + "/apps/{appId}/implicitRead?value=true", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // make sure the new guy can read again -- even without the READ privs
+        mockMvc.perform(get(ENDPOINT + "/apps/{appId}/keys", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(newUserDto.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // as admin turn OFF implicit read
+        mockMvc.perform(patch(ENDPOINT + "/apps/{appId}/implicitRead?value=false", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // read from new guy should fail again
+        mockMvc.perform(get(ENDPOINT + "/apps/{appId}/keys", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(newUserDto.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
     }
 
     @Transactional
@@ -755,7 +811,7 @@ public class ScratchStorageIntegrationTest {
 
         // make sure "some key" exists
         mockMvc.perform(get(ENDPOINT + "{appId}/{keyName}", entry2.getAppId(), "some key")
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(AUTH_HEADER_NAME, createToken(user2.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk());
 
@@ -765,7 +821,7 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(get(ENDPOINT + "{appId}/{keyName}", entry2.getAppId(), "some key")
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(AUTH_HEADER_NAME, createToken(user2.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isNotFound());
     }

@@ -19,6 +19,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -34,6 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
+@TestPropertySource(locations = "classpath:application-test.properties")
 @AutoConfigureMockMvc
 public class CommonApiLoggerTest {
     private static final String ENDPOINT = "/v1/person/";
@@ -57,6 +59,7 @@ public class CommonApiLoggerTest {
     @AfterEach
     public void tearDown() throws Exception {
         System.setOut(originalSystemOut);
+        System.setOut(originalSystemOut);
     }
 
     @Test
@@ -74,6 +77,7 @@ public class CommonApiLoggerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(p)));
         assertEquals(true, outputStreamCaptor.toString().contains("PUT request"));
+        assertEquals(true, outputStreamCaptor.toString().contains(MockToken.EMAIL_MD5));
     }
 
     @Test

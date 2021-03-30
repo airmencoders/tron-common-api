@@ -184,7 +184,7 @@ public class PersonServiceImpl implements PersonService {
 					unknownProperties.add(key);
 				}
 			});
-			if (unknownProperties.size() > 0) {
+			if (!unknownProperties.isEmpty()) {
 				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", branch, String.join(", ", unknownProperties)));
 			}
 		}

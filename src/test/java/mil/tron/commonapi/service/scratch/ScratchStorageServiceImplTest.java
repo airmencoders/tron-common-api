@@ -151,6 +151,14 @@ public class ScratchStorageServiceImplTest {
     }
 
     @Test
+    void testGetAllKeysForApp() {
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(repository.findAllKeysForAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0).getKey()));
+        assertEquals(Lists.newArrayList(entries.get(0).getKey()), service.getAllKeysForAppId(entries.get(0).getAppId()));
+    }
+
+
+    @Test
     void testGetSingleAppById() {
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
                 .thenReturn(Optional.of(registeredApps.get(0)))
@@ -475,6 +483,117 @@ public class ScratchStorageServiceImplTest {
         assertFalse(service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
         assertThrows(RecordNotFoundException.class,
                 () -> service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+    }
+
+    @Test
+    void testUserCanReadFromAppSpace() {
+        // tests logic of the read utility function
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.empty()); // not valid on subsequent
+
+        ScratchStorageUser adminUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("admin@test.com")
+                .build();
+
+        ScratchStorageUser writeUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("writer@test.com")
+                .build();
+
+        ScratchStorageUser someOtherNonRegisteredUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("dude@test.com")
+                .build();
+
+        // add the admin guy to the app with ADMIN privs -- admin users will have implicit read access
+        registeredApps.get(0).addUserAndPriv(ScratchStorageAppUserPriv
+                .builder()
+                .user(adminUser)
+                .privilege(privAdmin)
+                .build());
+
+        // add the writer guy to the app with WRITE privs -- write users will have implicit read access too
+        registeredApps.get(0).addUserAndPriv(ScratchStorageAppUserPriv
+                .builder()
+                .user(writeUser)
+                .privilege(privWrite)
+                .build());
+
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail()));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertThrows(RecordNotFoundException.class,
+                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+    }
+
+    @Test
+    void testAppImplicitReadSetting() {
+        // tests logic of the implicit read utility function
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.of(registeredApps.get(0)))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(registeredApps.get(0)));
+
+        ScratchStorageUser adminUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("admin@test.com")
+                .build();
+
+        ScratchStorageUser writeUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("writer@test.com")
+                .build();
+
+        ScratchStorageUser someOtherNonRegisteredUser = ScratchStorageUser
+                .builder()
+                .id(UUID.randomUUID())
+                .email("dude@test.com")
+                .build();
+
+        // add the admin guy to the app with ADMIN privs -- admin users will have implicit read access
+        registeredApps.get(0).addUserAndPriv(ScratchStorageAppUserPriv
+                .builder()
+                .user(adminUser)
+                .privilege(privAdmin)
+                .build());
+
+        // add the writer guy to the app with WRITE privs -- write users will have implicit read access too
+        registeredApps.get(0).addUserAndPriv(ScratchStorageAppUserPriv
+                .builder()
+                .user(writeUser)
+                .privilege(privWrite)
+                .build());
+
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail()));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertThrows(RecordNotFoundException.class,
+                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+
+        // turn on implicit read
+        registeredApps.get(0).setAppHasImplicitRead(true);
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+
+        // turn off implicit read
+        registeredApps.get(0).setAppHasImplicitRead(false);
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
     }
 
     @Test

@@ -9,6 +9,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
+import org.springframework.util.DigestUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
@@ -22,10 +23,7 @@ public class CommonApiLogger {
 
     private HttpServletRequest request;
 
-    public CommonApiLogger(HttpServletRequest request) {
-        this.request = request;
-    }
-
+    public CommonApiLogger(HttpServletRequest request) { this.request = request; }
     // decodes the Istio JWT
     private DecodedJWT decodeJwt (HttpServletRequest request) {
         String bearer = request.getHeader("authorization");
@@ -39,7 +37,9 @@ public class CommonApiLogger {
         while (headerNames.hasMoreElements()){
             if (headerNames.nextElement().equals("authorization")){
                 DecodedJWT decodedJwt = decodeJwt(request);
-                return decodedJwt.getClaim("email").asString();
+
+                // mask request's email as its MD5 string
+                return DigestUtils.md5DigestAsHex(decodedJwt.getClaim("email").asString().getBytes());
             }
         }
         return "Unknown";
