@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -168,4 +169,25 @@ public class AppSourceController {
 
         return new ResponseEntity<>(appSourceService.deleteAppSource(id), HttpStatus.OK);
     }
+
+    // app source user management
+
+    @PreAuthorizeDashboardAdmin
+    @PatchMapping("/admins/{id}")
+    public ResponseEntity<Object> addAppSourceAdmin(
+            @Parameter(name = "id", description = "App Source UUID", required = true) @PathVariable UUID id,
+            @Parameter(name = "Email", description = "Admin Email", required = true) @Valid @RequestBody DashboardUserDto user) {
+
+        return new ResponseEntity<>(appSourceService.addAppSourceAdmin(id, user.getEmail()), HttpStatus.OK);
+    }
+
+    @PreAuthorizeDashboardAdmin
+    @DeleteMapping("/admins/{id}")
+    public ResponseEntity<Object> removeAppSourceAdmin(
+            @Parameter(name = "id", description = "App Source UUID", required = true) @PathVariable UUID id,
+            @Parameter(name = "Email", description = "Admin Email", required = true) @Valid @RequestBody DashboardUserDto user) {
+
+        return new ResponseEntity<>(appSourceService.removeAdminFromAppSource(id, user.getEmail()), HttpStatus.OK);
+    }
+
 }

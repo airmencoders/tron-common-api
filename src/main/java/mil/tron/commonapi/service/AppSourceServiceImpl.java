@@ -1,9 +1,11 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.entity.appsource.AppSourcePriv;
@@ -11,17 +13,19 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppSourcePrivRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import org.assertj.core.util.Lists;
+import org.assertj.core.util.Sets;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
-import javax.transaction.Transactional;
 
 @Service
 public class AppSourceServiceImpl implements AppSourceService {
@@ -30,16 +34,24 @@ public class AppSourceServiceImpl implements AppSourceService {
     private AppSourcePrivRepository appSourcePrivRepository;
     private PrivilegeRepository privilegeRepository;
     private AppClientUserRespository appClientUserRespository;
+    private DashboardUserRepository dashboardUserRepository;
+    private DashboardUserService dashboardUserService;
+    private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
+
 
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
                                 AppSourcePrivRepository appSourcePrivRepository,
                                 PrivilegeRepository privilegeRepository,
-                                AppClientUserRespository appClientUserRespository) {
+                                AppClientUserRespository appClientUserRespository,
+                                DashboardUserRepository dashboardUserRepository,
+                                DashboardUserService dashboardUserService) {
         this.appSourceRepository = appSourceRepository;
         this.appSourcePrivRepository = appSourcePrivRepository;
         this.privilegeRepository = privilegeRepository;
         this.appClientUserRespository = appClientUserRespository;
+        this.dashboardUserRepository = dashboardUserRepository;
+        this.dashboardUserService = dashboardUserService;
     }
 
     @Override
@@ -53,6 +65,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .build()).collect(Collectors.toList());
     }
 
+    @Override
     public AppSourceDetailsDto createAppSource(AppSourceDetailsDto appSource) {
         return this.saveAppSource(null, appSource);
     }
@@ -64,16 +77,7 @@ public class AppSourceServiceImpl implements AppSourceService {
             throw new RecordNotFoundException(String.format("App Source with id %s was not found.", id));
         }
         AppSource appSource = appSourceRecord.get();
-        return AppSourceDetailsDto.builder()
-                .id(appSource.getId())
-                .name(appSource.getName())
-                .appClients(appSource.getAppSourcePrivs().stream()
-                        .map(appSourcePriv -> AppClientUserPrivDto.builder()
-                                .appClientUser(appSourcePriv.getAppClientUser().getId())
-                                .appClientUserName(appSourcePriv.getAppClientUser().getName())
-                                .privilegeIds(this.buildPrivilegeIds(appSourcePriv.getPrivileges()))
-                                .build()).collect(Collectors.toList()))
-                .build();
+        return this.buildAppSourceDetailsDto(appSource);
     }
 
     @Override
@@ -100,6 +104,9 @@ public class AppSourceServiceImpl implements AppSourceService {
         // validate id
         AppSource toRemove = this.appSourceRepository.findById(id)
                 .orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", id)));
+
+        // remove admins attached to this app
+        toRemove = this.deleteAdminsFromAppSource(toRemove, null);
 
         // remove privileges associated with the app source
         this.appSourcePrivRepository.removeAllByAppSource(AppSource.builder().id(id).build());
@@ -129,38 +136,56 @@ public class AppSourceServiceImpl implements AppSourceService {
             return new ArrayList<>();
         }
         return privileges.stream()
-                .map(privilege -> privilege.getId()).collect(Collectors.toList());
+                .map(Privilege::getId).collect(Collectors.toList());
     }
 
     private AppSourceDetailsDto buildAppSourceDetailsDto(AppSource appSource) {
         return AppSourceDetailsDto.builder()
                 .id(appSource.getId())
                 .name(appSource.getName())
-                .appClients(appSource.getAppSourcePrivs().stream().map(appSourcePriv ->
-                        AppClientUserPrivDto.builder()
+                .appSourceAdminUserEmails(appSource.getAppSourceAdmins().stream()
+                        .map(DashboardUser::getEmail)
+                        .collect(Collectors.toList()))
+                .appClients(appSource.getAppSourcePrivs().stream()
+                        .map(appSourcePriv -> AppClientUserPrivDto.builder()
                                 .appClientUser(appSourcePriv.getAppClientUser().getId())
-                                .privilegeIds(appSourcePriv.getPrivileges().stream().map(privilege ->
-                                        privilege.getId()).collect(Collectors.toList()))
+                                .appClientUserName(appSourcePriv.getAppClientUser().getName())
+                                .privilegeIds(this.buildPrivilegeIds(appSourcePriv.getPrivileges()))
                                 .build()).collect(Collectors.toList()))
                 .build();
     }
 
     private AppSourceDetailsDto saveAppSource(UUID uuid, AppSourceDetailsDto appSource) {
-        AppSource appSourceToSave = uuid != null ? 
+        AppSource appSourceToSave = uuid != null ?
             this.appSourceRepository.findById(uuid).orElse(AppSource.builder().id(uuid).build()) :
             AppSource.builder().id(UUID.randomUUID()).build();
 
         appSourceToSave.setName(appSource.getName());
 
+        // remove admins attached to this app, essentially sanitize admins from it
+        //  this allows us to essentially be able to add and delete admins via an HTTP PUT
+        AppSource appSourceCleanAdmins = this.deleteAdminsFromAppSource(appSourceToSave, null);
+
+        // resolve the app admin's from their DTO emails, create/add if needed
+        List<DashboardUser> thisAppsAdminUsers = new ArrayList<>();
+        for (String email : appSource.getAppSourceAdminUserEmails()) {
+            thisAppsAdminUsers.add(this.createDashboardUserWithAsAppSourceAdmin(email));
+        }
+
+        // re-apply the admins received in the DTO
+        appSourceCleanAdmins.setAppSourceAdmins(Sets.newHashSet(thisAppsAdminUsers));
+
         Set<AppSourcePriv> appSourcePrivs = appSource.getAppClients()
                 .stream().map(privDto -> AppSourcePriv.builder()
-                        .appSource(appSourceToSave)
+                        .appSource(appSourceCleanAdmins)
                         .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
                         .privileges(this.buildPrivilegeSet(privDto.getPrivilegeIds(), privDto.getAppClientUser()))
                         .build()).collect(Collectors.toSet());
-        
-        AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceToSave);
-        
+
+
+        // persist the app source and its changes
+        AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceCleanAdmins);
+
         Iterable<AppSourcePriv> existingPrivileges = this.appSourcePrivRepository.findAllByAppSource(appSourceToSave);
         this.appSourcePrivRepository.deleteAll(existingPrivileges);
         this.appSourcePrivRepository.saveAll(appSourcePrivs);
@@ -169,4 +194,142 @@ public class AppSourceServiceImpl implements AppSourceService {
 
         return appSource;
     }
+
+    /**
+     * Private helper to make a dashboard user with given email as an app source admin,
+     * or if that email is already a dashboard user, just adds app source admin to the set
+     * of privileges
+     * @param email the user email
+     * @return the newly created or modified dashboard user record
+     */
+    private DashboardUser createDashboardUserWithAsAppSourceAdmin(String email) {
+        Privilege appSourcePriv = privilegeRepository.findByName(APP_SOURCE_ADMIN_PRIV)
+                .orElseThrow(() -> new RecordNotFoundException("Cannot find APP SOURCE ADMIN privilege"));
+
+        Optional<DashboardUser> user = dashboardUserRepository.findByEmailIgnoreCase(email);
+        if (user.isEmpty()) {
+            return dashboardUserService.convertToEntity(dashboardUserService
+                    .createDashboardUserDto(DashboardUserDto
+                            .builder()
+                            .id(UUID.randomUUID())
+                            .email(email)
+                            .privileges(Lists.newArrayList(appSourcePriv))
+                            .build()));
+        }
+        else {
+            DashboardUser existingUser = user.get();
+            Set<Privilege> newPrivs = new HashSet<>(existingUser.getPrivileges());
+            newPrivs.add(appSourcePriv);
+            existingUser.setPrivileges(newPrivs);
+            return existingUser;
+        }
+    }
+
+    /**
+     * Adds a user to this app's set of admins
+     * @param appSourceId app source's id
+     * @param email the user's email
+     */
+    @Override
+    public AppSourceDetailsDto addAppSourceAdmin(UUID appSourceId, String email) {
+        AppSource appSource = this.appSourceRepository.findById(appSourceId)
+                .orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", appSourceId)));
+
+        appSource.getAppSourceAdmins().add(createDashboardUserWithAsAppSourceAdmin(email));
+        return this.buildAppSourceDetailsDto(appSourceRepository.saveAndFlush(appSource));
+    }
+
+    /**
+     * Check if the given email address is APP_SOURCE_ADMIN for given app source UUID
+     * @param appId UUID of the app source
+     * @param email email of user
+     * @return true if user is an assigned admin for the app source
+     */
+    @Override
+    public boolean userIsAdminForAppSource(UUID appId, String email) {
+        AppSource appSource = this.appSourceRepository.findById(appId)
+                .orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", appId)));
+
+        for (DashboardUser user : appSource.getAppSourceAdmins()) {
+            if (user.getEmail().equalsIgnoreCase(email)) {
+                for (Privilege priv : user.getPrivileges()) {
+                    if (priv.getName().equalsIgnoreCase(APP_SOURCE_ADMIN_PRIV)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Removes a dashboard user from this app's set of admins
+     * If the dashboard user is not associated with any other apps or have any other privs
+     * (e.g. DASHBOARD_ADMIN, etc), then that record is deleted completely, otherwise
+     * they are just removed from the given app
+     * @param appSourceId the app source's id
+     * @param email the user's email
+     */
+    @Override
+    public AppSourceDetailsDto removeAdminFromAppSource(UUID appSourceId, String email) {
+        AppSource appSource = this.appSourceRepository.findById(appSourceId)
+                .orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", appSourceId)));
+
+        appSource = this.deleteAdminsFromAppSource(appSource, email);
+
+        return this.buildAppSourceDetailsDto(appSource);
+    }
+
+    /**
+     * Private helper that removes one or all admins from an app source
+     * @param appSource the app source entity to modify
+     * @param email null for all admins otherwise the email of the admin to remove
+     * @return the modified app source entity
+     */
+    private AppSource deleteAdminsFromAppSource(AppSource appSource, String email) {
+        if (appSource.getAppSourceAdmins() == null) return appSource;
+
+        for (DashboardUser user : new HashSet<>(appSource.getAppSourceAdmins())) {
+            if (email != null && !user.getEmail().equalsIgnoreCase(email)) continue;
+
+            // at the minimum we remove this user from this app source
+            Set<DashboardUser> admins = new HashSet<>(appSource.getAppSourceAdmins());
+            admins.remove(user);
+            appSource.setAppSourceAdmins(admins);
+            appSource = appSourceRepository.saveAndFlush(appSource);
+
+            List<AppSource> usersAppSources = appSourceRepository.findAppSourcesByAppSourceAdminsContaining(user);
+            if (usersAppSources.isEmpty() && !privSetHasPrivsOtherThanAppSource(user.getPrivileges())) {
+
+                // this user doesn't belong to other apps and has no other privileges
+                //   so delete completely
+                dashboardUserService.deleteDashboardUser(user.getId());
+            }
+            else if (usersAppSources.isEmpty() && privSetHasPrivsOtherThanAppSource(user.getPrivileges())) {
+
+                // this user doesn't belong to other app source apps but HAS other privileges
+                //   in the system, so just remove the APP_SOURCE_ADMIN priv since keeping it
+                //   would make it an "orphaned" and unnecessary privilege
+                Set<Privilege> userPrivs = new HashSet<>(user.getPrivileges());
+                userPrivs.removeIf(p -> p.getName().equalsIgnoreCase(APP_SOURCE_ADMIN_PRIV));
+                user.setPrivileges(userPrivs);
+                dashboardUserRepository.save(user);
+            }
+        }
+
+        return appSource;
+    }
+
+    /**
+     * Private helper to examine a set of privileges to see if there's other-than-app-source-admin
+     * priv in it... used for removing Dashboard user from an AppSource
+     * @param privs set of privileges to examine
+     * @return if there's other privileges than App Source Admin
+     */
+    private boolean privSetHasPrivsOtherThanAppSource(Set<Privilege> privs) {
+        for (Privilege priv : privs) {
+            if (!priv.getName().equals(APP_SOURCE_ADMIN_PRIV)) return true;
+        }
+        return false;
+    }
+
+
 }
