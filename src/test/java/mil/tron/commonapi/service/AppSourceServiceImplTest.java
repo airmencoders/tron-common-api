@@ -12,7 +12,7 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.appsource.AppSourcePrivRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -36,7 +36,7 @@ public class AppSourceServiceImplTest {
     private AppSourceRepository appSourceRepository;
     
     @Mock
-    private AppSourcePrivRepository appSourcePrivRepo;
+    private AppEndpointPrivRepository appSourcePrivRepo;
     
     @Mock
     private AppClientUserRespository appClientUserRepo;

@@ -34,9 +34,4 @@ public class AppClientUserPrivDto {
 
     @JsonInclude(Include.NON_NULL)
     private String privilege;
-    // @Getter
-    // @Setter
-    // @NotNull
-    // @NotEmpty
-    // private List<Long> privilegeIds;
 }

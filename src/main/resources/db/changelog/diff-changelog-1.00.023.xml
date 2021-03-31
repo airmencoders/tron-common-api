@@ -1,0 +1,59 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="billdewitt (generated)" id="1617208284558-8">
+        <createTable tableName="app_endpoint">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="app_endpointPK"/>
+            </column>
+            <column name="method" type="INTEGER"/>
+            <column name="path" type="VARCHAR(255)"/>
+            <column name="app_source_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-9">
+        <createTable tableName="app_endpoint_privs">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="app_endpoint_privsPK"/>
+            </column>
+            <column name="app_client_user_id" type="UUID"/>
+            <column name="app_endpoint_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="app_source_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-10">
+        <addForeignKeyConstraint baseColumnNames="app_source_id" baseTableName="app_endpoint_privs" constraintName="FK193s6kbm3r1lq9m1xtqb8x5pe" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_source" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-11">
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_endpoint_privs" constraintName="FKdmj6bf0tncgkdkg893ngfnarh" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_client_user" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-12">
+        <addForeignKeyConstraint baseColumnNames="app_source_id" baseTableName="app_endpoint" constraintName="FKf5kkv6go8cubq0peuhuth3feu" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_source" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-13">
+        <addForeignKeyConstraint baseColumnNames="app_endpoint_id" baseTableName="app_endpoint_privs" constraintName="FKfjigk14m5mu88h6avbor3rwtr" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_endpoint" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-14">
+        <dropForeignKeyConstraint baseTableName="app_source_privs_privileges" constraintName="FK6tv6kfhbgse77s74304usb5iu"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-15">
+        <dropForeignKeyConstraint baseTableName="app_source_privs" constraintName="FK9oyltycoohbjudwlk2ngtq0ko"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-16">
+        <dropForeignKeyConstraint baseTableName="app_source_privs" constraintName="FK9t1bsnvq5gq9f55w0fuau1wyn"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-17">
+        <dropForeignKeyConstraint baseTableName="app_source_privs_privileges" constraintName="FKmsci8vgp047g2sdunnj3ep9jh"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-18">
+        <dropTable tableName="app_source_privs"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617208284558-19">
+        <dropTable tableName="app_source_privs_privileges"/>
+    </changeSet>
+</databaseChangeLog>

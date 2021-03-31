@@ -10,6 +10,7 @@ import lombok.val;
 import mil.tron.commonapi.CommonApiApplication;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -20,7 +21,7 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.appsource.AppSourcePrivRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.AppSourceServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,7 +87,7 @@ public class AppSourceIntegrationTest {
     AppSourceServiceImpl appSourceServiceImpl;
 
     @Autowired
-    AppSourcePrivRepository appSourcePrivRepository;
+    AppEndpointPrivRepository appSourcePrivRepository;
 
     @Autowired
     AppSourceRepository appSourceRepository;
@@ -138,7 +139,7 @@ public class AppSourceIntegrationTest {
                 AppClientUserPrivDto
                         .builder()
                         .appClientUser(appClientUserUuid)
-                        .privilegeIds(Arrays.asList(1L))
+                        .appClientUserName("App User 1")
                         .build()
         );
         AppSourceDetailsDto appSource = AppSourceDetailsDto.builder()
@@ -183,7 +184,13 @@ public class AppSourceIntegrationTest {
                 .name("App Source Test")
                 .appClients(Arrays.asList(AppClientUserPrivDto.builder()
                         .appClientUser(appClientId)
-                        .privilegeIds(Arrays.asList(0L))
+                        .appClientUserName("Test App Client")
+                        .appEndpoint(UUID.randomUUID())
+                        .privilege(ENDPOINT)
+                        .build()))
+                .endpoints(Arrays.asList(AppEndpointDto.builder()
+                        .path(ENDPOINT)
+                        .requestType("GET")
                         .build()))
                 .build();
 
@@ -210,7 +217,13 @@ public class AppSourceIntegrationTest {
                 .name("App Source Test")
                 .appClients(Arrays.asList(AppClientUserPrivDto.builder()
                         .appClientUser(appClientId)
-                        .privilegeIds(Arrays.asList(1L))
+                        .appClientUserName("Test App Client")
+                        .appEndpoint(UUID.randomUUID())
+                        .privilege(ENDPOINT)
+                        .build()))
+                .endpoints(Arrays.asList(AppEndpointDto.builder()
+                        .path(ENDPOINT)
+                        .requestType("GET")
                         .build()))
                 .build();
 

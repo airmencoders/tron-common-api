@@ -29,7 +29,7 @@ public class AppSourceEndpointBuilderTest {
                     this.appSourceEndpointsBuilder.initializeWithAppSourceDef(
                             new AppSourceInterfaceDefinition("Name",
                                     "Nofile.yml", "localhost", "/"),
-                            AppSource.builder().name("Name").appSourcePath("/").openApiSpecFilename(openApiSpecFilename)
+                            AppSource.builder().name("Name").appSourcePath("/").openApiSpecFilename("NoFile.yml").build()
                     );
                 });
     }

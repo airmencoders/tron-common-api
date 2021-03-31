@@ -9,7 +9,7 @@ import org.springframework.data.repository.CrudRepository;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.entity.appsource.AppSource;
 
-public interface AppSourcePrivRepository extends CrudRepository<AppEndpointPriv, UUID> {
+public interface AppEndpointPrivRepository extends CrudRepository<AppEndpointPriv, UUID> {
     Iterable<AppEndpointPriv> findAllByAppSource(AppSource appSource);
 
     @Transactional
