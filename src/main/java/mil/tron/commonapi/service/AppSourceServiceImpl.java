@@ -106,7 +106,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, id)));
 
         // remove admins attached to this app
-        toRemove = this.deleteAdminsFromAppSource(toRemove, null);
+        toRemove = this.deleteAdminsFromAppSource(toRemove, "", true);
 
         // remove privileges associated with the app source
         this.appSourcePrivRepository.removeAllByAppSource(AppSource.builder().id(id).build());
@@ -164,7 +164,7 @@ public class AppSourceServiceImpl implements AppSourceService {
 
         // remove admins attached to this app, essentially sanitize admins from it
         //  this allows us to essentially be able to add and delete admins via an HTTP PUT
-        AppSource appSourceCleanAdmins = this.deleteAdminsFromAppSource(appSourceToSave, null);
+        AppSource appSourceCleanAdmins = this.deleteAdminsFromAppSource(appSourceToSave, "", true);
 
         // resolve the app admin's from their DTO emails, create/add if needed
         List<DashboardUser> thisAppsAdminUsers = new ArrayList<>();
@@ -273,7 +273,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
                 .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, appSourceId)));
 
-        appSource = this.deleteAdminsFromAppSource(appSource, email);
+        appSource = this.deleteAdminsFromAppSource(appSource, email, false);
 
         return this.buildAppSourceDetailsDto(appSource);
     }
@@ -281,14 +281,15 @@ public class AppSourceServiceImpl implements AppSourceService {
     /**
      * Private helper that removes one or all admins from an app source
      * @param appSource the app source entity to modify
-     * @param email null for all admins otherwise the email of the admin to remove
+     * @param email email of the admin to remove
+     * @param deleteAll whether to delete all admins (if true negates the email parameter)
      * @return the modified app source entity
      */
-    private AppSource deleteAdminsFromAppSource(AppSource appSource, String email) {
+    private AppSource deleteAdminsFromAppSource(AppSource appSource, String email, boolean deleteAll) {
         if (appSource.getAppSourceAdmins() == null) return appSource;
 
         for (DashboardUser user : new HashSet<>(appSource.getAppSourceAdmins())) {
-            if (email != null && !user.getEmail().equalsIgnoreCase(email)) continue;
+            if (!deleteAll && !user.getEmail().equalsIgnoreCase(email)) continue;
 
             // at the minimum we remove this user from this app source
             Set<DashboardUser> admins = new HashSet<>(appSource.getAppSourceAdmins());
