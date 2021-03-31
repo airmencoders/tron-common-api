@@ -37,7 +37,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserService dashboardUserService;
     private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
-
+    private static final String APP_SOURCE_NO_FOUND_MSG = "No App Source found with id %s.";
 
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
@@ -88,7 +88,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                     id, appSourceDetailsDto.getId()));
         }
 
-        AppSource existingAppSource = this.appSourceRepository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", id)));
+        AppSource existingAppSource = this.appSourceRepository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, id)));
         // Name has changed. Make sure the new name doesn't exist
         if (!existingAppSource.getName().equals(appSourceDetailsDto.getName().trim()) &&
             this.appSourceRepository.existsByNameIgnoreCase(appSourceDetailsDto.getName().trim())) {
@@ -103,7 +103,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     public AppSourceDetailsDto deleteAppSource(UUID id) {
         // validate id
         AppSource toRemove = this.appSourceRepository.findById(id)
-                .orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", id)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, id)));
 
         // remove admins attached to this app
         toRemove = this.deleteAdminsFromAppSource(toRemove, null);
@@ -233,7 +233,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     @Override
     public AppSourceDetailsDto addAppSourceAdmin(UUID appSourceId, String email) {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
-                .orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", appSourceId)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, appSourceId)));
 
         appSource.getAppSourceAdmins().add(createDashboardUserWithAsAppSourceAdmin(email));
         return this.buildAppSourceDetailsDto(appSourceRepository.saveAndFlush(appSource));
@@ -248,7 +248,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     @Override
     public boolean userIsAdminForAppSource(UUID appId, String email) {
         AppSource appSource = this.appSourceRepository.findById(appId)
-                .orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", appId)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, appId)));
 
         for (DashboardUser user : appSource.getAppSourceAdmins()) {
             if (user.getEmail().equalsIgnoreCase(email)) {
@@ -271,7 +271,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     @Override
     public AppSourceDetailsDto removeAdminFromAppSource(UUID appSourceId, String email) {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
-                .orElseThrow(() -> new RecordNotFoundException(String.format("No App Source found with id %s.", appSourceId)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, appSourceId)));
 
         appSource = this.deleteAdminsFromAppSource(appSource, email);
 

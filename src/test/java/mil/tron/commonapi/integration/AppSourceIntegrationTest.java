@@ -435,11 +435,11 @@ public class AppSourceIntegrationTest {
 
         UUID app2Id = OBJECT_MAPPER.readValue(app2Result.getResponse().getContentAsString(), AppSourceDetailsDto.class).getId();
 
-        // add user3 via PUT in app1
+        // add user3 via PUT in app1 with user1's creds
         app1.getAppSourceAdminUserEmails().add(USER3_EMAIL);
         app1.setId(app1Id);
         MvcResult modApp1 = mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app1)))
@@ -448,6 +448,15 @@ public class AppSourceIntegrationTest {
 
         AppSourceDetailsDto dto = OBJECT_MAPPER.readValue(modApp1.getResponse().getContentAsString(), AppSourceDetailsDto.class);
         assertThat(dto.getAppSourceAdminUserEmails().size()).isEqualTo(3);
+
+        // try some random PUT as a non-app source admin user - should get 403
+        mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken("random@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isForbidden());
+
 
         // add user4 via the PATCH endpoints to App1 and App2
         mockMvc.perform(patch(ENDPOINT + "admins/{id}", app1Id)
