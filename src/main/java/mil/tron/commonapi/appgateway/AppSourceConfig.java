@@ -1,24 +1,29 @@
 package mil.tron.commonapi.appgateway;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import javax.transaction.Transactional;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.transaction.Transactional;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 
 @Service
 @Slf4j
 public class AppSourceConfig {
 
-    private AppSourceInterfaceDefinition[] appSourceDefs;
+    private Map<AppSourceInterfaceDefinition, AppSource> appSourceDefs;
 
     private AppSourceRepository appSourceRepository;
 
@@ -26,8 +31,8 @@ public class AppSourceConfig {
     public AppSourceConfig(AppSourceRepository appSourceRepository,
                            @Value("${appsource.definition-file}") String appSourceDefFile) {
         this.appSourceRepository = appSourceRepository;
-        this.appSourceDefs = this.parseAppSourceDefs(appSourceDefFile);
-        this.registerAppSources(this.appSourceDefs);
+        this.appSourceDefs = new HashMap<>();
+        this.registerAppSources(this.parseAppSourceDefs(appSourceDefFile));
     }
 
     private AppSourceInterfaceDefinition[] parseAppSourceDefs(String configFile) {
@@ -53,7 +58,7 @@ public class AppSourceConfig {
         return defs;
     }
 
-    public AppSourceInterfaceDefinition[] getAppSourceDefs() {
+    public Map<AppSourceInterfaceDefinition, AppSource> getAppSourceDefs() {
         return this.appSourceDefs;
     }
 
@@ -61,13 +66,13 @@ public class AppSourceConfig {
         // attempt adding
         if (appSourceDefs != null) {
             for (AppSourceInterfaceDefinition appDef : appSourceDefs) {
-                this.registerAppSource(appDef);
+                this.appSourceDefs.put(appDef, this.registerAppSource(appDef));
             }
         }
     }
 
     @Transactional
-    void registerAppSource(AppSourceInterfaceDefinition appDef) {
+    AppSource registerAppSource(AppSourceInterfaceDefinition appDef) {
         if (!this.appSourceRepository.existsByNameIgnoreCase(appDef.getName())) {
             // add new app source
             AppSource newAppSource = AppSource.builder()
@@ -76,12 +81,13 @@ public class AppSourceConfig {
                     .appSourcePath(appDef.getAppSourcePath())
                     .build();
             try {
-                this.appSourceRepository.save(newAppSource);
+                return this.appSourceRepository.save(newAppSource);                
             }
             catch (Exception e) {
                 log.warn(String.format("Unable to add app source %s.", appDef.getName()), e);
             }
         }
+        return this.appSourceRepository.findByNameIgnoreCase(appDef.getName());
     }
 
 }

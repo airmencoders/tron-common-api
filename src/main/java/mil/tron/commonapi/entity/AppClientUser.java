@@ -4,7 +4,14 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotBlank;
 
 import lombok.AllArgsConstructor;
@@ -12,7 +19,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 
 /**
  * Class that represents a Client User entity that is an Application
@@ -48,7 +55,7 @@ public class AppClientUser {
 	@Setter
 	@Builder.Default
 	@OneToMany(mappedBy = "appClientUser")
-	private Set<AppSourcePriv> appSourcePrivs = new HashSet<>();
+	private Set<AppEndpointPriv> appEndpointPrivs = new HashSet<>();
 	
 	@PrePersist 
 	@PreUpdate 

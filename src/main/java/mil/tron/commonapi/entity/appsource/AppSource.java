@@ -42,7 +42,13 @@ public class AppSource {
     @Setter
     @Builder.Default
     @OneToMany(mappedBy = "appSource")
-    private Set<AppSourcePriv> appSourcePrivs = new HashSet<>();
+    private Set<AppEndpoint> appEndpoints = new HashSet<>();
+
+    @Getter
+    @Setter
+    @Builder.Default
+    @OneToMany(mappedBy = "appSource")
+    private Set<AppEndpointPriv> appPrivs = new HashSet<>();
 
     @PrePersist
     @PreUpdate

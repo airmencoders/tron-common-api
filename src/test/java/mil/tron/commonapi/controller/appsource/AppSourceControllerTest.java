@@ -37,7 +37,7 @@ import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.AppSourceService;
@@ -59,7 +59,7 @@ public class AppSourceControllerTest {
 	
 	private static UUID APP_SOURCE_UUID = UUID.randomUUID();
     private static String APP_SOURCE_NAME = "Test App Source";
-    private Set<AppSourcePriv> appSourcePrivs = new HashSet<>();
+    private Set<AppEndpointPriv> appSourcePrivs = new HashSet<>();
     private AppSource appSource;
     private AppSourceDetailsDto appSourceDetailsDto;
     private List<AppClientUserPrivDto> appClientUserPrivDtos;
@@ -95,7 +95,7 @@ public class AppSourceControllerTest {
                 .id(UUID.randomUUID())
                 .name("Test App Client")
                 .build();
-        val appSourcePriv = AppSourcePriv
+        val appSourcePriv = AppEndpointPriv
                 .builder()
                 .id(UUID.randomUUID())
                 .appSource(appSource)

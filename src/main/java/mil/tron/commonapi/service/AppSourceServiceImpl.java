@@ -1,44 +1,48 @@
 package mil.tron.commonapi.service;
 
-import mil.tron.commonapi.dto.AppClientUserPrivDto;
-import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
-import mil.tron.commonapi.dto.appsource.AppSourceDto;
-import mil.tron.commonapi.entity.AppClientUser;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
-import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.repository.AppClientUserRespository;
-import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.appsource.AppSourcePrivRepository;
-import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import javax.transaction.Transactional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDto;
+import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
+import mil.tron.commonapi.repository.appsource.AppSourcePrivRepository;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 
 @Service
 public class AppSourceServiceImpl implements AppSourceService {
 
     private AppSourceRepository appSourceRepository;
     private AppSourcePrivRepository appSourcePrivRepository;
-    private PrivilegeRepository privilegeRepository;
+    private AppEndpointRepository appEndpointRepository;
     private AppClientUserRespository appClientUserRespository;
 
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
                                 AppSourcePrivRepository appSourcePrivRepository,
-                                PrivilegeRepository privilegeRepository,
+                                AppEndpointRepository appEndpointRepository,
                                 AppClientUserRespository appClientUserRespository) {
         this.appSourceRepository = appSourceRepository;
         this.appSourcePrivRepository = appSourcePrivRepository;
-        this.privilegeRepository = privilegeRepository;
+        this.appEndpointRepository = appEndpointRepository;
         this.appClientUserRespository = appClientUserRespository;
     }
 
@@ -49,7 +53,8 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .stream(appSources.spliterator(), false)
                 .map(appSource -> AppSourceDto.builder().id(appSource.getId())
                         .name(appSource.getName())
-                        .clientCount(appSource.getAppSourcePrivs().size())
+                        .endpointCount(appSource.getAppEndpoints().size())
+                        .clientCount(appSource.getAppPrivs().size())
                         .build()).collect(Collectors.toList());
     }
 
@@ -67,11 +72,11 @@ public class AppSourceServiceImpl implements AppSourceService {
         return AppSourceDetailsDto.builder()
                 .id(appSource.getId())
                 .name(appSource.getName())
-                .appClients(appSource.getAppSourcePrivs().stream()
-                        .map(appSourcePriv -> AppClientUserPrivDto.builder()
-                                .appClientUser(appSourcePriv.getAppClientUser().getId())
-                                .appClientUserName(appSourcePriv.getAppClientUser().getName())
-                                .privilegeIds(this.buildPrivilegeIds(appSourcePriv.getPrivileges()))
+                .appClients(appSource.getAppPrivs().stream()
+                        .map(appEndpointPriv -> AppClientUserPrivDto.builder()
+                                .appClientUser(appEndpointPriv.getAppClientUser().getId())
+                                .appClientUserName(appEndpointPriv.getAppClientUser().getName())
+                                .privilege(appEndpointPriv.getAppEndpoint().getPath())
                                 .build()).collect(Collectors.toList()))
                 .build();
     }
@@ -107,15 +112,15 @@ public class AppSourceServiceImpl implements AppSourceService {
         return this.buildAppSourceDetailsDto(toRemove);
     }
 
-    private Set<Privilege> buildPrivilegeSet(List<Long> privilegeIds, UUID appClientId) throws RecordNotFoundException {
-        return privilegeIds.stream().map(privId -> {
-            if (!this.privilegeRepository.existsById(privId)) {
-                throw new RecordNotFoundException(String.format("No privilege %x found for" +
-                        "client app with id %s.", privId, appClientId.toString()));
-            }
-            return Privilege.builder().id(privId).build();
-        }).collect(Collectors.toSet());
-    }
+    // private Set<Privilege> buildPrivilegeSet(List<Long> privilegeIds, UUID appClientId) throws RecordNotFoundException {
+    //     return privilegeIds.stream().map(privId -> {
+    //         if (!this.privilegeRepository.existsById(privId)) {
+    //             throw new RecordNotFoundException(String.format("No privilege %x found for" +
+    //                     "client app with id %s.", privId, appClientId.toString()));
+    //         }
+    //         return Privilege.builder().id(privId).build();
+    //     }).collect(Collectors.toSet());
+    // }
 
     private AppClientUser buildAppClientUser(UUID appClientId) throws RecordNotFoundException {
         AppClientUser appClientUser = this.appClientUserRespository.findById(appClientId)
@@ -124,24 +129,39 @@ public class AppSourceServiceImpl implements AppSourceService {
         return AppClientUser.builder().id(appClientUser.getId()).name(appClientUser.getName()).build();
     }
 
-    private List<Long> buildPrivilegeIds(Set<Privilege> privileges) {
-        if (privileges == null || privileges.size() == 0) {
-            return new ArrayList<>();
-        }
-        return privileges.stream()
-                .map(privilege -> privilege.getId()).collect(Collectors.toList());
+    // private List<Long> buildPrivilegeIds(Set<Privilege> privileges) {
+    //     if (privileges == null || privileges.size() == 0) {
+    //         return new ArrayList<>();
+    //     }
+    //     return privileges.stream()
+    //             .map(privilege -> privilege.getId()).collect(Collectors.toList());
+    // }
+
+    private AppEndpoint buildAppEndpoint(UUID appEndpointId) throws RecordNotFoundException {
+        AppEndpoint appEndpoint = this.appEndpointRepository.findById(appEndpointId)
+            .orElseThrow(() -> new RecordNotFoundException(String.format("No app endpoint with id %s found.", appEndpointId)));
+
+        return AppEndpoint.builder()
+            .id(appEndpointId)
+            .method(appEndpoint.getMethod())
+            .path(appEndpoint.getPath())
+            .build();
     }
 
     private AppSourceDetailsDto buildAppSourceDetailsDto(AppSource appSource) {
         return AppSourceDetailsDto.builder()
                 .id(appSource.getId())
                 .name(appSource.getName())
-                .appClients(appSource.getAppSourcePrivs().stream().map(appSourcePriv ->
-                        AppClientUserPrivDto.builder()
+                .appClients(appSource.getAppEndpoints().stream()
+                    .map(appEndpoint -> appEndpoint.getAppEndpointPrivs().stream()
+                        .map(appSourcePriv ->
+                            AppClientUserPrivDto.builder()
                                 .appClientUser(appSourcePriv.getAppClientUser().getId())
-                                .privilegeIds(appSourcePriv.getPrivileges().stream().map(privilege ->
-                                        privilege.getId()).collect(Collectors.toList()))
-                                .build()).collect(Collectors.toList()))
+                                .appEndpoint(appEndpoint.getId())
+                                .build())
+                        .collect(Collectors.toList()))
+                    .flatMap(List::stream)
+                    .collect(Collectors.toList()))
                 .build();
     }
 
@@ -152,18 +172,18 @@ public class AppSourceServiceImpl implements AppSourceService {
 
         appSourceToSave.setName(appSource.getName());
 
-        Set<AppSourcePriv> appSourcePrivs = appSource.getAppClients()
-                .stream().map(privDto -> AppSourcePriv.builder()
+        Set<AppEndpointPriv> appEndpointPrivs = appSource.getAppClients()
+                .stream().map(privDto -> AppEndpointPriv.builder()
                         .appSource(appSourceToSave)
                         .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
-                        .privileges(this.buildPrivilegeSet(privDto.getPrivilegeIds(), privDto.getAppClientUser()))
+                        .appEndpoint(this.buildAppEndpoint(privDto.getAppEndpoint()))
                         .build()).collect(Collectors.toSet());
         
         AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceToSave);
         
-        Iterable<AppSourcePriv> existingPrivileges = this.appSourcePrivRepository.findAllByAppSource(appSourceToSave);
+        Iterable<AppEndpointPriv> existingPrivileges = this.appSourcePrivRepository.findAllByAppSource(appSourceToSave);
         this.appSourcePrivRepository.deleteAll(existingPrivileges);
-        this.appSourcePrivRepository.saveAll(appSourcePrivs);
+        this.appSourcePrivRepository.saveAll(appEndpointPrivs);
         
         appSource.setId(savedAppSource.getId());
 

@@ -23,7 +23,7 @@ import org.springframework.security.web.authentication.preauth.PreAuthenticatedA
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,12 +73,12 @@ class AppClientUserPreAuthenticatedServiceTest {
 			.name("Test Gateway")
 			.openApiSpecFilename("test.yml")
 			.build();
-		AppSourcePriv appSourcePriv = AppSourcePriv.builder()
+		AppEndpointPriv appSourcePriv = AppEndpointPriv.builder()
 			.appSource(appSource)
 			.id(UUID.randomUUID())
 			.privileges(new HashSet<>(Arrays.asList(Privilege.builder().id(2L).name("READ").build())))
 			.build();
-		Set<AppSourcePriv> appSourcePrivs = new HashSet<AppSourcePriv>(Arrays.asList(appSourcePriv));
+		Set<AppEndpointPriv> appSourcePrivs = new HashSet<AppEndpointPriv>(Arrays.asList(appSourcePriv));
 		appSource.setAppSourcePrivs(appSourcePrivs);
 		user.setAppSourcePrivs(appSourcePrivs);
 		Mockito.when(repository.findByNameIgnoreCase(user.getName())).thenReturn(Optional.of(user));
@@ -98,7 +98,7 @@ class AppClientUserPreAuthenticatedServiceTest {
 			.name("Test Gateway")
 			.openApiSpecFilename("test.yml")
 			.build();
-		AppSourcePriv appSourcePriv = AppSourcePriv.builder()
+		AppEndpointPriv appSourcePriv = AppEndpointPriv.builder()
 			.appSource(appSource)
 			.id(UUID.randomUUID())
 			.privileges(new HashSet<>(Arrays.asList(Privilege.builder().id(2L).name("WRITE").build())))
@@ -110,12 +110,12 @@ class AppClientUserPreAuthenticatedServiceTest {
 			.name("Other Test Gateway")
 			.openApiSpecFilename("test.yml")
 			.build();
-		AppSourcePriv appSourcePriv2 = AppSourcePriv.builder()
+		AppEndpointPriv appSourcePriv2 = AppEndpointPriv.builder()
 			.appSource(appSource2)
 			.id(UUID.randomUUID())
 			.privileges(new HashSet<>(Arrays.asList(Privilege.builder().id(3L).name("WRITE").build())))
 			.build();
-		Set<AppSourcePriv> appSourcePrivs = new HashSet<AppSourcePriv>(Arrays.asList(appSourcePriv, appSourcePriv2));
+		Set<AppEndpointPriv> appSourcePrivs = new HashSet<AppEndpointPriv>(Arrays.asList(appSourcePriv, appSourcePriv2));
 		appSource.setAppSourcePrivs(appSourcePrivs);
 		user.setAppSourcePrivs(appSourcePrivs);
 		Mockito.when(repository.findByNameIgnoreCase(user.getName())).thenReturn(Optional.of(user));
@@ -135,7 +135,7 @@ class AppClientUserPreAuthenticatedServiceTest {
 			.name("Test Gateway")
 			.openApiSpecFilename("test.yml")
 			.build();
-		Set<AppSourcePriv> appSourcePrivs = null;
+		Set<AppEndpointPriv> appSourcePrivs = null;
 		appSource.setAppSourcePrivs(appSourcePrivs);
 		user.setAppSourcePrivs(appSourcePrivs);
 		Mockito.when(repository.findByNameIgnoreCase(user.getName())).thenReturn(Optional.of(user));
