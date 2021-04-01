@@ -1,29 +1,26 @@
 package mil.tron.commonapi.integration;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import javax.transaction.Transactional;
+
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import lombok.val;
-import mil.tron.commonapi.CommonApiApplication;
-import mil.tron.commonapi.dto.AppClientUserPrivDto;
-import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
-import mil.tron.commonapi.dto.appsource.AppEndpointDto;
-import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
-import mil.tron.commonapi.entity.AppClientUser;
-import mil.tron.commonapi.entity.DashboardUser;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.repository.AppClientUserRespository;
-import mil.tron.commonapi.repository.DashboardUserRepository;
-import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
-import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import mil.tron.commonapi.service.AppSourceServiceImpl;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,20 +29,25 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.util.Assert;
+import org.springframework.web.bind.annotation.RequestMethod;
 
-import javax.transaction.Transactional;
-import java.lang.reflect.Array;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import lombok.val;
+import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.dto.appsource.AppEndpointDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
+import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import mil.tron.commonapi.service.AppSourceServiceImpl;
 
 @SpringBootTest(properties = { "security.enabled=true" })
 @TestPropertySource(locations = "classpath:application-test.properties")
@@ -134,17 +136,25 @@ public class AppSourceIntegrationTest {
                         .name("App User 1")
                         .build()
         );
+        AppEndpointDto appEndpointDto = AppEndpointDto.builder()
+                .id(UUID.randomUUID())
+                .path("/path")
+                .requestType(RequestMethod.GET.toString())
+                .build();
         List<AppClientUserPrivDto> privDtos = new ArrayList<>();
         privDtos.add(
                 AppClientUserPrivDto
                         .builder()
                         .appClientUser(appClientUserUuid)
                         .appClientUserName("App User 1")
+                        .appEndpoint(appEndpointDto.getId())
+                        .privilege(appEndpointDto.getPath())
                         .build()
         );
         AppSourceDetailsDto appSource = AppSourceDetailsDto.builder()
                 .name("Name")
                 .appClients(privDtos)
+                .endpoints(Arrays.asList(appEndpointDto))
                 .build();
         appSourceServiceImpl.createAppSource(appSource);
         val appSources = appSourceServiceImpl.getAppSources();
@@ -157,6 +167,7 @@ public class AppSourceIntegrationTest {
     void testCreateAppSourceFromEndpoint() throws Exception {
 
         val appSource = AppSourceDetailsDto.builder()
+
                 .name("App Source Test")
                 .build();
 
@@ -245,6 +256,7 @@ public class AppSourceIntegrationTest {
     void successfulCreateRequest() throws Exception {
 
         val appClientId = UUID.randomUUID();
+        val appEndpointId = UUID.randomUUID();
         val testAppClient = AppClientUser.builder()
                 .id(appClientId)
                 .name("Test App Client")
@@ -254,8 +266,14 @@ public class AppSourceIntegrationTest {
                 .name("App Source Test")
                 .appClients(Arrays.asList(AppClientUserPrivDto.builder()
                         .appClientUser(appClientId)
-                        .privilegeIds(Arrays.asList(1L))
+                        .appEndpoint(appEndpointId)
                         .build()))
+                .endpoints(Arrays.asList(AppEndpointDto.builder()
+                        .id(appEndpointId)
+                        .path("/path")
+                        .requestType(RequestMethod.GET.toString())
+                        .build()
+                ))
                 .build();
 
         mockMvc.perform(post(ENDPOINT)
@@ -286,6 +304,7 @@ public class AppSourceIntegrationTest {
     void successfulUpdateRequest() throws Exception {
 
         val appClientId = UUID.randomUUID();
+        val endpointId = UUID.randomUUID();
         val testAppClient = AppClientUser.builder()
                 .id(appClientId)
                 .name("Test App Client")
@@ -295,11 +314,18 @@ public class AppSourceIntegrationTest {
                 .name("App Source Test")
                 .appClients(Arrays.asList(AppClientUserPrivDto.builder()
                         .appClientUser(appClientId)
-                        .privilegeIds(Arrays.asList(1L))
+                        .appEndpoint(endpointId)
                         .build()))
+                .endpoints(Arrays.asList(AppEndpointDto.builder()
+                        .id(endpointId)
+                        .path("/path")
+                        .requestType(RequestMethod.GET.toString())
+                        .build()
+                ))
                 .build();
         val createdAppSource = appSourceServiceImpl.createAppSource(appSource);
 
+        System.out.println(OBJECT_MAPPER.writeValueAsString(appSource));
         createdAppSource.setName("New App Source Name");
         mockMvc.perform(put(ENDPOINT + "/{id}", createdAppSource.getId())
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
@@ -320,6 +346,7 @@ public class AppSourceIntegrationTest {
     void successfulDeleteRequest() throws Exception {
 
         val appClientId = UUID.randomUUID();
+        val appEndpointId = UUID.randomUUID();
         val testAppClient = AppClientUser.builder()
                 .id(appClientId)
                 .name("Test App Client")
@@ -336,12 +363,19 @@ public class AppSourceIntegrationTest {
                 .appClients(Arrays.asList(
                     AppClientUserPrivDto.builder()
                         .appClientUser(appClientId)
-                        .privilegeIds(Arrays.asList(1L))
+                        .appEndpoint(appEndpointId)
                         .build(),
                     AppClientUserPrivDto.builder()
                             .appClientUser(appClient2Id)
-                            .privilegeIds(Arrays.asList(1L))
+                            .appEndpoint(appEndpointId)
                             .build()
+                ))
+                .endpoints(Arrays.asList(
+                        AppEndpointDto.builder()    
+                                .id(appEndpointId)
+                                .path("/path")                            
+                                .requestType(RequestMethod.GET.toString())
+                                .build()
                 ))
                 .build();
         val createdAppSource = appSourceServiceImpl.createAppSource(appSource);

@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -104,6 +105,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         // remove endpoints associated with the app source
         this.appEndpointRepository.removeAllByAppSource(AppSource.builder().id(id).build());
         this.appSourceRepository.deleteById(toRemove.getId());
+        AppSourceDetailsDto result =  this.buildAppSourceDetailsDto(toRemove);
         return this.buildAppSourceDetailsDto(toRemove);
     }
 
@@ -114,15 +116,11 @@ public class AppSourceServiceImpl implements AppSourceService {
         return AppClientUser.builder().id(appClientUser.getId()).name(appClientUser.getName()).build();
     }
 
-    private AppEndpoint buildAppEndpoint(UUID appEndpointId) throws RecordNotFoundException {
-        AppEndpoint appEndpoint = this.appEndpointRepository.findById(appEndpointId)
-            .orElseThrow(() -> new RecordNotFoundException(String.format("No app endpoint with id %s found.", appEndpointId)));
-
-        return AppEndpoint.builder()
-            .id(appEndpointId)
-            .method(appEndpoint.getMethod())
-            .path(appEndpoint.getPath())
-            .build();
+    private AppEndpoint findAppEndpoint(UUID appEndpointId, Collection<AppEndpoint> appEndpoints) throws RecordNotFoundException {
+        return appEndpoints.stream()
+            .filter(endpoint -> appEndpointId.equals(endpoint.getId()))
+            .findAny()
+            .orElseThrow(() ->new RecordNotFoundException(String.format("No app endpoint with id %s found.", appEndpointId)));
     }
 
     private AppSourceDetailsDto buildAppSourceDetailsDto(AppSource appSource) {
@@ -131,6 +129,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .name(appSource.getName())
                 .endpoints(appSource.getAppEndpoints().stream()
                     .map(appEndpoint -> AppEndpointDto.builder()
+                        .id(appEndpoint.getId())
                         .path(appEndpoint.getPath())
                         .requestType(appEndpoint.getMethod().toString())
                         .build()).collect(Collectors.toList()))
@@ -139,6 +138,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .appClientUser(appEndpointPriv.getAppClientUser().getId())
                         .appClientUserName(appEndpointPriv.getAppClientUser().getName())
                         .privilege(appEndpointPriv.getAppEndpoint().getPath())
+                        .appEndpoint(appEndpointPriv.getAppEndpoint().getId())
                         .build()).collect(Collectors.toList()))
                 .build();
     }
@@ -150,28 +150,32 @@ public class AppSourceServiceImpl implements AppSourceService {
 
         appSourceToSave.setName(appSource.getName());
 
-        Set<AppEndpoint> appEndpoints = appSource.getEndpoints().stream().map(endpointDto -> AppEndpoint.builder()
+        Set<AppEndpoint> appEndpoints = appSource.getEndpoints()
+            .stream().map(endpointDto -> AppEndpoint.builder()
+                .id(endpointDto.getId())
                 .appSource(appSourceToSave)
                 .method(RequestMethod.valueOf(endpointDto.getRequestType()))
                 .path(endpointDto.getPath())
                 .build()).collect(Collectors.toSet());
 
+        
+        
         Set<AppEndpointPriv> appEndpointPrivs = appSource.getAppClients()
-                .stream().map(privDto -> AppEndpointPriv.builder()
-                        .appSource(appSourceToSave)
-                        .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
-                        .appEndpoint(this.buildAppEndpoint(privDto.getAppEndpoint()))
-                        .build()).collect(Collectors.toSet());
-        
+            .stream().map(privDto -> AppEndpointPriv.builder()
+                .appSource(appSourceToSave)
+                .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
+                .appEndpoint(privDto.getAppEndpoint() == null ? null : this.findAppEndpoint(privDto.getAppEndpoint(), appEndpoints))
+                .build()).collect(Collectors.toSet());
+    
         AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceToSave);
-
-        Iterable<AppEndpoint> existingEndpoints = this.appEndpointRepository.findAllByAppSource(appSourceToSave);
-        this.appEndpointRepository.deleteAll(existingEndpoints);
-        this.appEndpointRepository.saveAll(appEndpoints);
-        
         
         Iterable<AppEndpointPriv> existingPrivileges = this.appEndpointPrivRepository.findAllByAppSource(appSourceToSave);
         this.appEndpointPrivRepository.deleteAll(existingPrivileges);
+
+        Iterable<AppEndpoint> existingEndpoints = this.appEndpointRepository.findAllByAppSource(appSourceToSave);
+        this.appEndpointRepository.deleteAll(existingEndpoints);
+
+        this.appEndpointRepository.saveAll(appEndpoints);
         this.appEndpointPrivRepository.saveAll(appEndpointPrivs);
         
         appSource.setId(savedAppSource.getId());
