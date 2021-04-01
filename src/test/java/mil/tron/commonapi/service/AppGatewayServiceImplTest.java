@@ -65,7 +65,7 @@ class AppGatewayServiceImplTest {
         String testUriRequest = "/api/v1/app/the-app-source/the-path/11";
         AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate());
         String appSource = appGatewayService.buildPathForAppSource(testUriRequest);
-        assertThat(appSource).isEqualTo("\\the-path\\11");
+        assertThat(appSource).isEqualTo("/the-path/11");
     }
 
     @Test
