@@ -2,10 +2,7 @@ package mil.tron.commonapi.controller.appsource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
@@ -15,6 +12,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import mil.tron.commonapi.dto.DashboardUserDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -152,7 +150,8 @@ public class AppSourceControllerTest {
 		@Test
 		void getAppSourceDetails() throws Exception {
 			Mockito.when(service.getAppSource(Mockito.any(UUID.class))).thenReturn(appSourceDetailsDto);
-			
+
+
 			mockMvc.perform(get(ENDPOINT + "{id}", appSourceDetailsDto.getId()))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(appSourceDetailsDto)));
@@ -251,5 +250,32 @@ public class AppSourceControllerTest {
                     .content(OBJECT_MAPPER.writeValueAsString(appSourceDetailsDto)))
                     .andExpect(status().isOk());
 	    }
+
+		@Test
+		void testRemoveAdmin() throws Exception {
+			Mockito.when(service.removeAdminFromAppSource(Mockito.any(), Mockito.any())).thenReturn(appSourceDetailsDto);
+
+			mockMvc.perform(delete(ENDPOINT + "admins/{id}", appSourceDetailsDto.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(DashboardUserDto.builder().email("joe@test.com").build())))
+					.andExpect(status().isOk());
+		}
+	}
+
+	@Nested
+	@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
+	class Patch {
+
+		@Test
+		void testAddAdmin() throws Exception {
+			Mockito.when(service.addAppSourceAdmin(Mockito.any(), Mockito.any())).thenReturn(appSourceDetailsDto);
+
+			mockMvc.perform(patch(ENDPOINT + "admins/{id}", appSourceDetailsDto.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(DashboardUserDto.builder().email("joe@test.com").build())))
+					.andExpect(status().isOk());
+		}
 	}
 }

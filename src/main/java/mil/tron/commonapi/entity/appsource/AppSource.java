@@ -1,6 +1,7 @@
 package mil.tron.commonapi.entity.appsource;
 
 import lombok.*;
+import mil.tron.commonapi.entity.DashboardUser;
 
 import javax.persistence.*;
 import java.util.HashSet;
@@ -37,6 +38,15 @@ public class AppSource {
     @Setter
     @Column(unique = true)
     private String appSourcePath;
+
+    /**
+     * List of AppSourceAdmins that can administer this app
+     * One app can have many admins...
+     */
+    @Getter
+    @Setter
+    @ManyToMany
+    private Set<DashboardUser> appSourceAdmins = new HashSet<>();
 
     @Getter
     @Setter

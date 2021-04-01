@@ -1,10 +1,15 @@
 package mil.tron.commonapi.service;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import lombok.val;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
@@ -14,6 +19,8 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
+import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -26,10 +33,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 public class AppSourceServiceImplTest {
@@ -45,29 +54,78 @@ public class AppSourceServiceImplTest {
 
     @Mock
     private AppEndpointRepository appEndpointRepo;
+
+    @Mock
+	private PrivilegeRepository privilegeRepo;
     
+    @Mock
+	private DashboardUserService dashboardUserService;
+
+    @Mock
+	private DashboardUserRepository dashboardUserRepository;
+
     @InjectMocks
     private AppSourceServiceImpl service;
 
     private static UUID APP_SOURCE_UUID = UUID.randomUUID();
     private static String APP_SOURCE_NAME = "Test App Source";
+    private static String APP_SOURCE_ADMIN = "APP_SOURCE_ADMIN";
+    private static String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
     private List<AppSource> entries = new ArrayList<>();
     private Set<AppEndpointPriv> appSourcePrivs = new HashSet<>();
     private AppSource appSource;
     private AppSourceDetailsDto appSourceDetailsDto;
     private List<AppClientUserPrivDto> appClientUserPrivDtos;
-    private AppClientUser appClientUser;
+    private AppClientUser appClientUser;    
+    private Privilege appSourceAdminPriv;
+    private Privilege dashboardAdminPriv;
+    private Set<Privilege> privileges;
     private AppEndpoint appEndpoint;
     private Set<AppEndpoint> appEndpoints = new HashSet<>();
     private List<AppEndpointDto> appEndpointDtos;
 
     @BeforeEach
     void setup() {
+    	privileges = new HashSet<>();
+    	privileges.add(
+			Privilege
+    			.builder()
+    			.id(1L)
+    			.name("Read")
+    			.build()
+		);
+    	privileges.add(
+			Privilege
+    			.builder()
+    			.id(2L)
+    			.name("Write")
+    			.build()
+		);
+
+    	appSourceAdminPriv = Privilege
+					.builder()
+					.id(3L)
+					.name(APP_SOURCE_ADMIN)
+					.build();
+
+		dashboardAdminPriv = Privilege
+				.builder()
+				.id(4L)
+				.name(DASHBOARD_ADMIN)
+				.build();
+
+
+		DashboardUser adminUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("joe@test.com")
+				.privileges(Set.of(appSourceAdminPriv))
+				.build();
     	
         this.appSource = AppSource
                 .builder()
                 .id(APP_SOURCE_UUID)
                 .name(APP_SOURCE_NAME)
+				.appSourceAdmins(Set.of(adminUser))
                 .build();
         this.appEndpoint = AppEndpoint
                 .builder()
@@ -95,6 +153,7 @@ public class AppSourceServiceImplTest {
         appSource.setAppPrivs(appSourcePrivs);
         appSource.setAppEndpoints(appEndpoints);
         appClientUser.setAppEndpointPrivs(appSourcePrivs);
+        appSourcePrivs.add(appSourcePriv);
         entries.add(appSource);
         
         appClientUserPrivDtos = new ArrayList<>();
@@ -122,6 +181,10 @@ public class AppSourceServiceImplTest {
         		.builder()
         		.id(appSource.getId())
         		.name(appSource.getName())
+				.appSourceAdminUserEmails(appSource
+						.getAppSourceAdmins()
+						.stream().map(DashboardUser::getEmail)
+						.collect(Collectors.toList()))
         		.appClients(appClientUserPrivDtos)
                 .endpoints(appEndpointDtos)
         		.build();
@@ -214,10 +277,18 @@ public class AppSourceServiceImplTest {
     	@Test
     	void successDelete() {
     		Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(appSource));
+			Mockito.when(appSourceRepository.findAppSourcesByAppSourceAdminsContaining(Mockito.any()))
+					.thenReturn(Lists.newArrayList(appSource));
+			Mockito.when(appSourceRepository.saveAndFlush(Mockito.any()))
+					.thenReturn(appSource);
 
     		AppSourceDetailsDto removed = service.deleteAppSource(appSource.getId());
 
-    		assertThat(removed).isEqualTo(appSourceDetailsDto);
+			assertThat(appSourceDetailsDto.getAppSourceAdminUserEmails()).size().isGreaterThan(0);
+    		assertThat(removed.getId()).isEqualTo(appSourceDetailsDto.getId());
+
+    		// admins should be of length 0
+    		assertThat(removed.getAppSourceAdminUserEmails().size()).isEqualTo(0);
     	}
     }
     
@@ -235,13 +306,139 @@ public class AppSourceServiceImplTest {
         Mockito.when(appEndpointRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(new ArrayList<>());
     	
     	Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
-    	// Mockito.when(privilegeRepo.existsById(Mockito.anyLong())).thenReturn(true);
-    	
+    	Mockito.when(privilegeRepo.findByName(APP_SOURCE_ADMIN)).thenReturn(Optional.of(appSourceAdminPriv));
     	AppSourceDetailsDto created = service.createAppSource(appSourceDetailsDto);
-    	
+
     	appSourceDetailsDto.setId(created.getId());
-    	
+
     	assertThat(created).isEqualTo(appSourceDetailsDto);
     }
 
+	@Test
+	void testAddAppSourceAdmin() {
+
+    	AppSource newAppSource = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Some App")
+				.appSourcePath("")
+				.openApiSpecFilename("")
+				.appSourceAdmins(new HashSet<>())
+				.appPrivs(new HashSet<>())
+				.build();
+
+    	DashboardUser newUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dude@dude.com")
+				.privileges(Set.of(appSourceAdminPriv))
+				.build();
+
+		DashboardUser newUser2 = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dude2@dude.com")
+				.privileges(new HashSet<>())
+				.build();
+
+		Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(newAppSource));
+		Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).thenReturn(newAppSource);
+		Mockito.when(privilegeRepo.findByName(Mockito.any())).thenReturn(Optional.of(appSourceAdminPriv));
+		Mockito.when(dashboardUserRepository.findByEmailIgnoreCase(Mockito.any()))
+				.thenReturn(Optional.of(newUser))
+				.thenReturn(Optional.empty());
+
+		Mockito.when(dashboardUserService.createDashboardUserDto(Mockito.any())).thenReturn(DashboardUserDto
+				.builder()
+				.id(newUser2.getId())
+				.privileges(Lists.newArrayList(newUser2.getPrivileges()))
+				.email(newUser2.getEmail())
+				.build());
+		Mockito.when(dashboardUserService.convertToEntity(Mockito.any())).thenReturn(newUser2);
+
+		// add existing user
+		service.addAppSourceAdmin(newAppSource.getId(), newUser.getEmail());
+		assertThat(newAppSource.getAppSourceAdmins().size()).isEqualTo(1);
+
+		// add brand new user
+		service.addAppSourceAdmin(newAppSource.getId(), newUser2.getEmail());
+		assertThat(newAppSource.getAppSourceAdmins().size()).isEqualTo(2);
+
+	}
+
+	@Test
+	void testRemoveAdminFromAppSource() {
+
+		DashboardUser newUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dude@dude.com")
+				.privileges(Set.of(appSourceAdminPriv, dashboardAdminPriv))
+				.build();
+
+		DashboardUser newUser2 = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dude2@dude.com")
+				.privileges(new HashSet<>())
+				.build();
+
+		AppSource newAppSource = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Some App")
+				.appSourcePath("")
+				.openApiSpecFilename("")
+				.appSourceAdmins(Sets.newHashSet(newUser, newUser2))
+				.appPrivs(new HashSet<>())
+				.build();
+
+		AppSource someOtherApp = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Another App")
+				.appSourcePath("")
+				.openApiSpecFilename("")
+				.appSourceAdmins(Sets.newHashSet(newUser))
+				.appPrivs(new HashSet<>())
+				.build();
+
+		Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class)))
+				.thenReturn(Optional.of(newAppSource));
+		Mockito.when(appSourceRepository.saveAndFlush(Mockito.any()))
+				.thenReturn(newAppSource);
+
+		Mockito.when(appSourceRepository.findAppSourcesByAppSourceAdminsContaining(newUser2))
+				.thenReturn(Lists.newArrayList());
+
+		Mockito.doNothing().when(dashboardUserService).deleteDashboardUser(Mockito.any());
+		Mockito.when(dashboardUserRepository.save(Mockito.any())).then(returnsFirstArg());
+
+		// newUser2 should only be in newAppSource, so upon removal, they'll be purged completely
+		service.removeAdminFromAppSource(newAppSource.getId(), newUser2.getEmail());
+		Mockito.verify(dashboardUserService, times(1))
+				.deleteDashboardUser(newUser2.getId());
+
+		// newUser should only loose their APP_SOURCE_ADMIN cred
+		service.removeAdminFromAppSource(someOtherApp.getId(), newUser.getEmail());
+		service.removeAdminFromAppSource(newAppSource.getId(), newUser.getEmail());
+		Mockito.verify(dashboardUserRepository, times(1))
+				.save(Mockito.any());
+	}
+
+	@Test
+	void testUserIsAdminForAppSource() {
+		DashboardUser newUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dude@dude.com")
+				.privileges(Set.of(appSourceAdminPriv))
+				.build();
+
+		AppSource newAppSource = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Some App")
+				.appSourcePath("")
+				.openApiSpecFilename("")
+				.appSourceAdmins(Sets.newHashSet(newUser))
+				.appPrivs(new HashSet<>())
+				.build();
+
+		Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(newAppSource));
+
+		assertTrue(service.userIsAdminForAppSource(newAppSource.getId(), newUser.getEmail()));
+		assertFalse(service.userIsAdminForAppSource(newAppSource.getId(), "randomdude@test.com"));
+	}
 }

@@ -2,12 +2,14 @@ package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
 import org.assertj.core.util.Lists;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -50,9 +52,6 @@ public class PersonControllerTest {
 	
 	@MockBean
 	private PersonService personService;
-	
-	@MockBean
-	private AppClientUserPreAuthenticatedService appClientUserPreAuthenticatedService;
 
 	private PersonDto testPerson;
 	private String testPersonJson;
@@ -222,6 +221,87 @@ public class PersonControllerTest {
 					.content(testPersonJson))
 				.andExpect(status().isNotFound());
 		}
+	}
+
+	@Nested
+	class TestPatch {
+		@Test
+		void testPatchReplaceValidJsonBody() throws Exception {
+			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
+
+			JSONObject content = new JSONObject();
+			content.put("op","replace");
+			content.put("path","/firstName");
+			content.put("value",testPerson.getFirstName());
+			JSONArray patch = new JSONArray();
+			patch.put(content);
+
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+						.contentType("application/json-patch+json")
+						.accept(MediaType.APPLICATION_JSON)
+						.content(patch.toString()))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
+		}
+
+		@Test
+		void testPatchInvalidOp() throws Exception {
+			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenReturn(testPerson);
+
+			JSONObject content = new JSONObject();
+			content.put("op","noop");
+			content.put("path","/firstName");
+			content.put("value","bad data");
+			JSONArray patch = new JSONArray();
+			patch.put(content);
+
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+					.contentType("application/json-patch+json")
+					.accept(MediaType.APPLICATION_JSON)
+					.content(patch.toString()))
+					.andExpect(status().isBadRequest())
+					.andExpect(result -> assertThat(result.getResolvedException() instanceof HttpMessageNotReadableException));
+		}
+
+		@Test
+		void testPatchInvalidJsonBody() throws Exception {
+			// Send empty string as bad json data
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+						.contentType("application/json-patch+json")
+						.accept(MediaType.APPLICATION_JSON)
+						.content(""))
+					.andExpect(status().isBadRequest())
+					.andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
+		}
+
+		@Test
+		void testPatchInvalidBadPathVariable() throws Exception {
+			// Send an invalid UUID as ID path variable
+			mockMvc.perform(patch(ENDPOINT + "{id}", "asdf1234")
+						.contentType("application/json-patch+json")
+						.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
+		}
+
+		@Test
+		void testPatchResourceDoesNotExist() throws Exception {
+			Mockito.when(personService.patchPerson(Mockito.any(UUID.class), Mockito.any(JsonPatch.class))).thenThrow(new RecordNotFoundException("Record not found"));
+
+			JSONObject content = new JSONObject();
+			content.put("op","replace");
+			content.put("path","/firstName");
+			content.put("value",testPerson.getFirstName());
+			JSONArray patch = new JSONArray();
+			patch.put(content);
+
+			mockMvc.perform(patch(ENDPOINT + "{id}", testPerson.getId())
+						.contentType("application/json-patch+json")
+						.accept(MediaType.APPLICATION_JSON)
+						.content(patch.toString()))
+					.andExpect(status().isNotFound());
+		}
+
 	}
 	
 	@Nested
