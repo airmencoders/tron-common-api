@@ -69,6 +69,22 @@ public class AppSourceController {
         }
     }
 
+    /**
+     * Wrapper for the checkUserIsDashBoardAdminOrAppSourceAdmin but traps
+     * its exceptions and just returns false
+     * @param appId UUID of the app source
+     * @return true if user is Dashboard Admin or App Source admin for given appId
+     */
+    private boolean userIsDashBoardAdminOrAppSourceAdmin(UUID appId) {
+        try {
+            this.checkUserIsDashBoardAdminOrAppSourceAdmin(appId);
+            return true;
+        }
+        catch (InvalidAppSourcePermissions ignored) {}
+
+        return false;
+    }
+
     @Operation(summary = "Creates an App Source including App Client permissions.", description = "Requires DASHBOARD_ADMIN rights")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201",
@@ -107,10 +123,15 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
 					))
     })
-    @PreAuthorizeDashboardAdmin
     @GetMapping
     public ResponseEntity<List<AppSourceDto>> getAppSources() {
-        return new ResponseEntity<>(this.appSourceService.getAppSources(), HttpStatus.OK);
+        List<AppSourceDto> dtos = this.appSourceService
+                .getAppSources()
+                .stream()
+                .filter(source -> userIsDashBoardAdminOrAppSourceAdmin(source.getId()))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
     @Operation(summary = "Returns the details for an App Source", description = "Requires DASHBOARD_ADMIN or APP_SOURCE_ADMIN rights.")
