@@ -1,6 +1,7 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.github.fge.jsonpatch.JsonPatch;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -11,6 +12,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -382,6 +386,31 @@ public class OrganizationController {
 	@PostMapping(value = "/organizations")
 	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
 		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
+	}
+
+	@Operation(summary = "Patches an existing organization", description = "Patches an existing organization")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeWrite
+	@PatchMapping(path = "/{id}", consumes = "application/json-patch+json")
+	public ResponseEntity<OrganizationDto> patchPerson(
+			@Parameter(description = "Organization ID to patch", required = true) @PathVariable("id") UUID orgId,
+			@Parameter(description = "Patched organization",
+					required = true,
+					schema = @Schema(example="[ {'op':'add','path':'/hello','value':'world'} ]",
+							oneOf = {JsonPatchStringArrayValue.class, JsonPatchStringValue.class,
+									JsonPatchObjectValue.class})) @RequestBody JsonPatch patch) {
+		OrganizationDto organizationDto = organizationService.patchOrganization(orgId, patch);
+		return new ResponseEntity<>(organizationDto, HttpStatus.OK);
 	}
 
 	// helper to build the options map for customization of return DTOs

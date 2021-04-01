@@ -1,6 +1,12 @@
 package mil.tron.commonapi.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
+import com.github.fge.jsonpatch.JsonPatch;
+import com.github.fge.jsonpatch.JsonPatchException;
+import com.github.fge.jsonpatch.JsonPatchOperation;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
@@ -9,23 +15,32 @@ import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.pubsub.EventManagerService;
 import mil.tron.commonapi.pubsub.EventManagerServiceImpl;
 import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.security.core.parameters.P;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceImplTest {
@@ -719,5 +735,95 @@ class OrganizationServiceImplTest {
 		assertFalse(organizationService.parentOrgCandidateIsDescendent(parent, UUID.randomUUID()));
 	}
 
+	@Test
+	void testApplyPatchToOrganization() throws JSONException, IOException {
+		UUID origLeaderUuid = UUID.randomUUID();
+		UUID changedLeaderUuid = UUID.randomUUID();
+		ObjectMapper objectMapper = new ObjectMapper();
+		JSONArray contentArray = new JSONArray();
+		JSONObject content = new JSONObject();
+		content.put("op", "replace");
+		content.put("path", "/leader");
+		content.put("value", changedLeaderUuid);
+		contentArray.put(content);
+		JsonPatch newPatch = JsonPatch.fromJson(
+				objectMapper.readTree(contentArray.toString())
+		);
+		OrganizationDto organizationDto = OrganizationDto.builder()
+				.name("testName")
+				.leader(origLeaderUuid)
+				.build();
+		OrganizationDto patchedOrgDto = organizationService.applyPatchToOrganization(newPatch, organizationDto);
+		assertThat(patchedOrgDto.getLeader()).isEqualTo(changedLeaderUuid);
+	}
+
+	@Test
+	void testNoIdFoundForPatch() throws JSONException, IOException {
+		UUID orgId = UUID.randomUUID();
+		ObjectMapper objectMapper = new ObjectMapper();
+		JSONArray contentArray = new JSONArray();
+		JSONObject content = new JSONObject();
+		content.put("op", "replace");
+		content.put("path", "/leader");
+		content.put("value", orgId);
+		contentArray.put(content);
+		JsonPatch newPatch = JsonPatch.fromJson(
+				objectMapper.readTree(contentArray.toString())
+		);
+		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
+		assertThrows(RecordNotFoundException.class, () -> organizationService.patchOrganization(UUID.randomUUID(),
+				newPatch));
+	}
+
+	@Test
+	void testOrgNameAlreadyExists() throws JSONException, IOException {
+		String orgName = "Existing Name";
+		ObjectMapper objectMapper = new ObjectMapper();
+		JSONArray contentArray = new JSONArray();
+		JSONObject content = new JSONObject();
+		content.put("op", "replace");
+		content.put("path", "/name");
+		content.put("value", orgName);
+		contentArray.put(content);
+		JsonPatch newPatch = JsonPatch.fromJson(
+				objectMapper.readTree(contentArray.toString())
+		);
+		OrganizationDto organizationDto = OrganizationDto.builder()
+				.name("Orig Name")
+				.build();
+		Organization organization = this.organizationService.convertToEntity(organizationDto);
+		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(organization));
+		Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(false);
+
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.patchOrganization(UUID.randomUUID(),
+				newPatch));
+	}
+
+	@Test
+	public void testPatchRequest() throws JSONException, IOException {
+		UUID orgId = UUID.randomUUID();
+		ObjectMapper objectMapper = new ObjectMapper();
+		JSONArray contentArray = new JSONArray();
+		JSONObject content = new JSONObject();
+		content.put("op", "replace");
+		content.put("path", "/name");
+		content.put("value", "Org Name");
+		contentArray.put(content);
+		JsonPatch newPatch = JsonPatch.fromJson(
+				objectMapper.readTree(contentArray.toString())
+		);
+		Organization organizationDb = Organization.builder()
+				.id(orgId)
+				.name("Old New Name")
+				.build();
+		ArgumentCaptor<Organization> captor = ArgumentCaptor.forClass(Organization.class);
+		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(organizationDb));
+		Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
+		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(organizationDb);
+		this.organizationService.patchOrganization(orgId, newPatch);
+		verify(repository).save(captor.capture());
+		Organization capturedOrg = captor.getValue();
+		assertThat(capturedOrg.getName()).isEqualTo("Org Name");
+	}
 
 }

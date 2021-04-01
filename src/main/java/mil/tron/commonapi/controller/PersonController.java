@@ -11,7 +11,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.dto.annotation.helper.JsonPatchAnnotated;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.pagination.Paginator;
 import mil.tron.commonapi.service.PersonConversionOptions;
@@ -137,7 +139,8 @@ public class PersonController {
 			@Parameter(description = "Patched person",
 					required = true,
 					schema = @Schema(example="[ {'op':'add','path':'/hello','value':'world'} ]",
-							implementation = JsonPatchAnnotated.class)) @RequestBody JsonPatch patch) {
+							oneOf = {JsonPatchStringArrayValue.class, JsonPatchStringValue.class,
+									JsonPatchObjectValue.class})) @RequestBody JsonPatch patch) {
 		PersonDto updatedPerson = personService.patchPerson(personId, patch);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 	}
