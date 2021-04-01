@@ -2,6 +2,7 @@ package mil.tron.commonapi.dto.appsource;
 
 import lombok.*;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.entity.DashboardUser;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
@@ -26,6 +27,12 @@ public class AppSourceDetailsDto {
     @NotBlank
     @NotNull
     private String name;
+
+    @Getter
+    @Setter
+    @Builder.Default
+    @Valid
+    private List<String> appSourceAdminUserEmails = new ArrayList<>();
 
     @Getter
     @Setter
