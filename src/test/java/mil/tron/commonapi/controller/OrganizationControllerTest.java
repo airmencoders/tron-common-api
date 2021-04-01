@@ -93,7 +93,7 @@ public class OrganizationControllerTest {
 				.name(testOrg.getName())
 				.orgType(Unit.WING)
 				.branchType(Branch.USAF)
-				.members(testOrg.getMembers().stream().map(Person::getId).collect(Collectors.toSet()))
+				.members(testOrg.getMembers().stream().map(Person::getId).collect(Collectors.toList()))
 				.build();
 
 	}
@@ -418,7 +418,7 @@ public class OrganizationControllerTest {
 
 			Person p = new Person();
 			Person p2 = new Person();
-			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
+			newOrg.setMembersUUID(List.of(p.getId(), p2.getId()));
 
 			Mockito.when(organizationService.flattenOrg(testOrgDto))
 					.thenReturn(OrganizationDto
@@ -457,7 +457,7 @@ public class OrganizationControllerTest {
 					.lastName("Public")
 					.build();
 
-			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
+			newOrg.setMembersUUID(List.of(p.getId(), p2.getId()));
 
 			Mockito.when(organizationService.getOrganization(newOrg.getId())).thenReturn(newOrg);
 			Mockito.when(organizationService.getOrganization(testOrgDto.getId())).thenReturn(testOrgDto);

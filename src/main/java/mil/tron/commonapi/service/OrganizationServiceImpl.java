@@ -294,7 +294,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.addOrgId(id);
-//		eventManagerService.recordEventAndPublish(message);
+		eventManagerService.recordEventAndPublish(message);
 
 		return updateOrganization;
 	}
@@ -705,10 +705,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 		flattenedOrg.setName(org.getName());
 		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
 		if (org.getMembers() != null) {
-			flattenedOrg.setMembersUUID(new HashSet<>(org.getMembers()));
+			flattenedOrg.setMembersUUID(new ArrayList<>(org.getMembers()));
 		}
 		else {
-			flattenedOrg.setMembersUUID(new HashSet<>());
+			flattenedOrg.setMembersUUID(new ArrayList<>());
 		}
 		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), flattenedOrg.getMembers()));
 		return flattenedOrg;
@@ -729,7 +729,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	// recursive helper function to dig deep on a units members
-	private Set<UUID> harvestOrgMembers(Set<UUID> orgIds, Set<UUID> accumulator) {
+	private List<UUID> harvestOrgMembers(Set<UUID> orgIds, List<UUID> accumulator) {
 
 		if (orgIds == null || orgIds.isEmpty()) return accumulator;
 
@@ -737,7 +737,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			OrganizationDto subOrg = getOrganization(orgId);
 			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
 			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
-			Set<UUID> ids = harvestOrgMembers(getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			List<UUID> ids = harvestOrgMembers(getOrganization(orgId).getSubordinateOrganizations(), new ArrayList<>());
 			accumulator.addAll(ids);
 		}
 

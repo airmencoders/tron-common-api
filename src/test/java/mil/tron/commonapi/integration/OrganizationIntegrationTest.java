@@ -218,7 +218,7 @@ public class OrganizationIntegrationTest {
         organizationService.createOrganization(parent);
 
         theOrg.setParentOrganizationUUID(parent.getId());
-        theOrg.setMembersUUID(Set.of(p1.getId(), p2.getId()));
+        theOrg.setMembersUUID(List.of(p1.getId(), p2.getId()));
         organizationService.createOrganization(theOrg);
 
         parent.setSubOrgsUUID(Set.of(theOrg.getId()));
@@ -312,8 +312,8 @@ public class OrganizationIntegrationTest {
     class OrgPatchTests {
 
         private final Squadron existingOrgDto;
-        private final Organization existingParentOrg;
-        private final Organization existingChildOrg;
+        private final Squadron existingParentOrg;
+        private final Squadron existingChildOrg;
         private final Person existingPerson;
         private final UUID orgId = UUID.randomUUID();
         private final UUID parentOrgId = UUID.randomUUID();
@@ -332,16 +332,21 @@ public class OrganizationIntegrationTest {
             this.existingOrgDto.setOrgType(Unit.SQUADRON);
             this.existingOrgDto.setMembers(Set.of(this.existingPerson));
             this.existingOrgDto.setLeader(this.existingPerson);
-
+            this.existingOrgDto.setPas("Pas");
             this.existingOrgDto.setPas("pasValue");
-            this.existingParentOrg = Organization.builder()
-                    .id(parentOrgId)
-                    .name("Parent Org Name")
-                    .build();
-            this.existingChildOrg = Organization.builder()
-                    .id(childOrgId)
-                    .name("Child Org Name")
-                    .build();
+
+            this.existingParentOrg = new Squadron();
+            this.existingParentOrg.setId(parentOrgId);
+            this.existingParentOrg.setName("Parent Org Name");
+            this.existingParentOrg.setBranchType(Branch.USAF);
+            this.existingParentOrg.setOrgType(Unit.SQUADRON);
+
+            this.existingChildOrg = new Squadron();
+            this.existingChildOrg.setId(childOrgId);
+            this.existingChildOrg.setName("Child Org Name");
+            this.existingChildOrg.setBranchType(Branch.USAF);
+            this.existingChildOrg.setOrgType(Unit.SQUADRON);
+
 //            this.existingOrg.setParentOrganization(this.existingParentOrg);
 //            this.existingChildOrg.setParentOrganization(this.existingOrg);
         }
@@ -352,6 +357,9 @@ public class OrganizationIntegrationTest {
             personDto.setRank("Capt");
             personDto.setBranch(Branch.USAF);
             personService.createPerson(personDto);
+            organizationService.createOrganization(this.existingParentOrg);
+            Optional<Organization> parentOrg = organizationRepository.findById(this.existingParentOrg.getId());
+            existingOrgDto.setParentOrganization(parentOrg.get());
             organizationService.createOrganization(this.existingOrgDto);
         }
 
@@ -380,6 +388,7 @@ public class OrganizationIntegrationTest {
         }
 
         @Test
+        @Transactional
         void testPatchAddOrgMembers() throws Exception {
 
             UUID newMemberId = UUID.randomUUID();
@@ -393,7 +402,7 @@ public class OrganizationIntegrationTest {
             JSONArray contentArray = new JSONArray();
             JSONObject content = new JSONObject();
             content.put("op", "add");
-            content.put("path", "/members");
+            content.put("path", "/members/-");
             content.put("value", newMemberId);
             contentArray.put(content);
             MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
@@ -402,33 +411,52 @@ public class OrganizationIntegrationTest {
                     .andExpect(status().isOk())
                     .andReturn();
             Optional<Organization> updatedOrg = organizationRepository.findById(this.existingOrgDto.getId());
-            int numberOfMembers = updatedOrg.get().getMembers().size();
+            Set<Person> orgMembers = updatedOrg.get().getMembers();
+            int numberOfMembers = orgMembers.size();
             assertEquals(2, numberOfMembers);
         }
 
         @Test
+        @Transactional
         void testPatchOrgParentOrg() throws Exception {
-
+            JSONArray contentArray = new JSONArray();
+            JSONObject content = new JSONObject();
+            content.put("op", "remove");
+            content.put("path", "/parentOrganization");
+            contentArray.put(content);
+            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+                    .contentType("application/json-patch+json")
+                    .content(contentArray.toString()))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            Optional<Organization> updatedOrg = organizationRepository.findById(this.existingOrgDto.getId());
+            assertTrue(updatedOrg.get().getParentOrganization() == null);
         }
 
         @Test
-        void testPatchOrgSubOrg() throws Exception {
+        @Transactional
+        void testPatchNameTest() throws Exception {
+            JSONArray contentArray = new JSONArray();
 
-        }
+            JSONObject testContent = new JSONObject();
+            testContent.put("op", "test");
+            testContent.put("path", "/name");
+            testContent.put("value", "Not the Name");
+            contentArray.put(testContent);
 
-        @Test
-        void testPatchOrgName() throws Exception {
+            JSONObject replaceContent = new JSONObject();
+            replaceContent.put("op", "replace");
+            replaceContent.put("path", "/name");
+            replaceContent.put("value", "New Name");
+            contentArray.put(replaceContent);
 
-        }
-
-        @Test
-        void testPatchOrgType() throws Exception {
-
-        }
-
-        @Test
-        void testPatchOrgBranch() throws Exception {
-
+            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+                    .contentType("application/json-patch+json")
+                    .content(contentArray.toString()))
+                    .andExpect(status().is4xxClientError())
+                    .andReturn();
+            Optional<Organization> updatedOrg = organizationRepository.findById(this.existingOrgDto.getId());
+            assertEquals("Org Name", updatedOrg.get().getName());
         }
 
         @AfterEach
