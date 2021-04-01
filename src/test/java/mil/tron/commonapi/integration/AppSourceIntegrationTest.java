@@ -4,18 +4,16 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import lombok.val;
-import mil.tron.commonapi.CommonApiApplication;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
-import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
@@ -31,18 +29,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.Assert;
 
 import javax.transaction.Transactional;
-import java.lang.reflect.Array;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -65,6 +61,7 @@ public class AppSourceIntegrationTest {
             .toString();
 
     private static final String ENDPOINT = "/v1/app-source/";
+    private static final String DASHBOARD_USERS_ENDPOINT = "/v1/dashboard-users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 
@@ -114,7 +111,10 @@ public class AppSourceIntegrationTest {
         admin = DashboardUser.builder()
                 .id(UUID.randomUUID())
                 .email("admin@admin.com")
-                .privileges(Set.of(privRepo.findByName("DASHBOARD_ADMIN").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD ADMIN"))))
+                .privileges(Set.of(
+                        privRepo.findByName("DASHBOARD_ADMIN").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD ADMIN")),
+                        privRepo.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))
+                ))
                 .build();
 
         // persist the admin
@@ -345,5 +345,245 @@ public class AppSourceIntegrationTest {
         val storedAppSourcePrivileges = appSourcePrivRepository
                 .findAllByAppSource(AppSource.builder().id(createdAppSource.getId()).build());
         assertTrue(Iterables.size(storedAppSourcePrivileges) == 0);
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void appSourceAdminFullStackTests() throws Exception {
+
+        // create two AppSource applications as a Dashboard_Admin - App1 and App2
+        // assign App1 two admins - the existing Dashboard_Admin "admin@admin.com" (gets +APP_SOURCE_ADMIN priv) and a new user "user1@test.com"
+        // assign App2 an admin - a new user "user2@test.com"
+        // add new admin "user3@test.com" to App1 via a PUT (just adding an email to the admins collection field)
+        // add new admin "user4@test.com" to both App1 and App2 via the PATCH endpoint calls
+        // delete "user4@test.com" from App2 via the PATCH endpoint, check that "user4@test.com" is still on App1
+        // re-PUT App1 but without "user4@test.com", app1 should then just have 3 admins left on it
+        // check that "user4@test.com" doesn't exist anywhere anymore since its not assigned to anything and he didnt have other privs
+        // delete App1 -- check that "user3@test.com" and "user1@test.com" exist no where and that the Dashboard_Admin still exists in the system
+        //   but no longer has an APP_SOURCE_ADMIN priv to him, since he was not an APP_SOURCE_ADMIN of anything else
+
+        final String USER1_EMAIL = "user1@test.com";
+        final String USER2_EMAIL = "user2@test.com";
+        final String USER3_EMAIL = "user3@test.com";
+        final String USER4_EMAIL = "user4@test.com";
+
+        AppSourceDetailsDto app1 = AppSourceDetailsDto.builder()
+                .id(UUID.randomUUID())
+                .name("App1")
+                .appSourceAdminUserEmails(Lists.newArrayList(admin.getEmail(), USER1_EMAIL))
+                .appClients(new ArrayList<>())
+                .build();
+
+        MvcResult app1Result = mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID app1Id = OBJECT_MAPPER.readValue(app1Result.getResponse().getContentAsString(), AppSourceDetailsDto.class).getId();
+
+        // verify admin user has the APP_SOURCE_ADMIN priv, and that user1@test.com exists now
+        MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        DashboardUserDto[] users = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), DashboardUserDto[].class);
+
+        boolean foundAdminsPriv = false;
+        boolean foundUser1Priv = false;
+        for (DashboardUserDto d : users) {
+           if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
+               for (Privilege p : d.getPrivileges()) {
+                   if (p.getName().equals("APP_SOURCE_ADMIN")) {
+                       foundAdminsPriv = true;
+                       break;
+                   }
+               }
+           }
+           else if (d.getEmail().equalsIgnoreCase(USER1_EMAIL)) {
+               for (Privilege p : d.getPrivileges()) {
+                   if (p.getName().equals("APP_SOURCE_ADMIN")) {
+                       foundUser1Priv = true;
+                       break;
+                   }
+               }
+           }
+        }
+        assertTrue(foundAdminsPriv);
+        assertTrue(foundUser1Priv);
+
+        // make app2
+        AppSourceDetailsDto app2 = AppSourceDetailsDto.builder()
+                .id(UUID.randomUUID())
+                .name("App2")
+                .appSourceAdminUserEmails(Lists.newArrayList(USER2_EMAIL))
+                .appClients(new ArrayList<>())
+                .build();
+
+        MvcResult app2Result = mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app2)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID app2Id = OBJECT_MAPPER.readValue(app2Result.getResponse().getContentAsString(), AppSourceDetailsDto.class).getId();
+
+        // add user3 via PUT in app1 with user1's creds
+        app1.getAppSourceAdminUserEmails().add(USER3_EMAIL);
+        app1.setId(app1Id);
+        MvcResult modApp1 = mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        AppSourceDetailsDto dto = OBJECT_MAPPER.readValue(modApp1.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertThat(dto.getAppSourceAdminUserEmails().size()).isEqualTo(3);
+
+        // try some random PUT as a non-app source admin user - should get 403
+        mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken("random@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isForbidden());
+
+
+        // add user4 via the PATCH endpoints to App1 and App2
+        mockMvc.perform(patch(ENDPOINT + "admins/{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{ \"email\": \"%s\" }", USER4_EMAIL)))
+                .andExpect(status().isOk());
+
+        // check that "user4@test.com" is added to App1
+        modApp1 = mockMvc.perform(get(ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)         )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        dto = OBJECT_MAPPER.readValue(modApp1.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertThat(dto.getAppSourceAdminUserEmails().size()).isEqualTo(4);
+
+        MvcResult modApp2 = mockMvc.perform(patch(ENDPOINT + "admins/{id}", app2Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{ \"email\": \"%s\" }", USER4_EMAIL)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // verify that app2 got user4 - should have 2 admins
+        AppSourceDetailsDto dto2 = OBJECT_MAPPER.readValue(modApp2.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertThat(dto2.getAppSourceAdminUserEmails().size()).isEqualTo(2);
+
+        // delete "user4@test.com" from App2 via the PATCH endpoint
+        mockMvc.perform(delete(ENDPOINT + "admins/{id}", app2Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{ \"email\": \"%s\" }", USER4_EMAIL)))
+                .andExpect(status().isOk());
+
+        // check that "user4@test.com" is still on App1 (should have 4 admins)
+        modApp1 = mockMvc.perform(get(ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        dto = OBJECT_MAPPER.readValue(modApp1.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertThat(dto.getAppSourceAdminUserEmails().size()).isEqualTo(4);
+
+        // re-PUT app1 sans user4 this time -- effectively deleting them from app source admin of app1
+        //   should have 3 admins back on it
+        modApp1 = mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        dto = OBJECT_MAPPER.readValue(modApp1.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertThat(dto.getAppSourceAdminUserEmails().size()).isEqualTo(3);
+
+        // make sure that user4 is no longer anywhere in the system since it was a lone app source admin
+        //  with no other privs and wasn't an admin anywhere else anymore :(
+        // verify admin user has the APP_SOURCE_ADMIN priv, and that user1@test.com exists now
+        result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        users = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), DashboardUserDto[].class);
+
+        boolean foundUser4Priv = false;
+        for (DashboardUserDto d : users) {
+            if (d.getEmail().equalsIgnoreCase(USER4_EMAIL)) {
+                for (Privilege p : d.getPrivileges()) {
+                    if (p.getName().equals("APP_SOURCE_ADMIN")) {
+                        foundUser4Priv = true;
+                        break;
+                    }
+                }
+            }
+        }
+        assertFalse(foundUser4Priv);
+
+        // delete App1
+        mockMvc.perform(delete(ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // check that "user3@test.com" and "user1@test.com" exist no where and that "admin@admin.com" still exists in the system
+        result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        users = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), DashboardUserDto[].class);
+
+        boolean foundUser3 = false;
+        boolean foundUser1 = false;
+        boolean foundAdminUser = false;
+        boolean adminHasNoMoreAppSourceAdmin = true;
+        for (DashboardUserDto d : users) {
+            if (d.getEmail().equalsIgnoreCase(USER3_EMAIL)) {
+                foundUser3 = true;
+            }
+            else if (d.getEmail().equalsIgnoreCase(USER1_EMAIL)) {
+                foundUser1 = true;
+            }
+            else if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
+                foundAdminUser = true;
+
+                // make sure admin does have the app_source_admin anymore, not needed
+                for (Privilege p : d.getPrivileges()) {
+                    if (p.getName().equalsIgnoreCase("APP_SOURCE_ADMIN")) {
+                        adminHasNoMoreAppSourceAdmin = false;
+                        break;
+                    }
+                }
+            }
+        }
+        assertFalse(foundUser3);
+        assertFalse(foundUser1);
+        assertTrue(foundAdminUser);
+        assertTrue(adminHasNoMoreAppSourceAdmin);
     }
 }
