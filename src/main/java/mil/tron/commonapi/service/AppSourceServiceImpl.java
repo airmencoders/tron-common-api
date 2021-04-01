@@ -1,39 +1,52 @@
 package mil.tron.commonapi.service;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import javax.transaction.Transactional;
+
+import org.assertj.core.util.Lists;
+import org.assertj.core.util.Sets;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMethod;
+
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.appsource.AppSourcePrivRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import org.assertj.core.util.Lists;
-import org.assertj.core.util.Sets;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import javax.transaction.Transactional;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @Service
 public class AppSourceServiceImpl implements AppSourceService {
 
     private AppSourceRepository appSourceRepository;
-    private AppSourcePrivRepository appSourcePrivRepository;
-    private PrivilegeRepository privilegeRepository;
+    private AppEndpointPrivRepository appEndpointPrivRepository;
+    private AppEndpointRepository appEndpointRepository;
     private AppClientUserRespository appClientUserRespository;
+    private PrivilegeRepository privilegeRepository;
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserService dashboardUserService;
     private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
@@ -41,16 +54,18 @@ public class AppSourceServiceImpl implements AppSourceService {
 
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
-                                AppSourcePrivRepository appSourcePrivRepository,
-                                PrivilegeRepository privilegeRepository,
+                                AppEndpointPrivRepository appEndpointPrivRepository,
+                                AppEndpointRepository appEndpointRepository,
                                 AppClientUserRespository appClientUserRespository,
+                                PrivilegeRepository privilegeRepository,
                                 DashboardUserRepository dashboardUserRepository,
                                 DashboardUserService dashboardUserService) {
         this.appSourceRepository = appSourceRepository;
-        this.appSourcePrivRepository = appSourcePrivRepository;
-        this.privilegeRepository = privilegeRepository;
+        this.appEndpointPrivRepository = appEndpointPrivRepository;
+        this.appEndpointRepository = appEndpointRepository;
         this.appClientUserRespository = appClientUserRespository;
         this.dashboardUserRepository = dashboardUserRepository;
+        this.privilegeRepository = privilegeRepository;
         this.dashboardUserService = dashboardUserService;
     }
 
@@ -61,7 +76,8 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .stream(appSources.spliterator(), false)
                 .map(appSource -> AppSourceDto.builder().id(appSource.getId())
                         .name(appSource.getName())
-                        .clientCount(appSource.getAppSourcePrivs().size())
+                        .endpointCount(appSource.getAppEndpoints().size())
+                        .clientCount(appSource.getAppPrivs().size())
                         .build()).collect(Collectors.toList());
     }
 
@@ -109,19 +125,11 @@ public class AppSourceServiceImpl implements AppSourceService {
         toRemove = this.deleteAdminsFromAppSource(toRemove, "", true);
 
         // remove privileges associated with the app source
-        this.appSourcePrivRepository.removeAllByAppSource(AppSource.builder().id(id).build());
+        this.appEndpointPrivRepository.removeAllByAppSource(AppSource.builder().id(id).build());
+        // remove endpoints associated with the app source
+        this.appEndpointRepository.removeAllByAppSource(AppSource.builder().id(id).build());
         this.appSourceRepository.deleteById(toRemove.getId());
         return this.buildAppSourceDetailsDto(toRemove);
-    }
-
-    private Set<Privilege> buildPrivilegeSet(List<Long> privilegeIds, UUID appClientId) throws RecordNotFoundException {
-        return privilegeIds.stream().map(privId -> {
-            if (!this.privilegeRepository.existsById(privId)) {
-                throw new RecordNotFoundException(String.format("No privilege %x found for" +
-                        "client app with id %s.", privId, appClientId.toString()));
-            }
-            return Privilege.builder().id(privId).build();
-        }).collect(Collectors.toSet());
     }
 
     private AppClientUser buildAppClientUser(UUID appClientId) throws RecordNotFoundException {
@@ -131,27 +139,33 @@ public class AppSourceServiceImpl implements AppSourceService {
         return AppClientUser.builder().id(appClientUser.getId()).name(appClientUser.getName()).build();
     }
 
-    private List<Long> buildPrivilegeIds(Set<Privilege> privileges) {
-        if (privileges == null || privileges.size() == 0) {
-            return new ArrayList<>();
-        }
-        return privileges.stream()
-                .map(Privilege::getId).collect(Collectors.toList());
+    private AppEndpoint findAppEndpoint(UUID appEndpointId, Collection<AppEndpoint> appEndpoints) throws RecordNotFoundException {
+        return appEndpoints.stream()
+            .filter(endpoint -> appEndpointId.equals(endpoint.getId()))
+            .findAny()
+            .orElseThrow(() ->new RecordNotFoundException(String.format("No app endpoint with id %s found.", appEndpointId)));
     }
 
     private AppSourceDetailsDto buildAppSourceDetailsDto(AppSource appSource) {
         return AppSourceDetailsDto.builder()
                 .id(appSource.getId())
                 .name(appSource.getName())
+                .endpoints(appSource.getAppEndpoints().stream()
+                    .map(appEndpoint -> AppEndpointDto.builder()
+                        .id(appEndpoint.getId())
+                        .path(appEndpoint.getPath())
+                        .requestType(appEndpoint.getMethod().toString())
+                        .build()).collect(Collectors.toList()))
+                .appClients(appSource.getAppPrivs().stream()
+                    .map(appEndpointPriv -> AppClientUserPrivDto.builder()
+                        .appClientUser(appEndpointPriv.getAppClientUser().getId())
+                        .appClientUserName(appEndpointPriv.getAppClientUser().getName())
+                        .privilege(appEndpointPriv.getAppEndpoint().getPath())
+                        .appEndpoint(appEndpointPriv.getAppEndpoint().getId())
+                        .build()).collect(Collectors.toList()))
                 .appSourceAdminUserEmails(appSource.getAppSourceAdmins().stream()
                         .map(DashboardUser::getEmail)
                         .collect(Collectors.toList()))
-                .appClients(appSource.getAppSourcePrivs().stream()
-                        .map(appSourcePriv -> AppClientUserPrivDto.builder()
-                                .appClientUser(appSourcePriv.getAppClientUser().getId())
-                                .appClientUserName(appSourcePriv.getAppClientUser().getName())
-                                .privilegeIds(this.buildPrivilegeIds(appSourcePriv.getPrivileges()))
-                                .build()).collect(Collectors.toList()))
                 .build();
     }
 
@@ -161,6 +175,21 @@ public class AppSourceServiceImpl implements AppSourceService {
             AppSource.builder().id(UUID.randomUUID()).build();
 
         appSourceToSave.setName(appSource.getName());
+
+        Set<AppEndpoint> appEndpoints = appSource.getEndpoints()
+            .stream().map(endpointDto -> AppEndpoint.builder()
+                .id(endpointDto.getId())
+                .appSource(appSourceToSave)
+                .method(RequestMethod.valueOf(endpointDto.getRequestType()))
+                .path(endpointDto.getPath())
+                .build()).collect(Collectors.toSet());
+        
+        Set<AppEndpointPriv> appEndpointPrivs = appSource.getAppClients()
+            .stream().map(privDto -> AppEndpointPriv.builder()
+                .appSource(appSourceToSave)
+                .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
+                .appEndpoint(privDto.getAppEndpoint() == null ? null : this.findAppEndpoint(privDto.getAppEndpoint(), appEndpoints))
+                .build()).collect(Collectors.toSet());
 
         // remove admins attached to this app, essentially sanitize admins from it
         //  this allows us to essentially be able to add and delete admins via an HTTP PUT
@@ -175,20 +204,19 @@ public class AppSourceServiceImpl implements AppSourceService {
         // re-apply the admins received in the DTO
         appSourceCleanAdmins.setAppSourceAdmins(Sets.newHashSet(thisAppsAdminUsers));
 
-        Set<AppSourcePriv> appSourcePrivs = appSource.getAppClients()
-                .stream().map(privDto -> AppSourcePriv.builder()
-                        .appSource(appSourceCleanAdmins)
-                        .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
-                        .privileges(this.buildPrivilegeSet(privDto.getPrivilegeIds(), privDto.getAppClientUser()))
-                        .build()).collect(Collectors.toSet());
-
-
         // persist the app source and its changes
         AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceCleanAdmins);
+                  
+        // Remove and reapply the Endpoints and Endpoint Privileges 
+        // This allows us to change endpoints/privileges via PUT
+        Iterable<AppEndpointPriv> existingPrivileges = this.appEndpointPrivRepository.findAllByAppSource(appSourceToSave);
+        this.appEndpointPrivRepository.deleteAll(existingPrivileges);
 
-        Iterable<AppSourcePriv> existingPrivileges = this.appSourcePrivRepository.findAllByAppSource(appSourceToSave);
-        this.appSourcePrivRepository.deleteAll(existingPrivileges);
-        this.appSourcePrivRepository.saveAll(appSourcePrivs);
+        Iterable<AppEndpoint> existingEndpoints = this.appEndpointRepository.findAllByAppSource(appSourceToSave);
+        this.appEndpointRepository.deleteAll(existingEndpoints);
+
+        this.appEndpointRepository.saveAll(appEndpoints);
+        this.appEndpointPrivRepository.saveAll(appEndpointPrivs);
         
         appSource.setId(savedAppSource.getId());
 

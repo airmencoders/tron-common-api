@@ -1,6 +1,8 @@
 package mil.tron.commonapi.appgateway;
 
 import io.swagger.v3.oas.models.PathItem;
+import mil.tron.commonapi.entity.appsource.AppSource;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +28,8 @@ public class AppSourceEndpointBuilderTest {
                 () -> {
                     this.appSourceEndpointsBuilder.initializeWithAppSourceDef(
                             new AppSourceInterfaceDefinition("Name",
-                                    "Nofile.yml", "localhost", "/")
+                                    "Nofile.yml", "localhost", "/"),
+                            AppSource.builder().name("Name").appSourcePath("/").openApiSpecFilename("NoFile.yml").build()
                     );
                 });
     }

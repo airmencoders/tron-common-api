@@ -19,11 +19,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,14 +75,20 @@ class AppClientUserPreAuthenticatedServiceTest {
 			.name("Test Gateway")
 			.openApiSpecFilename("test.yml")
 			.build();
-		AppSourcePriv appSourcePriv = AppSourcePriv.builder()
+		AppEndpoint appEndpoint = AppEndpoint.builder()
 			.appSource(appSource)
 			.id(UUID.randomUUID())
-			.privileges(new HashSet<>(Arrays.asList(Privilege.builder().id(2L).name("READ").build())))
+			.method(RequestMethod.GET)
+			.path("/path")
 			.build();
-		Set<AppSourcePriv> appSourcePrivs = new HashSet<AppSourcePriv>(Arrays.asList(appSourcePriv));
-		appSource.setAppSourcePrivs(appSourcePrivs);
-		user.setAppSourcePrivs(appSourcePrivs);
+		AppEndpointPriv appSourcePriv = AppEndpointPriv.builder()
+			.appSource(appSource)
+			.id(UUID.randomUUID())
+			.appEndpoint(appEndpoint)
+			.build();
+		Set<AppEndpointPriv> appSourcePrivs = new HashSet<AppEndpointPriv>(Arrays.asList(appSourcePriv));
+		appSource.setAppPrivs(appSourcePrivs);
+		user.setAppEndpointPrivs(appSourcePrivs);
 		Mockito.when(repository.findByNameIgnoreCase(user.getName())).thenReturn(Optional.of(user));
 		Mockito.when(token.getName()).thenReturn(user.getName());
 		
@@ -98,10 +106,16 @@ class AppClientUserPreAuthenticatedServiceTest {
 			.name("Test Gateway")
 			.openApiSpecFilename("test.yml")
 			.build();
-		AppSourcePriv appSourcePriv = AppSourcePriv.builder()
+		AppEndpoint appEndpoint = AppEndpoint.builder()
 			.appSource(appSource)
 			.id(UUID.randomUUID())
-			.privileges(new HashSet<>(Arrays.asList(Privilege.builder().id(2L).name("WRITE").build())))
+			.method(RequestMethod.GET)
+			.path("/path")
+			.build();
+		AppEndpointPriv appSourcePriv = AppEndpointPriv.builder()
+			.appSource(appSource)
+			.id(UUID.randomUUID())
+			.appEndpoint(appEndpoint)
 			.build();
 
 		AppSource appSource2 = AppSource.builder()
@@ -110,14 +124,20 @@ class AppClientUserPreAuthenticatedServiceTest {
 			.name("Other Test Gateway")
 			.openApiSpecFilename("test.yml")
 			.build();
-		AppSourcePriv appSourcePriv2 = AppSourcePriv.builder()
+		AppEndpoint appEndpoint2 = AppEndpoint.builder()
 			.appSource(appSource2)
 			.id(UUID.randomUUID())
-			.privileges(new HashSet<>(Arrays.asList(Privilege.builder().id(3L).name("WRITE").build())))
+			.method(RequestMethod.GET)
+			.path("/path2")
 			.build();
-		Set<AppSourcePriv> appSourcePrivs = new HashSet<AppSourcePriv>(Arrays.asList(appSourcePriv, appSourcePriv2));
-		appSource.setAppSourcePrivs(appSourcePrivs);
-		user.setAppSourcePrivs(appSourcePrivs);
+		AppEndpointPriv appSourcePriv2 = AppEndpointPriv.builder()
+			.appSource(appSource2)
+			.id(UUID.randomUUID())
+			.appEndpoint(appEndpoint2)
+			.build();
+		Set<AppEndpointPriv> appSourcePrivs = new HashSet<AppEndpointPriv>(Arrays.asList(appSourcePriv, appSourcePriv2));
+		appSource.setAppPrivs(appSourcePrivs);
+		user.setAppEndpointPrivs(appSourcePrivs);
 		Mockito.when(repository.findByNameIgnoreCase(user.getName())).thenReturn(Optional.of(user));
 		Mockito.when(token.getName()).thenReturn(user.getName());
 		
@@ -135,9 +155,9 @@ class AppClientUserPreAuthenticatedServiceTest {
 			.name("Test Gateway")
 			.openApiSpecFilename("test.yml")
 			.build();
-		Set<AppSourcePriv> appSourcePrivs = null;
-		appSource.setAppSourcePrivs(appSourcePrivs);
-		user.setAppSourcePrivs(appSourcePrivs);
+		Set<AppEndpointPriv> appSourcePrivs = null;
+		appSource.setAppPrivs(appSourcePrivs);
+		user.setAppEndpointPrivs(appSourcePrivs);
 		Mockito.when(repository.findByNameIgnoreCase(user.getName())).thenReturn(Optional.of(user));
 		Mockito.when(token.getName()).thenReturn(user.getName());
 		

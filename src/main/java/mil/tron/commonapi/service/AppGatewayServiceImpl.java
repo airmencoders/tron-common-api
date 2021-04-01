@@ -99,7 +99,7 @@ public class AppGatewayServiceImpl implements AppGatewayService {
         String[] appSourcePathParts = Arrays.asList(requestUri).subList(5, requestUri.length)
                 .toArray(new String[0]);
 
-        return File.separator + String.join(File.separator, appSourcePathParts);
+        return "/" + String.join("/", appSourcePathParts);
     }
 
     /***

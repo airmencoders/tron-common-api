@@ -2,7 +2,6 @@ package mil.tron.commonapi.dto.appsource;
 
 import lombok.*;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
-import mil.tron.commonapi.entity.DashboardUser;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
@@ -39,4 +38,10 @@ public class AppSourceDetailsDto {
     @Builder.Default
     @Valid
     private List<AppClientUserPrivDto> appClients = new ArrayList<>();
+
+    @Getter
+    @Setter
+    @Builder.Default
+    @Valid
+    private List<AppEndpointDto> endpoints = new ArrayList<>();
 }

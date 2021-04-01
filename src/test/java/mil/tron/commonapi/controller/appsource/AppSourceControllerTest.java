@@ -35,7 +35,8 @@ import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.AppSourceService;
@@ -57,13 +58,14 @@ public class AppSourceControllerTest {
 	
 	private static UUID APP_SOURCE_UUID = UUID.randomUUID();
     private static String APP_SOURCE_NAME = "Test App Source";
-    private Set<AppSourcePriv> appSourcePrivs = new HashSet<>();
+    private Set<AppEndpointPriv> appEndpointPrivs = new HashSet<>();
     private AppSource appSource;
     private AppSourceDetailsDto appSourceDetailsDto;
     private List<AppClientUserPrivDto> appClientUserPrivDtos;
     private Set<Privilege> privileges;
     private AppClientUser appClientUser;
     private List<AppSourceDto> appSourceDtos;
+    private AppEndpoint appEndpoint;
 	
 	@BeforeEach
     void setup() {
@@ -93,27 +95,32 @@ public class AppSourceControllerTest {
                 .id(UUID.randomUUID())
                 .name("Test App Client")
                 .build();
-        val appSourcePriv = AppSourcePriv
+        appEndpoint = AppEndpoint
+                .builder()
+                .id(UUID.randomUUID())
+                .appSource(appSource)
+                .build();
+        val appEndpointPriv = AppEndpointPriv
                 .builder()
                 .id(UUID.randomUUID())
                 .appSource(appSource)
                 .appClientUser(appClientUser)
-                .privileges(privileges)
+                .appEndpoint(appEndpoint)
                 .build();
-        appSourcePrivs.add(
-            appSourcePriv
+        appEndpointPrivs.add(
+            appEndpointPriv
         );
-        appSource.setAppSourcePrivs(appSourcePrivs);
-        appClientUser.setAppSourcePrivs(appSourcePrivs);
-
-        List<Privilege> privilegesList = new ArrayList<>(privileges);
+        appSource.setAppPrivs(appEndpointPrivs);
+        appClientUser.setAppEndpointPrivs(appEndpointPrivs);
         
         appClientUserPrivDtos = new ArrayList<>();
         appClientUserPrivDtos.add(
     		AppClientUserPrivDto
         		.builder()
         		.appClientUser(appClientUser.getId())
-        		.privilegeIds(Arrays.asList(privilegesList.get(0).getId(), privilegesList.get(1).getId()))
+                .appClientUserName(appClientUser.getName())
+                .appEndpoint(appEndpoint.getId())
+                .privilege(appEndpoint.getPath())
         		.build()
 		);
         
