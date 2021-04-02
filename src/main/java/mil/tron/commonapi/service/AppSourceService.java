@@ -2,7 +2,6 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
-import mil.tron.commonapi.entity.DashboardUser;
 
 import java.util.List;
 import java.util.UUID;
