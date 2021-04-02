@@ -76,13 +76,17 @@ public class AppSourceController {
      * @return true if user is Dashboard Admin or App Source admin for given appId
      */
     private boolean userIsDashBoardAdminOrAppSourceAdmin(UUID appId) {
+
+        boolean result = true;
+
         try {
             this.checkUserIsDashBoardAdminOrAppSourceAdmin(appId);
         }
         catch (InvalidAppSourcePermissions ex) {
-            return false;
+            result = false;
         }
-        return true;
+
+        return result;
     }
 
     @Operation(summary = "Creates an App Source including App Client permissions.", description = "Requires DASHBOARD_ADMIN rights")
