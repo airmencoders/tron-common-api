@@ -346,9 +346,6 @@ public class OrganizationIntegrationTest {
             this.existingChildOrg.setName("Child Org Name");
             this.existingChildOrg.setBranchType(Branch.USAF);
             this.existingChildOrg.setOrgType(Unit.SQUADRON);
-
-//            this.existingOrg.setParentOrganization(this.existingParentOrg);
-//            this.existingChildOrg.setParentOrganization(this.existingOrg);
         }
 
         @BeforeEach
