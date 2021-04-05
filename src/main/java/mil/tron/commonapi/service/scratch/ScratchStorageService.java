@@ -20,6 +20,7 @@ public interface ScratchStorageService {
 
     // scratch storage app management...
     Iterable<ScratchStorageAppRegistryDto> getAllRegisteredScratchApps();
+    Iterable<ScratchStorageAppRegistryDto> getAllEntriesByAuthorizedUser();
     ScratchStorageAppRegistryDto getRegisteredScratchApp(UUID appId);
     ScratchStorageAppRegistryEntry addNewScratchAppName(ScratchStorageAppRegistryEntry entry);
     ScratchStorageAppRegistryEntry editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryEntry entry);

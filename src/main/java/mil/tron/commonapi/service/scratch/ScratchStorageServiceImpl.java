@@ -17,6 +17,9 @@ import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepos
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageUserRepository;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -158,6 +161,26 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         return StreamSupport
                 .stream(appRegistryRepo.findAll().spliterator(), false)
                 .map(item -> dtoMapper.map(item, ScratchStorageAppRegistryDto.class))
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public Iterable<ScratchStorageAppRegistryDto> getAllEntriesByAuthorizedUser() {
+    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getCredentials().toString();  // get the JWT email string
+        
+        return StreamSupport.stream(appRegistryRepo.findAllAppsWithUserEmail(userEmail).spliterator(), false)
+        		.map(item -> {
+        			// Strip out all other user privs that do not belong to the authorized user
+        			for (Iterator<ScratchStorageAppUserPriv> privsIter = item.getUserPrivs().iterator(); privsIter.hasNext();) {
+        				ScratchStorageAppUserPriv next = privsIter.next();
+        				if (!next.getUser().getEmail().equals(userEmail)) {
+        					privsIter.remove();
+        				}
+        			}
+
+        			return dtoMapper.map(item, ScratchStorageAppRegistryDto.class);
+        		})
                 .collect(Collectors.toList());
     }
 
