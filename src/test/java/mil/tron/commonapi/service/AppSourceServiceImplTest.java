@@ -4,20 +4,23 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.val;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
-import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.appsource.AppSourcePrivRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -27,6 +30,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,14 +47,17 @@ public class AppSourceServiceImplTest {
     private AppSourceRepository appSourceRepository;
     
     @Mock
-    private AppSourcePrivRepository appSourcePrivRepo;
+    private AppEndpointPrivRepository appSourcePrivRepo;
     
     @Mock
     private AppClientUserRespository appClientUserRepo;
-    
-    @Mock
-    private PrivilegeRepository privilegeRepo;
 
+    @Mock
+    private AppEndpointRepository appEndpointRepo;
+
+    @Mock
+	private PrivilegeRepository privilegeRepo;
+    
     @Mock
 	private DashboardUserService dashboardUserService;
 
@@ -65,14 +72,17 @@ public class AppSourceServiceImplTest {
     private static String APP_SOURCE_ADMIN = "APP_SOURCE_ADMIN";
     private static String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
     private List<AppSource> entries = new ArrayList<>();
-    private Set<AppSourcePriv> appSourcePrivs = new HashSet<>();
+    private Set<AppEndpointPriv> appSourcePrivs = new HashSet<>();
     private AppSource appSource;
     private AppSourceDetailsDto appSourceDetailsDto;
     private List<AppClientUserPrivDto> appClientUserPrivDtos;
-    private Set<Privilege> privileges;
-    private AppClientUser appClientUser;
+    private AppClientUser appClientUser;    
     private Privilege appSourceAdminPriv;
     private Privilege dashboardAdminPriv;
+    private Set<Privilege> privileges;
+    private AppEndpoint appEndpoint;
+    private Set<AppEndpoint> appEndpoints = new HashSet<>();
+    private List<AppEndpointDto> appEndpointDtos;
 
     @BeforeEach
     void setup() {
@@ -117,34 +127,55 @@ public class AppSourceServiceImplTest {
                 .name(APP_SOURCE_NAME)
 				.appSourceAdmins(Set.of(adminUser))
                 .build();
+        this.appEndpoint = AppEndpoint
+                .builder()
+                .id(UUID.randomUUID())
+                .appSource(appSource)
+                .method(RequestMethod.GET)
+                .path("/path")
+                .build();
         appClientUser = AppClientUser
                 .builder()
                 .id(UUID.randomUUID())
                 .name("Test App Client")
                 .build();
-        val appSourcePriv = AppSourcePriv
+        val appSourcePriv = AppEndpointPriv
                 .builder()
                 .id(UUID.randomUUID())
                 .appSource(appSource)
                 .appClientUser(appClientUser)
-                .privileges(privileges)
+                .appEndpoint(appEndpoint)
                 .build();
+        appSourcePrivs.add(
+            appSourcePriv
+        );
+        appEndpoints.add(appEndpoint);
+        appSource.setAppPrivs(appSourcePrivs);
+        appSource.setAppEndpoints(appEndpoints);
+        appClientUser.setAppEndpointPrivs(appSourcePrivs);
         appSourcePrivs.add(appSourcePriv);
-        appSource.setAppSourcePrivs(appSourcePrivs);
-        appClientUser.setAppSourcePrivs(appSourcePrivs);
         entries.add(appSource);
-
-        List<Privilege> privilegesList = new ArrayList<>(privileges);
         
         appClientUserPrivDtos = new ArrayList<>();
         appClientUserPrivDtos.add(
     		AppClientUserPrivDto
         		.builder()
         		.appClientUser(appClientUser.getId())
-				.appClientUserName(appClientUser.getName())
-        		.privilegeIds(Arrays.asList(privilegesList.get(0).getId(), privilegesList.get(1).getId()))
+                .appClientUserName(appClientUser.getName())
+        		.appEndpoint(appEndpoint.getId())
+                .privilege(appEndpoint.getPath())
         		.build()
 		);
+
+        appEndpointDtos = new ArrayList<>();
+        appEndpointDtos.add(
+            AppEndpointDto
+                .builder()
+                .path("/path")  
+                .requestType(RequestMethod.GET.toString())
+                .id(appEndpoint.getId())
+                .build()
+        );
         
         appSourceDetailsDto = AppSourceDetailsDto
         		.builder()
@@ -155,6 +186,7 @@ public class AppSourceServiceImplTest {
 						.stream().map(DashboardUser::getEmail)
 						.collect(Collectors.toList()))
         		.appClients(appClientUserPrivDtos)
+                .endpoints(appEndpointDtos)
         		.build();
     }
 
@@ -224,7 +256,7 @@ public class AppSourceServiceImplTest {
         	
         	Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).thenReturn(AppSource.builder().id(toUpdate.getId()).name(toUpdate.getName()).build());
         	
-        	List<AppSourcePriv> existingPrivs = new ArrayList<>();
+        	List<AppEndpointPriv> existingPrivs = new ArrayList<>();
         	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
         	
         	AppSourceDetailsDto updated = service.updateAppSource(toUpdate.getId(), toUpdate);
@@ -262,13 +294,18 @@ public class AppSourceServiceImplTest {
     
     @Test
     void testCreateAppSource() {
-    	Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).thenReturn(AppSource.builder().id(appSourceDetailsDto.getId()).name(appSourceDetailsDto.getName()).build());
+    	Mockito.when(appSourceRepository.saveAndFlush(Mockito.any()))
+                .thenReturn(AppSource.builder()
+                    .id(appSourceDetailsDto.getId())
+                    .name(appSourceDetailsDto.getName())
+                    .build());
     	
-    	List<AppSourcePriv> existingPrivs = new ArrayList<>();
+    	List<AppEndpointPriv> existingPrivs = new ArrayList<>();
     	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
+
+        Mockito.when(appEndpointRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(new ArrayList<>());
     	
     	Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
-    	Mockito.when(privilegeRepo.existsById(Mockito.anyLong())).thenReturn(true);
     	Mockito.when(privilegeRepo.findByName(APP_SOURCE_ADMIN)).thenReturn(Optional.of(appSourceAdminPriv));
     	AppSourceDetailsDto created = service.createAppSource(appSourceDetailsDto);
 
@@ -286,7 +323,7 @@ public class AppSourceServiceImplTest {
 				.appSourcePath("")
 				.openApiSpecFilename("")
 				.appSourceAdmins(new HashSet<>())
-				.appSourcePrivs(new HashSet<>())
+				.appPrivs(new HashSet<>())
 				.build();
 
     	DashboardUser newUser = DashboardUser.builder()
@@ -347,7 +384,7 @@ public class AppSourceServiceImplTest {
 				.appSourcePath("")
 				.openApiSpecFilename("")
 				.appSourceAdmins(Sets.newHashSet(newUser, newUser2))
-				.appSourcePrivs(new HashSet<>())
+				.appPrivs(new HashSet<>())
 				.build();
 
 		AppSource someOtherApp = AppSource.builder()
@@ -356,7 +393,7 @@ public class AppSourceServiceImplTest {
 				.appSourcePath("")
 				.openApiSpecFilename("")
 				.appSourceAdmins(Sets.newHashSet(newUser))
-				.appSourcePrivs(new HashSet<>())
+				.appPrivs(new HashSet<>())
 				.build();
 
 		Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class)))
@@ -396,7 +433,7 @@ public class AppSourceServiceImplTest {
 				.appSourcePath("")
 				.openApiSpecFilename("")
 				.appSourceAdmins(Sets.newHashSet(newUser))
-				.appSourcePrivs(new HashSet<>())
+				.appPrivs(new HashSet<>())
 				.build();
 
 		Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(newAppSource));

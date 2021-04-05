@@ -13,7 +13,6 @@ import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
-import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
 import mil.tron.commonapi.service.AppSourceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

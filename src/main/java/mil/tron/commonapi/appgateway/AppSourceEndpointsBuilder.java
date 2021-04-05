@@ -1,11 +1,14 @@
 package mil.tron.commonapi.appgateway;
 
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.parser.OpenAPIV3Parser;
-import io.swagger.v3.parser.core.models.SwaggerParseResult;
-import lombok.extern.slf4j.Slf4j;
-import mil.tron.commonapi.controller.AppGatewayController;
-import mil.tron.commonapi.service.AppGatewayService;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -16,13 +19,16 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import io.swagger.v3.parser.core.models.SwaggerParseResult;
+import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.controller.AppGatewayController;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import mil.tron.commonapi.service.AppGatewayService;
 
 @Service
 @Slf4j
@@ -36,13 +42,18 @@ public class AppSourceEndpointsBuilder {
 
     private AppGatewayService appGatewayService;
 
+    private AppEndpointRepository appEndpointRepository;
+
     private String apiVersionPrefix;
+    
 
     @Autowired
     AppSourceEndpointsBuilder(RequestMappingHandlerMapping requestMappingHandlerMapping,
                               AppGatewayController queryController,
                               AppGatewayService appGatewayService,
                               AppSourceConfig appSourceConfig,
+                              AppSourceRepository appSourceRepository,
+                              AppEndpointRepository appEndpointRepository,
                               @Value("${api-prefix.v1}") String apiVersionPrefix
     ) {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
@@ -50,21 +61,22 @@ public class AppSourceEndpointsBuilder {
         this.appSourceConfig = appSourceConfig;
         this.apiVersionPrefix = apiVersionPrefix;
         this.appGatewayService = appGatewayService;
+        this.appEndpointRepository = appEndpointRepository;
         this.createAppSourceEndpoints(this.appSourceConfig);
     }
 
     private void createAppSourceEndpoints(AppSourceConfig appSourceConfig) {
-        AppSourceInterfaceDefinition[] appDefs = appSourceConfig.getAppSourceDefs();
-        if (appDefs == null) {
+        Map<AppSourceInterfaceDefinition, AppSource> appDefs = appSourceConfig.getAppSourceDefs();
+        if (appDefs.keySet().size() == 0) {
             log.warn("No AppSource Definitions were found.");
             return;
         }
-        for (AppSourceInterfaceDefinition appDef : appDefs) {
-            this.initializeWithAppSourceDef(appDef);
+        for (AppSourceInterfaceDefinition appDef : appDefs.keySet()) {
+            this.initializeWithAppSourceDef(appDef, appDefs.get(appDef));
         }
     }
 
-    public void initializeWithAppSourceDef(AppSourceInterfaceDefinition appDef) {
+    public void initializeWithAppSourceDef(AppSourceInterfaceDefinition appDef, AppSource appSource) {
         try {
             List<AppSourceEndpoint> appSourceEndpoints = this.parseAppSourceEndpoints(appDef.getOpenApiSpecFilename());
             boolean newMapping = this.appGatewayService.addSourceDefMapping(appDef.getAppSourcePath(),
@@ -72,6 +84,7 @@ public class AppSourceEndpointsBuilder {
             if (newMapping) {
                 for (AppSourceEndpoint appEndpoint: appSourceEndpoints) {
                     this.addMapping(appDef.getAppSourcePath(), appEndpoint);
+                    this.addEndpointToSource(appEndpoint, appSource);
                 }
             }
         }
@@ -146,6 +159,19 @@ public class AppSourceEndpointsBuilder {
                             AppGatewayController.class.getDeclaredMethod("handleGetRequests",
                                     HttpServletRequest.class, HttpServletResponse.class, Map.class)
                     );
+        }
+    }
+
+    private void addEndpointToSource(AppSourceEndpoint endpoint, AppSource appSource) {
+        AppEndpoint appEndpoint = AppEndpoint.builder()
+            .appSource(appSource)
+            .method(endpoint.getMethod())
+            .path(endpoint.getPath())
+            .build();
+        try {
+            this.appEndpointRepository.save(appEndpoint);
+        } catch (Exception e) {
+            log.warn(String.format("Unable to add endpoint to app source %s.", appSource.getName()), e);
         }
     }
 
