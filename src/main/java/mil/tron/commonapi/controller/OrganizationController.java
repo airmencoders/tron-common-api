@@ -302,10 +302,13 @@ public class OrganizationController {
 	})
 	@PreAuthorizeWrite
 	@PatchMapping("/{id}/members")
-	public ResponseEntity<Object> addOrganizationMember(@Parameter(description = "UUID of the organization record", required = true) @PathVariable UUID id,
-													@Parameter(description = "UUID(s) of the member(s) to add", required = true) @RequestBody List<UUID> personId) {
+	public ResponseEntity<Object> addOrganizationMember(
+        @Parameter(description = "UUID of the organization record", required = true) @PathVariable UUID id,
+        @Parameter(description = "UUID(s) of the member(s) to add", required = true) @RequestBody List<UUID> personId,
+		@Parameter(description = "Whether to make the organization the primary organization for the user", required = false)
+				@RequestParam(name = "primary", required = false, defaultValue = "true") boolean primary) {
 
-		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId), HttpStatus.OK);
+		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId, primary), HttpStatus.OK);
 	}
 
 	@Operation(summary = "Add subordinate organizations to an organization", description = "Adds subordinate orgs to an organization")

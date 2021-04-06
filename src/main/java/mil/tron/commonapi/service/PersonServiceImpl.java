@@ -65,6 +65,7 @@ public class PersonServiceImpl implements PersonService {
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
         modelMapper.typeMap(Person.class, PersonDto.class)
+            .addMappings(m -> m.skip(PersonDto::setPrimaryOrganizationId))
             .addMappings(m -> m.skip(PersonDto::setOrganizationLeaderships))
             .addMappings(m -> m.skip(PersonDto::setOrganizationMemberships));
 		objMapper = new ObjectMapper();
@@ -282,10 +283,13 @@ public class PersonServiceImpl implements PersonService {
         }
 		PersonDto dto = modelMapper.map(entity, PersonDto.class);
 		Rank rank = entity.getRank();
-		if (rank != null) {
-			dto.setRank(rank.getAbbreviation());
-			dto.setBranch(entity.getRank().getBranchType());
-		}
+        if (rank != null) {
+            dto.setRank(rank.getAbbreviation());
+            dto.setBranch(entity.getRank().getBranchType());
+        }
+        if (entity.getPrimaryOrganization() != null) {
+            dto.setPrimaryOrganizationId(entity.getPrimaryOrganization().getId());
+        }
         if (options.isMetadataIncluded()) {
 		    entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
         }

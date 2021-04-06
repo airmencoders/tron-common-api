@@ -51,6 +51,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private static final String PERSON_PHONE_FIELD = "contactNumber";
     private static final String PERSON_RANK_FIELD = "rankId";
     private static final String PERSON_RANK_ABBR_FIELD = "rankAbbr";
+    private static final String PERSON_PRIMARY_ORG_FIELD = "primaryOrganizationId";
 
     private static final Branch[] branchMapping = {
             Branch.OTHER, // 0
@@ -232,13 +233,14 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
 
     private void assignPersonToOrg(JsonNode node, UUID id) {
         // now go thru each puckboard org person was in - either add or remove depending on active status
+        UUID primaryOrg = UUID.fromString(node.get(PERSON_PRIMARY_ORG_FIELD).textValue());
         List<String> personOrgIds = ImmutableList.copyOf(node.get(ORG_STATUS_FIELD).fieldNames());
         for (String org : personOrgIds) {
             JsonNode orgNode = node.get(ORG_STATUS_FIELD).get(org);
             UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
 
             if (orgNode.get("active").booleanValue()) {
-                orgService.addOrganizationMember(orgId, Lists.newArrayList(id));
+                orgService.addOrganizationMember(orgId, Lists.newArrayList(id), orgId.equals(primaryOrg));
             } else {
                 orgService.removeOrganizationMember(orgId, Lists.newArrayList(id));
             }

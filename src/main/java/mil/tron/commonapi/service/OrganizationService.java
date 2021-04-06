@@ -17,7 +17,7 @@ public interface OrganizationService {
 	Organization findOrganization(UUID id);
 	Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
 	Organization removeMember(UUID organizationId, List<UUID> personIds);
-	Organization addMember(UUID organizationId, List<UUID> personIds);
+	Organization addMember(UUID organizationId, List<UUID> personIds, boolean primary);
 	Organization addOrg(UUID organizationId, List<UUID> orgIds);
 	Organization removeOrg(UUID organizationId, List<UUID> orgIds);
 
@@ -31,7 +31,7 @@ public interface OrganizationService {
 	Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
 	OrganizationDto getOrganization(UUID id);
 	OrganizationDto removeOrganizationMember(UUID organizationId, List<UUID> personIds);
-	OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds);
+	OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds, boolean primary);
 	OrganizationDto addSubordinateOrg(UUID organizationId, List<UUID> orgIds);
 	OrganizationDto removeSubordinateOrg(UUID organizationId, List<UUID> orgIds);
 	List<OrganizationDto> bulkAddOrgs(List<OrganizationDto> newOrgs);

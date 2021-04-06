@@ -83,6 +83,11 @@ public class Person {
     private Rank rank;
 
     @Getter
+    @Setter
+    @ManyToOne
+    private Organization primaryOrganization;
+
+    @Getter
     @Builder.Default
     @ManyToMany
     @JoinTable(name = "organization_members", 

@@ -360,7 +360,7 @@ public class OrganizationControllerTest {
 			newOrg.setName("test org");
 			newOrg.getMembers().add(p.getId());
 
-			Mockito.when(organizationService.addOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class))).thenReturn(newOrg);
+			Mockito.when(organizationService.addOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class), Mockito.anyBoolean())).thenReturn(newOrg);
 			MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}/members", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
