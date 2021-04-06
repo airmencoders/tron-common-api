@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import mil.tron.commonapi.dto.AppClientSummaryDto;
 import org.modelmapper.Converter;
 import org.modelmapper.spi.MappingContext;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,18 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	@Override
 	public Iterable<AppClientUserDto> getAppClientUsers() {
 		return StreamSupport.stream(userRepository.findAll().spliterator(), false).map(this::convertToDto).collect(Collectors.toList());
+	}
+
+	/**
+	 * Gets just the names and UUIDs of the available app clients
+	 * @return list of AppClientSummaryDtos
+	 */
+	@Override
+	public Iterable<AppClientSummaryDto> getAppClientUserSummaries() {
+		return StreamSupport
+				.stream(userRepository.findAll().spliterator(), false)
+				.map(item -> MODEL_MAPPER.map(item, AppClientSummaryDto.class))
+				.collect(Collectors.toList());
 	}
 	
 	@Override

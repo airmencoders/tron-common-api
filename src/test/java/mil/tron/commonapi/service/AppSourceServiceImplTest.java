@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.val;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -13,6 +14,7 @@ import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -440,5 +442,155 @@ public class AppSourceServiceImplTest {
 
 		assertTrue(service.userIsAdminForAppSource(newAppSource.getId(), newUser.getEmail()));
 		assertFalse(service.userIsAdminForAppSource(newAppSource.getId(), "randomdude@test.com"));
+	}
+
+	@Test
+	void testDeleteAllAppClientPrivs() {
+    	AppSource app = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Test")
+				.appSourceAdmins(new HashSet<>())
+				.appSourcePath("test")
+				.appPrivs(Set.of(AppEndpointPriv.builder()
+						.id(UUID.randomUUID())
+						.appClientUser(AppClientUser.builder()
+								.id(UUID.randomUUID())
+								.name("puckboard")
+								.build())
+						.appEndpoint(AppEndpoint.builder()
+								.id(UUID.randomUUID())
+								.method(RequestMethod.GET)
+								.path("/blah")
+								.build())
+						.build()))
+				.build();
+
+    	Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class)))
+				.thenReturn(Optional.empty())
+				.thenReturn(Optional.of(app));
+
+    	Mockito.doNothing().when(appSourcePrivRepo).delete(Mockito.any(AppEndpointPriv.class));
+    	Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).then(returnsFirstArg());
+
+    	assertThrows(RecordNotFoundException.class, () -> service.deleteAllAppClientPrivs(app.getId()));
+    	assertEquals(app.getId(), service.deleteAllAppClientPrivs(app.getId()).getId());
+	}
+
+	@Test
+	void testAddEndPointPrivilege() {
+    	AppEndpoint endPoint = AppEndpoint.builder()
+				.id(UUID.randomUUID())
+				.method(RequestMethod.GET)
+				.path("/blah")
+				.build();
+
+    	AppClientUser client = AppClientUser.builder()
+				.id(UUID.randomUUID())
+				.name("puckboard")
+				.build();
+
+		AppSource app = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Test")
+				.appSourceAdmins(new HashSet<>())
+				.appSourcePath("test")
+				.appPrivs(Set.of(AppEndpointPriv.builder()
+						.id(UUID.randomUUID())
+						.appClientUser(client)
+						.appEndpoint(endPoint)
+						.build()))
+				.build();
+
+		AppEndPointPrivDto dto = AppEndPointPrivDto
+				.builder()
+				.appSourceId(app.getId())
+				.appEndpointId(endPoint.getId())
+				.appClientUserId(client.getId())
+				.build();
+
+		Mockito.when(appSourceRepository.findById(Mockito.any()))
+				.thenReturn(Optional.empty())
+				.thenReturn(Optional.of(app));
+
+		Mockito.when(appEndpointRepo.findById(Mockito.any()))
+				.thenReturn(Optional.empty())
+				.thenReturn(Optional.of(endPoint));
+
+		Mockito.when(appClientUserRepo.findById(Mockito.any()))
+				.thenReturn(Optional.empty())
+				.thenReturn(Optional.of(client));
+
+		Mockito.when(appSourcePrivRepo.existsByAppSourceEqualsAndAppClientUserEqualsAndAppEndpointEquals(
+			app, client, endPoint))
+				.thenReturn(true)
+				.thenReturn(false);
+
+		Mockito.when(appSourcePrivRepo.saveAndFlush(Mockito.any()))
+				.thenReturn(AppEndpointPriv
+						.builder()
+						.appSource(app)
+						.appEndpoint(endPoint)
+						.appClientUser(client)
+						.build());
+
+		assertThrows(RecordNotFoundException.class, () -> service.addEndPointPrivilege(dto));
+		assertThrows(RecordNotFoundException.class, () -> service.addEndPointPrivilege(dto));
+		assertThrows(RecordNotFoundException.class, () -> service.addEndPointPrivilege(dto));
+		assertThrows(ResourceAlreadyExistsException.class, () -> service.addEndPointPrivilege(dto));
+		assertEquals(app.getId(), service.addEndPointPrivilege(dto).getId());
+    }
+
+    @Test
+	void testRemoveEndpointPrivilege() {
+		AppEndpoint endPoint = AppEndpoint.builder()
+				.id(UUID.randomUUID())
+				.method(RequestMethod.GET)
+				.path("/blah")
+				.build();
+
+		AppClientUser client = AppClientUser.builder()
+				.id(UUID.randomUUID())
+				.name("puckboard")
+				.build();
+
+		AppSource app = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Test")
+				.appSourceAdmins(new HashSet<>())
+				.appSourcePath("test")
+				.appPrivs(Set.of(AppEndpointPriv.builder()
+						.id(UUID.randomUUID())
+						.appClientUser(client)
+						.appEndpoint(endPoint)
+						.build()))
+				.build();
+
+		AppEndpointPriv priv = AppEndpointPriv
+				.builder()
+				.appSource(app)
+				.appEndpoint(endPoint)
+				.appClientUser(client)
+				.build();
+
+		Mockito.when(appSourceRepository.findById(Mockito.any()))
+				.thenReturn(Optional.empty())
+				.thenReturn(Optional.of(app));
+
+		Mockito.when(appSourcePrivRepo.findById(Mockito.any()))
+				.thenReturn(Optional.empty())
+				.thenReturn(Optional.of(AppEndpointPriv
+						.builder()
+						.appSource(appSource)
+						.appEndpoint(endPoint)
+						.appClientUser(client)
+						.build()))
+				.thenReturn(Optional.of(priv));
+
+		Mockito.doNothing().when(appSourcePrivRepo).deleteById(Mockito.any());
+
+		assertThrows(RecordNotFoundException.class, () -> service.removeEndPointPrivilege(app.getId(), priv.getId()));
+		assertThrows(RecordNotFoundException.class, () -> service.removeEndPointPrivilege(app.getId(), priv.getId()));
+		assertThrows(InvalidAppSourcePermissions.class, () -> service.removeEndPointPrivilege(app.getId(), UUID.randomUUID()));
+		assertEquals(app.getId(), service.removeEndPointPrivilege(app.getId(), priv.getId()).getId());
 	}
 }

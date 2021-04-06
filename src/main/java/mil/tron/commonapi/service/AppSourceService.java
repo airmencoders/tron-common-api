@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 
@@ -12,6 +13,11 @@ public interface AppSourceService {
     AppSourceDetailsDto getAppSource(UUID id);
     AppSourceDetailsDto updateAppSource(UUID id, AppSourceDetailsDto appSourceDetailsDto);
     AppSourceDetailsDto deleteAppSource(UUID id);
+
+    // app source and app client endpoint management
+    AppSourceDetailsDto deleteAllAppClientPrivs(UUID appSourceId);
+    AppSourceDetailsDto addEndPointPrivilege(AppEndPointPrivDto dto);
+    AppSourceDetailsDto removeEndPointPrivilege(UUID appSourceId, UUID appSourceEndPointPrivId);
 
     // app source admin user management
     AppSourceDetailsDto addAppSourceAdmin(UUID appSourceId, String email);

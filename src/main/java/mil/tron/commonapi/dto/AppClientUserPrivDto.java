@@ -1,18 +1,11 @@
 package mil.tron.commonapi.dto;
 
-import java.util.UUID;
-
-import javax.validation.constraints.NotNull;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import lombok.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import javax.validation.constraints.NotNull;
+import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -22,6 +15,8 @@ import lombok.Setter;
 @EqualsAndHashCode
 public class AppClientUserPrivDto {
 
+    @Getter
+    private UUID id;
 
     @NotNull
     private UUID appClientUser;
