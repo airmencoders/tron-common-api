@@ -11,6 +11,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import mil.tron.commonapi.dto.AppClientSummaryDto;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -65,6 +67,13 @@ class AppClientUserServiceImplTest {
     	assertThat(result).hasSize(1);
     	assertThat(result.get(0)).isEqualTo(MODEL_MAPPER.map(users.get(0), AppClientUserDto.class));
     }
+
+	@Test
+	void getAppClientUsersSummariesTest() {
+		Mockito.when(repository.findAll()).thenReturn(users);
+		List<AppClientSummaryDto> result = Lists.newArrayList(userService.getAppClientUserSummaries());
+		assertThat(result.get(0).getId()).isEqualTo(users.get(0).getId());
+	}
 	
 	@Nested 
 	class CreateAppClientUserTest {

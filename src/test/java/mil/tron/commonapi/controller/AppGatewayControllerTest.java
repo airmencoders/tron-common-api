@@ -3,7 +3,10 @@ package mil.tron.commonapi.controller;
 import mil.tron.commonapi.appgateway.AppSourceEndpointsBuilder;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.AppGatewayService;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -12,6 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -36,6 +43,7 @@ public class AppGatewayControllerTest {
     private AppGatewayService appGatewayService;
 
     @Test
+    @WithMockUser(username = "guardianangel", authorities = "mock/test")
     void testHandleGetRequests() throws Exception {
         AppSourceInterfaceDefinition appDef = new AppSourceInterfaceDefinition("Name", "mock.yml",
                 "http:////localhost", "mock");
@@ -58,6 +66,7 @@ public class AppGatewayControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "guardianangel", authorities = "mock-fail/test")
     void testHandleNullResponse() throws Exception {
         AppSourceInterfaceDefinition appDef = new AppSourceInterfaceDefinition("Name", "mock.yml",
                 "http:////localhost", "mock-fail");

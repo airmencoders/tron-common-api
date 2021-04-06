@@ -2,6 +2,7 @@ package mil.tron.commonapi.appgateway;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -9,6 +10,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.assertj.core.util.Lists;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -169,10 +171,13 @@ public class AppSourceEndpointsBuilder {
             .path(endpoint.getPath())
             .build();
         try {
-            this.appEndpointRepository.save(appEndpoint);
+            // only add this endpoint to the db if it's not already in there.
+            if (!appEndpointRepository.existsByAppSourceEqualsAndMethodEqualsAndAndPathEquals(
+                    appSource, endpoint.getMethod(), endpoint.getPath())) {
+                this.appEndpointRepository.save(appEndpoint);
+            }
         } catch (Exception e) {
             log.warn(String.format("Unable to add endpoint to app source %s.", appSource.getName()), e);
         }
     }
-
 }

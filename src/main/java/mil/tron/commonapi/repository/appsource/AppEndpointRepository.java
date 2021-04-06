@@ -8,9 +8,11 @@ import org.springframework.data.repository.CrudRepository;
 
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 public interface AppEndpointRepository extends CrudRepository<AppEndpoint, UUID>{
     Iterable<AppEndpoint> findAllByAppSource(AppSource appSource);
+    boolean existsByAppSourceEqualsAndMethodEqualsAndAndPathEquals(AppSource appSource, RequestMethod method, String path);
     
     @Transactional
     Iterable<UUID> removeAllByAppSource(AppSource appSource);

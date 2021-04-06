@@ -1,30 +1,32 @@
 package mil.tron.commonapi.integration;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.transaction.Transactional;
-
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
+import liquibase.pro.packaged.M;
+import lombok.val;
+import mil.tron.commonapi.dto.AppClientSummaryDto;
+import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
+import mil.tron.commonapi.dto.appsource.AppEndpointDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
+import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import mil.tron.commonapi.service.AppSourceServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,22 +41,16 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import lombok.val;
-import mil.tron.commonapi.dto.AppClientUserPrivDto;
-import mil.tron.commonapi.dto.DashboardUserDto;
-import mil.tron.commonapi.dto.appsource.AppEndpointDto;
-import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
-import mil.tron.commonapi.entity.AppClientUser;
-import mil.tron.commonapi.entity.DashboardUser;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.repository.AppClientUserRespository;
-import mil.tron.commonapi.repository.DashboardUserRepository;
-import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
-import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import mil.tron.commonapi.service.AppSourceServiceImpl;
+import javax.transaction.Transactional;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = { "security.enabled=true" })
 @TestPropertySource(locations = "classpath:application-test.properties")
@@ -98,6 +94,9 @@ public class AppSourceIntegrationTest {
 
     @Autowired
     AppEndpointPrivRepository appSourcePrivRepository;
+
+    @Autowired
+    AppEndpointRepository endpointRepository;
 
     @Autowired
     AppSourceRepository appSourceRepository;
@@ -645,5 +644,233 @@ public class AppSourceIntegrationTest {
         assertFalse(foundUser1);
         assertTrue(foundAdminUser);
         assertTrue(adminHasNoMoreAppSourceAdmin);
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testUsersCanOnlySeeAllowedAppSources() throws Exception {
+
+        // test that DASHBOARD_ADMINS can see all app sources via REST call
+        // test that APP SOURCE ADMINS can only see the apps they are admins of
+
+        final String USER1_EMAIL = "user1@test.com";
+        final String USER2_EMAIL = "user2@test.com";
+
+        AppSourceDetailsDto app1 = AppSourceDetailsDto.builder()
+                .id(UUID.randomUUID())
+                .name("App1")
+                .appSourceAdminUserEmails(Lists.newArrayList(USER1_EMAIL))
+                .appClients(new ArrayList<>())
+                .endpoints(new ArrayList<>())
+                .build();
+
+        mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isCreated());
+
+        AppSourceDetailsDto app2 = AppSourceDetailsDto.builder()
+                .id(UUID.randomUUID())
+                .name("App2")
+                .appSourceAdminUserEmails(Lists.newArrayList(USER2_EMAIL))
+                .appClients(new ArrayList<>())
+                .endpoints(new ArrayList<>())
+                .build();
+
+        mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app2)))
+                .andExpect(status().isCreated());
+
+        AppSourceDetailsDto app3 = AppSourceDetailsDto.builder()
+                .id(UUID.randomUUID())
+                .name("App3")
+                .appSourceAdminUserEmails(Lists.newArrayList(admin.getEmail()))
+                .appClients(new ArrayList<>())
+                .endpoints(new ArrayList<>())
+                .build();
+
+        mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app3)))
+                .andExpect(status().isCreated());
+
+        // verify if a DASHBOARD admin requests anything we get everything -  3 apps
+        mockMvc.perform(get(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)));
+
+        // verify admin user has additional APP_SOURCE_ADMIN priv
+        MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        DashboardUserDto[] dtos = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), DashboardUserDto[].class);
+        boolean foundPriv = false;
+        for (DashboardUserDto d : dtos) {
+            if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
+                for (Privilege p : d.getPrivileges()) {
+                    if (p.getName().equalsIgnoreCase("APP_SOURCE_ADMIN")) {
+                        foundPriv = true;
+                        break;
+                    }
+                }
+            }
+        }
+        assertTrue(foundPriv);
+
+        // verify if a USER1 sees one record
+        mockMvc.perform(get(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        // verify if a USER2 sees one record
+        mockMvc.perform(get(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(USER2_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testAdministrationOfEndPoints() throws Exception {
+
+        // create new AppSource application as a Dashboard_Admin - App1
+        // assign App1 admin - new user "user1@test.com"
+
+        final String USER1_EMAIL = "user1@test.com";
+
+        AppClientUser client = AppClientUser.builder()
+                .id(UUID.randomUUID())
+                .name("Test Client")
+                .build();
+
+        appClientUserRespository.save(client);
+
+        Privilege admin = privRepo.findByName("APP_SOURCE_ADMIN").get();
+
+        DashboardUser user = DashboardUser.builder()
+                .id(UUID.randomUUID())
+                .email(USER1_EMAIL)
+                .privileges(Set.of(admin))
+                .build();
+
+        dashRepo.save(user);
+
+        AppSource app1Main = AppSource.builder()
+                .id(UUID.randomUUID())
+                .name("App1")
+                .appSourceAdmins(Set.of(user))
+                .appSourcePath("app1")
+                .build();
+
+        // mimic app that was already loaded at app invocation and camel processing is done
+        appSourceRepository.saveAndFlush(app1Main);
+
+        AppEndpoint endPoint = AppEndpoint
+                .builder()
+                .id(UUID.randomUUID())
+                .appSource(app1Main)
+                .method(RequestMethod.GET)
+                .path("/all")
+                .build();
+
+        endpointRepository.save(endPoint);
+
+        app1Main.setAppEndpoints(Set.of(endPoint));
+        appSourceRepository.saveAndFlush(app1Main);
+
+        MvcResult clientApps = mockMvc.perform(get(ENDPOINT + "app-clients")
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        AppClientSummaryDto[] availableClientApps = OBJECT_MAPPER
+                .readValue(clientApps.getResponse().getContentAsString(), AppClientSummaryDto[].class);
+
+        UUID clientAppId = null;
+        for (AppClientSummaryDto d : availableClientApps) {
+            if (d.getName().equals(client.getName())) {
+                clientAppId = d.getId();
+                break;
+            }
+        }
+        assertNotNull(clientAppId);
+
+        AppEndPointPrivDto privDto = AppEndPointPrivDto.builder()
+                .appSourceId(app1Main.getId())
+                .appEndpointId(endPoint.getId())
+                .appClientUserId(clientAppId)
+                .build();
+
+        // now, ...finally, we can connect up "Test Client" with "App1" endpoint
+        MvcResult result = mockMvc.perform(post(ENDPOINT + "app-clients")
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(privDto)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        // verify we can't add twice
+        mockMvc.perform(post(ENDPOINT + "app-clients")
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(privDto)))
+                .andExpect(status().isConflict());
+
+        AppSourceDetailsDto appSourceRecord = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertEquals(1, appSourceRecord.getAppClients().size());
+
+        // verify we can delete all in one request
+        MvcResult result2 = mockMvc.perform(delete(ENDPOINT + "app-clients/all/{id}", app1Main.getId())
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        AppSourceDetailsDto appSourceRecord2 = OBJECT_MAPPER.readValue(result2.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertEquals(0, appSourceRecord2.getAppClients().size());
+
+        // add it again
+        MvcResult result3 = mockMvc.perform(post(ENDPOINT + "app-clients")
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(privDto)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        AppSourceDetailsDto appSourceRecord3 = OBJECT_MAPPER.readValue(result3.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertEquals(1, appSourceRecord3.getAppClients().size());
+
+        UUID privId = appSourceRecord3.getAppClients().get(0).getId();
+
+        // singularly delete this time
+        MvcResult result4 = mockMvc.perform(delete(ENDPOINT + "app-clients/{appId}/{privId}", app1Main.getId(), privId)
+                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        AppSourceDetailsDto appSourceRecord4 = OBJECT_MAPPER.readValue(result4.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertEquals(0, appSourceRecord4.getAppClients().size());
     }
 }
