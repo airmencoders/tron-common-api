@@ -533,6 +533,8 @@ public class AppSourceServiceImplTest {
 						.appClientUser(client)
 						.build());
 
+		Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).then(returnsFirstArg());
+
 		assertThrows(RecordNotFoundException.class, () -> service.addEndPointPrivilege(dto));
 		assertThrows(RecordNotFoundException.class, () -> service.addEndPointPrivilege(dto));
 		assertThrows(RecordNotFoundException.class, () -> service.addEndPointPrivilege(dto));
@@ -587,6 +589,8 @@ public class AppSourceServiceImplTest {
 				.thenReturn(Optional.of(priv));
 
 		Mockito.doNothing().when(appSourcePrivRepo).deleteById(Mockito.any());
+
+		Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).then(returnsFirstArg());
 
 		assertThrows(RecordNotFoundException.class, () -> service.removeEndPointPrivilege(app.getId(), priv.getId()));
 		assertThrows(RecordNotFoundException.class, () -> service.removeEndPointPrivilege(app.getId(), priv.getId()));

@@ -408,8 +408,9 @@ public class AppSourceServiceImpl implements AppSourceService {
 
             appEndpointPrivRepository.saveAndFlush(newPriv);
 
-            Set<AppEndpointPriv> privs = appSource.getAppPrivs();
+            Set<AppEndpointPriv> privs = new HashSet<>(appSource.getAppPrivs());
             privs.add(newPriv);
+            appSource.setAppPrivs(privs);
 
             return this.buildAppSourceDetailsDto(appSourceRepository.saveAndFlush(appSource));
         }
@@ -436,8 +437,9 @@ public class AppSourceServiceImpl implements AppSourceService {
         if (appSource.getId().equals(endPoint.getAppSource().getId())) {
             appEndpointPrivRepository.deleteById(appSourceEndPointPrivId);
 
-            Set<AppEndpointPriv> privs = appSource.getAppPrivs();
+            Set<AppEndpointPriv> privs = new HashSet<>(appSource.getAppPrivs());
             privs.removeIf(item -> item.getId().equals(appSourceEndPointPrivId));
+            appSource.setAppPrivs(privs);
 
             // return the new app source record
             return this.buildAppSourceDetailsDto(appSourceRepository.saveAndFlush(appSource));
