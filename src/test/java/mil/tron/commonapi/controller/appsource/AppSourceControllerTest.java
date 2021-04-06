@@ -2,10 +2,7 @@ package mil.tron.commonapi.controller.appsource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
@@ -15,6 +12,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import mil.tron.commonapi.dto.DashboardUserDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -37,7 +35,8 @@ import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppSourcePriv;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.AppSourceService;
@@ -59,13 +58,14 @@ public class AppSourceControllerTest {
 	
 	private static UUID APP_SOURCE_UUID = UUID.randomUUID();
     private static String APP_SOURCE_NAME = "Test App Source";
-    private Set<AppSourcePriv> appSourcePrivs = new HashSet<>();
+    private Set<AppEndpointPriv> appEndpointPrivs = new HashSet<>();
     private AppSource appSource;
     private AppSourceDetailsDto appSourceDetailsDto;
     private List<AppClientUserPrivDto> appClientUserPrivDtos;
     private Set<Privilege> privileges;
     private AppClientUser appClientUser;
     private List<AppSourceDto> appSourceDtos;
+    private AppEndpoint appEndpoint;
 	
 	@BeforeEach
     void setup() {
@@ -95,27 +95,32 @@ public class AppSourceControllerTest {
                 .id(UUID.randomUUID())
                 .name("Test App Client")
                 .build();
-        val appSourcePriv = AppSourcePriv
+        appEndpoint = AppEndpoint
+                .builder()
+                .id(UUID.randomUUID())
+                .appSource(appSource)
+                .build();
+        val appEndpointPriv = AppEndpointPriv
                 .builder()
                 .id(UUID.randomUUID())
                 .appSource(appSource)
                 .appClientUser(appClientUser)
-                .privileges(privileges)
+                .appEndpoint(appEndpoint)
                 .build();
-        appSourcePrivs.add(
-            appSourcePriv
+        appEndpointPrivs.add(
+            appEndpointPriv
         );
-        appSource.setAppSourcePrivs(appSourcePrivs);
-        appClientUser.setAppSourcePrivs(appSourcePrivs);
-
-        List<Privilege> privilegesList = new ArrayList<>(privileges);
+        appSource.setAppPrivs(appEndpointPrivs);
+        appClientUser.setAppEndpointPrivs(appEndpointPrivs);
         
         appClientUserPrivDtos = new ArrayList<>();
         appClientUserPrivDtos.add(
     		AppClientUserPrivDto
         		.builder()
         		.appClientUser(appClientUser.getId())
-        		.privilegeIds(Arrays.asList(privilegesList.get(0).getId(), privilegesList.get(1).getId()))
+                .appClientUserName(appClientUser.getName())
+                .appEndpoint(appEndpoint.getId())
+                .privilege(appEndpoint.getPath())
         		.build()
 		);
         
@@ -145,7 +150,8 @@ public class AppSourceControllerTest {
 		@Test
 		void getAppSourceDetails() throws Exception {
 			Mockito.when(service.getAppSource(Mockito.any(UUID.class))).thenReturn(appSourceDetailsDto);
-			
+
+
 			mockMvc.perform(get(ENDPOINT + "{id}", appSourceDetailsDto.getId()))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(appSourceDetailsDto)));
@@ -244,5 +250,32 @@ public class AppSourceControllerTest {
                     .content(OBJECT_MAPPER.writeValueAsString(appSourceDetailsDto)))
                     .andExpect(status().isOk());
 	    }
+
+		@Test
+		void testRemoveAdmin() throws Exception {
+			Mockito.when(service.removeAdminFromAppSource(Mockito.any(), Mockito.any())).thenReturn(appSourceDetailsDto);
+
+			mockMvc.perform(delete(ENDPOINT + "admins/{id}", appSourceDetailsDto.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(DashboardUserDto.builder().email("joe@test.com").build())))
+					.andExpect(status().isOk());
+		}
+	}
+
+	@Nested
+	@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
+	class Patch {
+
+		@Test
+		void testAddAdmin() throws Exception {
+			Mockito.when(service.addAppSourceAdmin(Mockito.any(), Mockito.any())).thenReturn(appSourceDetailsDto);
+
+			mockMvc.perform(patch(ENDPOINT + "admins/{id}", appSourceDetailsDto.getId())
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(DashboardUserDto.builder().email("joe@test.com").build())))
+					.andExpect(status().isOk());
+		}
 	}
 }

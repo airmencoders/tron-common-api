@@ -4,6 +4,7 @@ import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,7 +24,7 @@ public class OrganizationDtoTest {
         dto.setSubordinateOrganizations(Set.of(o));
 
         assertEquals(p.getId(), dto.getLeader());
-        assertEquals(Set.of(p.getId()), dto.getMembers());
+        assertEquals(List.of(p.getId()), dto.getMembers());
         assertEquals(Set.of(o.getId()), dto.getSubordinateOrganizations());
         assertEquals(o.getId(), dto.getParentOrganization());
 

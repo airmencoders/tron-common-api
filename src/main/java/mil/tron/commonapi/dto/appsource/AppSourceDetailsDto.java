@@ -31,5 +31,17 @@ public class AppSourceDetailsDto {
     @Setter
     @Builder.Default
     @Valid
+    private List<String> appSourceAdminUserEmails = new ArrayList<>();
+
+    @Getter
+    @Setter
+    @Builder.Default
+    @Valid
     private List<AppClientUserPrivDto> appClients = new ArrayList<>();
+
+    @Getter
+    @Setter
+    @Builder.Default
+    @Valid
+    private List<AppEndpointDto> endpoints = new ArrayList<>();
 }

@@ -22,5 +22,10 @@ public class AppSourceDto {
     @Getter
     @Setter
     @Builder.Default
+    private Integer endpointCount = 0;
+
+    @Getter
+    @Setter
+    @Builder.Default
     private Integer clientCount = 0;
 }

@@ -3,6 +3,7 @@ package mil.tron.commonapi.service;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,6 +62,7 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 		}
 		AppClientUser user = appClientUserRespository.findByNameIgnoreCase(token.getName()).orElseThrow(() -> new UsernameNotFoundException("App Client name not found: " + token.getName()));
 		List<GrantedAuthority> privileges = createPrivileges(user.getPrivileges());
+		privileges.addAll(createGatewayAuthorities(user.getAppEndpointPrivs()));
 
 		return new User(user.getName(), NO_CREDS, privileges);
 	}
@@ -75,6 +77,22 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 			authorities.add(new SimpleGrantedAuthority(privilege.getName()));
 		}
 		
+		return authorities;
+	}
+
+	private List<GrantedAuthority> createGatewayAuthorities(Set<AppEndpointPriv> privs) {
+		if (privs == null) 
+			return new ArrayList<>();
+		
+		List<GrantedAuthority> authorities = new ArrayList<>();
+
+		for(AppEndpointPriv appPriv : privs) {
+			if(appPriv.getAppEndpoint() != null && appPriv.getAppEndpoint().getAppSource().getAppSourcePath() != null && appPriv.getAppEndpoint().getAppSource().getAppSourcePath().length() > 0)
+				// GrantedAuthority = name of the AppSource + the particular endpoint privilege allowed
+				// Ex: example-gateway/example-operation-path
+				authorities.add(new SimpleGrantedAuthority(appPriv.getAppEndpoint().getAppSource().getAppSourcePath() + appPriv.getAppEndpoint().getPath()));
+		}
+
 		return authorities;
 	}
 }

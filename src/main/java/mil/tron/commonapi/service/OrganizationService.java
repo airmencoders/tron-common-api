@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -24,6 +25,7 @@ public interface OrganizationService {
 	OrganizationDto createOrganization(OrganizationDto organization);
 	OrganizationDto updateOrganization(UUID id, OrganizationDto organization);
 	OrganizationDto modify(UUID organizationId, Map<String, String> attribs);
+	OrganizationDto patchOrganization(UUID id, JsonPatch patch);
 	void deleteOrganization(UUID id);
 	Iterable<OrganizationDto> getOrganizations(String searchQuery);
 	Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
@@ -43,4 +45,6 @@ public interface OrganizationService {
 	OrganizationDto convertToDto(Organization org);
 	Organization convertToEntity(OrganizationDto org);
 	JsonNode customizeEntity(Map<String, String> fields, OrganizationDto dto);
+
+	OrganizationDto applyPatchToOrganization(JsonPatch patch, OrganizationDto organizationDto);
 }

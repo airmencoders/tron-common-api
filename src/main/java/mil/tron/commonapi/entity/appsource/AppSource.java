@@ -1,6 +1,7 @@
 package mil.tron.commonapi.entity.appsource;
 
 import lombok.*;
+import mil.tron.commonapi.entity.DashboardUser;
 
 import javax.persistence.*;
 import java.util.HashSet;
@@ -14,7 +15,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name="app_source", uniqueConstraints = { @UniqueConstraint(columnNames = "name")})
+@EqualsAndHashCode
+@Table(name="app_source")
 public class AppSource {
 
     @Id
@@ -25,13 +27,38 @@ public class AppSource {
 
     @Getter
     @Setter
+    @Column(unique = true)
     private String name;
+
+    @Getter
+    @Setter
+    private String openApiSpecFilename;
+
+    @Getter
+    @Setter
+    @Column(unique = true)
+    private String appSourcePath;
+
+    /**
+     * List of AppSourceAdmins that can administer this app
+     * One app can have many admins...
+     */
+    @Getter
+    @Setter
+    @ManyToMany
+    private Set<DashboardUser> appSourceAdmins = new HashSet<>();
 
     @Getter
     @Setter
     @Builder.Default
     @OneToMany(mappedBy = "appSource")
-    private Set<AppSourcePriv> appSourcePrivs = new HashSet<>();
+    private Set<AppEndpoint> appEndpoints = new HashSet<>();
+
+    @Getter
+    @Setter
+    @Builder.Default
+    @OneToMany(mappedBy = "appSource")
+    private Set<AppEndpointPriv> appPrivs = new HashSet<>();
 
     @PrePersist
     @PreUpdate

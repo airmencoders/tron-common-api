@@ -1,5 +1,9 @@
 package mil.tron.commonapi.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
@@ -15,6 +19,9 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,6 +31,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -188,6 +196,98 @@ class PersonServiceImplTest {
 			});
 		}
  	}
+
+	@Nested
+	class PatchPersonTest {
+		JSONObject content;
+		JSONArray contentArr;
+		ObjectMapper objectMapper;
+		JsonPatch patch;
+
+		@BeforeEach
+		void basicPatch() throws JSONException, IOException {
+			content = new JSONObject();
+			content.put("op","test");
+			content.put("path","/dutyPhone");
+			content.put("value",testPerson.getDutyPhone());
+			contentArr = new JSONArray();
+			contentArr.put(content);
+			objectMapper = new ObjectMapper();
+		}
+
+		@Test
+		void successfulPatch() throws JSONException, IOException {
+			// replace op
+			content = new JSONObject();
+			content.put("op","replace");
+			content.put("path","/firstName");
+			content.put("value",testPerson.getFirstName());
+			// remove op
+			content = new JSONObject();
+			content.put("op","remove");
+			content.put("path","/lastName");
+			contentArr.put(content);
+			// add op
+			content = new JSONObject();
+			content.put("op","add");
+			content.put("path","/lastName");
+			content.put("value",testPerson.getLastName());
+			contentArr.put(content);
+			// copy op
+			content = new JSONObject();
+			content.put("op","copy");
+			content.put("from","/address");
+			content.put("path","/address");
+			contentArr.put(content);
+			// move op
+			content = new JSONObject();
+			content.put("op","copy");
+			content.put("from","/middleName");
+			content.put("path","/middleName");
+			contentArr.put(content);
+
+			JsonNode newNode = objectMapper.readTree(contentArr.toString());
+			patch = JsonPatch.fromJson(newNode);
+
+			// create a different test person that has a changed name
+			Person tempTestPerson = testPerson;
+			tempTestPerson.setFirstName("patchFirst");
+
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(tempTestPerson));
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			// pass through the patched entity
+			Mockito.when(repository.save(Mockito.any(Person.class))).thenAnswer(i -> i.getArguments()[0]);
+			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
+
+			PersonDto patchedPerson = personService.patchPerson(testPerson.getId(), patch);
+			assertThat(patchedPerson.getId()).isEqualTo(testPerson.getId());
+		}
+
+		@Test
+		void idNotExist() throws IOException {
+			JsonNode newNode = objectMapper.readTree(contentArr.toString());
+			patch = JsonPatch.fromJson(newNode);
+
+			// Test id not exist
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
+			assertThrows(RecordNotFoundException.class, () -> personService.patchPerson(testPerson.getId(), patch));
+		}
+
+		@Test
+		void emailAlreadyExists() throws IOException {
+			JsonNode newNode = objectMapper.readTree(contentArr.toString());
+			patch = JsonPatch.fromJson(newNode);
+
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
+
+			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
+				personService.patchPerson(testPerson.getId(), patch);
+			});
+		}
+	}
 
     @Test
     void deletePersonTest() {

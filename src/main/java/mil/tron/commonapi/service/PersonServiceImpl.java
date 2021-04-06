@@ -1,6 +1,15 @@
 package mil.tron.commonapi.service;
 
 import com.google.common.collect.Sets;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.JsonPatch;
+import com.github.fge.jsonpatch.JsonPatchException;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.persons.*;
@@ -21,10 +30,6 @@ import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.modelmapper.Conditions;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
 import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
 @Service
@@ -35,6 +40,7 @@ public class PersonServiceImpl implements PersonService {
 	private PersonMetadataRepository personMetadataRepository;
 	private EventManagerService eventManagerService;
 	private final DtoMapper modelMapper;
+	private final ObjectMapper objMapper;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
 			Branch.USAF, fields(Airman.class),
 			Branch.USCG, fields(CoastGuardsman.class),
@@ -57,10 +63,12 @@ public class PersonServiceImpl implements PersonService {
 		this.eventManagerService = eventManagerService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+
         modelMapper.typeMap(Person.class, PersonDto.class)
             .addMappings(m -> m.skip(PersonDto::setPrimaryOrganizationId))
             .addMappings(m -> m.skip(PersonDto::setOrganizationLeaderships))
             .addMappings(m -> m.skip(PersonDto::setOrganizationMemberships));
+		objMapper = new ObjectMapper();
 	}
 
 	/**
@@ -117,7 +125,7 @@ public class PersonServiceImpl implements PersonService {
 		Optional<Person> dbPerson = repository.findById(id);
 
 		if (dbPerson.isEmpty())
-			throw new RecordNotFoundException("Person resource with the ID: " + id + " does not exist.");
+			throw this.buildRecordNotFoundForPerson(id);
 
 		if (!personChecksService.personEmailIsUnique(entity)) {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
@@ -177,10 +185,35 @@ public class PersonServiceImpl implements PersonService {
 					unknownProperties.add(key);
 				}
 			});
-			if (unknownProperties.size() > 0) {
+			if (!unknownProperties.isEmpty()) {
 				throw new InvalidRecordUpdateRequest(String.format("Invalid properties for %s: %s", branch, String.join(", ", unknownProperties)));
 			}
 		}
+	}
+
+	@Override
+	public PersonDto patchPerson(UUID id, JsonPatch patch) {
+		Optional<Person> dbPerson = repository.findById(id);
+
+		if (dbPerson.isEmpty()) {
+			throw this.buildRecordNotFoundForPerson(id);
+		}
+		// patch must be done using a DTO
+		PersonDto dbPersonDto = convertToDto(dbPerson.get(),null);
+		PersonDto patchedPersonDto = applyPatchToPerson(patch, dbPersonDto);
+		Person patchedPerson = convertToEntity(patchedPersonDto);
+
+		if (!personChecksService.personEmailIsUnique(patchedPerson)) {
+			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", patchedPerson.getEmail()));
+		}
+
+		PersonDto updatedPerson = updateMetadata(patchedPersonDto.getBranch(), patchedPerson, dbPerson, patchedPersonDto.getMeta());
+
+		PersonChangedMessage message = new PersonChangedMessage();
+		message.addPersonId(updatedPerson.getId());
+		eventManagerService.recordEventAndPublish(message);
+
+		return updatedPerson;
 	}
 
 	@Override
@@ -207,7 +240,7 @@ public class PersonServiceImpl implements PersonService {
 
 	@Override
 	public Person getPerson(UUID id) {
-		return repository.findById(id).orElseThrow(() -> new RecordNotFoundException("Person resource with ID: " + id + " does not exist."));
+		return repository.findById(id).orElseThrow(() -> this.buildRecordNotFoundForPerson(id));
 	}
 
 	@Override
@@ -274,5 +307,20 @@ public class PersonServiceImpl implements PersonService {
 		Person entity = modelMapper.map(dto, Person.class);
 		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
 		return entity;
+	}
+
+	@Override
+	public PersonDto applyPatchToPerson(JsonPatch patch, PersonDto personDto) {
+		try {
+			JsonNode patched = patch.apply(objMapper.convertValue(personDto, JsonNode.class));
+			return objMapper.treeToValue(patched, PersonDto.class);
+		}
+		catch (JsonPatchException | JsonProcessingException e) {
+			throw new InvalidRecordUpdateRequest(String.format("Error patching person with email %s.", personDto.getEmail()));
+		}
+	}
+
+	private RecordNotFoundException buildRecordNotFoundForPerson(UUID personId) {
+		return new RecordNotFoundException("Person resource with ID: " + personId + " does not exist.");
 	}
 }

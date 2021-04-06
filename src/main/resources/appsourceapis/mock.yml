@@ -1,0 +1,14 @@
+openapi: 3.0.2
+info:
+  title: mock-api
+  version: 1
+  description: Mock API definitions.
+servers:
+  -
+    url: 'http://test.com/v1'
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK

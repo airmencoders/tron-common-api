@@ -4,14 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.organizations.Squadron;
+import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
+import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.OrganizationService;
+import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
 
 import org.assertj.core.util.Lists;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -22,8 +29,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
 import java.io.IOException;
@@ -39,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
+@TestPropertySource(locations = "classpath:application-test.properties")
 @AutoConfigureMockMvc
 public class OrganizationIntegrationTest {
 
@@ -61,6 +71,9 @@ public class OrganizationIntegrationTest {
 
     @Autowired
     private PersonService personService;
+
+    @Autowired
+    private PersonRepository personRepository;
 
     @BeforeEach
     public void insertSquadron() throws Exception {
@@ -205,7 +218,7 @@ public class OrganizationIntegrationTest {
         organizationService.createOrganization(parent);
 
         theOrg.setParentOrganizationUUID(parent.getId());
-        theOrg.setMembersUUID(Set.of(p1.getId(), p2.getId()));
+        theOrg.setMembersUUID(List.of(p1.getId(), p2.getId()));
         organizationService.createOrganization(theOrg);
 
         parent.setSubOrgsUUID(Set.of(theOrg.getId()));
@@ -292,6 +305,161 @@ public class OrganizationIntegrationTest {
         public void metadataCleanup() {
             organizationMetadataRepository.deleteAll();
             organizationRepository.deleteAll();
+        }
+    }
+
+    @Nested
+    class OrgPatchTests {
+
+        private final Squadron existingOrgDto;
+        private final Squadron existingParentOrg;
+        private final Squadron existingChildOrg;
+        private final Person existingPerson;
+        private final UUID orgId = UUID.randomUUID();
+        private final UUID parentOrgId = UUID.randomUUID();
+        private final UUID childOrgId = UUID.randomUUID();
+
+        public OrgPatchTests() {
+            this.existingPerson = Person.builder()
+                    .id(UUID.randomUUID())
+                    .firstName("First")
+                    .lastName("Last")
+                    .build();
+            this.existingOrgDto = new Squadron();
+            this.existingOrgDto.setId(orgId);
+            this.existingOrgDto.setName("Org Name");
+            this.existingOrgDto.setBranchType(Branch.USAF);
+            this.existingOrgDto.setOrgType(Unit.SQUADRON);
+            this.existingOrgDto.setMembers(Set.of(this.existingPerson));
+            this.existingOrgDto.setLeader(this.existingPerson);
+            this.existingOrgDto.setPas("Pas");
+            this.existingOrgDto.setPas("pasValue");
+
+            this.existingParentOrg = new Squadron();
+            this.existingParentOrg.setId(parentOrgId);
+            this.existingParentOrg.setName("Parent Org Name");
+            this.existingParentOrg.setBranchType(Branch.USAF);
+            this.existingParentOrg.setOrgType(Unit.SQUADRON);
+
+            this.existingChildOrg = new Squadron();
+            this.existingChildOrg.setId(childOrgId);
+            this.existingChildOrg.setName("Child Org Name");
+            this.existingChildOrg.setBranchType(Branch.USAF);
+            this.existingChildOrg.setOrgType(Unit.SQUADRON);
+        }
+
+        @BeforeEach
+        void beforeEach() {
+            PersonDto personDto = personService.convertToDto(this.existingPerson, new PersonConversionOptions());
+            personDto.setRank("Capt");
+            personDto.setBranch(Branch.USAF);
+            personService.createPerson(personDto);
+            organizationService.createOrganization(this.existingParentOrg);
+            Optional<Organization> parentOrg = organizationRepository.findById(this.existingParentOrg.getId());
+            existingOrgDto.setParentOrganization(parentOrg.get());
+            organizationService.createOrganization(this.existingOrgDto);
+        }
+
+        @Test
+        @Transactional
+        void testPatchOrgLeader() throws Exception {
+            UUID newLeaderId = UUID.randomUUID();
+            PersonDto newLeader = personService.convertToDto(Person.builder()
+                    .id(newLeaderId)
+                    .build(), new PersonConversionOptions());
+            newLeader.setRank("Capt");
+            newLeader.setBranch(Branch.USAF);
+            personService.createPerson(newLeader);
+            JSONArray contentArray = new JSONArray();
+            JSONObject content = new JSONObject();
+            content.put("op", "replace");
+            content.put("path", "/leader");
+            content.put("value", newLeaderId);
+            contentArray.put(content);
+            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+                    .contentType("application/json-patch+json")
+                    .content(contentArray.toString()))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            assertTrue(result.getResponse().getContentAsString().contains(newLeaderId.toString()));
+        }
+
+        @Test
+        @Transactional
+        void testPatchAddOrgMembers() throws Exception {
+
+            UUID newMemberId = UUID.randomUUID();
+            PersonDto newMember = personService.convertToDto(Person.builder()
+                    .id(newMemberId)
+                    .build(), new PersonConversionOptions());
+            newMember.setRank("Capt");
+            newMember.setBranch(Branch.USAF);
+            personService.createPerson(newMember);
+
+            JSONArray contentArray = new JSONArray();
+            JSONObject content = new JSONObject();
+            content.put("op", "add");
+            content.put("path", "/members/-");
+            content.put("value", newMemberId);
+            contentArray.put(content);
+            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+                    .contentType("application/json-patch+json")
+                    .content(contentArray.toString()))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            Optional<Organization> updatedOrg = organizationRepository.findById(this.existingOrgDto.getId());
+            Set<Person> orgMembers = updatedOrg.get().getMembers();
+            int numberOfMembers = orgMembers.size();
+            assertEquals(2, numberOfMembers);
+        }
+
+        @Test
+        @Transactional
+        void testPatchOrgParentOrg() throws Exception {
+            JSONArray contentArray = new JSONArray();
+            JSONObject content = new JSONObject();
+            content.put("op", "remove");
+            content.put("path", "/parentOrganization");
+            contentArray.put(content);
+            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+                    .contentType("application/json-patch+json")
+                    .content(contentArray.toString()))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            Optional<Organization> updatedOrg = organizationRepository.findById(this.existingOrgDto.getId());
+            assertTrue(updatedOrg.get().getParentOrganization() == null);
+        }
+
+        @Test
+        @Transactional
+        void testPatchNameTest() throws Exception {
+            JSONArray contentArray = new JSONArray();
+
+            JSONObject testContent = new JSONObject();
+            testContent.put("op", "test");
+            testContent.put("path", "/name");
+            testContent.put("value", "Not the Name");
+            contentArray.put(testContent);
+
+            JSONObject replaceContent = new JSONObject();
+            replaceContent.put("op", "replace");
+            replaceContent.put("path", "/name");
+            replaceContent.put("value", "New Name");
+            contentArray.put(replaceContent);
+
+            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+                    .contentType("application/json-patch+json")
+                    .content(contentArray.toString()))
+                    .andExpect(status().is4xxClientError())
+                    .andReturn();
+            Optional<Organization> updatedOrg = organizationRepository.findById(this.existingOrgDto.getId());
+            assertEquals("Org Name", updatedOrg.get().getName());
+        }
+
+        @AfterEach
+        void afterEach() throws Exception {
+            organizationService.deleteOrganization(orgId);
+            personRepository.deleteAll();
         }
     }
 
