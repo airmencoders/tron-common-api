@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import org.assertj.core.util.Lists;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +47,8 @@ public class AppSourceEndpointsBuilder {
 
     private AppEndpointRepository appEndpointRepository;
 
+    private AppEndpointPrivRepository appEndpointPrivRepository;
+
     private String apiVersionPrefix;
     
 
@@ -54,8 +57,8 @@ public class AppSourceEndpointsBuilder {
                               AppGatewayController queryController,
                               AppGatewayService appGatewayService,
                               AppSourceConfig appSourceConfig,
-                              AppSourceRepository appSourceRepository,
                               AppEndpointRepository appEndpointRepository,
+                              AppEndpointPrivRepository appEndpointPrivRepository,
                               @Value("${api-prefix.v1}") String apiVersionPrefix
     ) {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
@@ -64,6 +67,7 @@ public class AppSourceEndpointsBuilder {
         this.apiVersionPrefix = apiVersionPrefix;
         this.appGatewayService = appGatewayService;
         this.appEndpointRepository = appEndpointRepository;
+        this.appEndpointPrivRepository = appEndpointPrivRepository;
         this.createAppSourceEndpoints(this.appSourceConfig);
     }
 
@@ -88,6 +92,7 @@ public class AppSourceEndpointsBuilder {
                     this.addMapping(appDef.getAppSourcePath(), appEndpoint);
                     this.addEndpointToSource(appEndpoint, appSource);
                 }
+                deDuplicateRows(appSource);
             }
         }
         catch (FileNotFoundException e) {
@@ -178,6 +183,29 @@ public class AppSourceEndpointsBuilder {
             }
         } catch (Exception e) {
             log.warn(String.format("Unable to add endpoint to app source %s.", appSource.getName()), e);
+        }
+    }
+
+    /**
+     * Utility function to de dupe any endpoints in the database produced by camel.
+     * This function prefers the first match it finds out of a route that has duplicates and tries to delete
+     * the others (breaking links if necessary).  This method should **have** to run, since there should not be
+     * duplicates.
+     * @param appSource the app source to search
+     */
+    private void deDuplicateRows(AppSource appSource) {
+        for (AppEndpoint point : Lists.newArrayList(appEndpointRepository.findAllByAppSource(appSource))) {
+            List<AppEndpoint> others = Lists.newArrayList(
+                    appEndpointRepository.findAllByAppSourceEqualsAndMethodEqualsAndPathEquals(appSource, point.getMethod(), point.getPath()));
+
+            for (int i = 1; i < others.size(); i++) {
+                try {
+                    appEndpointPrivRepository.removeAllByAppEndpoint(others.get(i));
+                    appEndpointRepository.delete(others.get(i));
+                } catch (Exception e) {
+                    log.warn(String.format("Unable to delete duplicate app endpoint %s - %s.", point.getId(), point.getPath()), e);
+                }
+            }
         }
     }
 }

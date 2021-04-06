@@ -63,6 +63,12 @@ public class AppGatewayControllerTest {
 
         mockMvc.perform(get("/v1/app/mock/test"))
                 .andExpect(status().isOk());
+
+        mockMvc.perform(get("/v1/app/mock/test2"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/v1/app/mock/test3"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

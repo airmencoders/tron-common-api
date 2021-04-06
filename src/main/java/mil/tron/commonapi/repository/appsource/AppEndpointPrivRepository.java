@@ -16,5 +16,8 @@ public interface AppEndpointPrivRepository extends JpaRepository<AppEndpointPriv
                                                                               AppEndpoint appEndpoint);
 
     @Transactional
+    void removeAllByAppEndpoint(AppEndpoint appEndpoint);
+
+    @Transactional
     Iterable<UUID> removeAllByAppSource(AppSource appSource);
 }
