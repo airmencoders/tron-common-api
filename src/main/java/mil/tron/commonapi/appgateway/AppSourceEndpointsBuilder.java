@@ -57,7 +57,6 @@ public class AppSourceEndpointsBuilder {
                               AppGatewayController queryController,
                               AppGatewayService appGatewayService,
                               AppSourceConfig appSourceConfig,
-                              AppSourceRepository appSourceRepository,
                               AppEndpointRepository appEndpointRepository,
                               AppEndpointPrivRepository appEndpointPrivRepository,
                               @Value("${api-prefix.v1}") String apiVersionPrefix
