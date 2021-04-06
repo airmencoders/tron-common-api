@@ -34,9 +34,7 @@ public class AppGatewayController {
         this.appGatewayService = appGatewayService;
     }
 
-    public ResponseEntity<byte[]> handleGetRequests(HttpServletRequest requestObject,
-                                                    HttpServletResponse responseObject,
-                                                    @PathVariable Map<String, String> vars)
+    public ResponseEntity<byte[]> handleGetRequests(HttpServletRequest requestObject, HttpServletResponse responseObject, @PathVariable Map<String, String> vars) //NOSONAR
             throws ResponseStatusException,
                     IOException,
                     InvalidAppSourcePermissions {
