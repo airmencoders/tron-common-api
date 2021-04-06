@@ -1,12 +1,11 @@
 package mil.tron.commonapi.dto.annotation.helper;
+
 import lombok.Getter;
 import lombok.Setter;
 
-public abstract class JsonPatchAnnotated {
+public class JsonPatchStringValue extends JsonPatchAnnotated {
+
     @Getter
     @Setter
-    private PatchOp op;
-    @Getter
-    @Setter
-    private String path;
+    private String value;
 }
