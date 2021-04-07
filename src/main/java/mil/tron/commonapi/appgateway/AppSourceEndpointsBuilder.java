@@ -42,8 +42,6 @@ public class AppSourceEndpointsBuilder {
 
     private AppEndpointRepository appEndpointRepository;
 
-    private AppEndpointPrivRepository appEndpointPrivRepository;
-
     private String apiVersionPrefix;
     
 
@@ -53,7 +51,6 @@ public class AppSourceEndpointsBuilder {
                               AppGatewayService appGatewayService,
                               AppSourceConfig appSourceConfig,
                               AppEndpointRepository appEndpointRepository,
-                              AppEndpointPrivRepository appEndpointPrivRepository,
                               @Value("${api-prefix.v1}") String apiVersionPrefix
     ) {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
@@ -62,7 +59,6 @@ public class AppSourceEndpointsBuilder {
         this.apiVersionPrefix = apiVersionPrefix;
         this.appGatewayService = appGatewayService;
         this.appEndpointRepository = appEndpointRepository;
-        this.appEndpointPrivRepository = appEndpointPrivRepository;
         this.createAppSourceEndpoints(this.appSourceConfig);
     }
 
