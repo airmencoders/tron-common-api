@@ -135,6 +135,13 @@ public class PersonDto {
     private String dutyTitle;
 
     /**
+     * The primary organization for this person
+     */
+    @Getter
+    @Setter
+    private UUID primaryOrganizationId;
+
+    /**
      * The organizations this person is a member of
      */
     @Getter

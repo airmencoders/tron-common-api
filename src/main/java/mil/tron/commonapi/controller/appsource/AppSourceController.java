@@ -9,10 +9,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
+import mil.tron.commonapi.service.AppClientUserService;
 import mil.tron.commonapi.service.AppSourceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -34,13 +36,15 @@ import java.util.stream.Collectors;
 @RequestMapping("${api-prefix.v1}/app-source")
 public class AppSourceController {
 
+    private AppClientUserService appClientUserService;
     private AppSourceService appSourceService;
     private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
     private static final String INVALID_PERMS = "Invalid User Permissions";
 
     @Autowired
-    AppSourceController(AppSourceService appSourceService) {
+    AppSourceController(AppSourceService appSourceService, AppClientUserService appClientUserService) {
         this.appSourceService = appSourceService;
+        this.appClientUserService = appClientUserService;
     }
 
     private void checkUserIsDashBoardAdminOrAppSourceAdmin(UUID appId) {
@@ -67,6 +71,26 @@ public class AppSourceController {
         if (!appSourceService.userIsAdminForAppSource(appId, userEmail)) {
             throw new InvalidAppSourcePermissions(INVALID_PERMS);
         }
+    }
+
+    /**
+     * Wrapper for the checkUserIsDashBoardAdminOrAppSourceAdmin but traps
+     * its exceptions and just returns false
+     * @param appId UUID of the app source
+     * @return true if user is Dashboard Admin or App Source admin for given appId
+     */
+    private boolean userIsDashBoardAdminOrAppSourceAdmin(UUID appId) {
+
+        boolean result = true;
+
+        try {
+            this.checkUserIsDashBoardAdminOrAppSourceAdmin(appId);
+        }
+        catch (InvalidAppSourcePermissions ex) {
+            result = false;
+        }
+
+        return result;
     }
 
     @Operation(summary = "Creates an App Source including App Client permissions.", description = "Requires DASHBOARD_ADMIN rights")
@@ -107,10 +131,15 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
 					))
     })
-    @PreAuthorizeDashboardAdmin
     @GetMapping
     public ResponseEntity<List<AppSourceDto>> getAppSources() {
-        return new ResponseEntity<>(this.appSourceService.getAppSources(), HttpStatus.OK);
+        List<AppSourceDto> dtos = this.appSourceService
+                .getAppSources()
+                .stream()
+                .filter(source -> userIsDashBoardAdminOrAppSourceAdmin(source.getId()))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
     @Operation(summary = "Returns the details for an App Source", description = "Requires DASHBOARD_ADMIN or APP_SOURCE_ADMIN rights.")
@@ -208,8 +237,8 @@ public class AppSourceController {
         return new ResponseEntity<>(appSourceService.deleteAppSource(id), HttpStatus.OK);
     }
 
-    // app source user management, patch endpoints for adding removing app source admins, singularly
-    //   multiples can be done in a whole-record PUT request above...
+    // app source user management, patch endpoints for adding removing app source admins, singularly.
+    //   Multiple users can be done in a whole-record PUT request using endpoints above...
 
     @Operation(summary = "Adds single app source admin by email address to provided App Source",
             description = "Requester has to have DASHBOARD_ADMIN rights or be APP_SOURCE_ADMIN of given App Id.  Request payload is a DashboardUserDto, " +
@@ -267,6 +296,98 @@ public class AppSourceController {
 
         checkUserIsDashBoardAdminOrAppSourceAdmin(id);
         return new ResponseEntity<>(appSourceService.removeAdminFromAppSource(id, user.getEmail()), HttpStatus.OK);
+    }
+
+    // app-source endpoint management endpoints, manages client app access to this app-sources endpoints
+
+    @Operation(summary = "Deletes ALL app client privileges from provided App Source.  No App Clients will be able to use this app source's endpoints.",
+            description = "Requester has to have DASHBOARD_ADMIN rights or be APP_SOURCE_ADMIN of given App Id.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "All App Client Privileges Removed OK",
+                    content = @Content(schema = @Schema(implementation = AppSourceDetailsDto.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Id is malformed",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "App Source not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+                    ))
+    })
+    @DeleteMapping("/app-clients/all/{id}")
+    public ResponseEntity<Object> removeAllAppClientPrivs(
+            @Parameter(name = "id", description = "App Source UUID", required = true) @PathVariable UUID id) {
+        checkUserIsDashBoardAdminOrAppSourceAdmin(id);
+        return new ResponseEntity<>(appSourceService.deleteAllAppClientPrivs(id), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Gets a list of the available app clients (their names and UUIDs)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "All App Client Privileges Removed OK",
+                    content = @Content(schema = @Schema(implementation = AppSourceDetailsDto.class)))
+    })
+    @GetMapping("/app-clients")
+    public ResponseEntity<Object> getAvailableAppClients() {
+        return new ResponseEntity<>(appClientUserService.getAppClientUserSummaries(), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Adds an app source's endpoint to app client privilege relationship",
+            description = "Requester has to have DASHBOARD_ADMIN rights or be APP_SOURCE_ADMIN of given App Id.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Record Added/Updated OK",
+                    content = @Content(schema = @Schema(implementation = AppSourceDetailsDto.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "An Id is malformed",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "App Source/End Point/App Client not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+                    ))
+    })
+    @PostMapping("/app-clients")
+    public ResponseEntity<Object> addClientToEndpointPriv(
+            @Parameter(name = "appId", description = "App Source UUID", required = true) @Valid @RequestBody AppEndPointPrivDto dto) {
+        checkUserIsDashBoardAdminOrAppSourceAdmin(dto.getAppSourceId());
+        return new ResponseEntity<>(appSourceService.addEndPointPrivilege(dto), HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "Deletes an app source's endpoint to app client privilege relationship",
+            description = "Requester has to have DASHBOARD_ADMIN rights or be APP_SOURCE_ADMIN of given App Id.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Privilege Removed OK",
+                    content = @Content(schema = @Schema(implementation = AppSourceDetailsDto.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "An Id is malformed",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "App Source/End Point/App Client not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+                    ))
+    })
+    @DeleteMapping("/app-clients/{appId}/{privId}")
+    public ResponseEntity<Object> removeClientToEndPointPriv(
+            @Parameter(name = "appId", description = "App Source UUID", required = true) @PathVariable UUID appId,
+            @Parameter(name = "privId", description = "App Source Endpoint Privilege UUID", required = true) @PathVariable UUID privId) {
+        checkUserIsDashBoardAdminOrAppSourceAdmin(appId);
+        return new ResponseEntity<>(appSourceService.removeEndPointPrivilege(appId, privId), HttpStatus.OK);
     }
 
 }

@@ -10,6 +10,7 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.OrganizationService;
 import org.assertj.core.util.Lists;
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.test.context.TestPropertySource;
@@ -91,7 +93,7 @@ public class OrganizationControllerTest {
 				.name(testOrg.getName())
 				.orgType(Unit.WING)
 				.branchType(Branch.USAF)
-				.members(testOrg.getMembers().stream().map(Person::getId).collect(Collectors.toSet()))
+				.members(testOrg.getMembers().stream().map(Person::getId).collect(Collectors.toList()))
 				.build();
 
 	}
@@ -358,7 +360,7 @@ public class OrganizationControllerTest {
 			newOrg.setName("test org");
 			newOrg.getMembers().add(p.getId());
 
-			Mockito.when(organizationService.addOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class))).thenReturn(newOrg);
+			Mockito.when(organizationService.addOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class), Mockito.anyBoolean())).thenReturn(newOrg);
 			MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}/members", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
@@ -416,7 +418,7 @@ public class OrganizationControllerTest {
 
 			Person p = new Person();
 			Person p2 = new Person();
-			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
+			newOrg.setMembersUUID(List.of(p.getId(), p2.getId()));
 
 			Mockito.when(organizationService.flattenOrg(testOrgDto))
 					.thenReturn(OrganizationDto
@@ -455,7 +457,7 @@ public class OrganizationControllerTest {
 					.lastName("Public")
 					.build();
 
-			newOrg.setMembersUUID(Set.of(p.getId(), p2.getId()));
+			newOrg.setMembersUUID(List.of(p.getId(), p2.getId()));
 
 			Mockito.when(organizationService.getOrganization(newOrg.getId())).thenReturn(newOrg);
 			Mockito.when(organizationService.getOrganization(testOrgDto.getId())).thenReturn(testOrgDto);
@@ -491,5 +493,8 @@ public class OrganizationControllerTest {
 					.andExpect(status().isOk());
 
 		}
+
+
+
 	}
 }

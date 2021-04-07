@@ -1,25 +1,8 @@
 package mil.tron.commonapi.service;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-import javax.transaction.Transactional;
-
-import org.assertj.core.util.Lists;
-import org.assertj.core.util.Sets;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestMethod;
-
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
@@ -29,6 +12,7 @@ import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -38,6 +22,16 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import org.assertj.core.util.Lists;
+import org.assertj.core.util.Sets;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import javax.transaction.Transactional;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 public class AppSourceServiceImpl implements AppSourceService {
@@ -50,7 +44,9 @@ public class AppSourceServiceImpl implements AppSourceService {
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserService dashboardUserService;
     private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
-    private static final String APP_SOURCE_NO_FOUND_MSG = "No App Source found with id %s.";
+    private static final String APP_SOURCE_NOT_FOUND_MSG = "No App Source found with id %s.";
+    private static final String APP_SOURCE_NO_ENDPOINT_FOUND_MSG = "No App Source Endpoint found with id %s.";
+    private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
 
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
@@ -104,7 +100,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                     id, appSourceDetailsDto.getId()));
         }
 
-        AppSource existingAppSource = this.appSourceRepository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, id)));
+        AppSource existingAppSource = this.appSourceRepository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, id)));
         // Name has changed. Make sure the new name doesn't exist
         if (!existingAppSource.getName().equals(appSourceDetailsDto.getName().trim()) &&
             this.appSourceRepository.existsByNameIgnoreCase(appSourceDetailsDto.getName().trim())) {
@@ -119,7 +115,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     public AppSourceDetailsDto deleteAppSource(UUID id) {
         // validate id
         AppSource toRemove = this.appSourceRepository.findById(id)
-                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, id)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, id)));
 
         // remove admins attached to this app
         toRemove = this.deleteAdminsFromAppSource(toRemove, "", true);
@@ -158,6 +154,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .build()).collect(Collectors.toList()))
                 .appClients(appSource.getAppPrivs().stream()
                     .map(appEndpointPriv -> AppClientUserPrivDto.builder()
+                        .id(appEndpointPriv.getId())
                         .appClientUser(appEndpointPriv.getAppClientUser().getId())
                         .appClientUserName(appEndpointPriv.getAppClientUser().getName())
                         .privilege(appEndpointPriv.getAppEndpoint().getPath())
@@ -261,7 +258,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     @Override
     public AppSourceDetailsDto addAppSourceAdmin(UUID appSourceId, String email) {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
-                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, appSourceId)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, appSourceId)));
 
         appSource.getAppSourceAdmins().add(createDashboardUserWithAsAppSourceAdmin(email));
         return this.buildAppSourceDetailsDto(appSourceRepository.saveAndFlush(appSource));
@@ -276,7 +273,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     @Override
     public boolean userIsAdminForAppSource(UUID appId, String email) {
         AppSource appSource = this.appSourceRepository.findById(appId)
-                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, appId)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, appId)));
 
         for (DashboardUser user : appSource.getAppSourceAdmins()) {
             if (user.getEmail().equalsIgnoreCase(email)) {
@@ -299,7 +296,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     @Override
     public AppSourceDetailsDto removeAdminFromAppSource(UUID appSourceId, String email) {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
-                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_FOUND_MSG, appSourceId)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, appSourceId)));
 
         appSource = this.deleteAdminsFromAppSource(appSource, email, false);
 
@@ -361,4 +358,94 @@ public class AppSourceServiceImpl implements AppSourceService {
     }
 
 
+    /**
+     * Deletes all app clients privileges for this app source - one shot to shut down all
+     *   app client accesses to app source endpoints
+     * @param appSourceId UUID of the app source to remove all app client privileges from
+     * @return the modified app source details dto
+     */
+    @Override
+    public AppSourceDetailsDto deleteAllAppClientPrivs(UUID appSourceId) {
+        AppSource appSource = this.appSourceRepository.findById(appSourceId)
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, appSourceId)));
+
+        List<AppEndpointPriv> appClientPrivs = new ArrayList<>(appSource.getAppPrivs());
+
+        appSource.setAppPrivs(new HashSet<>());
+        for (AppEndpointPriv priv : new ArrayList<>(appClientPrivs)) {
+            appEndpointPrivRepository.delete(priv);
+        }
+
+        appSourceRepository.saveAndFlush(appSource);
+        return this.buildAppSourceDetailsDto(appSource);
+    }
+
+    /**
+     * Adds an app source endpoint privilege relationship to some app client
+     * @param dto the AppEndPointPrivDto containing the app source, app client, and app source endpoint's UUIDs
+     * @return the modified AppSourceDetailsDto or else throws if that app source to app client to endpoint priv exists
+     */
+    @Override
+    public AppSourceDetailsDto addEndPointPrivilege(AppEndPointPrivDto dto) {
+        AppSource appSource = this.appSourceRepository.findById(dto.getAppSourceId())
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, dto.getAppSourceId())));
+
+        AppEndpoint endPoint = this.appEndpointRepository.findById(dto.getAppEndpointId())
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_ENDPOINT_FOUND_MSG, dto.getAppEndpointId())));
+
+        AppClientUser appClient = this.appClientUserRespository.findById(dto.getAppClientUserId())
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_CLIENT_NOT_FOUND_MSG, dto.getAppClientUserId())));
+
+        if (!appEndpointPrivRepository
+                .existsByAppSourceEqualsAndAppClientUserEqualsAndAppEndpointEquals(appSource, appClient, endPoint)) {
+
+            AppEndpointPriv newPriv = AppEndpointPriv.builder()
+                    .id(UUID.randomUUID())
+                    .appSource(appSource)
+                    .appClientUser(appClient)
+                    .appEndpoint(endPoint)
+                    .build();
+
+            appEndpointPrivRepository.saveAndFlush(newPriv);
+
+            Set<AppEndpointPriv> privs = new HashSet<>(appSource.getAppPrivs());
+            privs.add(newPriv);
+            appSource.setAppPrivs(privs);
+
+            return this.buildAppSourceDetailsDto(appSourceRepository.saveAndFlush(appSource));
+        }
+        else {
+            throw new ResourceAlreadyExistsException("An App Source to App Client privilege already exists for that endpoint");
+        }
+    }
+
+    /**
+     * Removes (deletes) a single app source endpoint to app client privilege from the provided app source
+     * @param appSourceId the UUID of the app source
+     * @param appSourceEndPointPrivId the UUID of the app source endpoint priv to delete
+     * @return the modified AppSourceDetailsDto or else throws if that app source to app client to endpoint priv exists
+     */
+    @Override
+    public AppSourceDetailsDto removeEndPointPrivilege(UUID appSourceId, UUID appSourceEndPointPrivId) {
+        AppSource appSource = this.appSourceRepository.findById(appSourceId)
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, appSourceId)));
+
+        AppEndpointPriv endPoint = this.appEndpointPrivRepository.findById(appSourceEndPointPrivId)
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NO_ENDPOINT_FOUND_MSG, appSourceEndPointPrivId)));
+
+        // verify this endpoint is part of this app source... and not some other app source
+        if (appSource.getId().equals(endPoint.getAppSource().getId())) {
+            appEndpointPrivRepository.deleteById(appSourceEndPointPrivId);
+
+            Set<AppEndpointPriv> privs = new HashSet<>(appSource.getAppPrivs());
+            privs.removeIf(item -> item.getId().equals(appSourceEndPointPrivId));
+            appSource.setAppPrivs(privs);
+
+            // return the new app source record
+            return this.buildAppSourceDetailsDto(appSourceRepository.saveAndFlush(appSource));
+        }
+        else {
+            throw new InvalidAppSourcePermissions(String.format("Endpoint privilege with ID %s does not belong to app source %s", appSourceEndPointPrivId, appSourceId));
+        }
+    }
 }

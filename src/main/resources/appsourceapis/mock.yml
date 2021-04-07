@@ -12,3 +12,8 @@ paths:
       responses:
         '200':
           description: OK
+  /test2:
+    get:
+      responses:
+        '200':
+          description: OK

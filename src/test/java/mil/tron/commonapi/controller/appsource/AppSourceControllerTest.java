@@ -12,7 +12,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import mil.tron.commonapi.dto.AppClientSummaryDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
+import mil.tron.commonapi.service.AppClientUserService;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -55,6 +59,9 @@ public class AppSourceControllerTest {
 	
 	@MockBean
 	private AppSourceService service;
+
+	@MockBean
+	private AppClientUserService appClientUserService;
 	
 	private static UUID APP_SOURCE_UUID = UUID.randomUUID();
     private static String APP_SOURCE_NAME = "Test App Source";
@@ -164,6 +171,15 @@ public class AppSourceControllerTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
         }
+
+        @Test
+		void getAvailableAppClients() throws Exception {
+			Mockito.when(appClientUserService.getAppClientUserSummaries()).thenReturn(Lists.newArrayList(
+					AppClientSummaryDto.builder().name("Test").build()));
+
+			mockMvc.perform(get(ENDPOINT + "app-clients"))
+					.andExpect(status().isOk());
+		}
 	}
 	
 	@Nested
@@ -191,6 +207,22 @@ public class AppSourceControllerTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(result -> assertTrue(result.getResolvedException() instanceof HttpMessageNotReadableException));
         }
+
+        @Test
+		void testAddClientEndpointPriv() throws Exception {
+        	Mockito.when(service.addEndPointPrivilege(Mockito.any())).thenReturn(appSourceDetailsDto);
+			mockMvc.perform(post(ENDPOINT + "app-clients")
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(AppEndPointPrivDto
+						.builder()
+						.appSourceId(UUID.randomUUID())
+						.appEndpointId(UUID.randomUUID())
+						.appClientUserId(UUID.randomUUID())
+						.build())))
+					.andExpect(status().isCreated());
+
+		}
     }
 	
 	@Nested
@@ -259,6 +291,20 @@ public class AppSourceControllerTest {
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(OBJECT_MAPPER.writeValueAsString(DashboardUserDto.builder().email("joe@test.com").build())))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		void testRemoveAllAppClientPrivs() throws Exception {
+			Mockito.when(service.deleteAllAppClientPrivs(Mockito.any())).thenReturn(appSourceDetailsDto);
+			mockMvc.perform(delete(ENDPOINT + "app-clients/all/{appId}", appSourceDetailsDto.getId()))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		void testRemoveEndpointPriv() throws Exception {
+			Mockito.when(service.removeEndPointPrivilege(Mockito.any(), Mockito.any())).thenReturn(appSourceDetailsDto);
+			mockMvc.perform(delete(ENDPOINT + "app-clients/{appId}/{privId}", appSourceDetailsDto.getId(), UUID.randomUUID()))
 					.andExpect(status().isOk());
 		}
 	}

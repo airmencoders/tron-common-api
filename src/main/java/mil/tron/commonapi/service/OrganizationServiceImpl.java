@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import com.github.fge.jsonpatch.JsonPatch;
+import com.github.fge.jsonpatch.JsonPatchException;
 import com.google.common.collect.Sets;
 import mil.tron.commonapi.controller.OrganizationController;
 import mil.tron.commonapi.dto.OrganizationDto;
@@ -63,6 +65,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 			Unit.ORGANIZATION, Collections.emptySet()
 	);
 
+	private final ObjectMapper objMapper;
+
 	public OrganizationServiceImpl(
 			OrganizationRepository repository,
 			PersonRepository personRepository,
@@ -78,6 +82,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		this.organizationMetadataRepository = organizationMetadataRepository;
 		this.eventManagerService = eventManagerService;
 		this.modelMapper = new DtoMapper();
+		this.objMapper = new ObjectMapper();
 	}
 
 	/**
@@ -167,14 +172,23 @@ public class OrganizationServiceImpl implements OrganizationService {
 		Organization organization = repository.findById(organizationId).orElseThrow(
 				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
 
+        List<Person> updatedPersons = new ArrayList<>();
 		for (UUID id : personIds) {
 			Person person = personRepository.findById(id).orElseThrow(
 					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
-			organization.removeMember(person);
+            organization.removeMember(person);
+            if (person.getPrimaryOrganization() != null && person.getPrimaryOrganization().getId() == organizationId) {
+                person.setPrimaryOrganization(null);
+                updatedPersons.add(person);
+            }
 		}
 
-		Organization result = repository.save(organization);
+        Organization result = repository.save(organization);
+
+        if (updatedPersons.size() > 0) {
+            personRepository.saveAll(updatedPersons);
+        }
 
 		PersonOrgRemoveMessage message = new PersonOrgRemoveMessage();
 		message.setParentOrgId(organizationId);
@@ -185,26 +199,35 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Adds members from an organization and re-persists it to db.
-	 *
-	 * @param organizationId UUID of the organization
-	 * @param personIds      List of Person UUIDs to remove
-	 * @return Organization entity object
-	 */
+     * Adds members from an organization and re-persists it to db.
+     *
+     * @param organizationId UUID of the organization
+     * @param personIds      List of Person UUIDs to remove
+     * @param primary        Whether to set the org as the persons' primary org
+     * @return Organization entity object
+     */
 	@Override
-	public Organization addMember(UUID organizationId, List<UUID> personIds) {
+	public Organization addMember(UUID organizationId, List<UUID> personIds, boolean primary) {
 		Organization organization = repository.findById(organizationId)
 				.orElseThrow(() -> new RecordNotFoundException(
-						String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
-
-		for (UUID id : personIds) {
+                        String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
+                        
+        List<Person> updatedPersons = personIds.stream().map(id -> {
 			Person person = personRepository.findById(id).orElseThrow(
-					() -> new InvalidRecordUpdateRequest("Provided person UUID " + id.toString() + " does not exist"));
+                    () -> new InvalidRecordUpdateRequest("Provided person UUID " + id.toString() + " does not exist"));
 
+            if (primary) {
+                person.setPrimaryOrganization(organization);
+            }
 			organization.addMember(person);
-		}
+            return person;
+        }).collect(Collectors.toList());
 
-		Organization result = repository.save(organization);
+        Organization result = repository.save(organization);
+        
+        if (primary) {
+            personRepository.saveAll(updatedPersons);
+        }
 
 		PersonOrgAddMessage message = new PersonOrgAddMessage();
 		message.setParentOrgId(organizationId);
@@ -264,6 +287,34 @@ public class OrganizationServiceImpl implements OrganizationService {
 		});
 
 		return updateMetadata(organization, Optional.empty(), metadata);
+	}
+
+	@Override
+	public OrganizationDto patchOrganization(UUID id, JsonPatch patch) {
+		Optional<Organization> dbOrganization = this.repository.findById(id);
+
+		if (dbOrganization.isEmpty()) {
+			throw new RecordNotFoundException(String.format("Organization %s not found.", id));
+		}
+
+		OrganizationDto dbOrgDto = convertToDto(dbOrganization.get());
+		OrganizationDto patchedOrgDto = applyPatchToOrganization(patch, dbOrgDto);
+		Organization patchedOrg = convertToEntity(patchedOrgDto);
+
+		// If patch changes name and the new name is not unique throw error
+		if (!dbOrganization.get().getName().equalsIgnoreCase(patchedOrg.getName()) &&
+			!this.orgChecksService.orgNameIsUnique(patchedOrg)) {
+			throw new InvalidRecordUpdateRequest(String.format("Organization already exists with name %s",
+					patchedOrg.getName()));
+		}
+
+		OrganizationDto updateOrganization = updateMetadata(patchedOrg, dbOrganization, patchedOrgDto.getMeta());
+
+		OrganizationChangedMessage message = new OrganizationChangedMessage();
+		message.addOrgId(id);
+		eventManagerService.recordEventAndPublish(message);
+
+		return updateOrganization;
 	}
 
 	/**
@@ -389,7 +440,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			}
 		}
 
-		OrganizationDto result =  updateMetadata(entity, dbEntity, organization.getMeta());
+		OrganizationDto result = updateMetadata(entity, dbEntity, organization.getMeta());
 
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.setOrgIds(Sets.newHashSet(result.getId()));
@@ -437,13 +488,19 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public void deleteOrganization(UUID id) {
 		Organization org = repository.findById(id)
-				.orElseThrow(() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id)));
+                .orElseThrow(() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, id)));
+
+        for (Person member : org.getPrimaryMembers()) {
+            member.setPrimaryOrganization(null);
+        }
+        personRepository.saveAll(org.getPrimaryMembers());
 
 		// must delete the parent link (since parent depends on this org to exist by its foreign key)
-		if (org.getParentOrganization() != null) {
-			org.setParentOrganization(null);
-			repository.save(org);
-		}
+        if (org.getParentOrganization() != null) {
+            org.setParentOrganization(null);
+        }
+        
+        repository.save(org);
 
 		freeOrganizationFromLinks(org);
 
@@ -491,8 +548,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return The updated OrganizationDTO object
 	 */
 	@Override
-	public OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds) {
-		return this.convertToDto(this.addMember(organizationId, personIds));
+	public OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds, boolean primary) {
+		return this.convertToDto(this.addMember(organizationId, personIds, primary));
 	}
 
 	/**
@@ -569,7 +626,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 	public OrganizationDto convertToDto(Organization org) {
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 		OrganizationDto dto = modelMapper.map(org, OrganizationDto.class);
-		org.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
+		if (org.getMetadata() != null) {
+			org.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
+		}
 		return dto;
 	}
 
@@ -598,28 +657,33 @@ public class OrganizationServiceImpl implements OrganizationService {
 			}
 		};
 
-		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
-		modelMapper.addConverter(personDemapper);
-		modelMapper.addConverter(orgDemapper);
-		Organization org = modelMapper.map(dto, Organization.class);
+		try {
+			modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
+			modelMapper.addConverter(personDemapper);
+			modelMapper.addConverter(orgDemapper);
+			Organization org = modelMapper.map(dto, Organization.class);
 
-		// since model mapper has trouble mapping over UUID <--> Org for the nested Set<> in the Entity
-		//  just iterate over and do the lookup manually
-		if (dto.getSubordinateOrganizations() != null) {
-			for (UUID id : dto.getSubordinateOrganizations()) {
-				org.addSubordinateOrganization(findOrganization(id));
+			// since model mapper has trouble mapping over UUID <--> Org for the nested Set<> in the Entity
+			//  just iterate over and do the lookup manually
+			if (dto.getSubordinateOrganizations() != null) {
+				for (UUID id : dto.getSubordinateOrganizations()) {
+					org.addSubordinateOrganization(findOrganization(id));
+				}
 			}
-		}
 
-		// since model mapper has trouble mapping over UUID <--> Person for the nested Set<> in the Entity
-		//  just iterate over and do the lookup manually
-		if (dto.getMembers() != null) {
-			for (UUID id : dto.getMembers()) {
-				org.addMember(personService.getPerson(id));
+			// since model mapper has trouble mapping over UUID <--> Person for the nested Set<> in the Entity
+			//  just iterate over and do the lookup manually
+			if (dto.getMembers() != null) {
+				for (UUID id : dto.getMembers()) {
+					org.addMember(personService.getPerson(id));
+				}
 			}
-		}
 
-		return org;
+			return org;
+		}
+		catch (Exception e) {
+			throw e;
+		}
 	}
 
 	/**
@@ -665,10 +729,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 		flattenedOrg.setName(org.getName());
 		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
 		if (org.getMembers() != null) {
-			flattenedOrg.setMembersUUID(new HashSet<>(org.getMembers()));
+			flattenedOrg.setMembersUUID(new ArrayList<>(org.getMembers()));
 		}
 		else {
-			flattenedOrg.setMembersUUID(new HashSet<>());
+			flattenedOrg.setMembersUUID(new ArrayList<>());
 		}
 		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), flattenedOrg.getMembers()));
 		return flattenedOrg;
@@ -689,7 +753,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	// recursive helper function to dig deep on a units members
-	private Set<UUID> harvestOrgMembers(Set<UUID> orgIds, Set<UUID> accumulator) {
+	private List<UUID> harvestOrgMembers(Set<UUID> orgIds, List<UUID> accumulator) {
 
 		if (orgIds == null || orgIds.isEmpty()) return accumulator;
 
@@ -697,7 +761,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			OrganizationDto subOrg = getOrganization(orgId);
 			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
 			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
-			Set<UUID> ids = harvestOrgMembers(getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			List<UUID> ids = harvestOrgMembers(getOrganization(orgId).getSubordinateOrganizations(), new ArrayList<>());
 			accumulator.addAll(ids);
 		}
 
@@ -814,6 +878,18 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		} catch (JsonProcessingException e) {
 			throw new BadRequestException("Could not compile custom organizational entity");
+		}
+	}
+
+	@Override
+	public OrganizationDto applyPatchToOrganization(JsonPatch patch, OrganizationDto organizationDto) {
+		try {
+			JsonNode patched = patch.apply(this.objMapper.convertValue(organizationDto, JsonNode.class));
+			return this.objMapper.treeToValue(patched, OrganizationDto.class);
+		}
+		catch (JsonPatchException | JsonProcessingException e) {
+			throw new InvalidRecordUpdateRequest(String.format("Error patching organization %s.",
+					organizationDto.getId()));
 		}
 	}
 
