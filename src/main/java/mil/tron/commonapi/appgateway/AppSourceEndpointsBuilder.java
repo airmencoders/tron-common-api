@@ -1,17 +1,15 @@
 package mil.tron.commonapi.appgateway;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import io.swagger.v3.parser.core.models.SwaggerParseResult;
+import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.controller.AppGatewayController;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
-import org.assertj.core.util.Lists;
+import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
+import mil.tron.commonapi.service.AppGatewayService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -22,16 +20,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.parser.OpenAPIV3Parser;
-import io.swagger.v3.parser.core.models.SwaggerParseResult;
-import lombok.extern.slf4j.Slf4j;
-import mil.tron.commonapi.controller.AppGatewayController;
-import mil.tron.commonapi.entity.appsource.AppEndpoint;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
-import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import mil.tron.commonapi.service.AppGatewayService;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
