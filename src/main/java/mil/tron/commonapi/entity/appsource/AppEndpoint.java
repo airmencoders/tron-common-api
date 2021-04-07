@@ -18,7 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @EqualsAndHashCode
-@Table(name="app_endpoint")
+@Table(name="app_endpoint", uniqueConstraints = { @UniqueConstraint(columnNames = {"path", "method", "app_source_id"})})
 public class AppEndpoint {
 
     @Id

@@ -92,7 +92,6 @@ public class AppSourceEndpointsBuilder {
                     this.addMapping(appDef.getAppSourcePath(), appEndpoint);
                     this.addEndpointToSource(appEndpoint, appSource);
                 }
-                deDuplicateRows(appSource);
             }
         }
         catch (FileNotFoundException e) {
@@ -183,29 +182,6 @@ public class AppSourceEndpointsBuilder {
             }
         } catch (Exception e) {
             log.warn(String.format("Unable to add endpoint to app source %s.", appSource.getName()), e);
-        }
-    }
-
-    /**
-     * Utility function to de dupe any endpoints in the database produced by camel.
-     * This function prefers the first match it finds out of a route that has duplicates and tries to delete
-     * the others (breaking links if necessary).  This method should **have** to run, since there should not be
-     * duplicates.
-     * @param appSource the app source to search
-     */
-    private void deDuplicateRows(AppSource appSource) {
-        for (AppEndpoint point : Lists.newArrayList(appEndpointRepository.findAllByAppSource(appSource))) {
-            List<AppEndpoint> others = Lists.newArrayList(
-                    appEndpointRepository.findAllByAppSourceEqualsAndMethodEqualsAndPathEquals(appSource, point.getMethod(), point.getPath()));
-
-            for (int i = 1; i < others.size(); i++) {
-                try {
-                    appEndpointPrivRepository.removeAllByAppEndpoint(others.get(i));
-                    appEndpointRepository.delete(others.get(i));
-                } catch (Exception e) {
-                    log.warn(String.format("Unable to delete duplicate app endpoint %s - %s.", point.getId(), point.getPath()), e);
-                }
-            }
         }
     }
 }
