@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import mil.tron.commonapi.annotation.security.PiiField;
 import mil.tron.commonapi.dto.persons.*;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.validations.ValidDodId;
@@ -48,6 +49,7 @@ public class PersonDto {
     /**
      * The person's first (given) name
      */
+    @PiiField
     @Getter
     @Setter
     private String firstName;
@@ -55,6 +57,7 @@ public class PersonDto {
     /**
      * The person's middle name
      */
+    @PiiField
     @Getter
     @Setter
     private String middleName;
@@ -62,6 +65,7 @@ public class PersonDto {
     /**
      * The person's last (family) name
      */
+    @PiiField
     @Getter
     @Setter
     private String lastName;
@@ -77,6 +81,7 @@ public class PersonDto {
     /**
      * The person's email address
      */
+    @PiiField
     @Email(message = "Malformed email address")
     @Getter
     @Setter
@@ -85,6 +90,7 @@ public class PersonDto {
     /**
      * An 10-digit airman's DOD Identification number.
      */
+    @PiiField
     @Getter
     @Setter
     @ValidDodId
@@ -107,6 +113,7 @@ public class PersonDto {
     /**
      * The person's phone number
      */
+    @PiiField
     @Getter
     @Setter
     @ValidPhoneNumber

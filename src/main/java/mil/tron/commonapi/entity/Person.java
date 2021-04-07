@@ -2,6 +2,7 @@ package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
+import mil.tron.commonapi.annotation.security.PiiField;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
@@ -49,6 +50,7 @@ public class Person {
     @Setter
     private String dutyTitle;
 
+    @PiiField
     @Getter
     @Setter
     private String email;
@@ -58,11 +60,13 @@ public class Person {
      * Putting DODID as a string since using a Long would require manually padding
      * value in string output if the dodid had leading zeros, this was it stays literal
      */
+    @PiiField
     @Getter
     @Setter
     @ValidDodId
     private String dodid;
 
+    @PiiField
     @Getter
     @Setter
     @ValidPhoneNumber
@@ -73,6 +77,7 @@ public class Person {
     @ValidPhoneNumber
     private String dutyPhone;
 
+    @PiiField
     @Getter
     @Setter
     private String address;
