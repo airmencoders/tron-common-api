@@ -448,4 +448,17 @@ public class AppSourceServiceImpl implements AppSourceService {
             throw new InvalidAppSourcePermissions(String.format("Endpoint privilege with ID %s does not belong to app source %s", appSourceEndPointPrivId, appSourceId));
         }
     }
+
+    /**
+     * Deletes an admin with given DashboardUser from all app sources he/she may be an admin of
+     * @param user DashboardUser to search and delete from app source(s)
+     */
+    @Override
+    public void deleteAdminFromAllAppSources(DashboardUser user) {
+        List<AppSource> usersAppSources = appSourceRepository.findAppSourcesByAppSourceAdminsContaining(user);
+        for (AppSource appSource : usersAppSources) {
+            appSource.getAppSourceAdmins().remove(user);
+            appSourceRepository.saveAndFlush(appSource);
+        }
+    }
 }

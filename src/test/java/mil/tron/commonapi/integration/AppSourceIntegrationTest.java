@@ -5,7 +5,6 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import liquibase.pro.packaged.M;
 import lombok.val;
 import mil.tron.commonapi.dto.AppClientSummaryDto;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
@@ -17,7 +16,6 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
-import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -43,7 +41,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.transaction.Transactional;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -872,5 +869,65 @@ public class AppSourceIntegrationTest {
 
         AppSourceDetailsDto appSourceRecord4 = OBJECT_MAPPER.readValue(result4.getResponse().getContentAsString(), AppSourceDetailsDto.class);
         assertEquals(0, appSourceRecord4.getAppClients().size());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testRemoveDashboardUserWhoAlsoIsAppSourceAdmin() throws Exception {
+
+        DashboardUser newUser = DashboardUser.builder()
+                .email("tester@test.com")
+                .privileges(Set.of(
+                        privRepo.findByName("DASHBOARD_ADMIN").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD ADMIN")),
+                        privRepo.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))
+                ))
+                .build();
+
+        dashRepo.save(newUser);
+
+        AppSourceDetailsDto app1 = AppSourceDetailsDto.builder()
+                .id(UUID.randomUUID())
+                .name("App1")
+                .appSourceAdminUserEmails(Lists.newArrayList("tester@test.com"))
+                .appClients(new ArrayList<>())
+                .endpoints(new ArrayList<>())
+                .build();
+
+        mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isCreated());
+
+
+        // verify new user has the APP_SOURCE_ADMIN priv
+        MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        DashboardUserDto[] users = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), DashboardUserDto[].class);
+
+        boolean foundAdminsPriv = false;
+        for (DashboardUserDto d : users) {
+            if (d.getEmail().equalsIgnoreCase("tester@test.com")) {
+                for (Privilege p : d.getPrivileges()) {
+                    if (p.getName().equals("APP_SOURCE_ADMIN")) {
+                        foundAdminsPriv = true;
+                        break;
+                    }
+                }
+            }
+        }
+        assertTrue(foundAdminsPriv);
+
+        // now delete newUser as a dashboard user
+        mockMvc.perform(delete(DASHBOARD_USERS_ENDPOINT + "{id}", newUser.getId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isNoContent());
     }
 }
