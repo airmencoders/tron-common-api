@@ -12,6 +12,7 @@ import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksService;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
 import org.modelmapper.spi.MappingContext;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -25,11 +26,14 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     private DashboardUserUniqueChecksService userChecksService;
     private static final String RESOURCE_NOT_FOUND_MSG = "User with the ID: %s does not exist.";
     private final DtoMapper modelMapper;
+    private AppSourceService appSourceService;
 
     public DashboardUserServiceImpl(DashboardUserRepository dashboardUserRepository,
-                                    DashboardUserUniqueChecksService dashboardUserUniqueChecksService) {
+                                    DashboardUserUniqueChecksService dashboardUserUniqueChecksService,
+                                    @Lazy AppSourceService appSourceService) {
         this.dashboardUserRepository = dashboardUserRepository;
         this.userChecksService = dashboardUserUniqueChecksService;
+        this.appSourceService = appSourceService;
         this.modelMapper = new DtoMapper();
         this.modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -102,12 +106,11 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 
     @Override
     public void deleteDashboardUser(UUID id) {
-        if (dashboardUserRepository.existsById(id)) {
-            dashboardUserRepository.deleteById(id);
-        }
-        else {
-            throw new RecordNotFoundException("Record with ID: " + id.toString() + " not found.");
-        }
+        DashboardUser user = dashboardUserRepository.findById(id).orElseThrow(() ->
+                new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
+
+        appSourceService.deleteAdminFromAllAppSources(user);
+        dashboardUserRepository.delete(user);
     }
 
     @Override

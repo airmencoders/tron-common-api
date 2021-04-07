@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.*;
@@ -32,6 +33,9 @@ public class DashboardUserServiceImplTest {
 
     @Mock
     private DashboardUserUniqueChecksServiceImpl uniqueChecksService;
+
+    @Mock
+    private AppSourceServiceImpl appSourceService;
 
     @InjectMocks
     private DashboardUserServiceImpl dashboardUserService;
@@ -134,11 +138,14 @@ public class DashboardUserServiceImplTest {
 
     @Test
     void deleteDashboardUserTest() {
-        assertThrows(RecordNotFoundException.class, () -> dashboardUserService.deleteDashboardUser(testDashboardUser.getId()));
+        Mockito.when(dashboardUserRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(testDashboardUser));
+        Mockito.doNothing().when(appSourceService).deleteAdminFromAllAppSources(Mockito.any());
 
-        Mockito.when(dashboardUserRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        assertThrows(RecordNotFoundException.class, () -> dashboardUserService.deleteDashboardUser(testDashboardUser.getId()));
         dashboardUserService.deleteDashboardUser(testDashboardUser.getId());
-        Mockito.verify(dashboardUserRepo, Mockito.times(1)).deleteById(testDashboardUser.getId());
+        Mockito.verify(dashboardUserRepo, Mockito.times(1)).delete(testDashboardUser);
     }
 
     @Test
