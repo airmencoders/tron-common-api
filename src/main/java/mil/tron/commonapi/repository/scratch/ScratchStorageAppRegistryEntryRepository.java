@@ -11,8 +11,8 @@ public interface ScratchStorageAppRegistryEntryRepository extends CrudRepository
     public boolean existsByAppNameIgnoreCase(String appName);
     
     @Query(value = "SELECT entry "
-    				+ "FROM ScratchStorageAppRegistryEntry entry, "
-    				+ "IN(entry.userPrivs) privs "
-    				+ "WHERE privs.user.email = :email")
+			+ "FROM ScratchStorageAppRegistryEntry entry, "
+			+ "IN(entry.userPrivs) privs "
+			+ "WHERE privs.user.email = :email")
     Iterable<ScratchStorageAppRegistryEntry> findAllAppsWithUserEmail(String email);
 }

@@ -34,11 +34,13 @@ import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -1053,5 +1055,48 @@ public class ScratchStorageIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user3PrivDto)))
                 .andExpect(status().isConflict());
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testGetAppsContainingUser() throws Exception {
+    	/*
+         * Add another user to the same App as user1
+         */
+        ScratchStorageAppUserPrivDto anotherUsePriv =
+                ScratchStorageAppUserPrivDto.builder()
+                .email("another@user.com")
+                .privilegeId(1L)
+                .build();
+
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(anotherUsePriv)))
+                .andExpect(status().isOk());
+        
+    	/*
+    	 * Get all apps containing user1
+    	 * The returned list should only contain privileges that user1 has and no other
+    	 */
+    	MvcResult response = mockMvc.perform(get(ENDPOINT + "apps/self")
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+    	
+        List<ScratchStorageAppRegistryDto> appsContainingSelf = Arrays.asList(OBJECT_MAPPER.readValue(response.getResponse().getContentAsString(),
+                ScratchStorageAppRegistryDto[].class));
+        
+        /*
+         * Check that all of the privileges in the returned list belong solely to user1
+         */
+        for (ScratchStorageAppRegistryDto entry : appsContainingSelf) {
+            for (ScratchStorageAppRegistryDto.UserWithPrivs priv : entry.getUserPrivs()) {
+                assertThat(priv.getEmailAddress()).isEqualToIgnoringCase(user1.getEmail());
+            }
+        }
     }
 }

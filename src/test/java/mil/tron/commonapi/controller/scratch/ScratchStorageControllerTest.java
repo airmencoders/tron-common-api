@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -274,6 +275,22 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(get(SCRATCH_ENDPOINT))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
+    }
+    
+    @Test
+    void testGetAllAppsContainingUser() throws Exception {
+    	DtoMapper mapper = new DtoMapper();
+    	
+    	List<ScratchStorageAppRegistryDto> dtos = new ArrayList<>();
+    	for (ScratchStorageAppRegistryEntry entry : registeredApps) {
+            dtos.add(mapper.map(entry, ScratchStorageAppRegistryDto.class));
+        }
+    	
+		Mockito.when(service.getAllScratchAppsContainingUser(Mockito.anyString())).thenReturn(dtos);
+		
+		mockMvc.perform(get(SCRATCH_ENDPOINT + "self"))
+	        .andExpect(status().isOk())
+	        .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(dtos)));
     }
 
     @Test

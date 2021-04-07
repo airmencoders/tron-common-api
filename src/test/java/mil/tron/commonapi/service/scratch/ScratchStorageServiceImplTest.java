@@ -2,7 +2,6 @@ package mil.tron.commonapi.service.scratch;
 
 
 import com.google.common.collect.Lists;
-import liquibase.pro.packaged.R;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -30,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 
@@ -189,6 +189,25 @@ public class ScratchStorageServiceImplTest {
 
         assertEquals(entries.get(0), service.getKeyValueEntryByAppId(entries.get(0).getId(), "hello"));
         assertThrows(RecordNotFoundException.class, () -> service.getKeyValueEntryByAppId(entries.get(0).getId(), "hello"));
+    }
+    
+    @Test
+    void testGetAppsByUser() {
+    	Mockito.when(appRegistryRepo.findAllAppsWithUserEmail(user1.getEmail())).thenReturn(registeredApps);
+    	
+    	DtoMapper mapper = new DtoMapper();
+        List<ScratchStorageAppRegistryDto> registeredAppsDtos = new ArrayList<>();
+        for (ScratchStorageAppRegistryEntry entry : registeredApps) {
+            registeredAppsDtos.add(mapper.map(entry, ScratchStorageAppRegistryDto.class));
+        }
+        
+    	Iterable<ScratchStorageAppRegistryDto> retrievedApps = service.getAllScratchAppsContainingUser(user1.getEmail());
+
+    	for (ScratchStorageAppRegistryDto dto : retrievedApps) {
+            for (ScratchStorageAppRegistryDto.UserWithPrivs priv : dto.getUserPrivs()) {
+                assertThat(priv.getEmailAddress()).isEqualToIgnoringCase(user1.getEmail());
+            }
+        }
     }
 
     @Test

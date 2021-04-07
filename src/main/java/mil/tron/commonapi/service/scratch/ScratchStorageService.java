@@ -20,7 +20,13 @@ public interface ScratchStorageService {
 
     // scratch storage app management...
     Iterable<ScratchStorageAppRegistryDto> getAllRegisteredScratchApps();
-    Iterable<ScratchStorageAppRegistryDto> getAllEntriesByAuthorizedUser();
+    /**
+     * Returns ScratchStorageAppRegistryDtos that contain only the list of privileges 
+     * for the Authorized User (does not return privileges belonging to another user)
+     * 
+     * @return list of Scratch Storage Apps that the Authorized User has an association with
+     */
+    Iterable<ScratchStorageAppRegistryDto> getAllScratchAppsContainingUser(String userEmail);
     ScratchStorageAppRegistryDto getRegisteredScratchApp(UUID appId);
     ScratchStorageAppRegistryEntry addNewScratchAppName(ScratchStorageAppRegistryEntry entry);
     ScratchStorageAppRegistryEntry editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryEntry entry);

@@ -165,11 +165,8 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     }
     
     @Override
-    public Iterable<ScratchStorageAppRegistryDto> getAllEntriesByAuthorizedUser() {
-    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userEmail = authentication.getCredentials().toString();  // get the JWT email string
-        
-        return StreamSupport.stream(appRegistryRepo.findAllAppsWithUserEmail(userEmail).spliterator(), false)
+    public Iterable<ScratchStorageAppRegistryDto> getAllScratchAppsContainingUser(String userEmail) {
+    	return StreamSupport.stream(appRegistryRepo.findAllAppsWithUserEmail(userEmail).spliterator(), false)
         		.map(item -> {
         			// Strip out all other user privs that do not belong to the authorized user
         			for (Iterator<ScratchStorageAppUserPriv> privsIter = item.getUserPrivs().iterator(); privsIter.hasNext();) {

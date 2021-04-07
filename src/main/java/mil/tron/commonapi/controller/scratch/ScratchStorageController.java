@@ -261,7 +261,8 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getAllRegisteredScratchApps(), HttpStatus.OK);
     }
     
-    @Operation(summary = "Gets all Scratch Storage apps that the current Authorized User is a user of")
+    @Operation(summary = "Gets all Scratch Storage apps that the current Authorized User is a user of",
+    		description= "Each Scratch Storage App returned will only container user privileges for the Authorized User. It will not contain the privileges of other users.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
@@ -271,7 +272,10 @@ public class ScratchStorageController {
     })
     @GetMapping("/apps/self")
     public ResponseEntity<Object> getScratchSpaceAppsByAuthorizedUser() {
-        return new ResponseEntity<>(scratchStorageService.getAllEntriesByAuthorizedUser(), HttpStatus.OK);
+    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getCredentials().toString();  // get the JWT email string
+        
+        return new ResponseEntity<>(scratchStorageService.getAllScratchAppsContainingUser(userEmail), HttpStatus.OK);
     }
 
     @Operation(summary = "Gets a single Scratch Storage app's record that is registered with Common API",
