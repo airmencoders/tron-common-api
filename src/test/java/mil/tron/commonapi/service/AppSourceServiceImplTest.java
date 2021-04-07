@@ -597,4 +597,29 @@ public class AppSourceServiceImplTest {
 		assertThrows(InvalidAppSourcePermissions.class, () -> service.removeEndPointPrivilege(app.getId(), UUID.randomUUID()));
 		assertEquals(app.getId(), service.removeEndPointPrivilege(app.getId(), priv.getId()).getId());
 	}
+
+	@Test
+	void testDeleteAdminFromAllAppSources() {
+
+		DashboardUser newUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dude@dude.com")
+				.privileges(Set.of(appSourceAdminPriv))
+				.build();
+
+		AppSource newAppSource = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Some App")
+				.appSourcePath("")
+				.openApiSpecFilename("")
+				.appSourceAdmins(Sets.newHashSet(newUser))
+				.appPrivs(new HashSet<>())
+				.build();
+
+		Mockito.when(appSourceRepository.findAppSourcesByAppSourceAdminsContaining(Mockito.any()))
+				.thenReturn(Lists.newArrayList(newAppSource));
+
+		service.deleteAdminFromAllAppSources(newUser);
+		assertTrue(newAppSource.getAppSourceAdmins().isEmpty());
+	}
 }
