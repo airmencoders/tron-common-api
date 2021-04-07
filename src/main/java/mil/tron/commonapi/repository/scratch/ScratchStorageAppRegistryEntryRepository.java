@@ -10,7 +10,7 @@ import java.util.UUID;
 public interface ScratchStorageAppRegistryEntryRepository extends CrudRepository<ScratchStorageAppRegistryEntry, UUID> {
     public boolean existsByAppNameIgnoreCase(String appName);
     
-    @Query(value = "SELECT entry "
+    @Query(value = "SELECT DISTINCT entry "
 			+ "FROM ScratchStorageAppRegistryEntry entry, "
 			+ "IN(entry.userPrivs) privs "
 			+ "WHERE privs.user.email = :email")
