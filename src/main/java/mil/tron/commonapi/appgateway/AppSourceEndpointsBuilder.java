@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import mil.tron.commonapi.controller.AppGatewayController;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.service.AppGatewayService;
 import org.springframework.beans.factory.annotation.Autowired;
