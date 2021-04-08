@@ -1,5 +1,7 @@
 package mil.tron.commonapi.controller.scratch;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,10 +17,7 @@ import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
-import mil.tron.commonapi.exception.BadRequestException;
-import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.*;
 import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.springframework.http.HttpStatus;
@@ -26,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -546,5 +546,178 @@ public class ScratchStorageController {
                 .collect(Collectors.toList());
 
         return new ResponseEntity<>(scratchPrivs, HttpStatus.OK);
+    }
+
+    // endpoints to prevent CORS preflights
+
+
+    @Operation(summary = "Adds or updates a key-value pair for a given App Id using content-type: text/plain",
+            description = "SCRATCH_WRITE privileges are required for the requester for the given App Id")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Write / Update action forbidden - no WRITE privileges",
+                    content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID / Key name not valid or found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Request Body")
+    })
+    @PostMapping(path = "", consumes = {"text/plain;charset=UTF-8"})
+    public ResponseEntity<Object> setKeyValuePairText(
+            @Parameter(name = "entry", description = "Key-Value-AppId object", required = true) @RequestBody String entry) {
+
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            ScratchStorageEntry data = mapper.readValue(entry, ScratchStorageEntry.class);
+            return this.setKeyValuePair(data);
+        }
+        catch (JsonProcessingException e) {
+            throw new InvalidRecordUpdateRequest("Invalid Request Body");
+        }
+    }
+
+    /**
+     * Deletes a single key-value pair via POST call, since DELETE method requires preflight
+     */
+    @Operation(summary = "Deletes a key-value pair for a given App Id",
+            description = "SCRATCH_WRITE privileges are required for the requester for the given App Id")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Write / Update action forbidden - no WRITE privileges",
+                    content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID / Key name not valid or found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Request Body")
+    })
+    @PostMapping(path = "/deleteKey/{appId}/key/{key}", consumes = {"text/plain;charset=UTF-8"})
+    public ResponseEntity<Object> deleteKeyValuePairText(
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
+            @Parameter(name = "key", description = "Key name of the key-value pair to delete", required = true) @PathVariable String key) {
+
+        return this.deleteKeyValuePair(appId, key);
+    }
+
+    /**
+     * Deletes a ALL key-value pairs via POST call, since DELETE method requires preflight
+     */
+    @Operation(summary = "Deletes all key-value pairs for a given App Id",
+            description = "SCRATCH_WRITE privileges are required for the requester for the given App Id")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Write / Update action forbidden - no WRITE privileges",
+                    content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID not valid or found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Request Body")
+    })
+    @PostMapping(path = "/deleteAllKeys/{appId}", consumes = {"text/plain;charset=UTF-8"})
+    public ResponseEntity<Object> deleteAllKeyValuePairsForAppIdText(
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
+        return this.deleteAllKeyValuePairsForAppId(appId);
+    }
+
+
+    /**
+     * Adds a user to scratch app via POST call, since PATCH method requires preflight
+     */
+    @Operation(summary = "Adds a user privilege to this app's data",
+            description = "Requester has to have DASHBOARD_ADMIN rights, or have SCRATCH_ADMIN rights for given app ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "App Priv Added OK",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed request body / app name already exists or appId is malformed",
+                    content = @Content(schema = @Schema(implementation = BadRequestException.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID not found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privileges for given app id"),
+            @ApiResponse(responseCode = "409",
+                    description = "This app/user/priv combo already exists",
+                    content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
+    })
+    @PostMapping(path = "/apps/{id}/addUser", consumes = {"text/plain;charset=UTF-8"})
+    public ResponseEntity<Object> addUserPrivText(
+            @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
+            @Parameter(name = "priv", description = "Application User-Priv Object", required = true) @RequestBody String priv) {
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        try {
+            ScratchStorageAppUserPrivDto dto = mapper.readValue(priv, ScratchStorageAppUserPrivDto.class);
+            return this.addUserPriv(id, dto);
+        }
+        catch (JsonProcessingException ex) {
+            throw new InvalidRecordUpdateRequest("Invalid request body for adding scratch user");
+        }
+    }
+
+    /**
+     * Toggles the app's IMPLICIT READ functionality, uses a POST method since PATCH requires a preflight
+     */
+    @Operation(summary = "Sets or un-sets the app's implicit read field",
+            description = "Requester has to have DASHBOARD_ADMIN rights, or have SCRATCH_ADMIN rights for given app ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "App Modified OK",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed appId or query parameter",
+                    content = @Content(schema = @Schema(implementation = BadRequestException.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID not found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privileges for given app id")
+    })
+    @PostMapping(path = "/apps/{id}/implicitRead", consumes = {"text/plain;charset=UTF-8"})
+    public ResponseEntity<Object> setImplicitReadSettingText(
+            @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
+            @Parameter(name = "priv", description = "Application User-Priv Object", required = true)
+            @RequestParam(name = "value", required = false, defaultValue = "false") boolean implicitRead) {
+
+        return this.setImplicitReadSetting(id, implicitRead);
+    }
+
+    /**
+     * Removes a user from a scratch app, uses a POST method since DELETE requires a preflight
+     */
+    @Operation(summary = "Removes a user privilege from this app's data",
+            description = "Requester has to have DASHBOARD_ADMIN rights")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "App Priv Removed OK",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed request body / app name already exists or appId is malformed",
+                    content = @Content(schema = @Schema(implementation = BadRequestException.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID not found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privileges for given app id")
+    })
+    @PostMapping(path = "/apps/{id}/removeUser/{appPrivIdEntry}", consumes = {"text/plain;charset=UTF-8"})
+    public ResponseEntity<Object> removeUserPrivText(
+            @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
+            @Parameter(name = "appPrivIdEntry", description = "UUID of the User-Priv set to remove", required = true) @PathVariable UUID appPrivIdEntry) {
+
+        return this.removeUserPriv(id, appPrivIdEntry);
     }
 }
