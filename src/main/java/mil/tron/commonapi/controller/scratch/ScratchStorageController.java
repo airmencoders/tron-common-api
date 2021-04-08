@@ -76,7 +76,7 @@ public class ScratchStorageController {
      * Private helper to authorize a user to a scratch space identified by the app UUID for write access
      * @param appId the appid of the app's data user/request is trying to access
      */
-    private void validateScratchWriteAccessForUser(UUID appId) {
+	private void validateScratchWriteAccessForUser(UUID appId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getCredentials().toString();  // get the JWT email string
         if (!scratchStorageService.userCanWriteToAppId(appId, userEmail)) {
@@ -259,6 +259,23 @@ public class ScratchStorageController {
     @GetMapping("/apps")
     public ResponseEntity<Object> getScratchSpaceApps() {
         return new ResponseEntity<>(scratchStorageService.getAllRegisteredScratchApps(), HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Gets all Scratch Storage apps that the current Authorized User is a user of",
+    		description= "Each Scratch Storage App returned will only contain user privileges for the Authorized User. It will not contain the privileges of other users.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class)))),
+            @ApiResponse(responseCode = "403",
+            		description = "Not Authorized")
+    })
+    @GetMapping("/apps/self")
+    public ResponseEntity<Object> getScratchSpaceAppsByAuthorizedUser() {
+    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getCredentials().toString();  // get the JWT email string
+        
+        return new ResponseEntity<>(scratchStorageService.getAllScratchAppsContainingUser(userEmail), HttpStatus.OK);
     }
 
     @Operation(summary = "Gets a single Scratch Storage app's record that is registered with Common API",
