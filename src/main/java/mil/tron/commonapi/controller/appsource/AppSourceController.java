@@ -343,7 +343,7 @@ public class AppSourceController {
             ))
     })
     @GetMapping("/app-clients")
-    @PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or hasAuthority('SCRATCH_ADMIN')")
+    @PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or hasAuthority('APP_SOURCE_ADMIN')")
     public ResponseEntity<Object> getAvailableAppClients() {
         return new ResponseEntity<>(appClientUserService.getAppClientUserSummaries(), HttpStatus.OK);
     }
