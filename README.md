@@ -38,9 +38,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--PGHOST=host --PGPORT=port --P
 
 Seeded data is provided for the purpose of local integration development.
 
-Seeded data is located at `src/main/resources/db/seed/{version}`, and names of the `.csv` files correlate to the table or entity they reperesent.
 
-By default, seeded data is not added to the database, but can be triggered through the environment variable `CONTEXTS` to `test`. Below are three examples.
 
 ### Liquibase Changeset Generation
 
@@ -59,7 +57,7 @@ mvnw -Dliquibase.url=jdbc:postgresql://localhost:5432/<dbname> -Dliquibase.usern
 
 
 ### docker
-`docker run -p 8080:8080 --env CONTEXTS=test registry.il2.dso.mil/tron/products/tron-common-api/tron-common-api:{version}`
+`docker run -p 8080:8080 registry.il2.dso.mil/tron/products/tron-common-api/tron-common-api:{version}`
 
 ### docker-compose
 Note: No external port is needed, as your api should communicate directly with the Common API.

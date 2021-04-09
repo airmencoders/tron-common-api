@@ -1,125 +1,163 @@
-# basic script to build out a Wing level organization and 
-# its subordinate groups and squadrons/flights
-#
-# usage: first install the Mojo framework with:
-# `sudo cpan install Mojolicious`
-#
-# then, with Common Running locally on port 8088, do:
-# `perl seed_data.pl` or it also respects the PROXY ENV VAR if present
-# like this `PROXY=http://localhost:9000/api/v1 perl seed_data.pl` if you wanna use it with
-# something like JWT CLI utility, etc
+/**
+ * This is a seeder script to set up a mock Wing, with its groups, and squadrons, and members in a local Common API instance.
+ *
+ * To use locally, run "npm install" in this directory, and then "node seeder.js", or if you want to
+ * run the requests thru a proxy if you have Spring Security enabled, you can use something like the "jwt-cli-utility"
+ * and issue the command "PROXY=http://localhost:<proxy-port>/api/v1 node seeder.js".
+ *
+ * This script uses the json-patch endpoints for organization.
+ *
+ */
+'use strict';
+const fetch = require('node-fetch');
 
-use Mojo::UserAgent -signatures;
+let url = process.env.PROXY || 'http://localhost:8088/api/v1';
 
-my $ua = Mojo::UserAgent->new;
-my $url = $ENV{PROXY} || "http://localhost:8088/api/v1";
-my $org_id;
+async function addNewPerson(spec) {
+    let [rank, firstName, middleName, lastName, email] = spec.split(/\s/);
+    let urlString = `${url}/person`;
 
-sub add_new_person($spec) {
-    my ($rank, $first_name, $middle_name, $last_name, $email) = split /\s/, $spec;
-    my $url_string = "$url/person";
+    if (rank === 'LtCol') rank = "Lt Col";
+    else if (rank === '2Lt') rank = "2nd Lt";
+    else if (rank === '1Lt') rank = "1st Lt";
 
-    # check for ranks needing a space
-    if ($rank eq 'LtCol') { $rank = "Lt Col"; }
-    elsif ($rank eq '2Lt') { $rank = "2nd Lt"; }
-    elsif ($rank eq '1Lt') { $rank = "1st Lt"; }
-
-    my $super = $ua->post($url_string => json => {
-            "firstName" => $first_name,
-            "middleName" => $middle_name,
-            "lastName" => $last_name,
-            "rank" => $rank,
-            "email" => $email,
-            "branch" => 'USAF',
-        });
-    die if $super->res->code != 201;
-    return $super->res->json->{id};
-}
-
-# makes an organization with TYPE and NAME and provided parent's UUID
-# returns its UUID
-sub add_new_org($type, $name, $parent_id) {
-
-    my $url_string = "$url/organization";
-
-    my $super = $ua->post($url_string => json => {
-        "name" => $name,
-        "members" => [],
-        "leader" => undef,
-        "parentOrganization" => $parent_id,
-        "orgType" => uc $type,
-        "branchType" => "USAF",
+    let resp = await fetch(urlString, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+            firstName, middleName, lastName, rank, email, branch: 'USAF'
+        })
     });
-    die if $super->res->code != 201;
-    return $super->res->json->{id};
-};
 
-# adds in subordinate orgs to an organization
-sub add_member_orgs($id, $orgs) {
-    my $super = $ua->patch("$url/organization/$id/subordinates" => json => $orgs);
-    die if $super->res->code != 200;
+    if (resp.status !== 201) throw new Error("Bad Add Person");
+    
+    let json = await resp.json();
+    return json.id;
 }
 
-sub add_leader($id, $leader) {
-    my $super = $ua->patch("$url/organization/$id" => json => { leader => $leader });
-    die if $super->res->code != 200;
+async function addNewOrg(type, name, parentId) {
+
+    let urlString = `${url}/organization`;
+
+    let resp = await fetch(urlString, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+            name, members: [], leader: null, parentOrganization: parentId, orgType: type.toUpperCase(), branchType: 'USAF'
+        })
+    });
+
+    if (resp.status !== 201) throw new Error("Bad Add Org");
+    
+    let json = await resp.json();
+    return json.id;
 }
 
-sub add_member($id, $member) {
-    my $super = $ua->patch("$url/organization/$id/members" => json => [ $member ]);
-    die if $super->res->code != 200;
+async function addMemberOrgs(id, orgs) {
+
+    let patchOp = [];
+    for (let org of orgs) {
+        patchOp.push({ op: 'add', path: '/subordinateOrganizations/-', value: org })
+    }
+    
+    let resp = await fetch(`${url}/organization/${id}`, {
+        method: 'PATCH',
+        headers: {
+            'content-type': 'application/json-patch+json'
+        },
+        body: JSON.stringify(patchOp)
+    });
+
+    if (resp.status !== 200) throw new Error("Bad Add Member Org");
+    
+    let json = await resp.json();
+    return json.id;
 }
 
-# accepts a nested hash of orgs to create
-sub create_org_structure($org, $parent) {
+async function addLeader(id, leader) {
 
-    my $new_org_id = add_new_org($org->{type}, $org->{name}, $parent);
+    let resp = await fetch(`${url}/organization/${id}`, {
+        method: 'PATCH',
+        headers: {
+            'content-type': 'application/json-patch+json'
+        },
+        body: JSON.stringify([{ op: 'replace', path: '/leader', value: leader }])
+    });
 
-    # add leader if present
-    if (defined($org->{leader})) {
-        my $leader_id = add_new_person($org->{leader});
-        add_leader($new_org_id, $leader_id);
+    if (resp.status !== 200) throw new Error("Bad Add Leader");
+
+    let json = await resp.json();
+    return json.id;
+}
+
+async function addMember(id, member) {
+
+    let patchOp = [];
+    patchOp.push({ op: 'add', path: '/members/-', value: member });
+
+    let resp = await fetch(`${url}/organization/${id}`, {
+        method: 'PATCH',
+        headers: {
+            'content-type': 'application/json-patch+json'
+        },
+        body: JSON.stringify(patchOp)
+    });
+
+    if (resp.status !== 200) throw new Error("Bad Add Member");
+    
+    let json = await resp.json();
+    return json.id;
+}
+
+async function createOrgStructure(org, parent) {
+
+    let newOrgId = await addNewOrg(org.type, org.name, parent);
+
+    // add leader if present
+    if (org.leader != null) {
+        let leaderId = await addNewPerson(org.leader);
+        await addLeader(newOrgId, leaderId);
     }
 
-    # add members if present
-    if (defined($org->{members})) {
-        for my $member (@{$org->{members}}) {
-            my $member_id = add_new_person($member);
-            add_member($new_org_id, $member_id);
+    // add members if present
+    if (org.members != null) {
+        for (let member of org.members) {
+            let memberId = await addNewPerson(member);
+            await addMember(newOrgId, memberId);
         }
     }
 
-    # if has subordinate orgs...
-    if (defined($org->{units})) {
-        my @sub_org_uuids = ();
+    // if has subordinate orgs
+    if (org.units != null) {
+        let subOrgUuids = [];
 
-        # go create the suborgs themselves and store the UUIDs
-        for my $unit (@{$org->{units}}) {
-            push @sub_org_uuids, create_org_structure($unit, $new_org_id);
+        // go create the suborgs themselves and store the uuids
+        for (let unit of org.units) {
+            subOrgUuids.push(await createOrgStructure(unit, newOrgId));
         }
 
-        # go add the new suborgs to the parent
-        add_member_orgs($new_org_id, \@sub_org_uuids);
+        // go add the new suborgs to the parent
+        await addMemberOrgs(newOrgId, subOrgUuids);
     }
 
-    return $new_org_id;
+    return newOrgId;
 }
 
-my $org_structure = {
-    name => "181st IW",
-    type => "WING",
-    leader => 'Col JOHNNY A APPLESEED JA@AF.MIL',
-    units => [
+const orgStructure = {
+    name: "181st IW",
+    type : "WING",
+    leader : 'Col JOHNNY A APPLESEED JA@AF.MIL',
+    units : [
         {
-            name => "181st ISRG",
-            type => "GROUP",
-            leader => 'Col FRED A SMITH FS@AF.MIL',
-            units => [
+            name : "181st ISRG",
+            type : "GROUP",
+            leader : 'Col FRED A SMITH FS@AF.MIL',
+            units : [
                 {
-                    name => "137th IS",
-                    type => "SQUADRON",
-                    leader => 'LtCol JOEY A JOJO JJ@AF.MIL',
-                    members => [
+                    name : "137th IS",
+                    type : "SQUADRON",
+                    leader : 'LtCol JOEY A JOJO JJ@AF.MIL',
+                    members : [
                         'SrA Marley Esperanza Windler Adah71@gmail.com',
                         'SSgt Turner Oren Pouros Danial44@hotmail.com',
                         'SrA Hester Davin Leuschke Dexter.Waelchi@yahoo.com',
@@ -165,13 +203,13 @@ my $org_structure = {
                         'A1C Ethel Mikayla Ortiz Marilyne_Sporer@hotmail.com',
                         'AB Clarabelle Lester Bauch Emerson82@hotmail.com',
                     ],
-                    units => undef,
+                    units : null,
                 },
                 {
-                    name => "137th ISS",
-                    type => "SQUADRON",
-                    leader => 'LtCol CRAIG A SNELLER CS@AF.MIL',
-                    members => [
+                    name : "137th ISS",
+                    type : "SQUADRON",
+                    leader : 'LtCol CRAIG A SNELLER CS@AF.MIL',
+                    members : [
                         '1Lt Dimitri Easton Zemlak Bud28@yahoo.com',
                         'SrA Stephanie Nicola Murray Amy.Wilkinson59@gmail.com',
                         '2Lt Arlene Skyla Weissnat Denis.Bernhard39@yahoo.com',
@@ -237,13 +275,13 @@ my $org_structure = {
                         'SSgt Chasity Edison Towne Alessandro.Goyette47@hotmail.com',
                         '1Lt Marge Jon Corkery Jannie17@gmail.com',
                     ],
-                    units => undef,
+                    units : null,
                 },
                 {
-                    name => "137th OSS",
-                    type => "SQUADRON",
-                    leader => 'LtCol BECCA A LEADER BL@AF.MIL',
-                    members => [
+                    name : "137th OSS",
+                    type : "SQUADRON",
+                    leader : 'LtCol BECCA A LEADER BL@AF.MIL',
+                    members : [
                         'MSgt Zora Karl Toy Demetris56@hotmail.com',
                         '1Lt Bernadine Lincoln Quigley Deborah.Prohaska@hotmail.com',
                         'MSgt Ivy Jaunita Zemlak Santa_Hammes@gmail.com',
@@ -303,20 +341,20 @@ my $org_structure = {
                         'SrA Kelton Marta Brakus Brooks.Wintheiser@hotmail.com',
                         'TSgt Fannie Cordia Swift Frederick13@yahoo.com',
                     ],
-                    units => undef,
+                    units : null,
                 },
             ],
         },
         {
-            name => "181st MSG",
-            type => "GROUP",
-            leader => 'Col SARAH A GRAPESEED SG@AF.MIL',
-            units => [
+            name : "181st MSG",
+            type : "GROUP",
+            leader : 'Col SARAH A GRAPESEED SG@AF.MIL',
+            units : [
                 {
-                    name => "181st LRF",
-                    type => "FLIGHT",
-                    leader => 'Maj JIMBO A SUITER JSA@AF.MIL',
-                    members => [
+                    name : "181st LRF",
+                    type : "FLIGHT",
+                    leader : 'Maj JIMBO A SUITER JSA@AF.MIL',
+                    members : [
                         'MSgt Daryl Mercedes Goodwin Dariana.Kuphal67@hotmail.com',
                         'SMSgt Wilson Mark Welch Bradly76@gmail.com',
                         'SrA Clemmie Kelli Willms Cory13@gmail.com',
@@ -354,13 +392,13 @@ my $org_structure = {
                         'SMSgt Gerardo Eladio Rempel Mellie22@gmail.com',
                         'SSgt Kelly Davon Halvorson Nakia_Haag25@gmail.com',
                     ],
-                    units => undef,
+                    units : null,
                 },
                 {
-                    name => "181st CF",
-                    leader => 'Maj ARM A STRONG AS2@AF.MIL',
-                    type => "FLIGHT",
-                    members => [
+                    name : "181st CF",
+                    leader : 'Maj ARM A STRONG AS2@AF.MIL',
+                    type : "FLIGHT",
+                    members : [
                         'TSgt Jalon Dasia Crona Cielo_Mayert51@hotmail.com',
                         'MSgt Prudence Marcus Ward Lonny_Turner49@gmail.com',
                         'SSgt Jovanny Aryanna Parker Keith_Hintz@hotmail.com',
@@ -396,12 +434,11 @@ my $org_structure = {
                         '1Lt Neal Noe Morar Fred.Maggio62@yahoo.com',
                         '2Lt Evan Gene Rice Estell_Marquardt55@yahoo.com',
                     ],
-                    units => undef,
+                    units : null,
                 }
             ],
         }
     ],
 };
 
-# create that whole structure above
-create_org_structure($org_structure, undef);
+createOrgStructure(orgStructure, null);
