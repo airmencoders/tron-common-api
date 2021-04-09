@@ -22,6 +22,10 @@ public class AppSourceMetricDto {
     @Getter
     @Setter
     private UUID id;
+
+    @Getter
+    @Setter
+    private String name;
     
     @Getter
     @Setter

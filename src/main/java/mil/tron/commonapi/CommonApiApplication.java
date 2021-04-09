@@ -6,16 +6,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.web.filter.CommonsRequestLoggingFilter;
 
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.Metrics;
-
 @SpringBootApplication
 @EnableAsync
 public class CommonApiApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(CommonApiApplication.class, args);
-        // Metrics.addRegistry(new CustomMeterRegistry(CustomRegistryConfig.DEFAULT, Clock.SYSTEM));
     }
     
     @Bean
