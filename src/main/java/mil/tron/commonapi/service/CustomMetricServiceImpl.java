@@ -23,7 +23,7 @@ import mil.tron.commonapi.repository.MeterValueRepository;
 public class CustomMetricServiceImpl implements CustomMetricService {
 
     @Autowired
-    private MeterValueRepository timerMeterValueRepo;
+    private MeterValueRepository meterValueRepo;
 
     @Override
     @Transactional
@@ -35,7 +35,7 @@ public class CustomMetricServiceImpl implements CustomMetricService {
                 .filter(m -> m.getId().getName().startsWith("gateway"))
                 .forEach(meter -> meter.use(
                     m -> {}, // gauge
-                    counter -> createMeterValue(counter, date), // counter
+                    counter -> buildMeterValue(counter, date), // counter
                     m -> {}, // timer
                     m -> {}, // summary
                     m -> {}, // long task timer
@@ -46,26 +46,19 @@ public class CustomMetricServiceImpl implements CustomMetricService {
         }
     }
 
-    private void createMeterValue(Counter counter, Date date) {
-        try {
-            timerMeterValueRepo.save(buildMeterValue(counter, date));
-        } catch (Exception e) {
-            // log.warn(String.format("Unable to add meter value to %s.", timer.getId().getName()), e);
-        }
-    }
-
-    private MeterValue buildMeterValue(Counter counter, Date date) {
+    private void buildMeterValue(Counter counter, Date date) {
         AppSource appSource = AppSource.builder().id(UUID.fromString(counter.getId().getTag("AppSource"))).build();
         AppEndpoint appEndpoint = AppEndpoint.builder().id(UUID.fromString(counter.getId().getTag("Endpoint"))).build();
         AppClientUser appClientUser = AppClientUser.builder().id(UUID.fromString(counter.getId().getTag("AppClient"))).build();
 
-        return MeterValue.builder()
+        meterValueRepo.save(MeterValue.builder()
+            .id(UUID.randomUUID())
             .timestamp(date)
             .value(counter.count())
             .metricName(counter.getId().getName())
             .appSource(appSource)
             .appEndpoint(appEndpoint)
             .appClientUser(appClientUser)
-            .build();  
+            .build());  
     }
 }

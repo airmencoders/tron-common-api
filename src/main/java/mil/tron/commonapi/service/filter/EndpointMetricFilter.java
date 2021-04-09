@@ -75,10 +75,10 @@ public class EndpointMetricFilter implements Filter {
         meterRegistry
             .counter(
                 "gateway-counter." + appSource.getAppSourcePath().replaceAll("/", "."), 
-                "AppSource", appSource.getAppSourcePath().replaceAll("/", "."), 
-                "Endpoint", endpoint.getPath().replaceAll("/", "."), 
+                "AppSource", appSource.getId().toString(), 
+                "Endpoint", endpoint.getId().toString(), 
                 "Path", path,
-                "AppClient", appClient.getNameAsLower())
+                "AppClient", appClient.getId().toString())
             .increment();
     }
 }
