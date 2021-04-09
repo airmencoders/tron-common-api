@@ -15,11 +15,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.Timer.Sample;
-import mil.tron.commonapi.CustomMeterRegistry;
+import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 
@@ -38,21 +37,13 @@ public class EndpointMetricFilter implements Filter {
     @Autowired
     private AppSourceRepository appSourceRepo;
 
-    // @Override
-    // public void init(FilterConfig config) throws ServletException {
-    //     metricService = (MetricService) WebApplicationContextUtils
-    //         .getRequiredWebApplicationContext(config.getServletContext())
-    //         .getBean("metricService");
-    // }
+    @Autowired
+    private AppClientUserRespository appClientUserRepo;
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
-        // String[] uriParts  = httpRequest.getRequestURI().split("/");
-        // get the spring-matched request mapping -- trim off the beginning prefix (e.g. /v1/app/)
-        // String uri = httpRequest
-        //     .getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)
-        //     .toString();
+
         String uri = httpRequest.getRequestURI();
         String patternMatched = uri.replaceFirst("/api" + apiVersion + "/app/", "");
         
@@ -62,30 +53,32 @@ public class EndpointMetricFilter implements Filter {
         if(appSource != null) {
             // If this belongs to an App Source, the rest of the path is part of the Endpoint
             // String path = String.join("/", Arrays.copyOfRange(uriParts, 5, uriParts.length));
+            String name = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
     
             AppEndpoint endpoint = appEndpointRepo.findByPathAndAppSource(patternMatched.substring(patternMatched.indexOf("/"), patternMatched.length()), appSource);
-            if(endpoint != null) {
-                Sample sample = Timer.start();
+            AppClientUser appClient = appClientUserRepo.findByNameIgnoreCase(name).orElse(null);
+            if(endpoint != null && appClient != null) {
                 chain.doFilter(request, response);
-                sample.stop(getTimer(endpoint, appSource));
+                this.incrementCounter(endpoint, appSource, appClient);
                 return;
             }
         }
         chain.doFilter(request, response);
     }
 
-    // register timer on AppSource, Endpoint, and AppClient so we can find it again
-    private Timer getTimer(AppEndpoint endpoint, AppSource appSource) {
-        String path = (appSource.getAppSourcePath() + "." + endpoint.getPath()).replaceAll("/", ".");
-        Object obj = meterRegistry.config();
-        String name = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
-        return meterRegistry.timer("gateway." + appSource.getAppSourcePath().replaceAll("/", "."), 
-            "AppSource", appSource.getAppSourcePath().replaceAll("/", "."), 
-            "Endpoint", endpoint.getPath().replaceAll("/", "."), 
-            "Path", path,
-            "AppClient", name);
+    // register counter with tags AppSource, Endpoint, and AppClient so we can find it again
+    private void incrementCounter(AppEndpoint endpoint, AppSource appSource, AppClientUser appClient) {
+        String path = (appSource.getAppSourcePath() + "." + endpoint.getPath()).replaceAll("/", ".");       
+        meterRegistry
+            .counter(
+                "gateway-counter." + appSource.getAppSourcePath().replaceAll("/", "."), 
+                "AppSource", appSource.getAppSourcePath().replaceAll("/", "."), 
+                "Endpoint", endpoint.getPath().replaceAll("/", "."), 
+                "Path", path,
+                "AppClient", appClient.getNameAsLower())
+            .increment();
     }
 }
