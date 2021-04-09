@@ -85,6 +85,13 @@ Example header: `"x-forwarded-client-cert": "By=spiffe://cluster.local/ns/tron-c
 
 The identity is obtained by parsing down the URI field of the header to obtain the namespace name. For example, given a x-forwarded-client-cert header with the URI field: `URI=spiffe://cluster.local/ns/guardianangel/sa/default`, the identity obtained is `guardianangel`.
 
+### Authorization in local development
+To use authorization in local development run the jwt-cli-utility (https://code.il2.dso.mil/tron/products/dod-open-source/utilities/jwt-cli-utility)
+
+Before running the  set an admin email to `ckumabe.ctr@revacomm.com` in the admin.jwt file.
+
+Run `node proxy.js 9000 8080` if you're running tron-common-api on the "production" profile or `node proxy.js 9000 8088` if running in "development".
+
 ### Current Privileges
 Current privileges include `READ`/`WRITE` (access to endpoints like /persons and /organization), and `DASHBOARD_USER`/`DASHBOARD_ADMIN` (access to endpoints specifically for dashboard app).
 
