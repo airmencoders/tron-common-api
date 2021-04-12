@@ -45,7 +45,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/" + this.apiPrefix + "/list-request-headers").permitAll()
 				.antMatchers("/actuator/health/**").hasAuthority("DASHBOARD_USER")
 				.antMatchers("/actuator/logfile").hasAuthority("DASHBOARD_ADMIN")
-				.antMatchers("/actuator/metrics").hasAuthority("DASHBOARD_ADMIN")
 	            .anyRequest()
 	            	.authenticated()
             .and()
