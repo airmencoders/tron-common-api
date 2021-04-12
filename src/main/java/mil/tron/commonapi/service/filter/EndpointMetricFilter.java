@@ -54,7 +54,6 @@ public class EndpointMetricFilter implements Filter {
         AppSource appSource = appSourceRepo.findByAppSourcePath(appSourcePath);
         if(appSource != null) {
             // If this belongs to an App Source, the rest of the path is part of the Endpoint
-            // String path = String.join("/", Arrays.copyOfRange(uriParts, 5, uriParts.length));
             String name = SecurityContextHolder
                 .getContext()
                 .getAuthentication()

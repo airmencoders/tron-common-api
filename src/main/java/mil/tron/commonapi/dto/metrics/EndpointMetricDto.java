@@ -16,16 +16,20 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Getter
-@Setter
 @EqualsAndHashCode
 public class EndpointMetricDto {
 
+    @Getter
+    @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    @Getter
+    @Setter
     private String path;
-    
+
+    @Getter
+    @Setter
     @Builder.Default
     @Valid
     @EqualsAndHashCode.Exclude

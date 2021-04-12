@@ -34,28 +34,35 @@ public class CustomMetricServiceImpl implements CustomMetricService {
             batch.stream()
                 .filter(m -> m.getId().getName().startsWith("gateway"))
                 .forEach(meter -> meter.use(
-                    m -> {}, // gauge
+                    g -> {}, // gauge
                     counter -> buildMeterValue(counter, date), // counter
-                    m -> {}, // timer
-                    m -> {}, // summary
-                    m -> {}, // long task timer
-                    m -> {}, // time gauge
-                    m -> {}, // function counter
-                    m -> {}, // function timer
+                    t -> {}, // timer
+                    d -> {}, // distribution summary
+                    l -> {}, // long task timer
+                    t -> {}, // time gauge
+                    f -> {}, // function counter
+                    f -> {}, // function timer
                     m -> {})); // generic/custom meter 
         }
     }
 
     private void buildMeterValue(Counter counter, Date date) {
-        AppSource appSource = AppSource.builder().id(UUID.fromString(counter.getId().getTag("AppSource"))).build();
-        AppEndpoint appEndpoint = AppEndpoint.builder().id(UUID.fromString(counter.getId().getTag("Endpoint"))).build();
-        AppClientUser appClientUser = AppClientUser.builder().id(UUID.fromString(counter.getId().getTag("AppClient"))).build();
+        Meter.Id counterId = counter.getId();
+        AppSource appSource = AppSource.builder()
+            .id(UUID.fromString(counterId.getTag("AppSource")))
+            .build();
+        AppEndpoint appEndpoint = AppEndpoint.builder()
+            .id(UUID.fromString(counterId.getTag("Endpoint")))
+            .build();
+        AppClientUser appClientUser = AppClientUser.builder()
+            .id(UUID.fromString(counterId.getTag("AppClient")))
+            .build();
 
         meterValueRepo.save(MeterValue.builder()
             .id(UUID.randomUUID())
             .timestamp(date)
             .value(counter.count())
-            .metricName(counter.getId().getName())
+            .metricName(counterId.getName())
             .appSource(appSource)
             .appEndpoint(appEndpoint)
             .appClientUser(appClientUser)

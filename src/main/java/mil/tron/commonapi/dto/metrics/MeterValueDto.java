@@ -15,20 +15,28 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Getter
-@Setter
 @EqualsAndHashCode
 public class MeterValueDto {
 
+    @Getter
+    @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    @Getter
+    @Setter
     private String appClient;
     
+    @Getter
+    @Setter
     private String metricName;
 
+    @Getter
+    @Setter
     private Double count;
 
+    @Getter
+    @Setter
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
     private Date timestamp;
 }
