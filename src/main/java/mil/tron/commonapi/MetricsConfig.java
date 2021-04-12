@@ -9,16 +9,16 @@ import org.springframework.context.annotation.Configuration;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.config.MeterFilter;
-import mil.tron.commonapi.service.CustomMetricService;
+import mil.tron.commonapi.service.MetricService;
 
 @Configuration
 @ConditionalOnProperty(name = "metrics.save.enabled")
 public class MetricsConfig {
 
     @Bean()
-    public CompositeMeterRegistry compositeMeterRegistry(CustomMetricService customMetricService) {
+    public CompositeMeterRegistry compositeMeterRegistry(MetricService metricService) {
         return new CompositeMeterRegistry(Clock.SYSTEM, Arrays.asList(
-           new CustomMeterRegistry(CustomRegistryConfig.DEFAULT, Clock.SYSTEM, customMetricService) 
+           new CustomMeterRegistry(CustomRegistryConfig.DEFAULT, Clock.SYSTEM, metricService) 
         ));
     }
 
