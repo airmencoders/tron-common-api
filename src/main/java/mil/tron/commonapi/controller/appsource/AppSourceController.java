@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.AppClientSummaryDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
@@ -19,6 +20,7 @@ import mil.tron.commonapi.service.AppSourceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -329,10 +331,19 @@ public class AppSourceController {
     @Operation(summary = "Gets a list of the available app clients (their names and UUIDs)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
-                    description = "All App Client Privileges Removed OK",
-                    content = @Content(schema = @Schema(implementation = AppSourceDetailsDto.class)))
+                    description = "Successful operation",
+            		content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = AppClientSummaryDto.class)))),
+            @ApiResponse(responseCode = "403",
+            description = "Insufficient privileges",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ExceptionResponse.class)
+            ))
     })
     @GetMapping("/app-clients")
+    @PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or hasAuthority('APP_SOURCE_ADMIN')")
     public ResponseEntity<Object> getAvailableAppClients() {
         return new ResponseEntity<>(appClientUserService.getAppClientUserSummaries(), HttpStatus.OK);
     }
