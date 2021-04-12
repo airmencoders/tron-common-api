@@ -28,5 +28,6 @@ public class EndpointMetricDto {
     
     @Builder.Default
     @Valid
+    @EqualsAndHashCode.Exclude
     private List<MeterValueDto> values = new ArrayList<>();
 }
