@@ -1,0 +1,25 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="billdewitt (generated)" id="1617980646260-1">
+        <createTable tableName="meter_value">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="meter_valuePK"/>
+            </column>
+            <column name="metric_name" type="VARCHAR(255)"/>
+            <column name="timestamp" type="TIMESTAMP WITHOUT TIME ZONE"/>
+            <column name="value" type="FLOAT8"/>
+            <column name="app_client_user_id" type="UUID"/>
+            <column name="app_endpoint_id" type="UUID"/>
+            <column name="app_source_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617980646260-2">
+        <addForeignKeyConstraint baseColumnNames="app_endpoint_id" baseTableName="meter_value" constraintName="FK308l71nf4fi4xvhi77ncmbjq3" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_endpoint" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617980646260-3">
+        <addForeignKeyConstraint baseColumnNames="app_source_id" baseTableName="meter_value" constraintName="FKfn3dy5rv5j8m2hcvqu2ice4x9" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_source" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1617980646260-4">
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="meter_value" constraintName="FKhc3ltbqh86edi63jm39o0felq" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app_client_user" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
