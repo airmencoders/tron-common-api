@@ -1,0 +1,42 @@
+# Used for the docker-compose fullstack setup
+
+
+FROM centos:7 as wgetsrc
+RUN yum install wget -y
+
+# Load the hardened jdk image we use to run puckboard
+FROM registry.il2.dso.mil/platform-one/devops/pipeline-templates/ironbank/maven-jdk11:3.6.3
+
+ENV CONTEXTS DEV
+
+USER root
+
+RUN rm -rf src
+COPY . .
+
+# make new migration file that has our default admin user in it (jt@test.mil)
+RUN rm -f  src/main/resources/db/changelog/diff-changelog-1.00.999.xml
+RUN printf $'<?xml version="1.1" encoding="UTF-8" standalone="no"?> \n\
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">\n\
+    <changeSet author="none" id="1117755096080">\n\
+        <sql>\n\
+            INSERT INTO dashboard_user (id, email, email_as_lower) values (\'da26d89f-015d-4ba0-a2bb-30b54b3a6c02\', \'jt@test.mil\', \'jt@test.mil\'); \n\
+            INSERT INTO dashboard_user_privileges (dashboard_user_id, privileges_id) values (\'da26d89f-015d-4ba0-a2bb-30b54b3a6c02\', 3); \n\
+            INSERT INTO dashboard_user_privileges (dashboard_user_id, privileges_id) values (\'da26d89f-015d-4ba0-a2bb-30b54b3a6c02\', 4); \n\
+        </sql>\n\
+    </changeSet>\n\
+</databaseChangeLog>\n' > src/main/resources/db/changelog/diff-changelog-1.00.999.xml
+
+# clean and build
+RUN rm -rf target/
+RUN mvn clean
+RUN mvn package -Dmaven.test.skip=true
+VOLUME /tmp
+
+# Copy the wget binaries build in stage 1
+COPY --from=wgetsrc /usr/bin/wget /usr/bin
+COPY --from=wgetsrc /usr/lib64/libssl.so.10 /usr/lib64/
+COPY --from=wgetsrc /usr/lib64/libidn.so.11 /usr/lib64/
+COPY --from=wgetsrc /usr/lib64/libcrypto.so.10 /usr/lib64/
+
+ENTRYPOINT ["java","-Xms512m","-Xmx1024m","-XX:+HeapDumpOnOutOfMemoryError","-XX:HeapDumpPath=/tmp/heap-dump.core","-jar","/home/maven/target/commonapi-0.0.1-SNAPSHOT.jar"]
