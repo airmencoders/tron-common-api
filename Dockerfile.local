@@ -1,6 +1,25 @@
-FROM adoptopenjdk/openjdk11:centos
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} /app/commonapi.jar
-EXPOSE 8080
+# Multi-stage docker build.  First load CentOS and install wget and maven
+FROM centos:7 as wgetsrc
+RUN yum install wget -y
+
+# Load the hardened jdk image we use to run puckboard
+FROM registry.il2.dso.mil/platform-one/devops/pipeline-templates/ironbank/maven-jdk11:3.6.3
+
 ENV CONTEXTS DEV
-ENTRYPOINT ["java","-jar","/app/commonapi.jar"]
+
+# Run as a unprivileged user
+USER root
+
+COPY . .
+RUN rm -rf target/
+RUN mvn package -Dmaven.test.skip=true
+VOLUME /tmp
+COPY target/*.jar /app/commonapi.jar
+
+# Copy the wget binaries build in stage 1
+COPY --from=wgetsrc /usr/bin/wget /usr/bin
+COPY --from=wgetsrc /usr/lib64/libssl.so.10 /usr/lib64/
+COPY --from=wgetsrc /usr/lib64/libidn.so.11 /usr/lib64/
+COPY --from=wgetsrc /usr/lib64/libcrypto.so.10 /usr/lib64/
+
+ENTRYPOINT ["java","-Xms512m","-Xmx1024m","-XX:+HeapDumpOnOutOfMemoryError","-XX:HeapDumpPath=/tmp/heap-dump.core","-jar","/app/commonapi.jar"]
