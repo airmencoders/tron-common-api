@@ -1,19 +1,43 @@
 
 # TRON Common API
 
+By far the easiest way to get up an running with a local instance of Common API for testing alongside another application you are developing is to follow the instructions in the repo https://code.il2.dso.mil/tron/products/tron-common-api/tron-common-api-local for how to use docker-compose to get all services up and running.
+
+If you choose to get your hands dirty and want to run the Common API locally for _development_ on it, then note that Common API runs by default in the `development` profile (e.g `mvn spring-boot:run`) which means:
+  + you can access it at http://localhost:8088/api
+  + H2 (in-mem) database is used
+  + spring security is disabled
+
+If you want to run it locally in `production` profile, then issue `mvn spring-boot:run -Pproduction`.  This means that:
+  + you an access it at http://localhost:8080/api (note change in port number)
+  + looks for and uses a postgres db (see postgres section below)
+  + spring security is enabled
+
+You can also run `development` with security enabled or you can run `production` with security disabled.  To control security manually set the env var `SECURITY_ENABLED` as in `SECURITY_ENABLED=true mvn spring-boot:run -Pdevelopment` which will force the development profile and force security to be enabled.
+
 ## Swagger Docs
 Navigate to the root of the API - `/api` and a redirect will go to the Swagger UI docs.
 
 Example:
-`http://localhost:8080/api/` or `https://tron-common-api.staging.dso.mi/api`
+`http://localhost:8088/api/` or `https://tron-common-api.staging.dso.mil/api` etc.
 
 ## H2 Test DB
 
-### Console
-http://localhost:8080/api/h2-console/
+The H2 database is the in-memory database used in `development` and in unit tests.
 
-### Connection String
+### H2 Console
+
+The H2 console can only be accessed when Spring Security is disabled (which is default in devlopment profile).
+
+http://localhost:8088/api/h2-console/
+
+### H2 Connection String
+
 jdbc:h2:mem:testdb
+
+### H2 creds
+
+username: `sa` with no password
 
 ## Postgres DB Usage
 
@@ -31,14 +55,12 @@ then Common API will look to connect to a postgres db using the following ENV VA
 `${APP_DB_ADMIN_PASSWORD}` => admin password for the database
 
 
-## Maven CLI w/ env variables & profile
+## Forcing use of Postgres DB via Maven CLI w/ env variables & profile
 mvn spring-boot:run -Dspring-boot.run.arguments="--PGHOST=host --PGPORT=port --PG_DATABASE=database_name --APP_DB_ADMIN__PASSWORD=database_password --PG_USER=database_user" -Pproduction
 
 ## Seeded Data
 
-Seeded data is provided for the purpose of local integration development.
-
-
+See the seeder utility repo at: https://code.il2.dso.mil/tron/products/tron-common-api/tron-common-api-seeder
 
 ### Liquibase Changeset Generation
 
@@ -49,35 +71,27 @@ Some database migrations are simple (e.g. adding a single column), and you may c
 2. Checkout branch with your changes
 3. Run the following command to tell liquibase to generate a diff between your current postgres database and the hibernate generated H2 database *(replace the parameters as appropriate to match your environment)*:
 ```
-mvnw -Dliquibase.url=jdbc:postgresql://localhost:5432/<dbname> -Dliquibase.username=<username> -Dliquibase.password=<password> liquibase:diff
+mvn -Dliquibase.url=jdbc:postgresql://localhost:5432/<db_name> -Dliquibase.username=<db_username> -Dliquibase.password=<db_password> liquibase:diff
 ```
 4. The generated diff changelog file will have .XXX in the name, change this as appropriate to the next available version number
 5. Make any appropriate changes or customizations to the generated file
 6. You no longer have to add the new changelog file to the `db.changelog-master.xml`, it will be included automatically
 
-
 ### docker
 `docker run -p 8080:8080 registry.il2.dso.mil/tron/products/tron-common-api/tron-common-api:{version}`
 
+Note to log into the IL2 GitLab container registry first:
+
+`docker login registry.il2.dso.mil -u gitlab_ci_token -u <token>` where `<token>` is your GitLab access token with registry accesses enabled.
+
 ### docker-compose
-Note: No external port is needed, as your api should communicate directly with the Common API.
-```
-version: '3.3'
 
-services:
+The entire Tron Common API stack can be ran using docker-compose.  
 
-  common-api:
-    image: registry.il2.dsop.io/tron/products/tron-common-api/tron-common-api:{version}
-    environment:
-      CONTEXTS: test
-```
-
-### jar file
-`export CONTEXTS=test && java -jar target/commonapi-{version}.jar`
-
+See https://code.il2.dso.mil/tron/products/tron-common-api/tron-common-api-local for how to run this locally for development/testing.
 
 ## Authorization
-Application to Common API authorization is based off the `x-forwarded-client-cert` header to identify the requesting application's identify. This header will be provided by ISTIO in production. For development purposes, the application can be ran with the `development` profile to circumvent authorization so that the header does not need to be provided in requests. The `security.enabled` field in the properties is used to control whether or not Spring Security will enforce authorization.
+Application to Common API authorization is based off the `x-forwarded-client-cert` header to identify the requesting application's identify. This header will be provided by ISTIO in production. For development purposes, the application can be ran with the `development` profile to circumvent authorization so that the header does not need to be provided in requests. The `security.enabled` (or env var SECURITY_ENABLED=true) field in the properties is used to control whether or not Spring Security will enforce authorization.
 
 Example header: `"x-forwarded-client-cert": "By=spiffe://cluster.local/ns/tron-common-api/sa/default;Hash=855b1556a45637abf05c63407437f6f305b4627c4361fb965a78e5731999c0c7;Subject=\"\";URI=spiffe://cluster.local/ns/guardianangel/sa/default"`
 
@@ -86,7 +100,7 @@ The identity is obtained by parsing down the URI field of the header to obtain t
 ### Authorization in local development
 To use authorization in local development run the jwt-cli-utility (https://code.il2.dso.mil/tron/products/dod-open-source/utilities/jwt-cli-utility)
 
-Before running the  set an admin email to `ckumabe.ctr@revacomm.com` in the admin.jwt file.
+Before running the API with the JWT UTILITY, set an admin email to `ckumabe.ctr@revacomm.com` in the admin.jwt file.
 
 Run `node proxy.js 9000 8080` if you're running tron-common-api on the "production" profile or `node proxy.js 9000 8088` if running in "development".
 
