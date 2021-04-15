@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 public interface AppEndpointRepository extends CrudRepository<AppEndpoint, UUID>{
     Iterable<AppEndpoint> findAllByAppSource(AppSource appSource);
     Iterable<AppEndpoint> findAllByAppSourceEqualsAndMethodEqualsAndPathEquals(AppSource source, RequestMethod method, String path);
+    AppEndpoint findByPathAndAppSource(String path, AppSource appSource);
     boolean existsByAppSourceEqualsAndMethodEqualsAndAndPathEquals(AppSource appSource, RequestMethod method, String path);
     
     @Transactional
