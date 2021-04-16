@@ -44,4 +44,8 @@ public interface ScratchStorageService {
     boolean userCanReadFromAppId(UUID appId, String email);
     boolean userCanWriteToAppId(UUID appId, String email);
     boolean userHasAdminWithAppId(UUID appId, String email);
+
+    // JSON methods to treating values of specified keys like JSON
+    String getKeyValueJson(UUID appId, String keyName, String jsonPathSpec);
+    void patchKeyValueJson(UUID appId, String keyName, String value, String jsonPathSpec);
 }
