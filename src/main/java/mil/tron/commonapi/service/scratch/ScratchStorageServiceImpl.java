@@ -1,6 +1,12 @@
 package mil.tron.commonapi.service.scratch;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.InvalidJsonException;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -9,6 +15,7 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
+import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -17,9 +24,6 @@ import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepos
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageUserRepository;
-
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -484,5 +488,59 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         }
 
         return false;
+    }
+
+    /**
+     * Gets an existing key value-pair by appId and key name.  And then applies given JsonPath specification/query
+     * to it and returns the result (if any) in Json format.
+     * @param appId scratch app UUID
+     * @param keyName key name
+     * @param jsonPathSpec the JayWay JsonPath specification string
+     * @return the result of the JsonPath query
+     */
+    @Override
+    public String getKeyValueJson(UUID appId, String keyName, String jsonPathSpec) {
+        ScratchStorageEntry value = this.getKeyValueEntryByAppId(appId, keyName);
+
+        try {
+            Object results = JsonPath.parse(value.getValue()).read(jsonPathSpec);
+            return new ObjectMapper()
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(results);
+        }
+        catch (PathNotFoundException e) {
+            throw new RecordNotFoundException("Json Path not found");
+        }
+        catch (JsonProcessingException e) {
+            throw new InvalidFieldValueException("Return value Could not be serialized to Json");
+        }
+        catch (InvalidJsonException e) {
+            throw new InvalidFieldValueException("Source value not valid Json");
+        }
+    }
+
+    /**
+     * Updates a portion of a Json structure given a JsonPath and value
+     * @param appId the UUID of the scratch app
+     * @param keyName the key name of the existing key-value pair
+     * @param value the value to set in the Json
+     * @param jsonPathSpec the Jayway JsonPath specification string
+     */
+    @Override
+    public void patchKeyValueJson(UUID appId, String keyName, String value, String jsonPathSpec) {
+
+        // must already exist as a key-value pair to modify...
+        ScratchStorageEntry existingJsonValue = this.getKeyValueEntryByAppId(appId, keyName);
+
+        try {
+            // parse it to Json
+            DocumentContext results = JsonPath.parse(existingJsonValue.getValue()).set(jsonPathSpec, value);
+
+            // write the modified json structure back to the db as a string
+            this.setKeyValuePair(appId, keyName, results.jsonString());
+        }
+        catch (InvalidJsonException e) {
+            throw new InvalidFieldValueException("Source Value Not Valid Json");
+        }
     }
 }
