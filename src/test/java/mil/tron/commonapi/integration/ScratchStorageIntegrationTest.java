@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.ScratchValuePatchJsonDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
@@ -40,9 +41,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
 /**
@@ -100,6 +99,14 @@ public class ScratchStorageIntegrationTest {
             .appId(UUID.randomUUID())
             .key("hello")
             .value("world")
+            .build();
+
+    // predefine a key value pair for COOL_APP_NAME that is also valid JSON
+    private ScratchStorageEntry entry1Json = ScratchStorageEntry
+            .builder()
+            .appId(entry1.getAppId())
+            .key("name")
+            .value("{ \"name\": \"Billiam\" }")
             .build();
 
     // predefine a key value pair for TEST_APP_NAME
@@ -374,6 +381,51 @@ public class ScratchStorageIntegrationTest {
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isNotFound());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testSetAndGetScratchValueAsJson() throws Exception {
+
+        // test using scratch values as JSON
+
+        mockMvc.perform(post(ENDPOINT)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(entry1Json)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.appId", equalTo(entry1.getAppId().toString())));
+
+        // read the name field
+        mockMvc.perform(post(ENDPOINT + "{appId}/{keyName}/jsonize", entry1.getAppId(), "name")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .contentType(MediaType.TEXT_PLAIN)
+                .content("$.name"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(equalTo("\"Billiam\"")));
+
+        // set the name field
+        mockMvc.perform(patch(ENDPOINT + "{appId}/{keyName}/jsonize", entry1.getAppId(), "name")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto.builder()
+                    .jsonPath("$.name")
+                    .value("John")
+                    .build())))
+                .andExpect(status().isNoContent());
+
+        // read it back
+        mockMvc.perform(post(ENDPOINT + "{appId}/{keyName}/jsonize", entry1.getAppId(), "name")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
+                .contentType(MediaType.TEXT_PLAIN)
+                .content("$.name"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo("\"John\"")));
     }
 
     @Transactional

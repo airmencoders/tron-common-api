@@ -10,6 +10,7 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
+import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -650,5 +651,80 @@ public class ScratchStorageServiceImplTest {
         assertThrows(RecordNotFoundException.class,
                 () -> service.userHasAdminWithAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
 
+    }
+
+    @Test
+    void testGetKeyValueAsJson() {
+
+        ScratchStorageEntry entry = ScratchStorageEntry.builder()
+            .id(UUID.randomUUID())
+            .key("hello")
+            .value("{ \"name\": \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
+            .build();
+
+        ScratchStorageEntry invalidJsonEntry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("hello")
+                .value("{ \"name: \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
+                .build();
+
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(invalidJsonEntry));
+
+        String retVal = service.getKeyValueJson(entry.getId(), "hello", "$.name");
+        assertEquals("\"Dude\"", retVal);
+
+        retVal = service.getKeyValueJson(entry.getId(), "hello", "$.skills");
+        assertEquals("[ \"coding\", \"math\" ]", retVal);
+
+        retVal = service.getKeyValueJson(entry.getId(), "hello", "$.skills[?(@ == 'math')]");
+        assertEquals("[ \"math\" ]", retVal);
+
+        retVal = service.getKeyValueJson(entry.getId(), "hello", "$.skills[?(@ == 'driving')]");
+        assertEquals("[ ]", retVal);
+
+        assertThrows(RecordNotFoundException.class, () -> service.getKeyValueJson(entry.getId(), "hello", "$.age"));
+        assertThrows(InvalidFieldValueException.class, () -> service.getKeyValueJson(entry.getId(), "hello", "$.age"));
+    }
+
+    @Test
+    void testSetKeyValueAsJson() {
+        ScratchStorageEntry entry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("hello")
+                .value("{ \"name\": \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
+                .build();
+
+        ScratchStorageEntry invalidJsonEntry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("hello")
+                .value("{ \"name: \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
+                .build();
+
+        final ScratchStorageEntry[] updatedValue = {null};
+
+        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(invalidJsonEntry));
+
+        Mockito.when(repository.save(Mockito.any(ScratchStorageEntry.class)))
+                .thenAnswer(invocationOnMock -> {
+                    updatedValue[0] = invocationOnMock.getArgument(0);
+                    return invocationOnMock.getArgument(0);
+                });
+
+        service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.name");
+        assertTrue(updatedValue[0].getValue().contains("John"));
+
+        assertThrows(InvalidFieldValueException.class, () -> service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.age"));
+        assertThrows(InvalidFieldValueException.class, () -> service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.name"));
     }
 }

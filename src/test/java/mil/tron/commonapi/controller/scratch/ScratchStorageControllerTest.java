@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.ScratchValuePatchJsonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
@@ -28,14 +29,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.AdditionalAnswers.returnsSecondArg;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ScratchStorageController.class)
 public class ScratchStorageControllerTest {
@@ -507,6 +506,50 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(get("/v1/scratch/users/privs"))
                 .andExpect(status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void testGetScratchValueAsJson() throws Exception {
+
+        // test a post request to get a scratch key-value as Json (request body is text/plain with the Json Patch Spec)
+        UUID appId = entries.get(0).getAppId();
+        String keyValue = "hello";
+        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true); // let user have the privs to read
+        Mockito.when(service.getKeyValueEntryByAppId(appId, keyValue)).thenReturn(entries.get(0));
+        Mockito.when(service.getKeyValueJson(appId, keyValue, "$.name")).thenReturn("Dude");
+
+        mockMvc.perform(post(ENDPOINT  + "{appId}/{keyValue}/jsonize", appId, keyValue)
+                .contentType(MediaType.TEXT_PLAIN)
+                .content("$.name"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("Dude")));
+
+    }
+
+    @Test
+    void testSetScratchValuePartAsJson() throws Exception {
+
+        // test a patch request to change part of a scratch key-value as Json
+        ScratchStorageEntry entry = ScratchStorageEntry
+                .builder()
+                .id(UUID.randomUUID())
+                .appId(UUID.randomUUID())
+                .key("name")
+                .value("Chris")
+                .build();
+
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(true); // let user have the privs to mutate
+
+        Mockito.when(service.setKeyValuePair(entry.getAppId(), entry.getKey(), entry.getValue())).thenReturn(entry);
+        Mockito.doNothing().when(service).patchKeyValueJson(entry.getAppId(), entry.getKey(), "Bob", "$.name");
+
+        mockMvc.perform(patch(ENDPOINT + "{appId}/{keyName}/jsonize", entry.getAppId(), entry.getKey())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto.builder().value("Bob").jsonPath("$.name").build())))
+                .andExpect(status().isNoContent());
+
     }
 
     // test endpoints consuming text/plain
