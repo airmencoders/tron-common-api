@@ -3,7 +3,9 @@ package mil.tron.commonapi.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
+
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
@@ -97,6 +99,18 @@ public class PersonControllerTest {
 			mockMvc.perform(get(ENDPOINT + "{id}", "asdf1234"))
 				.andExpect(status().isBadRequest())
 				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
+		}
+		
+		@Test
+		void testGetFilter() throws Exception {
+			Person entity = personService.convertToEntity(testPerson);
+			Mockito.when(personService.getPersonFilter(Mockito.any(), Mockito.any())).thenReturn(entity);
+			Mockito.when(personService.convertToDto(Mockito.any(), Mockito.any())).thenReturn(testPerson);
+			
+			mockMvc.perform(get(ENDPOINT + String.format("filter/?filterType=email&filterValue=%s", testPerson.getEmail())))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.isEqualTo(testPersonJson));
 		}
 
         @Captor ArgumentCaptor<PersonConversionOptions> optionsCaptor;

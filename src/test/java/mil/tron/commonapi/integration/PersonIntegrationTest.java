@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -102,6 +103,49 @@ public class PersonIntegrationTest {
         mockMvc.perform(get(ENDPOINT + "?page=2&limit=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testPersonFilter() throws Exception {
+    	PersonDto person = PersonDto.builder()
+                .firstName("test")
+                .lastName("member")
+                .email("test@member.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("12345")
+                .build();
+    	
+    	PersonDto person1 = PersonDto.builder()
+                .firstName("1")
+                .lastName("2")
+                .email("1@2.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("34567")
+                .build();
+                
+                
+		mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person)));
+		mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person1)));
+		
+		// Try to filter by email
+		mockMvc.perform(get(ENDPOINT + String.format("filter/?filterType=email&filterValue=%s", person.getEmail())))
+			.andExpect(status().isOk())
+			.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+					.isEqualTo(OBJECT_MAPPER.writeValueAsString(person)));
+		
+		// Try to filter by dodid
+		mockMvc.perform(get(ENDPOINT + String.format("filter/?filterType=dodid&filterValue=%s", person1.getDodid())))
+			.andExpect(status().isOk())
+			.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+					.isEqualTo(OBJECT_MAPPER.writeValueAsString(person1)));
+		
+		// Try an invalid filter
+		mockMvc.perform(get(ENDPOINT + String.format("filter/?filterType=asdf&filterValue=%s", person1.getDodid())))
+			.andExpect(status().isBadRequest());
     }
 
     @Test
