@@ -103,27 +103,27 @@ public class PersonController {
 	})
 	@Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
 	@Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
-	@Parameter(name = "filterType", 
-				description = "The type of filter to be used", 
+	@Parameter(name = "findByField", 
+				description = "The field to search for", 
 				required = true,
 				content= @Content(schema = @Schema(implementation = PersonFilterType.class)))
-	@Parameter(name = "filterValue", description = "The value to filter against", required = true)
+	@Parameter(name = "value", description = "The value to search against", required = true)
 	@PreAuthorizeRead
-	@GetMapping(value = "/filter")
-	public ResponseEntity<PersonDto> getPersonWithFilter(
+	@GetMapping(value = "/find")
+	public ResponseEntity<PersonDto> findPersonBy(
 				@RequestParam(name = "memberships", required = false) boolean memberships,
                 @RequestParam(name = "leaderships", required = false) boolean leaderships,
-                @RequestParam(name = "filterType", required = true) String filterType,
-                @RequestParam(name = "filterValue", required = true) String filterValue) {
+                @RequestParam(name = "findByField", required = true) String findByField,
+                @RequestParam(name = "value", required = true) String value) {
 		
 		PersonFilterType filter = null;
 		try {
-			filter = PersonFilterType.valueOf(filterType.toUpperCase());
+			filter = PersonFilterType.valueOf(findByField.toUpperCase());
 		} catch (Exception ex) {
-			throw new BadRequestException(String.format("filterType: %s is invalid.", filterType));
+			throw new BadRequestException(String.format("findByField: %s is invalid.", findByField));
 		}
 
-		Person person = personService.getPersonFilter(filter, filterValue);
+		Person person = personService.getPersonFilter(filter, value);
 		PersonDto dto = personService.convertToDto(person, PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build());
 		
 		return new ResponseEntity<>(dto, HttpStatus.OK);

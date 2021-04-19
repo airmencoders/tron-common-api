@@ -132,19 +132,19 @@ public class PersonIntegrationTest {
 		mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person1)));
 		
 		// Try to filter by email
-		mockMvc.perform(get(ENDPOINT + String.format("filter/?filterType=email&filterValue=%s", person.getEmail())))
+		mockMvc.perform(get(ENDPOINT + String.format("find/?findByField=email&value=%s", person.getEmail())))
 			.andExpect(status().isOk())
 			.andExpect(result -> assertThat(result.getResponse().getContentAsString())
 					.isEqualTo(OBJECT_MAPPER.writeValueAsString(person)));
 		
 		// Try to filter by dodid
-		mockMvc.perform(get(ENDPOINT + String.format("filter/?filterType=dodid&filterValue=%s", person1.getDodid())))
+		mockMvc.perform(get(ENDPOINT + String.format("find/?findByField=dodid&value=%s", person1.getDodid())))
 			.andExpect(status().isOk())
 			.andExpect(result -> assertThat(result.getResponse().getContentAsString())
 					.isEqualTo(OBJECT_MAPPER.writeValueAsString(person1)));
 		
 		// Try an invalid filter
-		mockMvc.perform(get(ENDPOINT + String.format("filter/?filterType=asdf&filterValue=%s", person1.getDodid())))
+		mockMvc.perform(get(ENDPOINT + String.format("find/?findByField=asdf&value=%s", person1.getDodid())))
 			.andExpect(status().isBadRequest());
     }
 

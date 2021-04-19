@@ -107,7 +107,7 @@ public class PersonControllerTest {
 			Mockito.when(personService.getPersonFilter(Mockito.any(), Mockito.any())).thenReturn(entity);
 			Mockito.when(personService.convertToDto(Mockito.any(), Mockito.any())).thenReturn(testPerson);
 			
-			mockMvc.perform(get(ENDPOINT + String.format("filter/?filterType=email&filterValue=%s", testPerson.getEmail())))
+			mockMvc.perform(get(ENDPOINT + String.format("find/?findByField=email&value=%s", testPerson.getEmail())))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
 						.isEqualTo(testPersonJson));

@@ -319,7 +319,7 @@ class PersonServiceImplTest {
     }
     
     @Test
-    void getPersonFilter() {
+    void getPersonByFieldTest() {
     	// email filter
     	Mockito.when(repository.findByEmailIgnoreCase(testPerson.getEmail())).thenReturn(Optional.of(testPerson));
     	Person retrievedPerson = personService.getPersonFilter(PersonFilterType.EMAIL, testPerson.getEmail());
