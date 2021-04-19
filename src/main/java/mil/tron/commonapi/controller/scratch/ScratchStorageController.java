@@ -14,6 +14,7 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.ScratchValuePatchJsonDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
@@ -151,7 +152,7 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
 
-    @Operation(summary = "Retrieves a singe key-value pair for for a single app",
+    @Operation(summary = "Retrieves a single key-value pair for for a single app",
             description = "App ID is the UUID of the owning application")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
@@ -170,6 +171,53 @@ public class ScratchStorageController {
 
         validateScratchReadAccessForUser(appId);
         return new ResponseEntity<>(scratchStorageService.getKeyValueEntryByAppId(appId, keyName), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Treats the key's value as JSON and returns the JsonPath query invoked onto that JSON structure. " +
+                "Returns JSON string matching the specified JSON Path",
+            description = "App ID is the UUID of the owning application")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = String.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID / Key name not valid or found / JSON path spec not found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Application UUID / Value cannot be jsonized / Unable to serialize response to JSON")
+    })
+    @PostMapping(value = "/{appId}/{keyName}/jsonize", consumes = {"text/plain;charset=UTF-8"})
+    public ResponseEntity<Object> getKeyValueByKeyNameAsJson(
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
+            @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName,
+            @Parameter(name = "jsonPath", description = "Jayway JsonPath spec string", required = true) @RequestBody String jsonPath) {
+
+        validateScratchReadAccessForUser(appId);
+        return new ResponseEntity<>(scratchStorageService.getKeyValueJson(appId, keyName, jsonPath), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Treats the key's value as JSON and attempts to update a portion of it from given JSON Patch spec " +
+                "with provided value.  Returns NO_CONTENT response on successful update.",
+            description = "App ID is the UUID of the owning application")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204",
+                    description = "Successful operation"),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID / Key name not valid or found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Application UUID / Value cannot be jsonized / Bad JSON Path / Unable to serialize response to JSON")
+    })
+    @PatchMapping("/{appId}/{keyName}/jsonize")
+    public ResponseEntity<Object> patchKeyValuePairAsJson(
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
+            @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName,
+            @Parameter(name = "updateSpec", description = "Object specifying the json path to execute and the new value", required = true)
+                @Valid @RequestBody ScratchValuePatchJsonDto valueSpec) {
+
+        validateScratchWriteAccessForUser(appId);
+        scratchStorageService.patchKeyValueJson(appId, keyName, valueSpec.getValue(), valueSpec.getJsonPath());
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @Operation(summary = "Adds or updates a key-value pair for a given App Id",
