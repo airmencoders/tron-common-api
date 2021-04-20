@@ -2,7 +2,6 @@ package mil.tron.commonapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.times;
@@ -36,15 +35,20 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.TimeGauge;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
+import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
+import mil.tron.commonapi.dto.metrics.CountMetricDto;
+import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.dto.metrics.MeterValueDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.CountMetric;
 import mil.tron.commonapi.entity.MeterValue;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.MeterValueRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
@@ -56,6 +60,9 @@ class MetricsServiceImplTest {
 
 	@Mock
 	private AppEndpointRepository appEndpointRepo;
+
+    @Mock
+	private AppClientUserRespository appClientUserRepo;
 
 	@Mock
 	private AppSourceRepository appSourceRepo;
@@ -70,6 +77,13 @@ class MetricsServiceImplTest {
     private AppClientUser appClientUser;
     private AppSource appSource;
     private AppSourceMetricDto testAppSourceMetricDto;
+    private CountMetric countMetric1;
+    private CountMetric countMetric2;
+    private CountMetricDto countMetricDto1;
+    private CountMetricDto countMetricDto2;
+    private AppSourceCountMetricDto appSourceCountMetricDto;
+    private EndpointCountMetricDto endpointCountMetricDto;
+    private AppClientCountMetricDto appClientCountMetricDto;
 
 	@BeforeEach
 	void beforeEachSetup() {
@@ -118,6 +132,78 @@ class MetricsServiceImplTest {
                 .endpoints(Arrays.asList(testEndpointMetricDto))
                 .name(appSource.getName())
                 .build();
+        countMetric1 = new CountMetric() {
+            private UUID id = UUID.randomUUID();
+            private String name = "name";
+            private Double sum = 2d;
+            @Override
+            public UUID getId() {
+                return id;
+            }
+
+            @Override
+            public String getName() {
+                return name;
+            }
+
+            @Override
+            public Double getSum() {
+                return sum;
+            }            
+        };
+
+        countMetric2 = new CountMetric() {
+            private UUID id = UUID.randomUUID();
+            private String name = "name2";
+            private Double sum = 4d;
+            @Override
+            public UUID getId() {
+                return id;
+            }
+
+            @Override
+            public String getName() {
+                return name;
+            }
+
+            @Override
+            public Double getSum() {
+                return sum;
+            }            
+        };
+
+        countMetricDto1 = CountMetricDto.builder()
+                .id(countMetric1.getId())
+                .path(countMetric1.getName())
+                .sum(countMetric1.getSum())
+                .build();
+        
+        countMetricDto2 = CountMetricDto.builder()
+                .id(countMetric2.getId())
+                .path(countMetric2.getName())
+                .sum(countMetric2.getSum())
+                .build();
+
+        appSourceCountMetricDto = AppSourceCountMetricDto.builder()
+                .id(appSource.getId())
+                .endpoints(Arrays.asList(countMetricDto1))
+                .appClients(Arrays.asList(countMetricDto2))
+                .name(appSource.getName())
+                .build();
+
+        endpointCountMetricDto = EndpointCountMetricDto.builder()
+                .id(appEndpoint.getId())
+                .appClients(Arrays.asList(countMetricDto1))
+                .appSource(appSource.getName())
+                .path(appEndpoint.getPath())
+                .build();
+
+        appClientCountMetricDto = AppClientCountMetricDto.builder()
+                .id(appClientUser.getId())
+                .endpoints(Arrays.asList(countMetricDto2))
+                .appSource(appSource.getName())
+                .name(appClientUser.getName())
+                .build();
 	}
 
     @Test
@@ -159,7 +245,7 @@ class MetricsServiceImplTest {
     }
 
     @Test
-    void getMetricsForAppSourceTestWhereEndpointDNETest() {
+    void getMetricsForAppSourceTestWhereAppSourceDNETest() {
         Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.empty());
         assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
     		metricService.getMetricsForAppSource(appSource.getId(), new Date(), new Date());
@@ -178,6 +264,122 @@ class MetricsServiceImplTest {
         Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));
         AppSourceMetricDto result = metricService.getMetricsForAppSource(appSource.getId(), new Date(), new Date());
         assertThat(result).isEqualTo(testAppSourceMetricDto);
+    }
+
+    @Test
+    void getCountOfMetricsForAppSourceTest() {
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));        
+        Mockito.when(repository.sumByEndpoint(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric1));
+        Mockito.when(repository.sumByAppClient(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric2));        
+        AppSourceCountMetricDto result = metricService.getCountOfMetricsForAppSource(appSource.getId(), new Date(), new Date());
+        assertThat(result).isEqualTo(appSourceCountMetricDto);
+    }
+
+    @Test
+    void getCountOfMetricsForAppSourceTestWhereAppSourceDNETest() {
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.empty());
+        assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+    		metricService.getCountOfMetricsForAppSource(appSource.getId(), new Date(), new Date());
+    	});
+    }
+
+    @Test
+    void getCountOfMetricsForAppSourceTestWhereNoMetricsExistTest() {
+        appSource.getAppEndpoints().clear();
+        appSourceCountMetricDto = AppSourceCountMetricDto.builder()
+                .id(appSource.getId())
+                .endpoints(new ArrayList<>())
+                .appClients(new ArrayList<>())
+                .name(appSource.getName())
+                .build();
+
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));
+        AppSourceCountMetricDto result = metricService.getCountOfMetricsForAppSource(appSource.getId(), new Date(), new Date());
+        assertThat(result).isEqualTo(appSourceCountMetricDto);
+    }
+
+    @Test
+    void getCountOfMetricsForAppEndpointTest() {
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));        
+        Mockito.when(appEndpointRepo.findByPathAndAppSource(appEndpoint.getPath(), appSource)).thenReturn(appEndpoint);
+        Mockito.when(repository.sumByAppSourceAndAppClientForEndpoint(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric1));
+        EndpointCountMetricDto result = metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), new Date(), new Date());
+        assertThat(result).isEqualTo(endpointCountMetricDto);
+    }
+
+    @Test
+    void getCountOfMetricsForAppEndpointTestWhereAppSourceDNETest() {
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.empty());
+        assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+    		metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), new Date(), new Date());
+    	});
+    }
+
+    @Test
+    void getCountOfMetricsForAppEndpointTestWhereEndpointDNETest() {
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource)); 
+        Mockito.when(appEndpointRepo.findByPathAndAppSource(appEndpoint.getPath(), appSource)).thenReturn(null);
+        assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+    		metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), new Date(), new Date());
+    	});
+    }
+
+    @Test
+    void getCountOfMetricsForAppEndpointTestWhereNoMetricsExistTest() {
+        appSource.getAppEndpoints().clear();
+        endpointCountMetricDto = EndpointCountMetricDto.builder()
+                .id(appEndpoint.getId())
+                .appClients(new ArrayList<>())
+                .path(appEndpoint.getPath())
+                .appSource(appSource.getName())
+                .build();
+
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));
+        Mockito.when(appEndpointRepo.findByPathAndAppSource(appEndpoint.getPath(), appSource)).thenReturn(appEndpoint);
+        EndpointCountMetricDto result = metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), new Date(), new Date());
+        assertThat(result).isEqualTo(endpointCountMetricDto);
+    }
+
+    @Test
+    void getCountOfMetricsForAppClientUserTest() {
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));        
+        Mockito.when(appClientUserRepo.findByNameIgnoreCase(appClientUser.getName())).thenReturn(Optional.of(appClientUser));
+        Mockito.when(repository.sumByAppSourceAndEndpointForAppClient(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric2));      
+        AppClientCountMetricDto result = metricService.getCountOfMetricsForAppClient(appSource.getId(), appClientUser.getName(), new Date(), new Date());
+        assertThat(result).isEqualTo(appClientCountMetricDto);
+    }
+
+    @Test
+    void getCountOfMetricsForAppClientUserTestWhereAppSourceDNETest() {
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.empty());
+        assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+    		metricService.getCountOfMetricsForAppClient(appSource.getId(), appClientUser.getName(), new Date(), new Date());
+    	});
+    }
+
+    @Test
+    void getCountOfMetricsForAppClientUserTestWhereAppClientUserDNETest() {
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource)); 
+        Mockito.when(appClientUserRepo.findByNameIgnoreCase(appClientUser.getName())).thenReturn(Optional.empty());
+        assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+    		metricService.getCountOfMetricsForAppClient(appSource.getId(), appClientUser.getName(), new Date(), new Date());
+    	});
+    }
+
+    @Test
+    void getCountOfMetricsForAppClientUserTestWhereNoMetricsExistTest() {
+        appSource.getAppEndpoints().clear();
+        appClientCountMetricDto = AppClientCountMetricDto.builder()
+                .id(appClientUser.getId())
+                .endpoints(new ArrayList<>())
+                .name(appClientUser.getName())
+                .appSource(appSource.getName())
+                .build();
+
+        Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource)); 
+        Mockito.when(appClientUserRepo.findByNameIgnoreCase(appClientUser.getName())).thenReturn(Optional.of(appClientUser));
+        AppClientCountMetricDto result = metricService.getCountOfMetricsForAppClient(appSource.getId(), appClientUser.getName(), new Date(), new Date());
+        assertThat(result).isEqualTo(appClientCountMetricDto);
     }
 
     @Test

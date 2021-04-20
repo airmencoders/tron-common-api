@@ -12,14 +12,20 @@ import org.springframework.stereotype.Service;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter;
+import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
+import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
+import mil.tron.commonapi.dto.metrics.CountMetricDto;
+import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.dto.metrics.MeterValueDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.CountMetric;
 import mil.tron.commonapi.entity.MeterValue;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.MeterValueRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
@@ -31,13 +37,17 @@ public class MetricServiceImpl implements MetricService {
 
   private AppEndpointRepository appEndpointRepo;
 
+  private AppClientUserRespository appClientRepo;
+
   private AppSourceRepository appSourceRepo;
 
+
   @Autowired
-  public MetricServiceImpl(MeterValueRepository meterValueRepo, AppEndpointRepository appEndpointRepo, AppSourceRepository appSourceRepo) {
+  public MetricServiceImpl(MeterValueRepository meterValueRepo, AppEndpointRepository appEndpointRepo, AppSourceRepository appSourceRepo, AppClientUserRespository appClientRepo) {
     this.meterValueRepo = meterValueRepo;
     this.appEndpointRepo = appEndpointRepo;
     this.appSourceRepo = appSourceRepo;
+    this.appClientRepo = appClientRepo;
   }
 
   @Override
@@ -51,7 +61,7 @@ public class MetricServiceImpl implements MetricService {
 
   @Override
   public AppSourceMetricDto getMetricsForAppSource(UUID id, Date startDate, Date endDate) {
-      AppSource appSource = appSourceRepo.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format("App Source with id %s not found", id.toString())));
+    AppSource appSource = getAppSource(id);
       List<EndpointMetricDto> endpointDtos = appSource.getAppEndpoints().stream()
         .map(endpoint -> createEndpointMetricDto(endpoint, meterValueRepo.findAllByAppEndpointIdAndTimestampBetweenOrderByTimestampDesc(endpoint.getId(), startDate, endDate).stream()
           .map(meterValue -> createMeterValueDto(meterValue))
@@ -62,6 +72,64 @@ public class MetricServiceImpl implements MetricService {
         .id(id)
         .name(appSource.getName())
         .build();
+  }
+
+  @Override
+  public AppSourceCountMetricDto getCountOfMetricsForAppSource(UUID id, Date startDate, Date endDate) {
+    AppSource appSource = getAppSource(id);
+    List<CountMetricDto> endpointCountMetrics =  mapToCountMetricDtos(meterValueRepo.sumByEndpoint(id, startDate, endDate));
+    List<CountMetricDto> appClientCountMetrics =  mapToCountMetricDtos(meterValueRepo.sumByAppClient(id, startDate, endDate));
+      
+    return AppSourceCountMetricDto.builder()
+      .id(id)
+      .name(appSource.getName())
+      .endpoints(endpointCountMetrics)
+      .appClients(appClientCountMetrics)
+      .build();
+  }
+
+  @Override
+  public EndpointCountMetricDto getCountOfMetricsForEndpoint(UUID id, String path, Date startDate, Date endDate) {
+    AppSource appSource = getAppSource(id);
+    AppEndpoint appEndpoint = appEndpointRepo.findByPathAndAppSource(path, appSource);
+    if (appEndpoint == null) {
+      throw new RecordNotFoundException(String.format("Endpoint with path %s not found on app source %s", path, appSource.getName()));
+    }
+    List<CountMetricDto> countMetrics = mapToCountMetricDtos(meterValueRepo.sumByAppSourceAndAppClientForEndpoint(id, path, startDate, endDate));
+    
+    return EndpointCountMetricDto.builder()
+      .id(appEndpoint.getId())
+      .path(path)
+      .appClients(countMetrics)
+      .appSource(appSource.getName())
+      .build();
+  }
+
+  @Override
+  public AppClientCountMetricDto getCountOfMetricsForAppClient(UUID id, String name, Date startDate, Date endDate) {
+    AppSource appSource = getAppSource(id);
+    AppClientUser appClient = appClientRepo.findByNameIgnoreCase(name).orElseThrow(() -> new RecordNotFoundException(String.format("App Client User with name %s not found", name)));
+    List<CountMetricDto> countMetrics = mapToCountMetricDtos(meterValueRepo.sumByAppSourceAndEndpointForAppClient(id, name, startDate, endDate));
+    
+    return AppClientCountMetricDto.builder()
+      .id(appClient.getId())
+      .name(appClient.getName())
+      .endpoints(countMetrics)
+      .appSource(appSource.getName())
+      .build();
+  }
+  
+  private AppSource getAppSource(UUID id) throws RecordNotFoundException {
+    return appSourceRepo.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format("App Source with id %s not found", id.toString())));
+  }
+
+  private List<CountMetricDto> mapToCountMetricDtos(List<CountMetric> countMetrics) {
+    return countMetrics.stream().map(ecm -> CountMetricDto.builder()
+      .id(ecm.getId())
+      .path(ecm.getName())
+      .sum(ecm.getSum())
+      .build())
+    .collect(Collectors.toList());
   }
 
   @Override
