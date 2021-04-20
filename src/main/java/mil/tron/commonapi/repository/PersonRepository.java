@@ -11,4 +11,5 @@ import mil.tron.commonapi.entity.Person;
 @Repository
 public interface PersonRepository extends JpaRepository<Person, UUID> {
 	public Optional<Person> findByEmailIgnoreCase(String email);
+	public Optional<Person> findByDodidIgnoreCase(String dodid);
 }

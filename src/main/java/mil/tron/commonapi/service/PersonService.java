@@ -16,6 +16,7 @@ public interface PersonService {
 	Iterable<PersonDto> getPersons(PersonConversionOptions options);
 	PersonDto getPersonDto(UUID id, PersonConversionOptions options);
 	Person getPerson(UUID id);
+	Person getPersonFilter(PersonFilterType type, String value);
 	boolean exists(UUID id);
 
 	List<PersonDto> bulkAddPeople(List<PersonDto> dtos);

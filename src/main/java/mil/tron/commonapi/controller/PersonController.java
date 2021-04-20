@@ -15,9 +15,12 @@ import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.pagination.Paginator;
 import mil.tron.commonapi.service.PersonConversionOptions;
+import mil.tron.commonapi.service.PersonFilterType;
 import mil.tron.commonapi.service.PersonService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -82,6 +85,48 @@ public class PersonController {
 
 		PersonDto person = personService.getPersonDto(personId, PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build());
 		return new ResponseEntity<>(person, HttpStatus.OK);
+	}
+	
+	
+	
+	@Operation(summary = "Retrieves a person by email or dodid", description = "Retrieves a person using a single identifying property.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
+	@Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
+	@Parameter(name = "findByField", 
+				description = "The field to search for", 
+				required = true,
+				content= @Content(schema = @Schema(implementation = PersonFilterType.class)))
+	@Parameter(name = "value", description = "The value to search against", required = true)
+	@PreAuthorizeRead
+	@GetMapping(value = "/find")
+	public ResponseEntity<PersonDto> findPersonBy(
+				@RequestParam(name = "memberships", required = false) boolean memberships,
+                @RequestParam(name = "leaderships", required = false) boolean leaderships,
+                @RequestParam(name = "findByField", required = true) String findByField,
+                @RequestParam(name = "value", required = true) String value) {
+		
+		PersonFilterType filter = null;
+		try {
+			filter = PersonFilterType.valueOf(findByField.toUpperCase());
+		} catch (Exception ex) {
+			throw new BadRequestException(String.format("findByField: %s is invalid.", findByField));
+		}
+
+		Person person = personService.getPersonFilter(filter, value);
+		PersonDto dto = personService.convertToDto(person, PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build());
+		
+		return new ResponseEntity<>(dto, HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Adds a person", description = "Adds a person")
