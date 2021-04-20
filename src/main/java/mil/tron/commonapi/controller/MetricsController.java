@@ -35,6 +35,7 @@ import mil.tron.commonapi.service.MetricService;
 @RequestMapping("${api-prefix.v1}/metrics")
 public class MetricsController {
     private MetricService metricService;
+    private final String dateMessage = "Start date must be before End Date";
 
     @Value("${api-prefix.v1}")
     private String apiVersion;
@@ -58,7 +59,7 @@ public class MetricsController {
         @Parameter(description = "Latest date to include", required = true) @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) @Valid Date endDate
     ) {
         if(startDate.compareTo(endDate) > -1) {
-            throw new BadRequestException("Start date must be before End Date");
+            throw new BadRequestException(dateMessage);
         }
         return new ResponseEntity<>(metricService.getAllMetricsForEndpointDto(id, startDate, endDate), HttpStatus.OK);
     }
@@ -77,7 +78,7 @@ public class MetricsController {
         @Parameter(description = "Latest date to include", required = true) @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
     ) {
         if(startDate.compareTo(endDate) > -1) {
-            throw new BadRequestException("Start date must be before End Date");
+            throw new BadRequestException(dateMessage);
         }
         return new ResponseEntity<>(metricService.getMetricsForAppSource(id, startDate, endDate), HttpStatus.OK);
     }
@@ -96,7 +97,7 @@ public class MetricsController {
         @Parameter(description = "Latest date to include", required = true) @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
     ) {
         if(startDate.compareTo(endDate) > -1) {
-            throw new BadRequestException("Start date must be before End Date");
+            throw new BadRequestException(dateMessage);
         }
         return new ResponseEntity<>(metricService.getCountOfMetricsForAppSource(id, startDate, endDate), HttpStatus.OK);
     }
@@ -116,7 +117,7 @@ public class MetricsController {
         @Parameter(description = "Latest date to include", required = true) @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
     ) {
         if(startDate.compareTo(endDate) > -1) {
-            throw new BadRequestException("Start date must be before End Date");
+            throw new BadRequestException(dateMessage);
         }
         return new ResponseEntity<>(metricService.getCountOfMetricsForEndpoint(id, path, startDate, endDate), HttpStatus.OK);
     }
@@ -136,7 +137,7 @@ public class MetricsController {
         @Parameter(description = "Latest date to include", required = true) @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
     ) {
         if(startDate.compareTo(endDate) > -1) {
-            throw new BadRequestException("Start date must be before End Date");
+            throw new BadRequestException(dateMessage);
         }
         return new ResponseEntity<>(metricService.getCountOfMetricsForAppClient(id, name, startDate, endDate), HttpStatus.OK);
     }

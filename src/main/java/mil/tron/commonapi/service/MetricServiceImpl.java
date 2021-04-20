@@ -99,7 +99,7 @@ public class MetricServiceImpl implements MetricService {
     
     return EndpointCountMetricDto.builder()
       .id(appEndpoint.getId())
-      .name(path)
+      .path(path)
       .appClients(countMetrics)
       .appSource(appSource.getName())
       .build();

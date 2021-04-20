@@ -293,7 +293,7 @@ public class MetricsControllerTest {
             countMetricDto = EndpointCountMetricDto.builder()
                 .id(UUID.randomUUID())
                 .appClients(Arrays.asList(appClientCountMetricDto))
-                .name("AppSourceName")
+                .path("AppSourceName")
                 .build();
         }
         

@@ -24,7 +24,7 @@ public class EndpointCountMetricDto {
 
     @Getter
     @Setter
-    private String name;
+    private String path;
 
     @Getter
     @Setter

@@ -195,7 +195,7 @@ class MetricsServiceImplTest {
                 .id(appEndpoint.getId())
                 .appClients(Arrays.asList(countMetricDto1))
                 .appSource(appSource.getName())
-                .name(appEndpoint.getPath())
+                .path(appEndpoint.getPath())
                 .build();
 
         appClientCountMetricDto = AppClientCountMetricDto.builder()
@@ -330,7 +330,7 @@ class MetricsServiceImplTest {
         endpointCountMetricDto = EndpointCountMetricDto.builder()
                 .id(appEndpoint.getId())
                 .appClients(new ArrayList<>())
-                .name(appEndpoint.getPath())
+                .path(appEndpoint.getPath())
                 .appSource(appSource.getName())
                 .build();
 
