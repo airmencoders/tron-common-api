@@ -29,6 +29,7 @@ import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.exception.BadRequestException;
+import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.MetricService;
 
 @RestController
@@ -49,7 +50,16 @@ public class MetricsController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-						content = @Content(schema = @Schema(implementation = EndpointMetricDto.class)))
+						content = @Content(schema = @Schema(implementation = EndpointMetricDto.class))),
+            @ApiResponse(responseCode = "400",
+                description = "Bad Rquest (Start date and end date are both required. Start date must be before end date)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                description = "Resource not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @PreAuthorizeDashboardAdmin
     @GetMapping("/endpoint/{id}")
@@ -68,7 +78,16 @@ public class MetricsController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-						content = @Content(schema = @Schema(implementation = AppSourceMetricDto.class)))
+						content = @Content(schema = @Schema(implementation = AppSourceMetricDto.class))),
+            @ApiResponse(responseCode = "400",
+                description = "Bad Rquest (Start date and end date are both required. Start date must be before end date)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                description = "Resource not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @PreAuthorizeDashboardAdmin
     @GetMapping("/appsource/{id}")
@@ -87,7 +106,16 @@ public class MetricsController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-						content = @Content(schema = @Schema(implementation = AppSourceCountMetricDto.class)))
+						content = @Content(schema = @Schema(implementation = AppSourceCountMetricDto.class))),
+            @ApiResponse(responseCode = "400",
+                description = "Bad Rquest (Start date and end date are both required. Start date must be before end date)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                description = "Resource not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @PreAuthorizeDashboardAdmin
     @GetMapping("/count/{id}")
@@ -106,7 +134,16 @@ public class MetricsController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-						content = @Content(schema = @Schema(implementation = EndpointCountMetricDto.class)))
+						content = @Content(schema = @Schema(implementation = EndpointCountMetricDto.class))),
+            @ApiResponse(responseCode = "400",
+                description = "Bad Rquest (Start date, end date, and path are all required. Start date must be before end date)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                description = "Resource not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @PreAuthorizeDashboardAdmin
     @GetMapping("/count/{id}/endpoint")
@@ -126,7 +163,16 @@ public class MetricsController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-						content = @Content(schema = @Schema(implementation = AppClientCountMetricDto.class)))
+						content = @Content(schema = @Schema(implementation = AppClientCountMetricDto.class))),
+            @ApiResponse(responseCode = "400",
+                description = "Bad Rquest (Start date, end date, and name are all required. Start date must be before end date)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                description = "Resource not found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @PreAuthorizeDashboardAdmin
     @GetMapping("/count/{id}/appclient")
