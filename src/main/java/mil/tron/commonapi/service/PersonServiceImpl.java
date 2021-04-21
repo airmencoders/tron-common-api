@@ -1,15 +1,11 @@
 package mil.tron.commonapi.service;
 
-import com.google.common.collect.Sets;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
+import com.google.common.collect.Sets;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.persons.*;
@@ -29,7 +25,12 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.modelmapper.Conditions;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
@@ -40,6 +41,7 @@ public class PersonServiceImpl implements PersonService {
 	private RankRepository rankRepository;
 	private PersonMetadataRepository personMetadataRepository;
 	private EventManagerService eventManagerService;
+	private OrganizationService organizationService;
 	private final DtoMapper modelMapper;
 	private final ObjectMapper objMapper;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
@@ -56,12 +58,14 @@ public class PersonServiceImpl implements PersonService {
 							 PersonUniqueChecksService personChecksService,
 							 RankRepository rankRepository,
 							 PersonMetadataRepository personMetadataRepository,
-							 EventManagerService eventManagerService) {
+							 EventManagerService eventManagerService,
+							 @Lazy OrganizationService organizationService) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
 		this.personMetadataRepository = personMetadataRepository;
 		this.eventManagerService = eventManagerService;
+		this.organizationService = organizationService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -220,6 +224,8 @@ public class PersonServiceImpl implements PersonService {
 	@Override
 	public void deletePerson(UUID id) {
 		if (repository.existsById(id)) {
+
+			organizationService.removeLeaderByUuid(id);
 			repository.deleteById(id);
 
 			PersonDeleteMessage message = new PersonDeleteMessage();

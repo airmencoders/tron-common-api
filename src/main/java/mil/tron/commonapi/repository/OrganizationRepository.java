@@ -1,9 +1,12 @@
 package mil.tron.commonapi.repository;
 
 import mil.tron.commonapi.entity.Organization;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
+import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,4 +17,9 @@ public interface OrganizationRepository extends CrudRepository<Organization, UUI
 
 	List<Organization> findOrganizationsByParentOrganization(Organization org);
 	List<Organization> findOrganizationsBySubordinateOrganizationsContaining(Organization org);
+
+	@Transactional
+	@Modifying
+	@Query(value = "update organization set leader_id = null where leader_id = :id", nativeQuery = true)
+	void clearLeaderById(UUID id);
 }
