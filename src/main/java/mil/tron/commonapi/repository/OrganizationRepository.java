@@ -19,7 +19,5 @@ public interface OrganizationRepository extends CrudRepository<Organization, UUI
 	List<Organization> findOrganizationsBySubordinateOrganizationsContaining(Organization org);
 
 	@Transactional
-	@Modifying
-	@Query(value = "update organization set leader_id = null where leader_id = :id", nativeQuery = true)
-	void clearLeaderById(UUID id);
+	List<Organization> deleteByLeaderId(UUID id);
 }

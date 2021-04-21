@@ -938,6 +938,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @param leaderUuid id of the leader to remove from leader position(s)
 	 */
 	public void removeLeaderByUuid(UUID leaderUuid) {
-		repository.clearLeaderById(leaderUuid);
+		List<Organization> modifiedOrgs = repository.deleteByLeaderId(leaderUuid);
+		List<UUID> modifiedIds = modifiedOrgs.stream().map(Organization::getId).collect(Collectors.toList());
+		OrganizationChangedMessage message = new OrganizationChangedMessage();
+		message.setOrgIds(Sets.newHashSet(modifiedIds));
+		eventManagerService.recordEventAndPublish(message);
 	}
 }
