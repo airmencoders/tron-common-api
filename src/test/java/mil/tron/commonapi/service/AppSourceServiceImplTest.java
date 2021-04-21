@@ -265,6 +265,31 @@ public class AppSourceServiceImplTest {
         	
         	assertThat(updated).isEqualTo(toUpdate);
         }
+
+		@Test
+        void successUpdateWithEndpoints() {
+        	Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(appSource));
+
+        	appClientUserPrivDtos.remove(0);
+        	AppSourceDetailsDto toUpdate = AppSourceDetailsDto
+            		.builder()
+            		.id(appSource.getId())
+            		.name(appSource.getName())
+            		.appClients(appClientUserPrivDtos)
+					.endpoints(appEndpointDtos)
+            		.build();
+        	
+        	Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).thenReturn(AppSource.builder().id(toUpdate.getId()).name(toUpdate.getName()).build());
+        	
+        	List<AppEndpointPriv> existingPrivs = new ArrayList<>();
+        	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
+
+			Mockito.when(appEndpointRepo.findAllByAppSource(appSource)).thenReturn(appEndpoints.stream().collect(Collectors.toList()));
+        	
+        	AppSourceDetailsDto updated = service.updateAppSource(toUpdate.getId(), toUpdate);
+        	
+        	assertThat(updated).isEqualTo(toUpdate);
+        }
     }
     
     @Nested

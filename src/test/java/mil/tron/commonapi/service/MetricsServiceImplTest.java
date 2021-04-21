@@ -36,11 +36,11 @@ import io.micrometer.core.instrument.TimeGauge;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
+import mil.tron.commonapi.dto.metrics.AppEndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
 import mil.tron.commonapi.dto.metrics.CountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
-import mil.tron.commonapi.dto.metrics.AppEndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.dto.metrics.MeterValueDto;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -68,6 +68,9 @@ class MetricsServiceImplTest {
 
 	@Mock
 	private AppSourceRepository appSourceRepo;
+
+    @Mock
+    private MeterRegistry meterRegistry;
 	
 	@InjectMocks
 	private MetricServiceImpl metricService;
@@ -407,23 +410,14 @@ class MetricsServiceImplTest {
         .register(mockRegistry);
         counter.increment();
 
-        Meter.Id counterId = counter.getId();
-
-        appSource = AppSource.builder()
-            .id(UUID.fromString(counterId.getTag("AppSource")))
-            .build();
-        appEndpoint = AppEndpoint.builder()
-            .id(UUID.fromString(counterId.getTag("Endpoint")))
-            .build();
-        appClientUser = AppClientUser.builder()
-            .id(UUID.fromString(counterId.getTag("AppClient")))
-            .build();
-
+        Mockito.when(appSourceRepo.findById(Mockito.any())).thenReturn(Optional.of(appSource));
+        Mockito.when(appEndpointRepo.findById(Mockito.any())).thenReturn(Optional.of(appEndpoint));
+        Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
 
         Mockito.when(repository.save(Mockito.any(MeterValue.class))).thenReturn(null);
 
         ArgumentCaptor<MeterValue> savedCaptor = ArgumentCaptor.forClass(MeterValue.class);
-        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date);
+        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date, mockRegistry);
 
         // Verify we saved, and capture what we tried to save
         verify(repository, times(1)).save(savedCaptor.capture());
@@ -440,6 +434,81 @@ class MetricsServiceImplTest {
     }
 
     @Test
+    void publishToDataBaseNoAppSourceRemoveMeterTest() {
+        Date date = new Date();
+        MeterRegistry mockRegistry = new SimpleMeterRegistry();
+        Counter counter = Counter.builder("gateway-counter.test")
+        .tags(
+            "AppSource", appSource.getId().toString(),
+            "Endpoint", appEndpoint.getId().toString(),
+            "AppClient", appClientUser.getId().toString())
+        .register(mockRegistry);
+        counter.increment();
+
+        Mockito.when(appSourceRepo.findById(Mockito.any())).thenReturn(Optional.empty());
+        Mockito.when(appEndpointRepo.findById(Mockito.any())).thenReturn(Optional.of(appEndpoint));
+        Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
+
+        Mockito.when(meterRegistry.remove(Mockito.any(Meter.Id.class))).thenReturn(counter);
+
+        ArgumentCaptor<Meter.Id> meterCaptor = ArgumentCaptor.forClass(Meter.Id.class);
+        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date, meterRegistry);
+
+        // Verify we removed the meter
+        verify(meterRegistry, times(1)).remove(meterCaptor.capture());
+    }
+
+    @Test
+    void publishToDataBaseNoAppEndpointRemoveMeterTest() {
+        Date date = new Date();
+        MeterRegistry mockRegistry = new SimpleMeterRegistry();
+        Counter counter = Counter.builder("gateway-counter.test")
+        .tags(
+            "AppSource", appSource.getId().toString(),
+            "Endpoint", appEndpoint.getId().toString(),
+            "AppClient", appClientUser.getId().toString())
+        .register(mockRegistry);
+        counter.increment();
+
+        Mockito.when(appSourceRepo.findById(Mockito.any())).thenReturn(Optional.of(appSource));
+        Mockito.when(appEndpointRepo.findById(Mockito.any())).thenReturn(Optional.empty());
+        Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
+
+        Mockito.when(meterRegistry.remove(Mockito.any(Meter.Id.class))).thenReturn(counter);
+
+        ArgumentCaptor<Meter.Id> meterCaptor = ArgumentCaptor.forClass(Meter.Id.class);
+        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date, meterRegistry);
+
+        // Verify we removed the meter
+        verify(meterRegistry, times(1)).remove(meterCaptor.capture());
+    }
+
+    @Test
+    void publishToDataBaseNoAppClientUserRemoveMeterTest() {
+        Date date = new Date();
+        MeterRegistry mockRegistry = new SimpleMeterRegistry();
+        Counter counter = Counter.builder("gateway-counter.test")
+        .tags(
+            "AppSource", appSource.getId().toString(),
+            "Endpoint", appEndpoint.getId().toString(),
+            "AppClient", appClientUser.getId().toString())
+        .register(mockRegistry);
+        counter.increment();
+
+        Mockito.when(appSourceRepo.findById(Mockito.any())).thenReturn(Optional.of(appSource));
+        Mockito.when(appEndpointRepo.findById(Mockito.any())).thenReturn(Optional.of(appEndpoint));
+        Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.empty());
+
+        Mockito.when(meterRegistry.remove(Mockito.any(Meter.Id.class))).thenReturn(counter);
+
+        ArgumentCaptor<Meter.Id> meterCaptor = ArgumentCaptor.forClass(Meter.Id.class);
+        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date, meterRegistry);
+
+        // Verify we removed the meter
+        verify(meterRegistry, times(1)).remove(meterCaptor.capture());
+    }
+
+    @Test
     void publishNonCounters() {
         MeterRegistry registry = new SimpleMeterRegistry();
         List<List<Meter>> meters = Arrays.asList(Arrays.asList(
@@ -452,7 +521,7 @@ class MetricsServiceImplTest {
             FunctionTimer.builder("gateway-function-timer.test", null, null, null, null).register(registry),
             Meter.builder("gateway-meter.test", null, null).register(registry)
         ));
-        metricService.publishToDatabase(meters, new Date());
+        metricService.publishToDatabase(meters, new Date(), meterRegistry);
 
         // Verify we saved nothing
         verify(repository, times(0)).save(Mockito.any());
