@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service.filter;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -59,7 +61,7 @@ public class EndpointMetricFilter implements Filter {
                 .getAuthentication()
                 .getName();
     
-            AppEndpoint endpoint = appEndpointRepo.findByPathAndAppSource(patternMatched.substring(patternMatched.indexOf("/"), patternMatched.length()), appSource);
+            AppEndpoint endpoint = appEndpointRepo.findByPathAndAppSourceAndMethod(patternMatched.substring(patternMatched.indexOf("/"), patternMatched.length()), appSource, RequestMethod.valueOf(httpRequest.getMethod()));
             AppClientUser appClient = appClientUserRepo.findByNameIgnoreCase(name).orElse(null);
             if(endpoint != null && appClient != null) {
                 chain.doFilter(request, response);

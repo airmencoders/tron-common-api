@@ -19,15 +19,13 @@ import lombok.Setter;
 @NoArgsConstructor
 @Builder
 @EqualsAndHashCode
-public class EndpointMetricDto {
-
+public class AppEndpointCountMetricDto {
     @Getter
     @Setter
-    @Builder.Default
-    private UUID id = UUID.randomUUID();
+    private UUID id;
 
     @Getter
-    @Setter
+    @Setter    
     @NotBlank
     @NotNull
     private String path;
@@ -36,12 +34,15 @@ public class EndpointMetricDto {
     @Setter
     @NotBlank
     @NotNull
-    private String requestType;
+    private String requestType;    
 
+    @Getter
+    @Setter
+    private String appSource;
+    
     @Getter
     @Setter
     @Builder.Default
     @Valid
-    @EqualsAndHashCode.Exclude
-    private List<MeterValueDto> values = new ArrayList<>();
+    private List<CountMetricDto> appClients = new ArrayList<>();  
 }
