@@ -134,6 +134,54 @@ class PersonServiceImplTest {
 				personService.createPerson(testDto);
 			});
 		}
+
+		@Test
+		void testInvalidRank() {
+
+			Person newPerson = Person
+					.builder()
+					.id(UUID.randomUUID())
+					.email("dude@test.net")
+					.firstName("John")
+					.lastName("Test")
+					.dodid("1233411111")
+					.rank(null)
+					.build();
+
+			PersonDto newPersonDto = PersonDto
+					.builder()
+					.id(newPerson.getId())
+					.email(newPerson.getEmail())
+					.firstName(newPerson.getFirstName())
+					.lastName(newPerson.getLastName())
+					.dodid(newPerson.getDodid())
+					.rank(null)
+					.build();
+
+			Rank unknownRank = Rank
+					.builder()
+					.name("Unknown")
+					.abbreviation("Unk")
+					.branchType(Branch.OTHER)
+					.payGrade("Unk")
+					.build();
+
+			Mockito.when(rankRepository
+					.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any()))
+					.thenReturn(Optional.empty())
+					.thenReturn(Optional.of(unknownRank))
+					.thenReturn(Optional.empty())
+					.thenReturn(Optional.empty());
+
+			Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(newPerson);
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
+			PersonDto createdPerson = personService.createPerson(newPersonDto);
+
+			assertThat(createdPerson.getId()).isEqualTo(newPerson.getId());
+			assertThrows(RecordNotFoundException.class, () -> personService.createPerson(newPersonDto));
+		}
 	}
 	
 	@Nested
