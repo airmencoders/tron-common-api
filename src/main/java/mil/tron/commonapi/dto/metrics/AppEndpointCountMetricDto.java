@@ -5,44 +5,31 @@ import java.util.List;
 import java.util.UUID;
 
 import javax.validation.Valid;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 
-@AllArgsConstructor
 @NoArgsConstructor
-@Builder
-@EqualsAndHashCode
-public class AppEndpointCountMetricDto {
-    @Getter
-    @Setter
-    private UUID id;
+@EqualsAndHashCode(callSuper = true)
+public class AppEndpointCountMetricDto extends AppEndpointDto {
 
-    @Getter
-    @Setter    
-    @NotBlank
-    @NotNull
-    private String path;
-
-    @Getter
-    @Setter
-    @NotBlank
-    @NotNull
-    private String requestType;    
-
+    @Builder(builderMethodName = "sumAppEndpointCountMetricBuilder")
+    public AppEndpointCountMetricDto(UUID id, String path, String requestType, String appSource, List<CountMetricDto> appClients) {
+        super(id, path, requestType);
+        this.appSource = appSource;
+        this.appClients = appClients;
+    }
+  
     @Getter
     @Setter
     private String appSource;
     
     @Getter
     @Setter
-    @Builder.Default
     @Valid
     private List<CountMetricDto> appClients = new ArrayList<>();  
 }
