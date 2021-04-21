@@ -327,7 +327,9 @@ public class PersonServiceImpl implements PersonService {
 	@Override
 	public Person convertToEntity(PersonDto dto) {
 		Person entity = modelMapper.map(dto, Person.class);
-		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
+		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch())
+				.orElse(rankRepository.findByAbbreviationAndBranchType("Unk", Branch.OTHER)
+						.orElseThrow(() -> new RecordNotFoundException("Unable to find rank match"))));
 		return entity;
 	}
 
