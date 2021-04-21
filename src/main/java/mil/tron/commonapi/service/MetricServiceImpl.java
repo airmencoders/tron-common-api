@@ -100,7 +100,7 @@ public class MetricServiceImpl implements MetricService {
     }
     List<CountMetricDto> countMetrics = mapToCountMetricDtos(meterValueRepo.sumByAppSourceAndAppClientForEndpoint(id, path, method, startDate, endDate));
     
-    return AppEndpointCountMetricDto.builder()
+    return AppEndpointCountMetricDto.sumAppEndpointCountMetricBuilder()
       .id(appEndpoint.getId())
       .path(path)
       .appClients(countMetrics)
@@ -190,7 +190,7 @@ public class MetricServiceImpl implements MetricService {
   }
 
   private EndpointMetricDto createEndpointMetricDto(AppEndpoint endpoint, List<MeterValueDto> values) {
-    return EndpointMetricDto.builder()
+    return EndpointMetricDto.endpointMetricBuilder()
       .id(endpoint.getId())
       .path(endpoint.getPath())
       .values(values)

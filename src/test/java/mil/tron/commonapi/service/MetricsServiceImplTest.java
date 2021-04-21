@@ -123,7 +123,7 @@ class MetricsServiceImplTest {
         
         appSource.getAppEndpoints().add(appEndpoint);
 
-        testEndpointMetricDto = EndpointMetricDto.builder()
+        testEndpointMetricDto = EndpointMetricDto.endpointMetricBuilder()
                 .id(appEndpoint.getId())
                 .path(appEndpoint.getPath())
                 .values(Arrays.asList(testMeterValueDto))
@@ -201,7 +201,7 @@ class MetricsServiceImplTest {
                 .name(appSource.getName())
                 .build();
 
-        appEndpointCountMetricDto = AppEndpointCountMetricDto.builder()
+        appEndpointCountMetricDto = AppEndpointCountMetricDto.sumAppEndpointCountMetricBuilder()
                 .id(appEndpoint.getId())
                 .appClients(Arrays.asList(countMetricDto2))
                 .appSource(appSource.getName())
@@ -235,7 +235,7 @@ class MetricsServiceImplTest {
 
     @Test
     void getAllMetricsForEndpointDtoWhereNoMetricsExistTest() {
-        testEndpointMetricDto = EndpointMetricDto.builder()
+        testEndpointMetricDto = EndpointMetricDto.endpointMetricBuilder()
                 .id(appEndpoint.getId())
                 .path(appEndpoint.getPath())
                 .values(Arrays.asList())
@@ -339,7 +339,7 @@ class MetricsServiceImplTest {
     @Test
     void getCountOfMetricsForAppEndpointTestWhereNoMetricsExistTest() {
         appSource.getAppEndpoints().clear();
-        appEndpointCountMetricDto = AppEndpointCountMetricDto.builder()
+        appEndpointCountMetricDto = AppEndpointCountMetricDto.sumAppEndpointCountMetricBuilder()
                 .id(appEndpoint.getId())
                 .appClients(new ArrayList<>())
                 .path(appEndpoint.getPath())

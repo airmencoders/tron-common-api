@@ -5,42 +5,26 @@ import java.util.List;
 import java.util.UUID;
 
 import javax.validation.Valid;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 
-@AllArgsConstructor
 @NoArgsConstructor
-@Builder
-@EqualsAndHashCode
-public class EndpointMetricDto {
+@EqualsAndHashCode(callSuper = true)
+public class EndpointMetricDto extends AppEndpointDto {
+
+    @Builder(builderMethodName = "endpointMetricBuilder")
+    public EndpointMetricDto(UUID id, String path, String requestType, List<MeterValueDto> values) {
+        super(id, path, requestType);
+        this.values = values;
+    }
 
     @Getter
     @Setter
-    @Builder.Default
-    private UUID id = UUID.randomUUID();
-
-    @Getter
-    @Setter
-    @NotBlank
-    @NotNull
-    private String path;
-
-    @Getter
-    @Setter
-    @NotBlank
-    @NotNull
-    private String requestType;
-
-    @Getter
-    @Setter
-    @Builder.Default
     @Valid
     @EqualsAndHashCode.Exclude
     private List<MeterValueDto> values = new ArrayList<>();
