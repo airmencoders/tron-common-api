@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import mil.tron.commonapi.entity.CountMetric;
 import mil.tron.commonapi.entity.EndpointCountMetric;
@@ -20,9 +21,9 @@ public interface MeterValueRepository extends CrudRepository<MeterValue, UUID>{
     List<EndpointCountMetric> sumByEndpoint(UUID appSource, Date startDate, Date endDate);
             
     @Query("SELECT c.appClientUser.id AS id, c.appClientUser.name AS name, SUM(c.value) AS sum "
-    + "FROM MeterValue AS c WHERE c.appSource.id = ?1 AND c.appEndpoint.path = ?2 AND c.timestamp >= ?3 AND c.timestamp <= ?4 "
+    + "FROM MeterValue AS c WHERE c.appSource.id = ?1 AND c.appEndpoint.path = ?2 AND c.appEndpoint.method = ?3 AND c.timestamp >= ?4 AND c.timestamp <= ?5 "
     + "GROUP BY c.appClientUser.id, c.appClientUser.name ORDER BY c.appClientUser.name ASC")
-    List<CountMetric> sumByAppSourceAndAppClientForEndpoint(UUID appSource, String path, Date startDate, Date endDate);
+    List<CountMetric> sumByAppSourceAndAppClientForEndpoint(UUID appSource, String path, RequestMethod method, Date startDate, Date endDate);
 
     @Query("SELECT c.appClientUser.id AS id, c.appClientUser.name AS name, SUM(c.value) AS sum "
         + "FROM MeterValue AS c WHERE c.appSource.id = ?1 AND c.timestamp >= ?2 AND c.timestamp <= ?3 "

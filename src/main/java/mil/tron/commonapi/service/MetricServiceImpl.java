@@ -98,7 +98,7 @@ public class MetricServiceImpl implements MetricService {
     if (appEndpoint == null) {
       throw new RecordNotFoundException(String.format("Endpoint with path %s not found on app source %s", path, appSource.getName()));
     }
-    List<CountMetricDto> countMetrics = mapToCountMetricDtos(meterValueRepo.sumByAppSourceAndAppClientForEndpoint(id, path, startDate, endDate));
+    List<CountMetricDto> countMetrics = mapToCountMetricDtos(meterValueRepo.sumByAppSourceAndAppClientForEndpoint(id, path, method, startDate, endDate));
     
     return AppEndpointCountMetricDto.builder()
       .id(appEndpoint.getId())

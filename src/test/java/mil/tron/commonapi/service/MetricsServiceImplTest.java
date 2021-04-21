@@ -314,7 +314,7 @@ class MetricsServiceImplTest {
     void getCountOfMetricsForAppEndpointTest() {
         Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));        
         Mockito.when(appEndpointRepo.findByPathAndAppSourceAndMethod(appEndpoint.getPath(), appSource, appEndpoint.getMethod())).thenReturn(appEndpoint);
-        Mockito.when(repository.sumByAppSourceAndAppClientForEndpoint(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric2));
+        Mockito.when(repository.sumByAppSourceAndAppClientForEndpoint(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric2));
         AppEndpointCountMetricDto result = metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), appEndpoint.getMethod(), new Date(), new Date());
         assertThat(result).isEqualTo(appEndpointCountMetricDto);
     }
