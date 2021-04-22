@@ -129,7 +129,8 @@ public class PersonController {
 		return new ResponseEntity<>(dto, HttpStatus.OK);
 	}
 	
-	@Operation(summary = "Adds a person", description = "Adds a person")
+	@Operation(summary = "Adds a person", description = "Adds a person.  Query Ranks controller for available Ranks and Branches. " +
+		"If a given Rank or Branch is invalid, the Person will be created with rank 'Unknown' and branch 'Other'")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
