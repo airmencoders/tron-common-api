@@ -51,22 +51,25 @@ public class EndpointMetricFilter implements Filter {
         String uri = httpRequest.getRequestURI();
         String patternMatched = uri.replaceFirst("/api" + apiVersion + "/app/", "");
         
-        // If uri starts with beginning prefix for AppSources
-        String appSourcePath = patternMatched.substring(0, patternMatched.indexOf("/"));
-        AppSource appSource = appSourceRepo.findByAppSourcePath(appSourcePath);
-        if(appSource != null) {
-            // If this belongs to an App Source, the rest of the path is part of the Endpoint
-            String name = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
-    
-            AppEndpoint endpoint = appEndpointRepo.findByPathAndAppSourceAndMethod(patternMatched.substring(patternMatched.indexOf("/"), patternMatched.length()), appSource, RequestMethod.valueOf(httpRequest.getMethod()));
-            AppClientUser appClient = appClientUserRepo.findByNameIgnoreCase(name).orElse(null);
-            if(endpoint != null && appClient != null) {
-                chain.doFilter(request, response);
-                this.incrementCounter(endpoint, appSource, appClient);
-                return;
+        int separator = patternMatched.indexOf("/");
+        if (separator > -1) {
+            // If uri starts with beginning prefix for AppSources
+            String appSourcePath = patternMatched.substring(0, separator);
+            AppSource appSource = appSourceRepo.findByAppSourcePath(appSourcePath);
+            if(appSource != null) {
+                // If this belongs to an App Source, the rest of the path is part of the Endpoint
+                String name = SecurityContextHolder
+                    .getContext()
+                    .getAuthentication()
+                    .getName();
+        
+                AppEndpoint endpoint = appEndpointRepo.findByPathAndAppSourceAndMethod(patternMatched.substring(separator, patternMatched.length()), appSource, RequestMethod.valueOf(httpRequest.getMethod()));
+                AppClientUser appClient = appClientUserRepo.findByNameIgnoreCase(name).orElse(null);
+                if(endpoint != null && appClient != null) {
+                    chain.doFilter(request, response);
+                    this.incrementCounter(endpoint, appSource, appClient);
+                    return;
+                }
             }
         }
         chain.doFilter(request, response);
