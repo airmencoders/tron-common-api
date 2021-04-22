@@ -20,6 +20,7 @@ public interface OrganizationService {
 	Organization addMember(UUID organizationId, List<UUID> personIds, boolean primary);
 	Organization addOrg(UUID organizationId, List<UUID> orgIds);
 	Organization removeOrg(UUID organizationId, List<UUID> orgIds);
+	void removeLeaderByUuid(UUID leaderUuid);
 
 	// methods dealing only with DTO (service <--> controller)
 	OrganizationDto createOrganization(OrganizationDto organization);

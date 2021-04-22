@@ -1,6 +1,5 @@
 package mil.tron.commonapi.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
@@ -8,13 +7,13 @@ import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
-import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.pubsub.EventManagerServiceImpl;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
@@ -33,7 +32,10 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -56,6 +58,9 @@ class PersonServiceImplTest {
 
 	@Mock
 	private EventManagerServiceImpl eventManagerService;
+
+	@Mock
+	private OrganizationService orgsService;
 	
 	@InjectMocks
 	private PersonServiceImpl personService;
@@ -343,6 +348,7 @@ class PersonServiceImplTest {
 		assertThrows(RecordNotFoundException.class, () -> personService.deletePerson(testPerson.getId()));
 		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+		Mockito.doNothing().when(orgsService).removeLeaderByUuid(Mockito.any(UUID.class));
         personService.deletePerson(testPerson.getId());
         Mockito.verify(repository, Mockito.times(1)).deleteById(testPerson.getId());    
     }
