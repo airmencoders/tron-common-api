@@ -1,33 +1,19 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
-    <changeSet author="billdewitt (generated)" id="1619035188514-1">
+    <changeSet author="christopherzell" id="1617980646261-1">
         <preConditions onFail="MARK_RAN">
-            <foreignKeyConstraintExists foreignKeyName="FK308l71nf4fi4xvhi77ncmbjq3"/>
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rank WHERE name='Unknown';
+            </sqlCheck>
         </preConditions>
-        <dropForeignKeyConstraint baseTableName="meter_value" constraintName="FK308l71nf4fi4xvhi77ncmbjq3"/>
-        <addForeignKeyConstraint baseTableName="meter_value" baseColumnNames="app_endpoint_id"
-                             constraintName="FK308l71nf4fi4xvhi77ncmbjq3"
-                             referencedTableName="app_endpoint" referencedColumnNames="id"
-                             onDelete="CASCADE"/>
-    </changeSet>
-    <changeSet author="billdewitt (generated)" id="1619035188514-2">
-        <preConditions onFail="MARK_RAN">
-            <foreignKeyConstraintExists foreignKeyName="FKfn3dy5rv5j8m2hcvqu2ice4x9"/>
-        </preConditions>
-        <dropForeignKeyConstraint baseTableName="meter_value" constraintName="FKfn3dy5rv5j8m2hcvqu2ice4x9"/>
-        <addForeignKeyConstraint baseTableName="meter_value" baseColumnNames="app_source_id"
-                                constraintName="FKfn3dy5rv5j8m2hcvqu2ice4x9"
-                                referencedTableName="app_source" referencedColumnNames="id"
-                                onDelete="CASCADE"/>
-    </changeSet>
-    <changeSet author="billdewitt (generated)" id="1619035188514-3">
-        <preConditions onFail="MARK_RAN">
-            <foreignKeyConstraintExists foreignKeyName="FKhc3ltbqh86edi63jm39o0felq"/>
-        </preConditions>
-        <dropForeignKeyConstraint baseTableName="meter_value" constraintName="FKhc3ltbqh86edi63jm39o0felq"/>
-        <addForeignKeyConstraint baseTableName="meter_value" baseColumnNames="app_client_user_id"
-                             constraintName="FKhc3ltbqh86edi63jm39o0felq"
-                             referencedTableName="app_client_user" referencedColumnNames="id"
-                             onDelete="CASCADE"/>
+
+        <!-- entry to cover for an unknown rank -->
+        <insert tableName="rank">
+            <column name="id" value="af9e2a49-15da-4df8-9108-a8d5da983998" />
+            <column name="name" value="Unknown" />
+            <column name="abbreviation" value="Unk" />
+            <column name="pay_grade" value="Unk" />
+            <column name="branch_type" value="OTHER" />
+        </insert>
     </changeSet>
 </databaseChangeLog>
