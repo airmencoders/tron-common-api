@@ -9,6 +9,8 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 
 import org.assertj.core.util.Lists;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -251,6 +253,48 @@ public class PersonIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(resource("invalidPerson.json")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testInvalidRankGoesToUnknown() throws Exception {
+        PersonDto person = new PersonDto();
+        person.setId(UUID.randomUUID());
+        person.setFirstName("John");
+        person.setMiddleName("Hero");
+        person.setLastName("Public");
+        person.setEmail("john@test.com");
+        person.setTitle("CAPT");
+        person.setRank(null);
+        person.setBranch(null);
+
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(person)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("Unk")))
+                .andExpect(jsonPath("$.branch", equalTo("OTHER")));
+
+        person.setRank("blah");
+        person.setBranch(Branch.USSF);
+        mockMvc.perform(put(ENDPOINT + "{id}", person.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(person)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rank", equalTo("Unk")))
+                .andExpect(jsonPath("$.branch", equalTo("OTHER")));
+
+        JSONObject content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/rank");
+        content.put("value", "invalid");
+        JSONArray contentArray = new JSONArray();
+        contentArray.put(content);
+        mockMvc.perform(patch(ENDPOINT + "{id}", person.getId())
+                .contentType("application/json-patch+json")
+                .content(contentArray.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rank", equalTo("Unk")))
+                .andExpect(jsonPath("$.branch", equalTo("OTHER")));
     }
 
     private static String resource(String name) throws IOException {
