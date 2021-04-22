@@ -9,6 +9,8 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 
 import org.assertj.core.util.Lists;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -102,6 +105,49 @@ public class PersonIntegrationTest {
         mockMvc.perform(get(ENDPOINT + "?page=2&limit=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testPersonFilter() throws Exception {
+    	PersonDto person = PersonDto.builder()
+                .firstName("test")
+                .lastName("member")
+                .email("test@member.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("12345")
+                .build();
+    	
+    	PersonDto person1 = PersonDto.builder()
+                .firstName("1")
+                .lastName("2")
+                .email("1@2.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("34567")
+                .build();
+                
+                
+		mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person)));
+		mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person1)));
+		
+		// Try to filter by email
+		mockMvc.perform(get(ENDPOINT + String.format("find/?findByField=email&value=%s", person.getEmail())))
+			.andExpect(status().isOk())
+			.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+					.isEqualTo(OBJECT_MAPPER.writeValueAsString(person)));
+		
+		// Try to filter by dodid
+		mockMvc.perform(get(ENDPOINT + String.format("find/?findByField=dodid&value=%s", person1.getDodid())))
+			.andExpect(status().isOk())
+			.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+					.isEqualTo(OBJECT_MAPPER.writeValueAsString(person1)));
+		
+		// Try an invalid filter
+		mockMvc.perform(get(ENDPOINT + String.format("find/?findByField=asdf&value=%s", person1.getDodid())))
+			.andExpect(status().isBadRequest());
     }
 
     @Test
@@ -207,6 +253,48 @@ public class PersonIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(resource("invalidPerson.json")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testInvalidRankGoesToUnknown() throws Exception {
+        PersonDto person = new PersonDto();
+        person.setId(UUID.randomUUID());
+        person.setFirstName("John");
+        person.setMiddleName("Hero");
+        person.setLastName("Public");
+        person.setEmail("john@test.com");
+        person.setTitle("CAPT");
+        person.setRank(null);
+        person.setBranch(null);
+
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(person)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("Unk")))
+                .andExpect(jsonPath("$.branch", equalTo("OTHER")));
+
+        person.setRank("blah");
+        person.setBranch(Branch.USSF);
+        mockMvc.perform(put(ENDPOINT + "{id}", person.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(person)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rank", equalTo("Unk")))
+                .andExpect(jsonPath("$.branch", equalTo("OTHER")));
+
+        JSONObject content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/rank");
+        content.put("value", "invalid");
+        JSONArray contentArray = new JSONArray();
+        contentArray.put(content);
+        mockMvc.perform(patch(ENDPOINT + "{id}", person.getId())
+                .contentType("application/json-patch+json")
+                .content(contentArray.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rank", equalTo("Unk")))
+                .andExpect(jsonPath("$.branch", equalTo("OTHER")));
     }
 
     private static String resource(String name) throws IOException {

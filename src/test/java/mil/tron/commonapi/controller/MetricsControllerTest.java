@@ -22,7 +22,11 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
+import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
+import mil.tron.commonapi.dto.metrics.CountMetricDto;
+import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.MetricService;
@@ -190,4 +194,273 @@ public class MetricsControllerTest {
         }
     }
 
+    @Nested
+    class TestCountAppSource {
+        private AppSourceCountMetricDto appSourceCountMetricDto;
+        private CountMetricDto endpointCountMetricDto;
+        private CountMetricDto appClientCountMetricDto;
+
+        @BeforeEach
+        public void setup() {
+            endpointCountMetricDto = CountMetricDto.builder()
+                .id(UUID.randomUUID())
+                .path("endpoint1")
+                .sum(2d)
+                .build();
+            appClientCountMetricDto = CountMetricDto.builder()
+                .id(UUID.randomUUID())
+                .path("appclient1")
+                .sum(4d)
+                .build();
+            appSourceCountMetricDto = AppSourceCountMetricDto.builder()
+                .id(UUID.randomUUID())
+                .endpoints(Arrays.asList(endpointCountMetricDto))
+                .appClients(Arrays.asList(appClientCountMetricDto))
+                .name("AppSourceName")
+                .build();
+        }
+        
+        @Test
+        public void getAppSourceCountTest() throws Exception {
+            Mockito.when(service.getCountOfMetricsForAppSource(Mockito.any(UUID.class), Mockito.any(), Mockito.any())).thenReturn(appSourceCountMetricDto);
+            
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}", appSourceCountMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", endDateStr)
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.parseMediaType("application/json")))
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(appSourceCountMetricDto)));
+        }
+
+        @Test
+        public void getAppSourceCountTestStartDateEqualsEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}", appSourceCountMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", startDateStr)
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getAppSourceCountTestStartDateAfterEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}", appSourceCountMetricDto.getId().toString())
+                        .param("startDate", endDateStr)
+                        .param("endDate", startDateStr)
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getAppSourceCountTestMissingStartDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}", appSourceCountMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getAppSourceCountTestMissingEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}", appSourceCountMetricDto.getId().toString())
+                        .param("endDate", endDateStr)
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    class TestCountAppEndpoint {
+        private EndpointCountMetricDto countMetricDto;
+        private CountMetricDto appClientCountMetricDto;
+
+        @BeforeEach
+        public void setup() {
+            appClientCountMetricDto = CountMetricDto.builder()
+                .id(UUID.randomUUID())
+                .path("appclient1")
+                .sum(4d)
+                .build();
+            countMetricDto = EndpointCountMetricDto.builder()
+                .id(UUID.randomUUID())
+                .appClients(Arrays.asList(appClientCountMetricDto))
+                .path("AppSourceName")
+                .build();
+        }
+        
+        @Test
+        public void getEndpointCountTest() throws Exception {
+            Mockito.when(service.getCountOfMetricsForEndpoint(Mockito.any(UUID.class), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(countMetricDto);
+            
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", endDateStr)
+                        .param("path", "endpoint1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.parseMediaType("application/json")))
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(countMetricDto)));
+        }
+
+        @Test
+        public void getEndpointCountTestStartDateEqualsEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", startDateStr)
+                        .param("path", "endpoint1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getEndpointCountTestStartDateAfterEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
+                        .param("startDate", endDateStr)
+                        .param("endDate", startDateStr)
+                        .param("path", "endpoint1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getEndpointCountTestMissingStartDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("path", "endpoint1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getEndpointCountTestMissingEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
+                        .param("endDate", endDateStr)
+                        .param("path", "endpoint1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        public void getEndpointCountTestMissingPath400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", endDateStr)
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    class TestCountAppClientUser {
+        private AppClientCountMetricDto countMetricDto;
+        private CountMetricDto endpointClientCountMetricDto;
+
+        @BeforeEach
+        public void setup() {
+            endpointClientCountMetricDto = CountMetricDto.builder()
+                .id(UUID.randomUUID())
+                .path("endpoint1")
+                .sum(2d)
+                .build();
+            countMetricDto = AppClientCountMetricDto.builder()
+                .id(UUID.randomUUID())
+                .endpoints(Arrays.asList(endpointClientCountMetricDto))
+                .name("AppSourceName")
+                .build();
+        }
+        
+        @Test
+        public void getAppClientCountTest() throws Exception {
+            Mockito.when(service.getCountOfMetricsForAppClient(Mockito.any(UUID.class), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(countMetricDto);
+            
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/appclient", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", endDateStr)
+                        .param("name", "appclient1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.parseMediaType("application/json")))
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(countMetricDto)));
+        }
+
+        @Test
+        public void getAppClientCountTestStartDateEqualsEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/appclient", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", startDateStr)
+                        .param("name", "appclient1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getAppClientCountTestStartDateAfterEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/appclient", countMetricDto.getId().toString())
+                        .param("startDate", endDateStr)
+                        .param("endDate", startDateStr)
+                        .param("name", "appclient1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getAppClientCountTestMissingStartDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/appclient", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("name", "appclient1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    
+        @Test
+        public void getAppClientCountTestMissingEndDate400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/appclient", countMetricDto.getId().toString())
+                        .param("endDate", endDateStr)
+                        .param("name", "appclient1")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        public void getAppClientCountTestMissingPath400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/appclient", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", endDateStr)
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+    }
 }

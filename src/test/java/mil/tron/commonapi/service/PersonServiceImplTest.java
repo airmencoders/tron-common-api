@@ -10,6 +10,7 @@ import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -132,6 +133,54 @@ class PersonServiceImplTest {
 			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
 				personService.createPerson(testDto);
 			});
+		}
+
+		@Test
+		void testInvalidRank() {
+
+			Person newPerson = Person
+					.builder()
+					.id(UUID.randomUUID())
+					.email("dude@test.net")
+					.firstName("John")
+					.lastName("Test")
+					.dodid("1233411111")
+					.rank(null)
+					.build();
+
+			PersonDto newPersonDto = PersonDto
+					.builder()
+					.id(newPerson.getId())
+					.email(newPerson.getEmail())
+					.firstName(newPerson.getFirstName())
+					.lastName(newPerson.getLastName())
+					.dodid(newPerson.getDodid())
+					.rank(null)
+					.build();
+
+			Rank unknownRank = Rank
+					.builder()
+					.name("Unknown")
+					.abbreviation("Unk")
+					.branchType(Branch.OTHER)
+					.payGrade("Unk")
+					.build();
+
+			Mockito.when(rankRepository
+					.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any()))
+					.thenReturn(Optional.empty())
+					.thenReturn(Optional.of(unknownRank))
+					.thenReturn(Optional.empty())
+					.thenReturn(Optional.empty());
+
+			Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(newPerson);
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
+			PersonDto createdPerson = personService.createPerson(newPersonDto);
+
+			assertThat(createdPerson.getId()).isEqualTo(newPerson.getId());
+			assertThrows(RecordNotFoundException.class, () -> personService.createPerson(newPersonDto));
 		}
 	}
 	
@@ -315,6 +364,27 @@ class PersonServiceImplTest {
     	// Test person not exists
     	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.ofNullable(null));
     	assertThrows(RecordNotFoundException.class, () -> personService.getPerson(testPerson.getId()));
+    }
+    
+    @Test
+    void getPersonByFieldTest() {
+    	// email filter
+    	Mockito.when(repository.findByEmailIgnoreCase(testPerson.getEmail())).thenReturn(Optional.of(testPerson));
+    	Person retrievedPerson = personService.getPersonFilter(PersonFilterType.EMAIL, testPerson.getEmail());
+    	assertThat(retrievedPerson).isEqualTo(testPerson);
+    	
+    	// dodid filter
+    	Mockito.when(repository.findByDodidIgnoreCase(testPerson.getDodid())).thenReturn(Optional.of(testPerson));
+    	retrievedPerson = personService.getPersonFilter(PersonFilterType.DODID, testPerson.getDodid());
+    	assertThat(retrievedPerson).isEqualTo(testPerson);
+    	
+    	// test not found
+    	Mockito.when(repository.findByDodidIgnoreCase(testPerson.getDodid())).thenReturn(Optional.ofNullable(null));
+    	assertThrows(RecordNotFoundException.class, () -> personService.getPersonFilter(PersonFilterType.DODID, testPerson.getDodid()));
+    	
+    	// test null parameters
+    	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(null, testPerson.getDodid()));
+    	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(PersonFilterType.EMAIL, null));
     }
 
     @Test

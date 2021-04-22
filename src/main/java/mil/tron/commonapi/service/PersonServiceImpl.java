@@ -17,6 +17,7 @@ import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -247,6 +248,27 @@ public class PersonServiceImpl implements PersonService {
 	public PersonDto getPersonDto(UUID id, PersonConversionOptions options) {
 		return convertToDto(getPerson(id), options);
 	}
+	
+	@Override
+	public Person getPersonFilter(PersonFilterType type, String value) {
+		if (type == null || value == null) {
+			throw new BadRequestException("Filter Type and Value cannot be null");
+		}
+		
+		Optional<Person> person;
+		switch(type) {
+			case DODID:
+				person = repository.findByDodidIgnoreCase(value);
+				break;
+			case EMAIL:
+				person = repository.findByEmailIgnoreCase(value);
+				break;
+			default:
+				throw new BadRequestException("Unknown filter type: " + type);
+		}
+		
+		return person.orElseThrow(() -> new RecordNotFoundException(String.format("Person filtered by: %s with value %s not found.", type.toString(), value)));
+	}
 
 	@Override
 	public boolean exists(UUID id) {
@@ -305,7 +327,9 @@ public class PersonServiceImpl implements PersonService {
 	@Override
 	public Person convertToEntity(PersonDto dto) {
 		Person entity = modelMapper.map(dto, Person.class);
-		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch()).orElseThrow(() -> new RecordNotFoundException(dto.getBranch() + " Rank '" + dto.getRank() + "' does not exist.")));
+		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch())
+				.orElse(rankRepository.findByAbbreviationAndBranchType("Unk", Branch.OTHER)
+						.orElseThrow(() -> new RecordNotFoundException("Unable to find rank match"))));
 		return entity;
 	}
 
