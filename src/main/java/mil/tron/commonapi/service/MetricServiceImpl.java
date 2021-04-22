@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MeterRegistry;
 import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
@@ -148,14 +149,14 @@ public class MetricServiceImpl implements MetricService {
 
   @Override
   @Transactional
-  public void publishToDatabase(List<List<Meter>> meters, Date now) {
+  public void publishToDatabase(List<List<Meter>> meters, Date now, MeterRegistry registry) {
       for(List<Meter> batch : meters) {            
           // We only care about timers, so everything else does nothing.
           batch.stream()
               .filter(m -> m.getId().getName().startsWith("gateway"))
               .forEach(meter -> meter.use(
                   g -> {}, // gauge
-                  counter -> buildMeterValue(counter, now), // counter
+                  counter -> buildMeterValue(counter, now, registry), // counter
                   t -> {}, // timer
                   d -> {}, // distribution summary
                   l -> {}, // long task timer
@@ -166,28 +167,27 @@ public class MetricServiceImpl implements MetricService {
       }
   }
 
-  private void buildMeterValue(Counter counter, Date date) {
+  private void buildMeterValue(Counter counter, Date date, MeterRegistry registry) {
       Meter.Id counterId = counter.getId();
-      AppSource appSource = AppSource.builder()
-          .id(UUID.fromString(counterId.getTag("AppSource")))
-          .build();
-      AppEndpoint appEndpoint = AppEndpoint.builder()
-          .id(UUID.fromString(counterId.getTag("Endpoint")))
-          .build();
-      AppClientUser appClientUser = AppClientUser.builder()
-          .id(UUID.fromString(counterId.getTag("AppClient")))
-          .build();
+      AppSource appSource = appSourceRepo.findById(UUID.fromString(counterId.getTag("AppSource"))).orElse(null);
+      AppEndpoint appEndpoint = appEndpointRepo.findById(UUID.fromString(counterId.getTag("Endpoint"))).orElse(null);
+      AppClientUser appClientUser = appClientRepo.findById(UUID.fromString(counterId.getTag("AppClient"))).orElse(null);
+      if (appSource == null || appEndpoint == null || appClientUser == null) {
+        registry.remove(counter.getId());
+      } else{
+        meterValueRepo.save(MeterValue.builder()
+            .id(UUID.randomUUID())
+            .timestamp(date)
+            .value(counter.count())
+            .metricName(counterId.getName())
+            .appSource(appSource)
+            .appEndpoint(appEndpoint)
+            .appClientUser(appClientUser)
+            .build());  
+      }
 
-      meterValueRepo.save(MeterValue.builder()
-          .id(UUID.randomUUID())
-          .timestamp(date)
-          .value(counter.count())
-          .metricName(counterId.getName())
-          .appSource(appSource)
-          .appEndpoint(appEndpoint)
-          .appClientUser(appClientUser)
-          .build());  
   }
+
 
   private EndpointMetricDto createEndpointMetricDto(AppEndpoint endpoint, List<MeterValueDto> values) {
     return EndpointMetricDto.endpointMetricBuilder()

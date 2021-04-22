@@ -42,7 +42,7 @@ public class CustomMeterRegistry extends StepMeterRegistry {
 	@Override
 	protected void publish() {
         // partition into smaller chunks, because we might have a lot of stuff....
-        this.metricService.publishToDatabase(MeterPartition.partition(this, config.batchSize()), new Date());
+        this.metricService.publishToDatabase(MeterPartition.partition(this, config.batchSize()), new Date(), this);
 	}
 
     @Override
