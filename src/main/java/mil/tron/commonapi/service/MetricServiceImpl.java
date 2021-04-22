@@ -9,6 +9,7 @@ import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter;
@@ -17,10 +18,12 @@ import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
 import mil.tron.commonapi.dto.metrics.CountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
+import mil.tron.commonapi.dto.metrics.AppEndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.dto.metrics.MeterValueDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.CountMetric;
+import mil.tron.commonapi.entity.EndpointCountMetric;
 import mil.tron.commonapi.entity.MeterValue;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
@@ -77,7 +80,7 @@ public class MetricServiceImpl implements MetricService {
   @Override
   public AppSourceCountMetricDto getCountOfMetricsForAppSource(UUID id, Date startDate, Date endDate) {
     AppSource appSource = getAppSource(id);
-    List<CountMetricDto> endpointCountMetrics =  mapToCountMetricDtos(meterValueRepo.sumByEndpoint(id, startDate, endDate));
+    List<EndpointCountMetricDto> endpointCountMetrics =  mapToEndpointCountMetricDtos(meterValueRepo.sumByEndpoint(id, startDate, endDate));
     List<CountMetricDto> appClientCountMetrics =  mapToCountMetricDtos(meterValueRepo.sumByAppClient(id, startDate, endDate));
       
     return AppSourceCountMetricDto.builder()
@@ -89,19 +92,20 @@ public class MetricServiceImpl implements MetricService {
   }
 
   @Override
-  public EndpointCountMetricDto getCountOfMetricsForEndpoint(UUID id, String path, Date startDate, Date endDate) {
+  public AppEndpointCountMetricDto getCountOfMetricsForEndpoint(UUID id, String path, RequestMethod method, Date startDate, Date endDate) {
     AppSource appSource = getAppSource(id);
-    AppEndpoint appEndpoint = appEndpointRepo.findByPathAndAppSource(path, appSource);
+    AppEndpoint appEndpoint = appEndpointRepo.findByPathAndAppSourceAndMethod(path, appSource, method);
     if (appEndpoint == null) {
       throw new RecordNotFoundException(String.format("Endpoint with path %s not found on app source %s", path, appSource.getName()));
     }
-    List<CountMetricDto> countMetrics = mapToCountMetricDtos(meterValueRepo.sumByAppSourceAndAppClientForEndpoint(id, path, startDate, endDate));
+    List<CountMetricDto> countMetrics = mapToCountMetricDtos(meterValueRepo.sumByAppSourceAndAppClientForEndpoint(id, path, method, startDate, endDate));
     
-    return EndpointCountMetricDto.builder()
+    return AppEndpointCountMetricDto.sumAppEndpointCountMetricBuilder()
       .id(appEndpoint.getId())
       .path(path)
       .appClients(countMetrics)
       .appSource(appSource.getName())
+      .requestType(method.toString())
       .build();
   }
 
@@ -109,7 +113,7 @@ public class MetricServiceImpl implements MetricService {
   public AppClientCountMetricDto getCountOfMetricsForAppClient(UUID id, String name, Date startDate, Date endDate) {
     AppSource appSource = getAppSource(id);
     AppClientUser appClient = appClientRepo.findByNameIgnoreCase(name).orElseThrow(() -> new RecordNotFoundException(String.format("App Client User with name %s not found", name)));
-    List<CountMetricDto> countMetrics = mapToCountMetricDtos(meterValueRepo.sumByAppSourceAndEndpointForAppClient(id, name, startDate, endDate));
+    List<EndpointCountMetricDto> countMetrics = mapToEndpointCountMetricDtos(meterValueRepo.sumByAppSourceAndEndpointForAppClient(id, name, startDate, endDate));
     
     return AppClientCountMetricDto.builder()
       .id(appClient.getId())
@@ -128,6 +132,16 @@ public class MetricServiceImpl implements MetricService {
       .id(ecm.getId())
       .path(ecm.getName())
       .sum(ecm.getSum())
+      .build())
+    .collect(Collectors.toList());
+  }
+
+  private List<EndpointCountMetricDto> mapToEndpointCountMetricDtos(List<EndpointCountMetric> countMetrics) {
+    return countMetrics.stream().map(ecm -> EndpointCountMetricDto.endpointCountMetricBuilder()
+      .id(ecm.getId())
+      .path(ecm.getName())
+      .sum(ecm.getSum())
+      .method(ecm.getMethod().toString())
       .build())
     .collect(Collectors.toList());
   }
@@ -176,10 +190,11 @@ public class MetricServiceImpl implements MetricService {
   }
 
   private EndpointMetricDto createEndpointMetricDto(AppEndpoint endpoint, List<MeterValueDto> values) {
-    return EndpointMetricDto.builder()
+    return EndpointMetricDto.endpointMetricBuilder()
       .id(endpoint.getId())
       .path(endpoint.getPath())
       .values(values)
+      .requestType(endpoint.getMethod().toString())
       .build();
   }
 

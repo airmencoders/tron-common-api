@@ -27,6 +27,7 @@ import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
 import mil.tron.commonapi.dto.metrics.CountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
+import mil.tron.commonapi.dto.metrics.AppEndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.MetricService;
@@ -53,7 +54,7 @@ public class MetricsControllerTest {
     class TestEndpoint {
         @BeforeEach
         public void setup() {
-            endpointMetricDto = EndpointMetricDto.builder()
+            endpointMetricDto = EndpointMetricDto.endpointMetricBuilder()
                 .id(UUID.randomUUID())
                 .path("path")
                 .values(new ArrayList<>())
@@ -124,7 +125,7 @@ public class MetricsControllerTest {
 
         @BeforeEach
         public void setup() {
-            endpointMetricDto = EndpointMetricDto.builder()
+            endpointMetricDto = EndpointMetricDto.endpointMetricBuilder()
                 .id(UUID.randomUUID())
                 .path("path")
                 .values(new ArrayList<>())
@@ -197,15 +198,16 @@ public class MetricsControllerTest {
     @Nested
     class TestCountAppSource {
         private AppSourceCountMetricDto appSourceCountMetricDto;
-        private CountMetricDto endpointCountMetricDto;
+        private EndpointCountMetricDto appEndpointCountMetricDto;
         private CountMetricDto appClientCountMetricDto;
 
         @BeforeEach
         public void setup() {
-            endpointCountMetricDto = CountMetricDto.builder()
+            appEndpointCountMetricDto = EndpointCountMetricDto.endpointCountMetricBuilder()
                 .id(UUID.randomUUID())
                 .path("endpoint1")
                 .sum(2d)
+                .method("GET")
                 .build();
             appClientCountMetricDto = CountMetricDto.builder()
                 .id(UUID.randomUUID())
@@ -214,7 +216,7 @@ public class MetricsControllerTest {
                 .build();
             appSourceCountMetricDto = AppSourceCountMetricDto.builder()
                 .id(UUID.randomUUID())
-                .endpoints(Arrays.asList(endpointCountMetricDto))
+                .endpoints(Arrays.asList(appEndpointCountMetricDto))
                 .appClients(Arrays.asList(appClientCountMetricDto))
                 .name("AppSourceName")
                 .build();
@@ -280,7 +282,7 @@ public class MetricsControllerTest {
 
     @Nested
     class TestCountAppEndpoint {
-        private EndpointCountMetricDto countMetricDto;
+        private AppEndpointCountMetricDto countMetricDto;
         private CountMetricDto appClientCountMetricDto;
 
         @BeforeEach
@@ -290,21 +292,23 @@ public class MetricsControllerTest {
                 .path("appclient1")
                 .sum(4d)
                 .build();
-            countMetricDto = EndpointCountMetricDto.builder()
+            countMetricDto = AppEndpointCountMetricDto.sumAppEndpointCountMetricBuilder()
                 .id(UUID.randomUUID())
                 .appClients(Arrays.asList(appClientCountMetricDto))
                 .path("AppSourceName")
+                .requestType("GET")
                 .build();
         }
         
         @Test
         public void getEndpointCountTest() throws Exception {
-            Mockito.when(service.getCountOfMetricsForEndpoint(Mockito.any(UUID.class), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(countMetricDto);
+            Mockito.when(service.getCountOfMetricsForEndpoint(Mockito.any(UUID.class), Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(countMetricDto);
             
             mockMvc.perform(
                     get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
                         .param("startDate", startDateStr)
                         .param("endDate", endDateStr)
+                        .param("method", "GET")
                         .param("path", "endpoint1")
                         .accept(MediaType.parseMediaType("application/json"))
                 )
@@ -319,6 +323,7 @@ public class MetricsControllerTest {
                     get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
                         .param("startDate", startDateStr)
                         .param("endDate", startDateStr)
+                        .param("method", "GET")
                         .param("path", "endpoint1")
                         .accept(MediaType.parseMediaType("application/json"))
                 )
@@ -331,6 +336,7 @@ public class MetricsControllerTest {
                     get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
                         .param("startDate", endDateStr)
                         .param("endDate", startDateStr)
+                        .param("method", "GET")
                         .param("path", "endpoint1")
                         .accept(MediaType.parseMediaType("application/json"))
                 )
@@ -342,6 +348,7 @@ public class MetricsControllerTest {
             mockMvc.perform(
                     get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
                         .param("startDate", startDateStr)
+                        .param("method", "GET")
                         .param("path", "endpoint1")
                         .accept(MediaType.parseMediaType("application/json"))
                 )
@@ -353,6 +360,7 @@ public class MetricsControllerTest {
             mockMvc.perform(
                     get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
                         .param("endDate", endDateStr)
+                        .param("method", "GET")
                         .param("path", "endpoint1")
                         .accept(MediaType.parseMediaType("application/json"))
                 )
@@ -365,6 +373,19 @@ public class MetricsControllerTest {
                     get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
                         .param("startDate", startDateStr)
                         .param("endDate", endDateStr)
+                        .param("method", "GET")
+                        .accept(MediaType.parseMediaType("application/json"))
+                )
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        public void getEndpointCountTestMissingRequestMethod400() throws Exception {
+            mockMvc.perform(
+                    get(ENDPOINT + "count/{id}/endpoint", countMetricDto.getId().toString())
+                        .param("startDate", startDateStr)
+                        .param("endDate", endDateStr)
+                        .param("path", "endpoint1")
                         .accept(MediaType.parseMediaType("application/json"))
                 )
                 .andExpect(status().isBadRequest());
@@ -374,14 +395,15 @@ public class MetricsControllerTest {
     @Nested
     class TestCountAppClientUser {
         private AppClientCountMetricDto countMetricDto;
-        private CountMetricDto endpointClientCountMetricDto;
+        private EndpointCountMetricDto endpointClientCountMetricDto;
 
         @BeforeEach
         public void setup() {
-            endpointClientCountMetricDto = CountMetricDto.builder()
+            endpointClientCountMetricDto = EndpointCountMetricDto.endpointCountMetricBuilder()
                 .id(UUID.randomUUID())
                 .path("endpoint1")
                 .sum(2d)
+                .method("GET")
                 .build();
             countMetricDto = AppClientCountMetricDto.builder()
                 .id(UUID.randomUUID())
