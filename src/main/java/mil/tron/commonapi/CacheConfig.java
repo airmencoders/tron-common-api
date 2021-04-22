@@ -10,11 +10,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.cache.interceptor.CacheResolver;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
+import mil.tron.commonapi.appgateway.GatewayCacheResolver;
 import mil.tron.commonapi.appgateway.GatewayKeyGenerator;
 
 @Configuration
@@ -41,7 +43,12 @@ public class CacheConfig {
         return caffeineCacheManager;
     }
 
-    @Bean("GatewayKeyGenerator")
+    @Bean("gatewayCacheResolver")
+    public CacheResolver cacheResolver() {
+        return new GatewayCacheResolver();
+    }
+
+    @Bean("gatewayKeyGenerator")
     public KeyGenerator keyGenerator() {
         return new GatewayKeyGenerator();
     }
