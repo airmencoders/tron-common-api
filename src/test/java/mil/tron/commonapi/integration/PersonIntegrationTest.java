@@ -3,6 +3,7 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 
+import liquibase.pro.packaged.U;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -105,6 +106,59 @@ public class PersonIntegrationTest {
         mockMvc.perform(get(ENDPOINT + "?page=2&limit=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testRemovePersonThatsLeaderInOrg() throws Exception {
+
+        PersonDto person = PersonDto.builder()
+            .firstName("test")
+            .lastName("member")
+            .email("test@member.com")
+            .rank("CIV")
+            .branch(Branch.USAF)
+            .dodid("12345")
+            .build();
+
+
+        MvcResult result = mockMvc.perform(post(ENDPOINT)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(OBJECT_MAPPER.writeValueAsString(person)))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        UUID id = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), PersonDto.class).getId();
+
+        OrganizationDto org = OrganizationDto.builder()
+            .name("TestOrg1")
+            .build();
+
+        MvcResult orgResult = mockMvc.perform(post(ORGANIZATION)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(org)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        OrganizationDto dtoObj = OBJECT_MAPPER.readValue(orgResult.getResponse().getContentAsString(), OrganizationDto.class);
+
+        JSONObject obj = new JSONObject();
+        obj.put("op", "replace");
+        obj.put("path", "/leader");
+        obj.put("value", id.toString());
+        JSONArray array = new JSONArray();
+        array.put(obj);
+
+        mockMvc.perform(patch(ORGANIZATION + "{id}", dtoObj.getId())
+                .contentType("application/json-patch+json")
+                .content(array.toString()))
+                .andExpect(status().isOk());
+
+
+        mockMvc.perform(delete(ENDPOINT + "{id}", id))
+                .andExpect(status().isNoContent());
+
     }
     
     @Transactional

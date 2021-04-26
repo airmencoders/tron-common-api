@@ -15,17 +15,21 @@ import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class EndpointMetricDto extends AppEndpointDto {
+public class AppEndpointCountMetricDto extends AppEndpointDto {
 
-    @Builder(builderMethodName = "endpointMetricBuilder")
-    public EndpointMetricDto(UUID id, String path, String requestType, List<MeterValueDto> values) {
+    @Builder(builderMethodName = "sumAppEndpointCountMetricBuilder")
+    public AppEndpointCountMetricDto(UUID id, String path, String requestType, String appSource, List<CountMetricDto> appClients) {
         super(id, path, requestType);
-        this.values = values;
+        this.appSource = appSource;
+        this.appClients = appClients;
     }
-
+  
+    @Getter
+    @Setter
+    private String appSource;
+    
     @Getter
     @Setter
     @Valid
-    @EqualsAndHashCode.Exclude
-    private List<MeterValueDto> values = new ArrayList<>();
+    private List<CountMetricDto> appClients = new ArrayList<>();  
 }

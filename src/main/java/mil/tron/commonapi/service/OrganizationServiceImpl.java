@@ -931,4 +931,17 @@ public class OrganizationServiceImpl implements OrganizationService {
 			repository.save(parent);
 		}
 	}
+
+	/**
+	 * Searches all organizations that have a leader by given UUID and removes them.
+	 * Used by the Person service to remove hard links to a Person entity before deletion.
+	 * @param leaderUuid id of the leader to remove from leader position(s)
+	 */
+	public void removeLeaderByUuid(UUID leaderUuid) {
+		List<Organization> modifiedOrgs = repository.deleteByLeaderId(leaderUuid);
+		List<UUID> modifiedIds = modifiedOrgs.stream().map(Organization::getId).collect(Collectors.toList());
+		OrganizationChangedMessage message = new OrganizationChangedMessage();
+		message.setOrgIds(Sets.newHashSet(modifiedIds));
+		eventManagerService.recordEventAndPublish(message);
+	}
 }

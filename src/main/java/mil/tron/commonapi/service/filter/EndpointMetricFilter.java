@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service.filter;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -49,22 +51,25 @@ public class EndpointMetricFilter implements Filter {
         String uri = httpRequest.getRequestURI();
         String patternMatched = uri.replaceFirst("/api" + apiVersion + "/app/", "");
         
-        // If uri starts with beginning prefix for AppSources
-        String appSourcePath = patternMatched.substring(0, patternMatched.indexOf("/"));
-        AppSource appSource = appSourceRepo.findByAppSourcePath(appSourcePath);
-        if(appSource != null) {
-            // If this belongs to an App Source, the rest of the path is part of the Endpoint
-            String name = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
-    
-            AppEndpoint endpoint = appEndpointRepo.findByPathAndAppSource(patternMatched.substring(patternMatched.indexOf("/"), patternMatched.length()), appSource);
-            AppClientUser appClient = appClientUserRepo.findByNameIgnoreCase(name).orElse(null);
-            if(endpoint != null && appClient != null) {
-                chain.doFilter(request, response);
-                this.incrementCounter(endpoint, appSource, appClient);
-                return;
+        int separator = patternMatched.indexOf("/");
+        if (separator > -1) {
+            // If uri starts with beginning prefix for AppSources
+            String appSourcePath = patternMatched.substring(0, separator);
+            AppSource appSource = appSourceRepo.findByAppSourcePath(appSourcePath);
+            if(appSource != null) {
+                // If this belongs to an App Source, the rest of the path is part of the Endpoint
+                String name = SecurityContextHolder
+                    .getContext()
+                    .getAuthentication()
+                    .getName();
+        
+                AppEndpoint endpoint = appEndpointRepo.findByPathAndAppSourceAndMethod(patternMatched.substring(separator, patternMatched.length()), appSource, RequestMethod.valueOf(httpRequest.getMethod()));
+                AppClientUser appClient = appClientUserRepo.findByNameIgnoreCase(name).orElse(null);
+                if(endpoint != null && appClient != null) {
+                    chain.doFilter(request, response);
+                    this.incrementCounter(endpoint, appSource, appClient);
+                    return;
+                }
             }
         }
         chain.doFilter(request, response);

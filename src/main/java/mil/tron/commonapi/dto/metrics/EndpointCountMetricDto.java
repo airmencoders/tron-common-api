@@ -1,38 +1,26 @@
 package mil.tron.commonapi.dto.metrics;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
-import javax.validation.Valid;
-
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
+
 @NoArgsConstructor
-@Builder
-@EqualsAndHashCode
-public class EndpointCountMetricDto {
-    @Getter
-    @Setter
-    private UUID id;
+@EqualsAndHashCode(callSuper = true)
+public class EndpointCountMetricDto extends CountMetricDto {
 
     @Getter
     @Setter
-    private String path;
+    private String method;
 
-    @Getter
-    @Setter
-    private String appSource;
-    
-    @Getter
-    @Setter
-    @Builder.Default
-    @Valid
-    private List<CountMetricDto> appClients = new ArrayList<>();  
+    @Builder(builderMethodName = "endpointCountMetricBuilder")
+    public EndpointCountMetricDto(UUID id, String path, Double sum, String method) {
+        super(id, path, sum);
+        this.method = method;
+    }
+
 }

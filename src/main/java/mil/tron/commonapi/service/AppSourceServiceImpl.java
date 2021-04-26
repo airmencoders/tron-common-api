@@ -209,7 +209,8 @@ public class AppSourceServiceImpl implements AppSourceService {
         Iterable<AppEndpointPriv> existingPrivileges = this.appEndpointPrivRepository.findAllByAppSource(appSourceToSave);
         this.appEndpointPrivRepository.deleteAll(existingPrivileges);
 
-        Iterable<AppEndpoint> existingEndpoints = this.appEndpointRepository.findAllByAppSource(appSourceToSave);
+        List<AppEndpoint> existingEndpoints = this.appEndpointRepository.findAllByAppSource(appSourceToSave);
+        existingEndpoints.removeAll(appEndpoints);
         this.appEndpointRepository.deleteAll(existingEndpoints);
 
         this.appEndpointRepository.saveAll(appEndpoints);
