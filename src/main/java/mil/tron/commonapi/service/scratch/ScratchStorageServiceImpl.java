@@ -209,7 +209,6 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     @Override
     public ScratchStorageAppRegistryEntry editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryEntry entry) {
-
         if (!id.equals(entry.getId()))
             throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, entry.getId()));
 
@@ -218,7 +217,10 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         }
 
         // check here for dups - even though at the db layer it will be inhibited -- albeit with a nasty 500 error there
-        if (appRegistryRepo.existsByAppNameIgnoreCase(entry.getAppName().trim())) {
+        Optional<ScratchStorageAppRegistryEntry> dbAppRegistry = appRegistryRepo.findById(id);
+
+        if (!dbAppRegistry.get().getAppName().equalsIgnoreCase(entry.getAppName()) &&
+            appRegistryRepo.existsByAppNameIgnoreCase(entry.getAppName().trim())) {
             throw new ResourceAlreadyExistsException("Scratch space application with that name already exists");
         }
 

@@ -294,6 +294,9 @@ public class ScratchStorageServiceImplTest {
                 .thenReturn(false)
                 .thenReturn(true);
 
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(newEntry));
+
         assertThrows(InvalidRecordUpdateRequest.class, () -> service.editExistingScratchAppEntry(UUID.randomUUID(), newEntry));
         assertThrows(RecordNotFoundException.class, () -> service.editExistingScratchAppEntry(newEntry.getId(), newEntry));
         assertEquals(newEntry, service.editExistingScratchAppEntry(newEntry.getId(), newEntry));
