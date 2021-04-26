@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.transaction.Transactional;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -22,6 +23,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.interceptor.BasicOperation;
 import org.springframework.cache.interceptor.CacheOperationInvocationContext;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -44,6 +46,8 @@ public class GatewayCacheResolverTest {
     @MockBean
     private AppGatewayService appGatewayService;
 
+    @Transactional
+    @Rollback
     @Test
     public void cacheOnControllerCreatesAndSelectsCorrectCache() throws Exception {
         AppSourceInterfaceDefinition appDef = new AppSourceInterfaceDefinition("Name", "mock.yml",
