@@ -2,8 +2,6 @@ package mil.tron.commonapi.service.utility;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.springframework.web.servlet.HandlerMapping;
-
 public class ResolvePathFromRequest {
     private ResolvePathFromRequest() {}
 
@@ -21,8 +19,7 @@ public class ResolvePathFromRequest {
             apiVersionPrefix = "";
         }
         return request
-                .getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)
-                .toString()
+                .getRequestURI()
                 .replaceFirst("^" + apiVersionPrefix + "/app/", "");
     }
 }

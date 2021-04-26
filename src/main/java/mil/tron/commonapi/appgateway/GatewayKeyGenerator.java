@@ -26,9 +26,9 @@ public class GatewayKeyGenerator implements KeyGenerator {
             keyParts.add(ccrw.getMethod().toString());
 
             Map<String, String[]> paramsMap = ccrw.getParameterMap();
-            for(String paramKey : paramsMap.keySet()) {
-                keyParts.add(paramKey);
-                keyParts.addAll(Arrays.asList(paramsMap.get(paramKey)));
+            for(Map.Entry<String, String[]> entry : paramsMap.entrySet()) {
+                keyParts.add(entry.getKey());
+                keyParts.addAll(Arrays.asList(entry.getValue()));
             }
         } else {
             keyParts.add(StringUtils.arrayToDelimitedString(params, "_"));

@@ -32,6 +32,8 @@ public class AccessCheckImpl implements AccessCheck {
         // get the spring-matched request mapping -- trim off the beginning prefix (e.g. /v1/app/)
         String patternMatched = ResolvePathFromRequest.resolve(requestObject, apiVersionPrefix);
 
+        authPaths.stream().forEach(item -> System.out.println(item));
+
         // check if the requestor has this request mapping in their privs, if not reject the request
         return authPaths.contains(patternMatched + "_" + requestObject.getMethod().toString());
     }

@@ -21,6 +21,12 @@ public class GatewayCacheResolver implements CacheResolver {
 
     @Autowired()
     CacheManager cacheManager;
+
+    public GatewayCacheResolver() {}
+
+    public GatewayCacheResolver(CacheManager cacheManager) {
+        this.cacheManager = cacheManager;
+    }
     
     @Override
     public Collection<? extends Cache> resolveCaches(CacheOperationInvocationContext<?> context) {
