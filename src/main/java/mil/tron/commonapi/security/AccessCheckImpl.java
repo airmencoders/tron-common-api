@@ -13,9 +13,11 @@ import mil.tron.commonapi.service.utility.ResolvePathFromRequest;
 public class AccessCheckImpl implements AccessCheck {
     
     private String apiVersionPrefix;
+    private String appSourcesPrefix;
 
-    public AccessCheckImpl(String apiVersionPrefix) {
+    public AccessCheckImpl(String apiVersionPrefix, String appSourcesPrefix) {
         this.apiVersionPrefix = apiVersionPrefix;
+        this.appSourcesPrefix = appSourcesPrefix;
     }
 
     @Override
@@ -30,7 +32,7 @@ public class AccessCheckImpl implements AccessCheck {
                 .collect(Collectors.toList());
 
         // get the spring-matched request mapping -- trim off the beginning prefix (e.g. /v1/app/)
-        String patternMatched = ResolvePathFromRequest.resolve(requestObject, apiVersionPrefix);
+        String patternMatched = ResolvePathFromRequest.resolve(requestObject, apiVersionPrefix + appSourcesPrefix);
 
         // check if the requestor has this request mapping in their privs, if not reject the request
         return authPaths.contains(patternMatched + "_" + requestObject.getMethod().toString());
