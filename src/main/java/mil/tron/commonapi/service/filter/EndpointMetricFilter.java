@@ -31,6 +31,9 @@ public class EndpointMetricFilter implements Filter {
     
     @Value("${api-prefix.v1}")
     private String apiVersion;
+    
+    @Value("${app-sources-prefix}")
+    private String appSourcesPrefix;
 
     @Autowired
     private AppEndpointRepository appEndpointRepo;
@@ -49,7 +52,7 @@ public class EndpointMetricFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
 
         String uri = httpRequest.getRequestURI();
-        String patternMatched = uri.replaceFirst("/api" + apiVersion + "/app/", "");
+        String patternMatched = uri.replaceFirst("/api" + apiVersion + appSourcesPrefix + "/", "");
         
         int separator = patternMatched.indexOf("/");
         if (separator > -1) {

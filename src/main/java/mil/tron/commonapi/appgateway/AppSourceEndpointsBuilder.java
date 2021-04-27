@@ -42,6 +42,8 @@ public class AppSourceEndpointsBuilder {
     private AppEndpointRepository appEndpointRepository;
 
     private String apiVersionPrefix;
+
+    private String appSourcesPathPrefix;
     
 
     @Autowired
@@ -50,12 +52,15 @@ public class AppSourceEndpointsBuilder {
                               AppGatewayService appGatewayService,
                               AppSourceConfig appSourceConfig,
                               AppEndpointRepository appEndpointRepository,
-                              @Value("${api-prefix.v1}") String apiVersionPrefix
+                              @Value("${api-prefix.v1}") String apiVersionPrefix,
+                              @Value("${app-sources-prefix}") String appSourcesPathPrefix
+
     ) {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
         this.queryController = queryController;
         this.appSourceConfig = appSourceConfig;
         this.apiVersionPrefix = apiVersionPrefix;
+        this.appSourcesPathPrefix = appSourcesPathPrefix;
         this.appGatewayService = appGatewayService;
         this.appEndpointRepository = appEndpointRepository;
         this.createAppSourceEndpoints(this.appSourceConfig);
@@ -141,13 +146,14 @@ public class AppSourceEndpointsBuilder {
     private void addMapping(String appSourcePath, AppSourceEndpoint endpoint) throws NoSuchMethodException {
 
         RequestMappingInfo requestMappingInfo = RequestMappingInfo
-                .paths(String.format("%s/app/%s%s",
-                        this.apiVersionPrefix,
-                        appSourcePath,
-                        endpoint.getPath()))
-                .methods(endpoint.getMethod())
-                .produces(MediaType.APPLICATION_JSON_VALUE)
-                .build();
+            .paths(String.format("%s%s/%s%s",
+                this.apiVersionPrefix,
+                this.appSourcesPathPrefix,
+                appSourcePath,
+                endpoint.getPath()))
+            .methods(endpoint.getMethod())
+            .produces(MediaType.APPLICATION_JSON_VALUE)
+            .build();
 
         if (endpoint.getMethod().equals(RequestMethod.GET)) {
             requestMappingHandlerMapping.

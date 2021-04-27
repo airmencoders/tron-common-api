@@ -20,7 +20,7 @@ import mil.tron.commonapi.appgateway.GatewayCacheResolver;
 import mil.tron.commonapi.appgateway.GatewayKeyGenerator;
 
 @Configuration
-@EnableCaching
+@EnableCaching(order = 2147483647)
 @ConditionalOnProperty(name = "caching.enabled")
 @PropertySource("classpath:application.properties")
 public class CacheConfig {

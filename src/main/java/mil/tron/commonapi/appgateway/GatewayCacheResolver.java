@@ -19,6 +19,9 @@ public class GatewayCacheResolver implements CacheResolver {
     @Value("${api-prefix.v1}")
     private String apiVersion;
 
+    @Value("${app-sources-prefix}")
+    private String appSourcesPrefix;
+
     @Autowired()
     CacheManager cacheManager;
 
@@ -34,10 +37,12 @@ public class GatewayCacheResolver implements CacheResolver {
 
         for(Object arg : context.getArgs()) {
             if(arg instanceof  HttpServletRequest) {
-                String path = ResolvePathFromRequest.resolve((HttpServletRequest) arg, apiVersion);
+                String path = ResolvePathFromRequest.resolve((HttpServletRequest) arg, apiVersion + appSourcesPrefix);
                 int appSourceAndEndpointSeparator = path.indexOf("/");
                 
-                if(appSourceAndEndpointSeparator > -1) {
+                // If the trimmed path starts with "/", something didn't parse correctly. 
+                // We should put that in the default cache
+                if(appSourceAndEndpointSeparator > 0) {
                     String appSourcePath = path.substring(0, appSourceAndEndpointSeparator);
                     result.add(cacheManager.getCache(appSourcePath));
                     break;

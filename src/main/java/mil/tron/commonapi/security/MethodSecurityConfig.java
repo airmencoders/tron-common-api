@@ -9,11 +9,14 @@ import org.springframework.security.config.annotation.method.configuration.Globa
 
 @Configuration
 @ConditionalOnProperty(name = "security.enabled", havingValue="true")
-@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)
+@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true, order = 1)
 public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
 
     @Bean
-    public AccessCheck accessCheck(@Value("${api-prefix.v1}") String version) {
-        return new AccessCheckImpl(version);
+    public AccessCheck accessCheck(
+        @Value("${api-prefix.v1}") String apiPrefix, 
+        @Value("${app-sources-prefix}") String appSourcesPrefix) 
+    {
+        return new AccessCheckImpl(apiPrefix, appSourcesPrefix);
     }
 }

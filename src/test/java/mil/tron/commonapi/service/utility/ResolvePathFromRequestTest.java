@@ -15,17 +15,23 @@ public class ResolvePathFromRequestTest {
     @Test
     public void returnsTrimmedPath() {
         HttpServletRequest request = get("/v1/app/appsource/endpoint").buildRequest(null);
-        assertEquals(ResolvePathFromRequest.resolve(request, "/v1"), "appsource/endpoint");
+        assertEquals("appsource/endpoint", ResolvePathFromRequest.resolve(request, "/v1/app"));
     }
 
     @Test
     public void returnsFullPathWithNoPrefix() {
-        HttpServletRequest request = get("/v1/app/appsource/endpoint").buildRequest(null);
-        assertEquals(ResolvePathFromRequest.resolve(request, null), "/v1/app/appsource/endpoint");
+        HttpServletRequest request = get("/api/v1/app/appsource/endpoint").buildRequest(null);
+        assertEquals("/api/v1/app/appsource/endpoint", ResolvePathFromRequest.resolve(request, null));
+    }
+
+    @Test
+    public void returnsTrimmedPathWithContextPathPrefix() {
+        HttpServletRequest request = get("/api/v1/app/appsource/endpoint").buildRequest(null);
+        assertEquals("appsource/endpoint", ResolvePathFromRequest.resolve(request, "/v1/app"));
     }
 
     @Test
     public void handlesNullRequestObject() {
-        assertEquals(ResolvePathFromRequest.resolve(null, "/v1"), "");
+        assertEquals("", ResolvePathFromRequest.resolve(null, "/v1/app"));
     }
 }

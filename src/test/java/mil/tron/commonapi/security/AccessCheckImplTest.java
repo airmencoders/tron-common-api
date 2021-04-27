@@ -16,15 +16,23 @@ public class AccessCheckImplTest {
     @Test
     @WithMockUser(username="guardianangel", authorities = "appsource/endpoint_GET")
     public void passAuthenticationCheck() {
-        AccessCheckImpl accessCheckImpl = new AccessCheckImpl("/v1");
+        AccessCheckImpl accessCheckImpl = new AccessCheckImpl("/v1", "/app");
         HttpServletRequest request = get("/v1/app/appsource/endpoint").buildRequest(null);
         assertTrue(accessCheckImpl.check(request));
     }
 
     @Test
     @WithMockUser(username="guardianangel", authorities = "appsource/endpoint_GET")
+    public void passAuthenticationCheckWithServletContextExplictlyDenoted() {
+        AccessCheckImpl accessCheckImpl = new AccessCheckImpl("/v1", "/app");
+        HttpServletRequest request = get("/api/v1/app/appsource/endpoint").buildRequest(null);
+        assertTrue(accessCheckImpl.check(request));
+    }
+
+    @Test
+    @WithMockUser(username="guardianangel", authorities = "appsource/endpoint_GET")
     public void passAuthenticationCheckWithParams() {
-        AccessCheckImpl accessCheckImpl = new AccessCheckImpl("/v1");
+        AccessCheckImpl accessCheckImpl = new AccessCheckImpl("/v1", "/app");
         HttpServletRequest request = get("/v1/app/appsource/endpoint?test=test").buildRequest(null);
         assertTrue(accessCheckImpl.check(request));
     }
@@ -32,7 +40,7 @@ public class AccessCheckImplTest {
     @Test
     @WithMockUser(username="guardianangel", authorities = "appsource/endpoint_GET")
     public void failAuthenticationCheck() {
-        AccessCheckImpl accessCheckImpl = new AccessCheckImpl("/v1");
+        AccessCheckImpl accessCheckImpl = new AccessCheckImpl("/v1", "/app");
         HttpServletRequest request = get("/v1/app/appsource/endpoint_fail").buildRequest(null);
         assertFalse(accessCheckImpl.check(request));
     }

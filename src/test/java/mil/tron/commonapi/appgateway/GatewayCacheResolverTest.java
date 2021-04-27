@@ -126,7 +126,7 @@ public class GatewayCacheResolverTest {
 
             @Override
             public Object[] getArgs() {
-                HttpServletRequest request = get("/app/mock").buildRequest(null);
+                HttpServletRequest request = get("/v1/app/mock").buildRequest(null);
                 return new Object[] { request };
             }            
         };
