@@ -1,32 +1,25 @@
 package mil.tron.commonapi.controller;
 
-import mil.tron.commonapi.appgateway.AppSourceEndpointsBuilder;
-import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-import mil.tron.commonapi.service.AppGatewayService;
-import org.assertj.core.util.Lists;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import javax.servlet.http.HttpServletRequest;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-import javax.servlet.http.HttpServletRequest;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import mil.tron.commonapi.appgateway.AppSourceEndpointsBuilder;
+import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.service.AppGatewayService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -63,9 +56,6 @@ public class AppGatewayControllerTest {
 
         mockMvc.perform(get("/v1/app/mock/test"))
                 .andExpect(status().isOk());
-
-        mockMvc.perform(get("/v1/app/mock/test2"))
-                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/v1/app/mock/test3"))
                 .andExpect(status().isNotFound());
