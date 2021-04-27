@@ -54,6 +54,8 @@ public class PersonServiceImpl implements PersonService {
 			Branch.OTHER, Collections.emptySet()
 	);
 
+	private static final String DODID_ALREADY_EXISTS_ERROR = "Person resource with the dodid: %s already exists";
+
 	public PersonServiceImpl(PersonRepository repository,
 							 PersonUniqueChecksService personChecksService,
 							 RankRepository rankRepository,
@@ -90,7 +92,7 @@ public class PersonServiceImpl implements PersonService {
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
 
 		if (!personChecksService.personDodidIsUnique(entity))
-			throw new ResourceAlreadyExistsException(String.format("Person resource with the dodid: %s already exists", entity.getDodid()));
+			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
 
 
 		checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
@@ -141,7 +143,7 @@ public class PersonServiceImpl implements PersonService {
 		}
 
 		if (!personChecksService.personDodidIsUnique(entity))
-			throw new ResourceAlreadyExistsException(String.format("Person resource with the dodid: %s already exists", entity.getDodid()));
+			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
 
 
 		PersonDto updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
@@ -221,7 +223,7 @@ public class PersonServiceImpl implements PersonService {
 		}
 
 		if (!personChecksService.personDodidIsUnique(patchedPerson))
-			throw new ResourceAlreadyExistsException(String.format("Person resource with the dodid: %s already exists", patchedPerson.getDodid()));
+			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, patchedPerson.getDodid()));
 
 
 		PersonDto updatedPerson = updateMetadata(patchedPersonDto.getBranch(), patchedPerson, dbPerson, patchedPersonDto.getMeta());
