@@ -11,11 +11,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
+
 public interface OrganizationService {
 
 	// entity methods (service <--> persistence)
 	Organization findOrganization(UUID id);
-	Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
+	Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch, Pageable page);
 	Organization removeMember(UUID organizationId, List<UUID> personIds);
 	Organization addMember(UUID organizationId, List<UUID> personIds, boolean primary);
 	Organization addOrg(UUID organizationId, List<UUID> orgIds);
@@ -28,8 +30,8 @@ public interface OrganizationService {
 	OrganizationDto modify(UUID organizationId, Map<String, String> attribs);
 	OrganizationDto patchOrganization(UUID id, JsonPatch patch);
 	void deleteOrganization(UUID id);
-	Iterable<OrganizationDto> getOrganizations(String searchQuery);
-	Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch);
+	Iterable<OrganizationDto> getOrganizations(String searchQuery, Pageable page);
+	Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch, Pageable page);
 	OrganizationDto getOrganization(UUID id);
 	OrganizationDto removeOrganizationMember(UUID organizationId, List<UUID> personIds);
 	OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds, boolean primary);

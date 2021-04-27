@@ -3,7 +3,6 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 
-import liquibase.pro.packaged.U;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -99,11 +98,11 @@ public class PersonIntegrationTest {
             .andExpect(status().isOk());
             
         // test pagination
-        mockMvc.perform(get(ENDPOINT + "?page=1&limit=2"))
+        mockMvc.perform(get(ENDPOINT + "?page=0&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
 
-        mockMvc.perform(get(ENDPOINT + "?page=2&limit=1"))
+        mockMvc.perform(get(ENDPOINT + "?page=1&size=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
