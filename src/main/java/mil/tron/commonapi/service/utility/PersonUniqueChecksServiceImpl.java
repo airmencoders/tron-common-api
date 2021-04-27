@@ -45,4 +45,26 @@ public class PersonUniqueChecksServiceImpl implements PersonUniqueChecksService 
             return (person.getEmail() == null || personRepo.findByEmailIgnoreCase(person.getEmail()).isEmpty());
         }
     }
+
+    /**
+     * Checks person DODID is unique before it hits the database
+     * @param person Person entity to check
+     * @return true if unique / false if not
+     */
+    @Override
+    public boolean personDodidIsUnique(Person person) {
+        if (person.getId() != null && personRepo.existsById(person.getId())) {
+            Person dbPerson = personRepo.findById(person.getId()).orElseThrow(() ->
+                    new RecordNotFoundException("Error retrieving Record with UUID: " + person.getId())
+            );
+
+            String dbPersonDodid = dbPerson.getDodid();
+            String personDodid = person.getDodid();
+            return (personDodid == null || personDodid.equalsIgnoreCase(dbPersonDodid) || personRepo.findByDodidIgnoreCase(personDodid).isEmpty());
+
+        } else {
+            return (person.getDodid() == null || personRepo.findByDodidIgnoreCase(person.getDodid()).isEmpty());
+        }
+    }
+
 }

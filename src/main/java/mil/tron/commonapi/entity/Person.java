@@ -21,7 +21,7 @@ import java.util.UUID;
 @Builder
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-@Table(uniqueConstraints = { @UniqueConstraint(columnNames = "emailAsLower") })
+@Table(uniqueConstraints = { @UniqueConstraint(columnNames = "emailAsLower"), @UniqueConstraint(columnNames = "dodid") })
 public class Person {
 
     @Id

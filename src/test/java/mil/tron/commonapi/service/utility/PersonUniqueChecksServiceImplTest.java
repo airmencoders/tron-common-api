@@ -51,4 +51,32 @@ public class PersonUniqueChecksServiceImplTest {
         assertTrue(uniqueChecksService.personEmailIsUnique(testPerson));
 
     }
+
+    @Test
+    void testUniqueDodidCheck() {
+        Person testPerson = Person.builder().dodid("123456789").build();
+        Mockito.when(personRepo.existsById(Mockito.any(UUID.class))).thenReturn(false);
+        Mockito.when(personRepo.findByDodidIgnoreCase(Mockito.any(String.class))).thenReturn(Optional.of(testPerson));
+        assertFalse(uniqueChecksService.personDodidIsUnique(testPerson));
+
+        // null dodid is allowed
+        testPerson.setDodid(null);
+        assertTrue(uniqueChecksService.personDodidIsUnique(testPerson));
+
+        // no dupes found
+        testPerson.setDodid("999999999");
+        Mockito.when(personRepo.findByDodidIgnoreCase(Mockito.any(String.class))).thenReturn(Optional.empty());
+        assertTrue(uniqueChecksService.personDodidIsUnique(testPerson));
+
+        // switch to existing record (update with a non-unique dodid)
+        Mockito.when(personRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(personRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(new Person()));
+        Mockito.when(personRepo.findByDodidIgnoreCase(Mockito.any(String.class))).thenReturn(Optional.of(testPerson));
+        assertFalse(uniqueChecksService.personDodidIsUnique(testPerson));
+
+        // existing record (update with a unique dodid)
+        Mockito.when(personRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
+        assertTrue(uniqueChecksService.personDodidIsUnique(testPerson));
+
+    }
 }
