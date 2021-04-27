@@ -3,6 +3,8 @@ package mil.tron.commonapi.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
+
 import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
@@ -13,7 +15,7 @@ public interface PersonService {
 	PersonDto patchPerson(UUID id, JsonPatch patch);
 
 	void deletePerson(UUID id);
-	Iterable<PersonDto> getPersons(PersonConversionOptions options);
+	Iterable<PersonDto> getPersons(PersonConversionOptions options, Pageable page);
 	PersonDto getPersonDto(UUID id, PersonConversionOptions options);
 	Person getPerson(UUID id);
 	Person getPersonFilter(PersonFilterType type, String value);

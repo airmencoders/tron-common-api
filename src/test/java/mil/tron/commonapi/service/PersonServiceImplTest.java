@@ -30,6 +30,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -355,8 +357,8 @@ class PersonServiceImplTest {
 
     @Test
     void getPersonsTest() {
-    	Mockito.when(repository.findAll()).thenReturn(Arrays.asList(testPerson));
-    	Iterable<PersonDto> persons = personService.getPersons(null);
+    	Mockito.when(repository.findBy(null)).thenReturn(new SliceImpl<>(Arrays.asList(testPerson)));
+    	Iterable<PersonDto> persons = personService.getPersons(null, Mockito.any());
     	assertThat(persons).hasSize(1);
     }
 

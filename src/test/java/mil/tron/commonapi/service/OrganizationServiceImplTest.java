@@ -1,12 +1,7 @@
 package mil.tron.commonapi.service;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.github.fge.jsonpatch.JsonPatch;
-import com.github.fge.jsonpatch.JsonPatchException;
-import com.github.fge.jsonpatch.JsonPatchOperation;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
@@ -15,13 +10,11 @@ import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.pubsub.EventManagerService;
 import mil.tron.commonapi.pubsub.EventManagerServiceImpl;
 import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
-import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
@@ -37,8 +30,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
-import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.security.core.parameters.P;
+import org.springframework.data.domain.SliceImpl;
 
 import java.io.IOException;
 import java.util.*;
@@ -227,40 +219,40 @@ class OrganizationServiceImplTest {
 
 	@Test
 	void getOrganizationsTest() {
-		Mockito.when(repository.findAll()).thenReturn(Lists.newArrayList(testOrg));
-    	Iterable<OrganizationDto> persons = organizationService.getOrganizations("");
+		Mockito.when(repository.findBy(Mockito.any())).thenReturn(new SliceImpl<>(Lists.newArrayList(testOrg)));
+    	Iterable<OrganizationDto> persons = organizationService.getOrganizations("", Mockito.any());
     	assertThat(persons).hasSize(1);
 
 	}
 
 	@Test
 	void getOrganizationsByTypeAndServiceTest() {
-		Mockito.when(repository.findAll()).thenReturn(Lists.newArrayList(testOrg));
-		Iterable<OrganizationDto> persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USAF);
+		Mockito.when(repository.findBy(Mockito.any())).thenReturn(new SliceImpl<>(Lists.newArrayList(testOrg)));
+		Iterable<OrganizationDto> persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USAF, Mockito.any());
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, null);
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, null, Mockito.any());
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", Unit.WING, null);
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.WING, null, Mockito.any());
 		assertThat(persons).hasSize(0);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", null, null);
+		persons = organizationService.getOrganizationsByTypeAndService("", null, null, Mockito.any());
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", null, Branch.USAF);
+		persons = organizationService.getOrganizationsByTypeAndService("", null, Branch.USAF, Mockito.any());
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("some org", null, Branch.USAF);
+		persons = organizationService.getOrganizationsByTypeAndService("some org", null, Branch.USAF, Mockito.any());
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("some org", null, null);
+		persons = organizationService.getOrganizationsByTypeAndService("some org", null, null, Mockito.any());
 		assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("area 51", null, null);
+		persons = organizationService.getOrganizationsByTypeAndService("area 51", null, null, Mockito.any());
 		assertThat(persons).hasSize(0);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USMC);
+		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USMC, Mockito.any());
 		assertThat(persons).hasSize(0);
 
 	}

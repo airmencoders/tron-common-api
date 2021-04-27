@@ -18,10 +18,12 @@ import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
-import mil.tron.commonapi.pagination.Paginator;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonFilterType;
 import mil.tron.commonapi.service.PersonService;
+
+import org.springdoc.api.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,11 +36,9 @@ import java.util.UUID;
 @RequestMapping("${api-prefix.v1}/person")
 public class PersonController {
 	private PersonService personService;
-	private Paginator pager;
 
-	public PersonController(PersonService personService, Paginator pager) {
+	public PersonController(PersonService personService) {
 		this.personService = personService;
-		this.pager = pager;
 	}
 	
 	@Operation(summary = "Retrieves all persons", description = "Retrieves all persons")
@@ -50,16 +50,13 @@ public class PersonController {
 	@PreAuthorizeRead
 	@GetMapping
 	public ResponseEntity<Object> getPersons(
-			@Parameter(name = "page", description = "Page of content to retrieve", required = false)
-				@RequestParam(name = "page", required = false, defaultValue = "1") Long pageNumber,
-			@Parameter(name = "limit", description = "Size of each page", required = false)
-				@RequestParam(name = "limit", required = false) Long pageSize,
             @Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
 				@RequestParam(name = "memberships", required = false) boolean memberships,
             @Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
-                @RequestParam(name = "leaderships", required = false) boolean leaderships) {
+                @RequestParam(name = "leaderships", required = false) boolean leaderships,
+                @ParameterObject Pageable page) {
 
-		return new ResponseEntity<>(pager.paginate(personService.getPersons(PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build()), pageNumber, pageSize), HttpStatus.OK);
+		return new ResponseEntity<>(personService.getPersons(PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build(), page), HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Retrieves a person by ID", description = "Retrieves a person by ID")

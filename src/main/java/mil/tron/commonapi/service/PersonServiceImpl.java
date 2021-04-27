@@ -26,11 +26,11 @@ import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.modelmapper.Conditions;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
@@ -238,11 +238,8 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public Iterable<PersonDto> getPersons(PersonConversionOptions options) {
-		return StreamSupport
-				.stream(repository.findAll().spliterator(), false)
-				.map(p -> convertToDto(p, options))
-				.collect(Collectors.toList());
+	public Iterable<PersonDto> getPersons(PersonConversionOptions options, Pageable page) {
+		return repository.findBy(page).stream().map(person -> convertToDto(person, options)).collect(Collectors.toList());
 	}
 
 	@Override
