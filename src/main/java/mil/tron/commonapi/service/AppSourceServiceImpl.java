@@ -139,7 +139,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         return appEndpoints.stream()
             .filter(endpoint -> appEndpointId.equals(endpoint.getId()))
             .findAny()
-            .orElse(null);
+            .orElseThrow(() ->new RecordNotFoundException(String.format("No app endpoint with id %s found.", appEndpointId)));
     }
 
     private AppSourceDetailsDto buildAppSourceDetailsDto(AppSource appSource) {
@@ -184,14 +184,11 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .build()).collect(Collectors.toSet());
         
         Set<AppEndpointPriv> appEndpointPrivs = appSource.getAppClients()
-            .stream()
-                .map(privDto -> AppEndpointPriv.builder()
-                    .appSource(appSourceToSave)
-                    .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
-                    .appEndpoint(privDto.getAppEndpoint() == null ? null : this.findAppEndpoint(privDto.getAppEndpoint(), appEndpoints))
-                    .build())
-                .filter(privDto -> privDto.getAppEndpoint() != null)
-                .collect(Collectors.toSet());
+            .stream().map(privDto -> AppEndpointPriv.builder()
+                .appSource(appSourceToSave)
+                .appClientUser(this.buildAppClientUser(privDto.getAppClientUser()))
+                .appEndpoint(privDto.getAppEndpoint() == null ? null : this.findAppEndpoint(privDto.getAppEndpoint(), appEndpoints))
+                .build()).collect(Collectors.toSet());
 
         // remove admins attached to this app, essentially sanitize admins from it
         //  this allows us to essentially be able to add and delete admins via an HTTP PUT

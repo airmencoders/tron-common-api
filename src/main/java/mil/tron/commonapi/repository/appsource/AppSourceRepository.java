@@ -10,7 +10,6 @@ import mil.tron.commonapi.entity.appsource.AppSource;
 
 public interface AppSourceRepository extends JpaRepository<AppSource, UUID>, AppSourceRepositoryCustom {
     boolean existsByNameIgnoreCase(String name);
-    AppSource findByNameIgnoreCase(String name);
     AppSource findByAppSourcePath(String appSourcePath);
     List<AppSource> findAppSourcesByAppSourceAdminsContaining(DashboardUser user);
 }

@@ -1,7 +1,6 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
@@ -10,7 +9,6 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.OrganizationService;
 import org.assertj.core.util.Lists;
@@ -24,7 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.test.context.TestPropertySource;
@@ -40,8 +37,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -106,7 +101,7 @@ public class OrganizationControllerTest {
 			List<OrganizationDto> orgs = new ArrayList<>();
 			orgs.add(testOrgDto);
 
-			Mockito.when(organizationService.getOrganizations("")).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizations(Mockito.eq(""), Mockito.any())).thenReturn(orgs);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
@@ -118,7 +113,7 @@ public class OrganizationControllerTest {
 			List<OrganizationDto> orgs = new ArrayList<>();
 			orgs.add(testOrgDto);
 
-			Mockito.when(organizationService.getOrganizationsByTypeAndService("", Unit.WING, null)).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.eq(Unit.WING), Mockito.isNull(), Mockito.any())).thenReturn(orgs);
 
 			mockMvc.perform(get(ENDPOINT + "?type=WING"))
 					.andExpect(status().isOk())
@@ -130,18 +125,18 @@ public class OrganizationControllerTest {
 			List<OrganizationDto> orgs = new ArrayList<>();
 			orgs.add(testOrgDto);
 
-			Mockito.when(organizationService.getOrganizationsByTypeAndService("", Unit.WING, Branch.USAF)).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.eq(Unit.WING), Mockito.eq(Branch.USAF), Mockito.any())).thenReturn(orgs);
 
 			mockMvc.perform(get(ENDPOINT + "?type=WING&branch=USAF"))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
 
-			Mockito.when(organizationService.getOrganizationsByTypeAndService("", null, null)).thenReturn(new ArrayList<>());
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.isNull(), Mockito.isNull(), Mockito.any())).thenReturn(new ArrayList<>());
 			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=UNKNOWN"))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(new ArrayList<>())));
 
-			Mockito.when(organizationService.getOrganizationsByTypeAndService("", null, Branch.USAF)).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.isNull(), Mockito.eq(Branch.USAF), Mockito.any())).thenReturn(orgs);
 			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=USAF"))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
@@ -181,7 +176,7 @@ public class OrganizationControllerTest {
 			ModelMapper mapper = new ModelMapper();
 			OrganizationDto dto = mapper.map(testOrgDto, OrganizationDto.class);
 			String dtoStr = OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(dto));
-			Mockito.when(organizationService.getOrganizations("")).thenReturn(Lists.newArrayList(testOrgDto));
+			Mockito.when(organizationService.getOrganizations(Mockito.eq(""), Mockito.any())).thenReturn(Lists.newArrayList(testOrgDto));
 			Mockito.when(organizationService.convertToDto(testOrg)).thenReturn(dto);
 			mockMvc.perform(get(ENDPOINT + "?onlyIds=true"))
 					.andExpect(status().isOk())
