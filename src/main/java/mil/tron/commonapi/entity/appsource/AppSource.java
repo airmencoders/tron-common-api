@@ -1,12 +1,23 @@
 package mil.tron.commonapi.entity.appsource;
 
-import lombok.*;
-import mil.tron.commonapi.entity.DashboardUser;
-
-import javax.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+import javax.validation.Valid;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+import mil.tron.commonapi.entity.DashboardUser;
 
 /***
  * An App Source is an app which provides data to app clients
@@ -14,21 +25,10 @@ import java.util.UUID;
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-@EqualsAndHashCode
-@Table(name="app_source")
-public class AppSource {
-
-    @Id
-    @Getter
-    @Setter
-    @Builder.Default
-    private UUID id = UUID.randomUUID();
-
-    @Getter
-    @Setter
-    @Column(unique = true)
-    private String name;
+@SuperBuilder
+@EqualsAndHashCode(callSuper = true)
+@Table(name="app")
+public class AppSource extends App {
 
     @Getter
     @Setter
@@ -40,11 +40,20 @@ public class AppSource {
     private String appSourcePath;
 
     /**
+     * Currently. appSourcePath is not given on App Source creation. 
+     * This flag allows an App Source to be identified as an App Source - removing the path requirement
+     */    
+    @Getter
+    @Builder.Default
+    private boolean appSource = true;
+
+    /**
      * List of AppSourceAdmins that can administer this app
      * One app can have many admins...
      */
     @Getter
     @Setter
+    @Builder.Default
     @ManyToMany
     private Set<DashboardUser> appSourceAdmins = new HashSet<>();
 
@@ -57,16 +66,8 @@ public class AppSource {
     @Getter
     @Setter
     @Builder.Default
+    @Valid
     @OneToMany(mappedBy = "appSource")
-    private Set<AppEndpointPriv> appPrivs = new HashSet<>();
+    private Set<@Valid AppEndpointPriv> appPrivs = new HashSet<>();
 
-    @PrePersist
-    @PreUpdate
-    public void sanitize() {
-        trimStringFields();
-    }
-
-    private void trimStringFields() {
-        name = name == null ? null : name.trim();
-    }
 }

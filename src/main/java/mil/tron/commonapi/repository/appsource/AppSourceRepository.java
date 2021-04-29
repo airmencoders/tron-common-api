@@ -13,4 +13,5 @@ public interface AppSourceRepository extends JpaRepository<AppSource, UUID> {
     AppSource findByNameIgnoreCase(String name);
     AppSource findByAppSourcePath(String appSourcePath);
     List<AppSource> findAppSourcesByAppSourceAdminsContaining(DashboardUser user);
+    List<AppSource> findByAppSourceTrue();
 }

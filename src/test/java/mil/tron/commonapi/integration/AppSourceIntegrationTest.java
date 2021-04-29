@@ -193,7 +193,7 @@ public class AppSourceIntegrationTest {
     void testBadPermissionId() throws Exception {
 
         val appClientId = UUID.randomUUID();
-        val testAppClient = AppClientUser.builder()
+        AppClientUser testAppClient = AppClientUser.builder()
                 .id(appClientId)
                 .name("Test App Client")
                 .build();
@@ -264,7 +264,7 @@ public class AppSourceIntegrationTest {
 
         val appClientId = UUID.randomUUID();
         val appEndpointId = UUID.randomUUID();
-        val testAppClient = AppClientUser.builder()
+        AppClientUser testAppClient = AppClientUser.builder()
                 .id(appClientId)
                 .name("Test App Client")
                 .build();
@@ -312,7 +312,7 @@ public class AppSourceIntegrationTest {
 
         val appClientId = UUID.randomUUID();
         val endpointId = UUID.randomUUID();
-        val testAppClient = AppClientUser.builder()
+        AppClientUser testAppClient = AppClientUser.builder()
                 .id(appClientId)
                 .name("Test App Client")
                 .build();
@@ -354,13 +354,13 @@ public class AppSourceIntegrationTest {
 
         val appClientId = UUID.randomUUID();
         val appEndpointId = UUID.randomUUID();
-        val testAppClient = AppClientUser.builder()
+        AppClientUser testAppClient = AppClientUser.builder()
                 .id(appClientId)
                 .name("Test App Client")
                 .build();
         appClientUserRespository.save(testAppClient);
         val appClient2Id = UUID.randomUUID();
-        val testAppClient2 = AppClientUser.builder()
+        AppClientUser testAppClient2 = AppClientUser.builder()
                 .id(appClient2Id)
                 .name("Test App Client 2")
                 .build();

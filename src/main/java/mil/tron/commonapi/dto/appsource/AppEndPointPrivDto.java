@@ -1,6 +1,7 @@
 package mil.tron.commonapi.dto.appsource;
 
 import lombok.*;
+import mil.tron.commonapi.validations.AppsMatch;
 
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @EqualsAndHashCode
+@AppsMatch(invert = true, field = "appClientUserId", fieldMatch = "appSourceId", message="App cannot fetch from itself")
 public class AppEndPointPrivDto {
 
     @Getter

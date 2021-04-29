@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.validations.AppsMatch;
 
 /**
  * Provides the privileges for a given app and client app
@@ -27,6 +28,7 @@ import mil.tron.commonapi.entity.AppClientUser;
 @Entity
 @Getter
 @Setter
+@AppsMatch(invert = true, field = "appSource", fieldMatch = "appClientUser", message="App cannot fetch from itself")
 @Table(name="app_endpoint_privs")
 public class AppEndpointPriv {
 
