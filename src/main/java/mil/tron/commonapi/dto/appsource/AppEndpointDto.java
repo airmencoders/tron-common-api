@@ -2,30 +2,22 @@ package mil.tron.commonapi.dto.appsource;
 
 import java.util.UUID;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import lombok.*;
-
-@AllArgsConstructor
 @NoArgsConstructor
-@Builder
-@EqualsAndHashCode
-public class AppEndpointDto {
+@EqualsAndHashCode(callSuper = true)
+public class AppEndpointDto extends EndpointDto {
     @Getter
     @Setter
-    @Builder.Default
-    private UUID id = UUID.randomUUID();
+    private boolean deleted;
 
-    @Getter
-    @Setter
-    @NotBlank
-    @NotNull
-    private String path;
-
-    @Getter
-    @Setter
-    @NotBlank
-    @NotNull
-    private String requestType;
+    @Builder
+    public AppEndpointDto(UUID id, String path, String requestType, boolean deleted) {
+        super(id, path, requestType);
+        this.deleted = deleted;
+    }
 }
