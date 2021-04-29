@@ -3,10 +3,9 @@ package mil.tron.commonapi.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -23,6 +22,15 @@ public class AppClientUserDto {
 	@Setter
 	@Builder.Default
 	private List<Privilege> privileges = new ArrayList<>();
+
+	@Getter
+	@Setter
+	@Builder.Default
+	private List<String> appClientDeveloperEmails = new ArrayList<>();
+
+	@Getter
+	@Setter
+	private Set<AppEndpointPriv> appEndpointPrivs = new HashSet<>();
 
 	@Getter
 	@Setter

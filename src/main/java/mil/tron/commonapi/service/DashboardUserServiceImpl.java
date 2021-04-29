@@ -27,13 +27,16 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     private static final String RESOURCE_NOT_FOUND_MSG = "User with the ID: %s does not exist.";
     private final DtoMapper modelMapper;
     private AppSourceService appSourceService;
+    private AppClientUserService appClientUserService;
 
     public DashboardUserServiceImpl(DashboardUserRepository dashboardUserRepository,
                                     DashboardUserUniqueChecksService dashboardUserUniqueChecksService,
-                                    @Lazy AppSourceService appSourceService) {
+                                    @Lazy AppSourceService appSourceService,
+                                    @Lazy AppClientUserService appClientUserService) {
         this.dashboardUserRepository = dashboardUserRepository;
         this.userChecksService = dashboardUserUniqueChecksService;
         this.appSourceService = appSourceService;
+        this.appClientUserService = appClientUserService;
         this.modelMapper = new DtoMapper();
         this.modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -110,6 +113,7 @@ public class DashboardUserServiceImpl implements DashboardUserService {
                 new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
 
         appSourceService.deleteAdminFromAllAppSources(user);
+        appClientUserService.deleteDeveloperFromAllAppClient(user);
         dashboardUserRepository.delete(user);
     }
 

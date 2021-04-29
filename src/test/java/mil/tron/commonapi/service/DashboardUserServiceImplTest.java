@@ -37,6 +37,9 @@ public class DashboardUserServiceImplTest {
     @Mock
     private AppSourceServiceImpl appSourceService;
 
+    @Mock
+    private AppClientUserServiceImpl appClientUserService;
+
     @InjectMocks
     private DashboardUserServiceImpl dashboardUserService;
 
@@ -142,6 +145,7 @@ public class DashboardUserServiceImplTest {
                 .thenReturn(Optional.empty())
                 .thenReturn(Optional.of(testDashboardUser));
         Mockito.doNothing().when(appSourceService).deleteAdminFromAllAppSources(Mockito.any());
+        Mockito.doNothing().when(appClientUserService).deleteDeveloperFromAllAppClient(Mockito.any());
 
         assertThrows(RecordNotFoundException.class, () -> dashboardUserService.deleteDashboardUser(testDashboardUser.getId()));
         dashboardUserService.deleteDashboardUser(testDashboardUser.getId());

@@ -1,17 +1,11 @@
 package mil.tron.commonapi.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.AppClientUserDto;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
+import mil.tron.commonapi.service.AppClientUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,17 +15,20 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
-import mil.tron.commonapi.dto.AppClientUserDto;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-import mil.tron.commonapi.service.AppClientUserService;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AppClientController.class)
 class AppClientControllerTest {
@@ -50,32 +47,63 @@ class AppClientControllerTest {
 	
 	private List<AppClientUserDto> users;
 	private AppClientUserDto userDto;
+
 	
 	@BeforeEach
 	void setup() {
+
 		users = new ArrayList<>();
 		
 		userDto = new AppClientUserDto();
 		userDto.setId(UUID.randomUUID());
 		userDto.setName("User A");
-		userDto.setPrivileges(new ArrayList<Privilege>());
+		userDto.setPrivileges(new ArrayList<>());
 		
 		users.add(userDto);
 	}
 	
 	@Nested 
 	class TestGet {
+
 		@Test
+		@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 		void getAll() throws Exception {
 			Mockito.when(userService.getAppClientUsers()).thenReturn(users);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(users)));
-		}	
+		}
+
+		@Test
+		@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
+		void getById() throws Exception {
+			Mockito.when(userService.getAppClient(Mockito.any(UUID.class))).thenReturn(users.get(0));
+
+			mockMvc.perform(get(ENDPOINT + "{id}", users.get(0).getId()))
+					.andExpect(status().isOk())
+					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(users.get(0))));
+		}
+
+		@Test
+		void getByIdFails() throws Exception {
+
+			mockMvc.perform(get(ENDPOINT + "{id}", users.get(0).getId()))
+					.andExpect(status().isForbidden());
+		}
+
+		@Test
+		void testGetAllFailsAsNoAdmin() throws Exception {
+			Mockito.when(userService.getAppClientUsers()).thenReturn(users);
+
+			mockMvc.perform(get(ENDPOINT))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$", hasSize(0)));
+		}
 	}
 	
 	@Nested
+	@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 	class TestPost {
 		@Test
 		void conflict() throws Exception {
@@ -113,6 +141,7 @@ class AppClientControllerTest {
 	}
 	
 	@Nested
+	@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 	class TestPut {
 		@Test
 		void success() throws Exception {
@@ -156,6 +185,7 @@ class AppClientControllerTest {
 	}
 	
 	@Nested
+	@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {
