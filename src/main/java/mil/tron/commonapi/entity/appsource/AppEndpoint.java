@@ -37,6 +37,10 @@ public class AppEndpoint {
 
     @Getter
     @Setter
+    boolean deleted;
+
+    @Getter
+    @Setter
     @ManyToOne
     @JoinColumn(name = "app_source_id", nullable = false)
     @EqualsAndHashCode.Exclude

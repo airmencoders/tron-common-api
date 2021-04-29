@@ -54,7 +54,7 @@ public class MetricsControllerTest {
     class TestEndpoint {
         @BeforeEach
         public void setup() {
-            endpointMetricDto = EndpointMetricDto.endpointMetricBuilder()
+            endpointMetricDto = EndpointMetricDto.builder()
                 .id(UUID.randomUUID())
                 .path("path")
                 .values(new ArrayList<>())
@@ -125,7 +125,7 @@ public class MetricsControllerTest {
 
         @BeforeEach
         public void setup() {
-            endpointMetricDto = EndpointMetricDto.endpointMetricBuilder()
+            endpointMetricDto = EndpointMetricDto.builder()
                 .id(UUID.randomUUID())
                 .path("path")
                 .values(new ArrayList<>())
@@ -292,7 +292,7 @@ public class MetricsControllerTest {
                 .path("appclient1")
                 .sum(4d)
                 .build();
-            countMetricDto = AppEndpointCountMetricDto.sumAppEndpointCountMetricBuilder()
+            countMetricDto = AppEndpointCountMetricDto.builder()
                 .id(UUID.randomUUID())
                 .appClients(Arrays.asList(appClientCountMetricDto))
                 .path("AppSourceName")

@@ -151,6 +151,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .id(appEndpoint.getId())
                         .path(appEndpoint.getPath())
                         .requestType(appEndpoint.getMethod().toString())
+                        .deleted(appEndpoint.isDeleted())
                         .build()).collect(Collectors.toList()))
                 .appClients(appSource.getAppPrivs().stream()
                     .map(appEndpointPriv -> AppClientUserPrivDto.builder()
@@ -179,6 +180,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .appSource(appSourceToSave)
                 .method(RequestMethod.valueOf(endpointDto.getRequestType()))
                 .path(endpointDto.getPath())
+                .deleted(endpointDto.isDeleted())
                 .build()).collect(Collectors.toSet());
         
         Set<AppEndpointPriv> appEndpointPrivs = appSource.getAppClients()

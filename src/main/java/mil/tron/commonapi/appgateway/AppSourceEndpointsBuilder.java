@@ -1,14 +1,14 @@
 package mil.tron.commonapi.appgateway;
 
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.parser.OpenAPIV3Parser;
-import io.swagger.v3.parser.core.models.SwaggerParseResult;
-import lombok.extern.slf4j.Slf4j;
-import mil.tron.commonapi.controller.AppGatewayController;
-import mil.tron.commonapi.entity.appsource.AppEndpoint;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
-import mil.tron.commonapi.service.AppGatewayService;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -19,13 +19,15 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import io.swagger.v3.parser.core.models.SwaggerParseResult;
+import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.controller.AppGatewayController;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
+import mil.tron.commonapi.service.AppGatewayService;
 
 @Service
 @Slf4j
@@ -88,6 +90,7 @@ public class AppSourceEndpointsBuilder {
                     this.addEndpointToSource(appEndpoint, appSource);
                 }
             }
+            setUnusedFlagOnEndpointsNotInSpec(appSourceEndpoints, appSource);
         }
         catch (FileNotFoundException e) {
             log.warn(String.format("Endpoints for %s could not be loaded from %s. File not found.", appDef.getName(),
@@ -100,6 +103,18 @@ public class AppSourceEndpointsBuilder {
         catch (NoSuchMethodException e) {
             log.warn("Unable to map app source path to a controller handler.", e);
         }
+    }
+
+    private void setUnusedFlagOnEndpointsNotInSpec(List<AppSourceEndpoint> appSourceEndpoints, AppSource appSource) {
+        List<AppEndpoint> unusedEndpoints = appSource.getAppEndpoints().parallelStream()
+            .filter(item -> appSourceEndpoints.stream()
+                    .noneMatch(appSourceEndpoint -> item.getPath().equals(appSourceEndpoint.getPath()) && item.getMethod().equals(appSourceEndpoint.getMethod())))
+            .map(item -> {
+                item.setDeleted(true);
+                return item;
+            })
+            .collect(Collectors.toList());
+        appEndpointRepository.saveAll(unusedEndpoints);
     }
 
     public List<AppSourceEndpoint> parseAppSourceEndpoints(String openApiFilename) throws IOException {
@@ -165,17 +180,15 @@ public class AppSourceEndpointsBuilder {
     }
 
     private void addEndpointToSource(AppSourceEndpoint endpoint, AppSource appSource) {
-        AppEndpoint appEndpoint = AppEndpoint.builder()
-            .appSource(appSource)
-            .method(endpoint.getMethod())
-            .path(endpoint.getPath())
-            .build();
+        AppEndpoint appEndpoint = appEndpointRepository.findByAppSourceEqualsAndMethodEqualsAndPathEquals(appSource, endpoint.getMethod(), endpoint.getPath())
+            .orElse(AppEndpoint.builder()
+                .appSource(appSource)
+                .method(endpoint.getMethod())
+                .path(endpoint.getPath())
+                .build());
+        appEndpoint.setDeleted(false);
         try {
-            // only add this endpoint to the db if it's not already in there.
-            if (!appEndpointRepository.existsByAppSourceEqualsAndMethodEqualsAndAndPathEquals(
-                    appSource, endpoint.getMethod(), endpoint.getPath())) {
-                this.appEndpointRepository.save(appEndpoint);
-            }
+            this.appEndpointRepository.save(appEndpoint);
         } catch (Exception e) {
             log.warn(String.format("Unable to add endpoint to app source %s.", appSource.getName()), e);
         }
