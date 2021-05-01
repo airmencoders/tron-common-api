@@ -1,18 +1,22 @@
 package mil.tron.commonapi.service;
 
-import mil.tron.commonapi.dto.AppClientSummaryDto;
-import mil.tron.commonapi.dto.AppClientUserDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDetailsDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.appclient.AppEndpointClientInfoDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.modelmapper.Converter;
@@ -33,16 +37,19 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private DashboardUserService dashboardUserService;
 	private PrivilegeRepository privilegeRepository;
 	private DashboardUserRepository dashboardUserRepository;
+	private AppEndpointPrivRepository appEndpointPrivRepository;
 
 	public AppClientUserServiceImpl(AppClientUserRespository appClientRepository,
 									DashboardUserService dashboardUserService,
 									DashboardUserRepository dashboardUserRepository,
-									PrivilegeRepository privilegeRepository) {
+									PrivilegeRepository privilegeRepository,
+									AppEndpointPrivRepository appEndpointPrivRepository) {
 
 		this.appClientRepository = appClientRepository;
 		this.dashboardUserService = dashboardUserService;
 		this.dashboardUserRepository = dashboardUserRepository;
 		this.privilegeRepository = privilegeRepository;
+		this.appEndpointPrivRepository = appEndpointPrivRepository;
 		
 		Converter<List<Privilege>, Set<Privilege>> convertPrivilegesToSet = 
 				((MappingContext<List<Privilege>, Set<Privilege>> context) -> new HashSet<>(context.getSource()));
@@ -63,11 +70,29 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	}
 
 	@Override
-	public AppClientUserDto getAppClient(UUID id) {
+	public AppClientUserDetailsDto getAppClient(UUID id) {
 		AppClientUser client = appClientRepository.findById(id)
 				.orElseThrow(() -> new RecordNotFoundException("Client App with that ID does not exist!"));
 
-		return convertToDto(client);
+		return AppClientUserDetailsDto.builder()
+				.id(client.getId())
+				.name(client.getName())
+				.appClientDeveloperEmails(Lists.newArrayList(client.getAppClientDevelopers())
+						.stream()
+						.map(DashboardUser::getEmail)
+						.collect(Collectors.toList()))
+				.privileges(Lists.newArrayList(client.getPrivileges()))
+				.appEndpointPrivs(client.getAppEndpointPrivs()
+						.stream()
+						.map(item -> AppEndpointClientInfoDto.builder()
+							.appSourceName(item.getAppSource().getName())
+							.path(item.getAppEndpoint().getPath())
+							.method(item.getAppEndpoint().getMethod())
+							.deleted(item.getAppEndpoint().isDeleted())
+							.id(item.getId())
+							.build())
+						.collect(Collectors.toList()))
+				.build();
 	}
 
 	/**
@@ -111,11 +136,19 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		if (appClient.getName() == null) {
 			appClient.setName(dbUser.getName());
 		}
-		
+
 		// Check for name uniqueness
 		if (!isNameUnique(appClient, dbUser)) {
 			throw new InvalidRecordUpdateRequest(String.format("Client Name: %s is already in use.", appClient.getName()));
 		}
+
+
+		// Check for name uniqueness
+		if (!isNameUnique(appClient, dbUser)) {
+			throw new InvalidRecordUpdateRequest(String.format("Client Name: %s is already in use.", appClient.getName()));
+		}
+
+		dbUser.setPrivileges(new HashSet<>(appClient.getPrivileges()));
 
 		// save/update and return
 		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(dbUser, appClient)));
@@ -181,17 +214,22 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		// remove developers attached to this app
 		this.deleteDevelopersFromAppClient(dbUser, "", true);
 
+		// remove any app endpoints too
+		for (AppEndpointPriv priv : new HashSet<>(dbUser.getAppEndpointPrivs())) {
+			appEndpointPrivRepository.delete(priv);
+		}
+
 		AppClientUserDto dto = convertToDto(dbUser);
     	appClientRepository.deleteById(id);
 
     	return dto;
     }
-	
+
 	private boolean isNameUnique(AppClientUserDto appClient, AppClientUser dbUser) {
 		return appClient.getName().equalsIgnoreCase(dbUser.getName())
 				|| appClientRepository.findByNameIgnoreCase(appClient.getName()).isEmpty();
 	}
-	
+
 	private AppClientUserDto convertToDto(AppClientUser user) {
 		AppClientUserDto dto = MODEL_MAPPER.map(user, AppClientUserDto.class);
 
@@ -307,13 +345,14 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 
 	/**
 	 * Private helper to examine a set of privileges to see if there's an other-than-app-client-developer
-	 * priv in it... used for removing Dashboard user from an App Client.
+	 * and dashboard user privs in it... used for removing Dashboard user from an App Client.
 	 * @param privs set of privileges to examine
 	 * @return if there's other privileges than App Client Developer
 	 */
 	private boolean privSetHasPrivsOtherThanAppClient(Set<Privilege> privs) {
 		for (Privilege priv : privs) {
-			if (!priv.getName().equals(APP_CLIENT_DEVELOPER_PRIV)) return true;
+			if (!priv.getName().equals(APP_CLIENT_DEVELOPER_PRIV)
+					&& !priv.getName().equals("DASHBOARD_USER")) return true;
 		}
 		return false;
 	}

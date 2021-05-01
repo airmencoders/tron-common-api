@@ -1,4 +1,4 @@
-package mil.tron.commonapi.dto;
+package mil.tron.commonapi.dto.appclient;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;

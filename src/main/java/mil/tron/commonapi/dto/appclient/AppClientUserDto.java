@@ -1,10 +1,12 @@
-package mil.tron.commonapi.dto;
+package mil.tron.commonapi.dto.appclient;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.*;
 
 @AllArgsConstructor
@@ -30,10 +32,8 @@ public class AppClientUserDto {
 
 	@Getter
 	@Setter
-	private Set<AppEndpointPriv> appEndpointPrivs = new HashSet<>();
-
-	@Getter
-	@Setter
+	@NotNull
+	@NotBlank
 	private String name;
 
 }

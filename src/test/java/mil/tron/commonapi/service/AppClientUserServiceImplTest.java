@@ -1,8 +1,8 @@
 package mil.tron.commonapi.service;
 
 import com.google.common.collect.Sets;
-import mil.tron.commonapi.dto.AppClientSummaryDto;
-import mil.tron.commonapi.dto.AppClientUserDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -154,7 +154,7 @@ class AppClientUserServiceImplTest {
 			AppClientUser existingUser = new AppClientUser();
 			existingUser.setId(UUID.randomUUID());
 			existingUser.setName(changedName);
-			existingUser.setPrivileges(new HashSet<Privilege>());
+			existingUser.setPrivileges(new HashSet<>());
 			
 			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(user));
 			Mockito.when(repository.findByNameIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(existingUser));

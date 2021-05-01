@@ -8,13 +8,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.AppClientUserDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDetailsDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.service.AppClientUserService;
+import mil.tron.commonapi.service.PrivilegeService;
 import org.assertj.core.util.Lists;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -29,11 +33,15 @@ import java.util.stream.Collectors;
 public class AppClientController {
 	
 	private AppClientUserService appClientService;
+	private PrivilegeService privilegeService;
+
 	private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
+	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
 	private static final String INVALID_PERMS = "Invalid User Permissions";
 
-	public AppClientController(AppClientUserService appClientService) {
+	public AppClientController(AppClientUserService appClientService, PrivilegeService privilegeService) {
 		this.appClientService = appClientService;
+		this.privilegeService = privilegeService;
 	}
 
 	private boolean getUserIsDashBoardAdmin() {
@@ -107,7 +115,7 @@ public class AppClientController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = AppClientUserDto.class))),
+					content = @Content(schema = @Schema(implementation = AppClientUserDetailsDto.class))),
 			@ApiResponse(responseCode = "403",
 					description = "Requester isn't a DASHBOARD_ADMIN or an App Client Developer of this App Client",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -199,4 +207,25 @@ public class AppClientController {
 
         return new ResponseEntity<>(appClientService.deleteAppClientUser(id), HttpStatus.OK);
     }
+
+	@Operation(summary = "Gets all available privileges available for an app-client",
+			description = "Gets all the app client privileges so that privilege names can be mapped to their IDs. " +
+							"Must be a DASHBOARD_ADMIN or APP_CLIENT_DEVELOPER")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Operation Successful",
+					content = @Content(array = @ArraySchema(schema = @Schema(implementation = PrivilegeDto.class))))
+	})
+	@GetMapping("/privs")
+	@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') || hasAuthority('APP_CLIENT_DEVELOPER')")
+	public ResponseEntity<Object> getClientTypePrivs() {
+		List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
+				.stream()
+				.filter(item -> item.getName().startsWith(APP_CLIENT_DEVELOPER_PRIV)
+						|| item.getName().startsWith("WRITE")
+						|| item.getName().startsWith("READ"))
+				.collect(Collectors.toList());
+
+		return new ResponseEntity<>(scratchPrivs, HttpStatus.OK);
+	}
 }

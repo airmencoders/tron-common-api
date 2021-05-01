@@ -8,6 +8,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -40,6 +41,9 @@ public class DashboardUserServiceImplTest {
     @Mock
     private AppClientUserServiceImpl appClientUserService;
 
+    @Mock
+    private PrivilegeRepository privilegeRepository;
+
     @InjectMocks
     private DashboardUserServiceImpl dashboardUserService;
 
@@ -67,8 +71,15 @@ public class DashboardUserServiceImplTest {
             Mockito.when(dashboardUserRepo.save(Mockito.any(DashboardUser.class))).thenReturn(testDashboardUser);
             Mockito.when(dashboardUserRepo.existsById(Mockito.any(UUID.class))).thenReturn(false);
             Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
+            Mockito.when(privilegeRepository.findByName(Mockito.any()))
+                    .thenReturn(Optional.of(Privilege.builder()
+                            .name("DASHBOARD_USER")
+                            .id(1L)
+                            .build()))
+                    .thenReturn(Optional.empty());
             DashboardUserDto createdDashboardUserDto = dashboardUserService.createDashboardUserDto(testDashboardUserDto);
             assertThat(createdDashboardUserDto.getId()).isEqualTo(testDashboardUser.getId());
+            assertThrows(RecordNotFoundException.class, () -> dashboardUserService.createDashboardUserDto(testDashboardUserDto));
         }
 
         @Test
@@ -76,6 +87,12 @@ public class DashboardUserServiceImplTest {
             // Test id already exists
             Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
             Mockito.when(dashboardUserRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+            Mockito.when(privilegeRepository.findByName(Mockito.any()))
+                    .thenReturn(Optional.of(Privilege.builder()
+                        .name("DASHBOARD_USER")
+                        .id(1L)
+                        .build()));
+
             assertThrows(ResourceAlreadyExistsException.class, () -> dashboardUserService.createDashboardUserDto(testDashboardUserDto));
         }
 
