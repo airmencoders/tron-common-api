@@ -67,10 +67,6 @@ public class DashboardUserServiceImpl implements DashboardUserService {
             throw new ResourceAlreadyExistsException(String.format("dashboardUser with the email: %s already exists", dashboardUser.getEmail()));
         }
 
-//        if (dashboardUser.getPrivileges().stream().count() == 0) {
-//            throw new InvalidRecordUpdateRequest("A privilege must be set");
-//        }
-
         Privilege dashBoardUserPriv = privRepo
                 .findByName("DASHBOARD_USER")
                 .orElseThrow(() -> new RecordNotFoundException("Cannot find the DASHBOARD_USER privilege"));

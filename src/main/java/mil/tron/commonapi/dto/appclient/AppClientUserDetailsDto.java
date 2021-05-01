@@ -26,17 +26,17 @@ public class AppClientUserDetailsDto {
 
     @Getter
     @Setter
-    @Builder.Default
-    private List<Privilege> privileges = new ArrayList<>();
-
-    @Getter
-    @Setter
     private String name;
 
     @Getter
     @Setter
     @Builder.Default
     private List<String> appClientDeveloperEmails = new ArrayList<>();
+
+    @Getter
+    @Setter
+    @Builder.Default
+    private List<Privilege> privileges = new ArrayList<>();
 
     @Getter
     @Setter
