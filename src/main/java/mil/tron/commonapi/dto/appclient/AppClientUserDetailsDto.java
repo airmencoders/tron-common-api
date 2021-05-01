@@ -25,10 +25,6 @@ public class AppClientUserDetailsDto {
 
     @Getter
     @Setter
-    private String name;
-
-    @Getter
-    @Setter
     @Builder.Default
     private List<String> appClientDeveloperEmails = new ArrayList<>();
 
@@ -41,4 +37,8 @@ public class AppClientUserDetailsDto {
     @Setter
     @Builder.Default
     private List<AppEndpointClientInfoDto> appEndpointPrivs = new ArrayList<>();
+
+    @Getter
+    @Setter
+    private String name;
 }
