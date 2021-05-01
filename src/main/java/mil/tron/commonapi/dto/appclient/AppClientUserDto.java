@@ -3,11 +3,12 @@ package mil.tron.commonapi.dto.appclient;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor

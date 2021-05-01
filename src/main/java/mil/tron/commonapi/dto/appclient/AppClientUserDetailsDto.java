@@ -3,7 +3,6 @@ package mil.tron.commonapi.dto.appclient;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 
 import java.util.ArrayList;
 import java.util.List;
