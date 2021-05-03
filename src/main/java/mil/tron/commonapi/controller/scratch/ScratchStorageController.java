@@ -15,6 +15,8 @@ import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.ScratchValuePatchJsonDto;
+import mil.tron.commonapi.dto.jsondb.ChangeElementDto;
+import mil.tron.commonapi.dto.jsondb.QueryDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
@@ -290,6 +292,60 @@ public class ScratchStorageController {
         validateScratchWriteAccessForUser(appId);
 
         return new ResponseEntity<>(scratchStorageService.deleteAllKeyValuePairsForAppId(appId), HttpStatus.OK);
+    }
+
+
+    @GetMapping("/{appId}/jsondb/{table}")
+    public ResponseEntity<Object> getTableValueDump(@PathVariable UUID appId, @PathVariable String table) {
+        validateScratchReadAccessForUser(appId);
+        return new ResponseEntity<>(scratchStorageService.getJson(appId, table), HttpStatus.OK);
+    }
+
+    @PostMapping("/{appId}/jsondb/{table}/query")
+    public ResponseEntity<Object> queryJsonTable(@PathVariable UUID appId,
+                                                 @PathVariable String table,
+                                                 @RequestBody @Valid QueryDto dto) {
+        validateScratchReadAccessForUser(appId);
+        return new ResponseEntity<>(scratchStorageService.queryJson(appId, table, dto.getQuery()), HttpStatus.OK);
+    }
+
+    @PostMapping("/{appId}/jsondb/{table}/insert")
+    public ResponseEntity<Object> insertIntoTable(@PathVariable UUID appId,
+                                                  @PathVariable String table,
+                                                  @RequestBody @Valid ChangeElementDto dto) {
+
+        validateScratchWriteAccessForUser(appId);
+        scratchStorageService.addElement(appId, table, dto.getJson());
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @PostMapping("/{appId}/jsondb/{table}/update")
+    public ResponseEntity<Object> updateJsonTable(@PathVariable UUID appId,
+                                                  @PathVariable String table,
+                                                  @RequestBody @Valid ChangeElementDto dto) {
+
+        validateScratchWriteAccessForUser(appId);
+        scratchStorageService.updateElement(appId, table, dto.getJson(), dto.getPath());
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @PatchMapping("/{appId}/jsondb/{table}/patch")
+    public ResponseEntity<Object> patchElement(@PathVariable UUID appId,
+                                               @PathVariable String table,
+                                               @RequestBody @Valid ChangeElementDto dto) {
+
+        validateScratchWriteAccessForUser(appId);
+        scratchStorageService.patchElement(appId, table, dto.getJson(), dto.getPath());
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @DeleteMapping("/{appId}/jsondb/{table}/delete")
+    public ResponseEntity<Object> deleteElement(@PathVariable UUID appId,
+                                                @PathVariable String table,
+                                                @RequestBody @Valid QueryDto dto) {
+
+        scratchStorageService.removeElement(appId, table, dto.getQuery());
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     // scratch app registration/management endpoints... only admins can manage these
