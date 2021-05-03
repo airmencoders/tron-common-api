@@ -19,8 +19,7 @@ public class AppsMatchValidator implements ConstraintValidator<AppsMatch, Object
         this.invert = constraintAnnotation.invert();
     }
 
-    public boolean isValid(Object value, 
-      ConstraintValidatorContext context) {
+    public boolean isValid(Object value, ConstraintValidatorContext context) {//NOSONAR
         if(invert) {
             return !resolve(value);
         }
