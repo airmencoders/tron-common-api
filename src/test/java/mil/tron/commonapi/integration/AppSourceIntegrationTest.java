@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import lombok.val;
-import mil.tron.commonapi.dto.AppClientSummaryDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
@@ -332,7 +332,6 @@ public class AppSourceIntegrationTest {
                 .build();
         val createdAppSource = appSourceServiceImpl.createAppSource(appSource);
 
-        System.out.println(OBJECT_MAPPER.writeValueAsString(appSource));
         createdAppSource.setName("New App Source Name");
         mockMvc.perform(put(ENDPOINT + "/{id}", createdAppSource.getId())
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))

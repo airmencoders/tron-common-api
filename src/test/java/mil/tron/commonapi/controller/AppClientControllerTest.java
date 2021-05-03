@@ -1,17 +1,15 @@
 package mil.tron.commonapi.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDetailsDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDto;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
+import mil.tron.commonapi.service.AppClientUserService;
+import mil.tron.commonapi.service.PrivilegeService;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,17 +19,22 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
-import mil.tron.commonapi.dto.AppClientUserDto;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-import mil.tron.commonapi.service.AppClientUserService;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AppClientController.class)
 class AppClientControllerTest {
@@ -47,35 +50,99 @@ class AppClientControllerTest {
 	
 	@MockBean
 	private AppClientUserService userService;
+
+	@MockBean
+	private PrivilegeService privService;
 	
 	private List<AppClientUserDto> users;
 	private AppClientUserDto userDto;
+
 	
 	@BeforeEach
 	void setup() {
+
 		users = new ArrayList<>();
 		
 		userDto = new AppClientUserDto();
 		userDto.setId(UUID.randomUUID());
 		userDto.setName("User A");
-		userDto.setPrivileges(new ArrayList<Privilege>());
+		userDto.setPrivileges(new ArrayList<>());
 		
 		users.add(userDto);
 	}
 	
 	@Nested 
 	class TestGet {
+
 		@Test
+		@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 		void getAll() throws Exception {
 			Mockito.when(userService.getAppClientUsers()).thenReturn(users);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(users)));
-		}	
+		}
+
+		@Test
+		@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
+		void getById() throws Exception {
+			Mockito.when(userService.getAppClient(Mockito.any(UUID.class)))
+					.thenReturn(AppClientUserDetailsDto.builder()
+							.id(users.get(0).getId())
+							.build());
+
+			mockMvc.perform(get(ENDPOINT + "{id}", users.get(0).getId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.id", equalTo(users.get(0).getId().toString())));
+		}
+
+		@Test
+		void getByIdFails() throws Exception {
+
+			mockMvc.perform(get(ENDPOINT + "{id}", users.get(0).getId()))
+					.andExpect(status().isForbidden());
+		}
+
+		@Test
+		void testGetAllFailsAsNoAdmin() throws Exception {
+			Mockito.when(userService.getAppClientUsers()).thenReturn(users);
+
+			mockMvc.perform(get(ENDPOINT))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$", hasSize(0)));
+		}
+
+		@Test
+		@WithMockUser(username = "DashboardUser", authorities = { "APP_CLIENT_USER" })
+		void testGetClientRelatedPrivs() throws Exception {
+			PrivilegeDto dto1 = new PrivilegeDto();
+			dto1.setId(1L);
+			dto1.setName("WRITE");
+
+			PrivilegeDto dto2 = new PrivilegeDto();
+			dto2.setId(2L);
+			dto2.setName("READ");
+
+			PrivilegeDto dto3 = new PrivilegeDto();
+			dto3.setId(3L);
+			dto3.setName("SCRATCH_WRITE");
+
+			PrivilegeDto dto4 = new PrivilegeDto();
+			dto4.setId(4L);
+			dto4.setName("APP_CLIENT_DEVELOPER");
+
+			Mockito.when(privService.getPrivileges())
+					.thenReturn(Lists.newArrayList(dto1, dto2, dto3, dto4));
+
+			mockMvc.perform(get(ENDPOINT + "privs"))
+					.andExpect(status().isOk())
+					.andExpect(MockMvcResultMatchers.jsonPath("$", hasSize(3)));
+		}
 	}
 	
 	@Nested
+	@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 	class TestPost {
 		@Test
 		void conflict() throws Exception {
@@ -113,6 +180,7 @@ class AppClientControllerTest {
 	}
 	
 	@Nested
+	@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 	class TestPut {
 		@Test
 		void success() throws Exception {
@@ -156,6 +224,7 @@ class AppClientControllerTest {
 	}
 	
 	@Nested
+	@WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 	class TestDelete {
 		@Test
 		void testDelete() throws Exception {
