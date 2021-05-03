@@ -17,9 +17,12 @@
     </changeSet>
     <changeSet author="billdewitt (generated)" id="1620070815472-2">
         <preConditions onFail="MARK_RAN">
-            <tableExists tableName="app"/>
+            <tableExists tableName="app"/>            
             <not>
                 <columnExists tableName="app" columnName="available_as_app_source" />
+            </not>
+            <not>
+                <columnExists tableName="app" columnName="available_as_app_client" />
             </not>
             <not>
                 <columnExists tableName="app" columnName="name_as_lower" />
@@ -27,6 +30,11 @@
         </preConditions>
         <addColumn tableName="app">
             <column name="available_as_app_source" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="app">
+            <column name="available_as_app_client" type="boolean" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
         </addColumn>
@@ -67,6 +75,9 @@
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app"/>
             <columnExists tableName="app" columnName="available_as_app_source" />
+            <columnExists tableName="app" columnName="app_source_path" />
+            <columnExists tableName="app" columnName="name_as_lower" />
+            <columnExists tableName="app" columnName="name" />
         </preConditions>
         <sql>UPDATE app SET available_as_app_source = true, name_as_lower = LOWER(name) WHERE app_source_path IS NOT null;</sql>
     </changeSet>
@@ -78,36 +89,46 @@
     </changeSet>
     <changeSet author="billdewitt (generated)" id="1620070815472-8">
         <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>
+            <tableExists tableName="app_client_user"/>
+            <columnExists tableName="app" columnName="available_as_app_client" />
+            <columnExists tableName="app" columnName="name_as_lower" />
+            <columnExists tableName="app_client_user" columnName="name_as_lower" />
+        </preConditions>
+        <sql>UPDATE app SET available_as_app_client = true WHERE name_as_lower IN (SELECT name_as_lower from app_client_user);</sql>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-9">
+        <preConditions onFail="MARK_RAN">
             <tableExists tableName="app_app_client_developers"/>
             <foreignKeyConstraintExists foreignKeyName="FKaa9gt3m0gwo6h1k0rtat4xa7c"/>
         </preConditions>
         <dropForeignKeyConstraint baseTableName="app_app_client_developers" constraintName="FKaa9gt3m0gwo6h1k0rtat4xa7c"/>
     </changeSet>    
-    <changeSet author="billdewitt (generated)" id="1620070815472-9">
+    <changeSet author="billdewitt (generated)" id="1620070815472-10">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app_privileges"/>
             <foreignKeyConstraintExists foreignKeyName="FKb0359mfinfxq2ia5f7y416oo9"/>
         </preConditions>
         <dropForeignKeyConstraint baseTableName="app_privileges" constraintName="FKb0359mfinfxq2ia5f7y416oo9"/>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-10">
+    <changeSet author="billdewitt (generated)" id="1620070815472-11">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app_endpoint_privs"/>
             <foreignKeyConstraintExists foreignKeyName="FKdmj6bf0tncgkdkg893ngfnarh"/>
         </preConditions>
         <dropForeignKeyConstraint baseTableName="app_endpoint_privs" constraintName="FKdmj6bf0tncgkdkg893ngfnarh"/>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-11">
+    <changeSet author="billdewitt (generated)" id="1620070815472-12">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="meter_value"/>
             <foreignKeyConstraintExists foreignKeyName="FKhc3ltbqh86edi63jm39o0felq"/>
         </preConditions>
         <dropForeignKeyConstraint baseTableName="meter_value" constraintName="FKhc3ltbqh86edi63jm39o0felq"/>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-12">
+    <changeSet author="billdewitt (generated)" id="1620070815472-13">
         <dropUniqueConstraint constraintName="appClientUser_nameAsLower_key" tableName="app_client_user"/>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-13">
+    <changeSet author="billdewitt (generated)" id="1620070815472-14">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app"/>
             <tableExists tableName="app_app_client_developers"/>
@@ -115,7 +136,7 @@
         </preConditions>
         <sql>UPDATE app_app_client_developers app_client_dev SET app_client_user_id = (SELECT app.id FROM app app JOIN app_client_user client_user ON app.name_as_lower = client_user.name_as_lower WHERE client_user.id = app_client_dev.app_client_user_id);</sql>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-14">
+    <changeSet author="billdewitt (generated)" id="1620070815472-15">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app"/>
             <tableExists tableName="app_privileges"/>
@@ -123,7 +144,7 @@
         </preConditions>
         <sql>UPDATE app_privileges app_priv SET app_client_user_id = (SELECT app.id FROM app app JOIN app_client_user client_user ON app.name_as_lower = client_user.name_as_lower WHERE client_user.id = app_priv.app_client_user_id);</sql>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-15">
+    <changeSet author="billdewitt (generated)" id="1620070815472-16">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app"/>
             <tableExists tableName="app_endpoint_privs"/>
@@ -131,7 +152,7 @@
         </preConditions>
         <sql>UPDATE app_endpoint_privs app_priv SET app_client_user_id = (SELECT app.id FROM app app JOIN app_client_user client_user ON app.name_as_lower = client_user.name_as_lower WHERE client_user.id = app_priv.app_client_user_id);</sql>
     </changeSet>
-        <changeSet author="billdewitt (generated)" id="1620070815472-16">
+        <changeSet author="billdewitt (generated)" id="1620070815472-17">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app"/>
             <tableExists tableName="meter_value"/>
@@ -139,7 +160,7 @@
         </preConditions>
         <sql>UPDATE meter_value meter_val SET app_client_user_id = (SELECT app.id FROM app app JOIN app_client_user client_user ON app.name_as_lower = client_user.name_as_lower WHERE client_user.id = meter_val.app_client_user_id);</sql>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-17">
+    <changeSet author="billdewitt (generated)" id="1620070815472-18">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app_app_client_developers"/>
             <columnExists tableName="app_app_client_developers" columnName="app_client_user_id" />
@@ -149,7 +170,7 @@
         </preConditions>
         <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_app_client_developers" constraintName="FKqnq1e50kt4jj8ev1bisgn0hxk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-18">
+    <changeSet author="billdewitt (generated)" id="1620070815472-19">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="meter_value"/>
             <columnExists tableName="meter_value" columnName="app_client_user_id" />
@@ -159,7 +180,7 @@
         </preConditions>
         <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="meter_value" constraintName="FKin5kkqryi4eukyqfgrs0d7xyl" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-19">
+    <changeSet author="billdewitt (generated)" id="1620070815472-20">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app_privileges"/>
             <columnExists tableName="app_privileges" columnName="app_client_user_id" />            
@@ -169,7 +190,7 @@
         </preConditions>
         <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_privileges" constraintName="FKkrauiqo64rr6kh1edi19q59a3" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-20">
+    <changeSet author="billdewitt (generated)" id="1620070815472-21">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app_endpoint_privs"/>
             <columnExists tableName="app_endpoint_privs" columnName="app_client_user_id" />
@@ -179,7 +200,7 @@
         </preConditions>
         <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_endpoint_privs" constraintName="FKo6abtx1xmu9c8kc6ya1opq39b" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
     </changeSet>
-    <changeSet author="billdewitt (generated)" id="1620070815472-21">
+    <changeSet author="billdewitt (generated)" id="1620070815472-22">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app_client_user"/>
         </preConditions>

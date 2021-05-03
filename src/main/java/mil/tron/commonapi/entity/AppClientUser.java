@@ -29,6 +29,14 @@ import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 @EqualsAndHashCode(callSuper = true)
 @Table(name="app")
 public class AppClientUser extends App {
+	
+	
+    /**
+     * This flag allows an App Client to be identified as an App Client in the App table
+     */    
+    @Getter
+    @Builder.Default
+    private boolean availableAsAppClient = true;
 
 	@Getter
 	@Setter

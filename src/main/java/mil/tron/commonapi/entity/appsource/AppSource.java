@@ -40,8 +40,7 @@ public class AppSource extends App {
     private String appSourcePath;
 
     /**
-     * Currently. appSourcePath is not given on App Source creation. 
-     * This flag allows an App Source to be identified as an App Source - removing the path requirement
+     * This flag allows an App Source to be identified as an App Source in the App table
      */    
     @Getter
     @Builder.Default
