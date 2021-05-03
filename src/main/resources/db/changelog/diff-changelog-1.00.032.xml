@@ -13,14 +13,14 @@
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app"/>
             <not>
-                <columnExists tableName="app" columnName="app_source" />
+                <columnExists tableName="app" columnName="available_as_app_source" />
             </not>
             <not>
                 <columnExists tableName="app" columnName="name_as_lower" />
             </not>
         </preConditions>
         <addColumn tableName="app">
-            <column name="app_source" type="boolean" defaultValueBoolean="false">
+            <column name="available_as_app_source" type="boolean" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
         </addColumn>
@@ -51,9 +51,9 @@
     <changeSet author="billdewitt (generated)" id="1619716384289-5">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="app"/>
-            <columnExists tableName="app" columnName="app_source" />
+            <columnExists tableName="app" columnName="available_as_app_source" />
         </preConditions>
-        <sql>UPDATE app SET app_source = true, name_as_lower = LOWER(name) WHERE app_source_path IS NOT null;</sql>
+        <sql>UPDATE app SET available_as_app_source = true, name_as_lower = LOWER(name) WHERE app_source_path IS NOT null;</sql>
     </changeSet>
     <changeSet author="billdewitt (generated)" id="1619716384289-6">
         <preConditions onFail="MARK_RAN">

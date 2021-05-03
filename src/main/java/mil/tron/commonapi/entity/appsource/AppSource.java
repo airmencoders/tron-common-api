@@ -45,7 +45,7 @@ public class AppSource extends App {
      */    
     @Getter
     @Builder.Default
-    private boolean appSource = true;
+    private boolean availableAsAppSource = true;
 
     /**
      * List of AppSourceAdmins that can administer this app
