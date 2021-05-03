@@ -36,6 +36,16 @@ public class AppClientUser extends App {
 	@ManyToMany
 	private Set<Privilege> privileges = new HashSet<>();
 
+	/**
+	 * List of App Client Developers that can see what app sources this client is connected to
+	 * An app client can have many developers...
+	 */
+	@Getter
+	@Setter
+	@Builder.Default
+	@ManyToMany
+	private Set<DashboardUser> appClientDevelopers = new HashSet<>();
+
 	@Getter
 	@Setter
 	@Builder.Default

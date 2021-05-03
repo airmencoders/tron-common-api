@@ -349,13 +349,14 @@ public class AppSourceServiceImpl implements AppSourceService {
 
     /**
      * Private helper to examine a set of privileges to see if there's other-than-app-source-admin
-     * priv in it... used for removing Dashboard user from an AppSource
+     * and dashboard user privs in it... used for removing Dashboard user from an AppSource
      * @param privs set of privileges to examine
      * @return if there's other privileges than App Source Admin
      */
     private boolean privSetHasPrivsOtherThanAppSource(Set<Privilege> privs) {
         for (Privilege priv : privs) {
-            if (!priv.getName().equals(APP_SOURCE_ADMIN_PRIV)) return true;
+            if (!priv.getName().equals(APP_SOURCE_ADMIN_PRIV) &&
+                !priv.getName().equals("DASHBOARD_USER")) return true;
         }
         return false;
     }

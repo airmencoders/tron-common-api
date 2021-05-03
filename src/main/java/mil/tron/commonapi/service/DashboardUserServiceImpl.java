@@ -8,6 +8,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksService;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
@@ -27,13 +28,20 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     private static final String RESOURCE_NOT_FOUND_MSG = "User with the ID: %s does not exist.";
     private final DtoMapper modelMapper;
     private AppSourceService appSourceService;
+    private AppClientUserService appClientUserService;
+
+    private PrivilegeRepository privRepo;
 
     public DashboardUserServiceImpl(DashboardUserRepository dashboardUserRepository,
                                     DashboardUserUniqueChecksService dashboardUserUniqueChecksService,
-                                    @Lazy AppSourceService appSourceService) {
+                                    PrivilegeRepository privilegeRepository,
+                                    @Lazy AppSourceService appSourceService,
+                                    @Lazy AppClientUserService appClientUserService) {
         this.dashboardUserRepository = dashboardUserRepository;
         this.userChecksService = dashboardUserUniqueChecksService;
         this.appSourceService = appSourceService;
+        this.appClientUserService = appClientUserService;
+        this.privRepo = privilegeRepository;
         this.modelMapper = new DtoMapper();
         this.modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -59,9 +67,12 @@ public class DashboardUserServiceImpl implements DashboardUserService {
             throw new ResourceAlreadyExistsException(String.format("dashboardUser with the email: %s already exists", dashboardUser.getEmail()));
         }
 
-        if (dashboardUser.getPrivileges().stream().count() == 0) {
-            throw new InvalidRecordUpdateRequest("A privilege must be set");
-        }
+        Privilege dashBoardUserPriv = privRepo
+                .findByName("DASHBOARD_USER")
+                .orElseThrow(() -> new RecordNotFoundException("Cannot find the DASHBOARD_USER privilege"));
+
+        // should have at least the DASHBOARD_USER priv
+        dashboardUser.getPrivileges().add(dashBoardUserPriv);
 
         // the record with this 'id' shouldn't already exist...
         if (!dashboardUserRepository.existsById(dashboardUser.getId())) {
@@ -110,6 +121,7 @@ public class DashboardUserServiceImpl implements DashboardUserService {
                 new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
 
         appSourceService.deleteAdminFromAllAppSources(user);
+        appClientUserService.deleteDeveloperFromAllAppClient(user);
         dashboardUserRepository.delete(user);
     }
 
