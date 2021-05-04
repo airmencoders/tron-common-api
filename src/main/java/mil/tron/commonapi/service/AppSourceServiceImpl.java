@@ -67,7 +67,7 @@ public class AppSourceServiceImpl implements AppSourceService {
 
     @Override
     public List<AppSourceDto> getAppSources() {
-        Iterable<AppSource> appSources = this.appSourceRepository.findAll();
+        Iterable<AppSource> appSources = this.appSourceRepository.findByAvailableAsAppSourceTrue();
         return StreamSupport
                 .stream(appSources.spliterator(), false)
                 .map(appSource -> AppSourceDto.builder().id(appSource.getId())

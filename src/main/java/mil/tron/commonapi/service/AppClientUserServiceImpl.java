@@ -64,7 +64,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	@Override
 	public Iterable<AppClientUserDto> getAppClientUsers() {
 		return StreamSupport.stream(appClientRepository
-				.findAll().spliterator(), false)
+				.findByAvailableAsAppClientTrue().spliterator(), false)
 				.map(this::convertToDto)
 				.collect(Collectors.toList());
 	}
@@ -102,7 +102,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	@Override
 	public Iterable<AppClientSummaryDto> getAppClientUserSummaries() {
 		return StreamSupport
-				.stream(appClientRepository.findAll().spliterator(), false)
+				.stream(appClientRepository.findByAvailableAsAppClientTrue().spliterator(), false)
 				.map(item -> MODEL_MAPPER.map(item, AppClientSummaryDto.class))
 				.collect(Collectors.toList());
 	}
