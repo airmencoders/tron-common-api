@@ -10,7 +10,7 @@ public class ChangeElementDto {
 
     @Getter
     @Setter
-    private Object json;
+    private String json;
 
     @Getter
     @Setter

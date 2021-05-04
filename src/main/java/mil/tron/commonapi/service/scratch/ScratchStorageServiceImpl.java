@@ -630,13 +630,15 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         try {
             schemaNodes = MAPPER.readTree(entry.getValue());
+            System.out.println(schemaNodes.toPrettyString());
         }
         catch (JsonProcessingException e) {
             throw new RuntimeException("Cannot parse the JSON schema specification for table " + tableName);
         }
 
         try {
-            nodes = MAPPER.readTree(MAPPER.writeValueAsString(json));
+            nodes = MAPPER.readTree(json.toString());
+            System.out.println(nodes.toPrettyString());
         }
         catch (JsonProcessingException e) {
             throw new RuntimeException("Error parsing entity value");
