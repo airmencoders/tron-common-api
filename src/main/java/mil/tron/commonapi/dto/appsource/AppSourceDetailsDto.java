@@ -29,6 +29,10 @@ public class AppSourceDetailsDto {
 
     @Getter
     @Setter
+    private String appSourcePath;
+    
+    @Getter
+    @Setter
     @Builder.Default
     @Valid
     private List<String> appSourceAdminUserEmails = new ArrayList<>();
