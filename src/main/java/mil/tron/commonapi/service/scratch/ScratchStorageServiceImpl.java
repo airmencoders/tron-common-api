@@ -26,6 +26,7 @@ import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepos
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageUserRepository;
+import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -594,7 +595,9 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a string but wasnt");
         }
         if (schemaType.contains("email")) {
-            if (!fieldValue.isTextual())
+            if (!fieldValue.isTextual()
+                    && EmailValidator.getInstance().isValid(fieldValue.asText()))
+
                 throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be an email but wasnt");
         }
         if (schemaType.contains("number")) {
@@ -606,7 +609,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a boolean but wasnt");
         }
         if (schemaType.contains("uuid")) {
-            if (!fieldValue.isTextual())
+            if (!fieldValue.isTextual()
+                    && !fieldValue
+                        .asText()
+                        .matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"))
+
                 throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a uuid but wasnt");
         }
     }
