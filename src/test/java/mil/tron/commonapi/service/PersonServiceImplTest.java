@@ -1,6 +1,5 @@
 package mil.tron.commonapi.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
@@ -8,13 +7,13 @@ import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
-import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.pubsub.EventManagerServiceImpl;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
@@ -31,9 +30,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -56,6 +60,9 @@ class PersonServiceImplTest {
 
 	@Mock
 	private EventManagerServiceImpl eventManagerService;
+
+	@Mock
+	private OrganizationService orgsService;
 	
 	@InjectMocks
 	private PersonServiceImpl personService;
@@ -97,6 +104,7 @@ class PersonServiceImplTest {
 	        Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 	        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+	        Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	        PersonDto createdPerson = personService.createPerson(testDto);
 	        assertThat(createdPerson.getId()).isEqualTo(testPerson.getId());
@@ -125,11 +133,27 @@ class PersonServiceImplTest {
 		}
 
 		@Test
+		void dodIdAlreadyExists() {
+			// Test email already exists
+			Person existingPersonWithEmail = new Person();
+			existingPersonWithEmail.setEmail(testPerson.getEmail());
+
+			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
+			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(false);
+			assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
+				personService.createPerson(testDto);
+			});
+		}
+
+		@Test
 		void invalidProperty() {
 			testDto.setMetaProperty("blahblah", "value");
 			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
 				personService.createPerson(testDto);
 			});
@@ -176,6 +200,7 @@ class PersonServiceImplTest {
 			Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(newPerson);
 			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 			PersonDto createdPerson = personService.createPerson(newPersonDto);
 
@@ -228,6 +253,7 @@ class PersonServiceImplTest {
 			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	    	PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
@@ -240,6 +266,7 @@ class PersonServiceImplTest {
 			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
 				personService.updatePerson(testPerson.getId(), testDto);
 			});
@@ -305,6 +332,7 @@ class PersonServiceImplTest {
 			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(tempTestPerson));
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			// pass through the patched entity
 			Mockito.when(repository.save(Mockito.any(Person.class))).thenAnswer(i -> i.getArguments()[0]);
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
@@ -343,14 +371,15 @@ class PersonServiceImplTest {
 		assertThrows(RecordNotFoundException.class, () -> personService.deletePerson(testPerson.getId()));
 		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
+		Mockito.doNothing().when(orgsService).removeLeaderByUuid(Mockito.any(UUID.class));
         personService.deletePerson(testPerson.getId());
         Mockito.verify(repository, Mockito.times(1)).deleteById(testPerson.getId());    
     }
 
     @Test
     void getPersonsTest() {
-    	Mockito.when(repository.findAll()).thenReturn(Arrays.asList(testPerson));
-    	Iterable<PersonDto> persons = personService.getPersons(null);
+    	Mockito.when(repository.findBy(null)).thenReturn(new SliceImpl<>(Arrays.asList(testPerson)));
+    	Iterable<PersonDto> persons = personService.getPersons(null, Mockito.any());
     	assertThat(persons).hasSize(1);
     }
 
@@ -393,6 +422,7 @@ class PersonServiceImplTest {
 		Mockito.when(repository.save(Mockito.any(Person.class))).then(returnsFirstArg());
 		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 		Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
+		Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 		List<PersonDto> people = Lists.newArrayList(
 				new PersonDto(),
 				new PersonDto(),

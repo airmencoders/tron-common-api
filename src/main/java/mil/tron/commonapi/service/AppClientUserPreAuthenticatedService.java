@@ -90,7 +90,7 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 			if(appPriv.getAppEndpoint() != null && appPriv.getAppEndpoint().getAppSource().getAppSourcePath() != null && appPriv.getAppEndpoint().getAppSource().getAppSourcePath().length() > 0)
 				// GrantedAuthority = name of the AppSource + the particular endpoint privilege allowed
 				// Ex: example-gateway/example-operation-path
-				authorities.add(new SimpleGrantedAuthority(appPriv.getAppEndpoint().getAppSource().getAppSourcePath() + appPriv.getAppEndpoint().getPath()));
+				authorities.add(new SimpleGrantedAuthority(appPriv.getAppEndpoint().getAppSource().getAppSourcePath() + appPriv.getAppEndpoint().getPath() + "_" + appPriv.getAppEndpoint().getMethod().toString()));
 		}
 
 		return authorities;

@@ -36,6 +36,7 @@ import io.micrometer.core.instrument.TimeGauge;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
+import mil.tron.commonapi.dto.metrics.AppEndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
 import mil.tron.commonapi.dto.metrics.CountMetricDto;
@@ -44,6 +45,7 @@ import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.dto.metrics.MeterValueDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.CountMetric;
+import mil.tron.commonapi.entity.EndpointCountMetric;
 import mil.tron.commonapi.entity.MeterValue;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
@@ -66,6 +68,9 @@ class MetricsServiceImplTest {
 
 	@Mock
 	private AppSourceRepository appSourceRepo;
+
+    @Mock
+    private MeterRegistry meterRegistry;
 	
 	@InjectMocks
 	private MetricServiceImpl metricService;
@@ -77,12 +82,12 @@ class MetricsServiceImplTest {
     private AppClientUser appClientUser;
     private AppSource appSource;
     private AppSourceMetricDto testAppSourceMetricDto;
-    private CountMetric countMetric1;
+    private EndpointCountMetric countMetric1;
     private CountMetric countMetric2;
-    private CountMetricDto countMetricDto1;
+    private EndpointCountMetricDto countMetricDto1;
     private CountMetricDto countMetricDto2;
     private AppSourceCountMetricDto appSourceCountMetricDto;
-    private EndpointCountMetricDto endpointCountMetricDto;
+    private AppEndpointCountMetricDto appEndpointCountMetricDto;
     private AppClientCountMetricDto appClientCountMetricDto;
 
 	@BeforeEach
@@ -125,6 +130,7 @@ class MetricsServiceImplTest {
                 .id(appEndpoint.getId())
                 .path(appEndpoint.getPath())
                 .values(Arrays.asList(testMeterValueDto))
+                .requestType(appEndpoint.getMethod().toString())
                 .build();
 
         testAppSourceMetricDto = AppSourceMetricDto.builder()
@@ -132,10 +138,11 @@ class MetricsServiceImplTest {
                 .endpoints(Arrays.asList(testEndpointMetricDto))
                 .name(appSource.getName())
                 .build();
-        countMetric1 = new CountMetric() {
+        countMetric1 = new EndpointCountMetric() {
             private UUID id = UUID.randomUUID();
             private String name = "name";
             private Double sum = 2d;
+            private RequestMethod method = RequestMethod.GET;
             @Override
             public UUID getId() {
                 return id;
@@ -150,6 +157,11 @@ class MetricsServiceImplTest {
             public Double getSum() {
                 return sum;
             }            
+
+            @Override
+            public RequestMethod getMethod() {
+                return method;
+            }
         };
 
         countMetric2 = new CountMetric() {
@@ -172,10 +184,11 @@ class MetricsServiceImplTest {
             }            
         };
 
-        countMetricDto1 = CountMetricDto.builder()
+        countMetricDto1 = EndpointCountMetricDto.endpointCountMetricBuilder()
                 .id(countMetric1.getId())
                 .path(countMetric1.getName())
                 .sum(countMetric1.getSum())
+                .method(countMetric1.getMethod().toString())
                 .build();
         
         countMetricDto2 = CountMetricDto.builder()
@@ -191,16 +204,17 @@ class MetricsServiceImplTest {
                 .name(appSource.getName())
                 .build();
 
-        endpointCountMetricDto = EndpointCountMetricDto.builder()
+        appEndpointCountMetricDto = AppEndpointCountMetricDto.builder()
                 .id(appEndpoint.getId())
-                .appClients(Arrays.asList(countMetricDto1))
+                .appClients(Arrays.asList(countMetricDto2))
                 .appSource(appSource.getName())
                 .path(appEndpoint.getPath())
+                .requestType(appEndpoint.getMethod().toString())
                 .build();
 
         appClientCountMetricDto = AppClientCountMetricDto.builder()
                 .id(appClientUser.getId())
-                .endpoints(Arrays.asList(countMetricDto2))
+                .endpoints(Arrays.asList(countMetricDto1))
                 .appSource(appSource.getName())
                 .name(appClientUser.getName())
                 .build();
@@ -228,6 +242,7 @@ class MetricsServiceImplTest {
                 .id(appEndpoint.getId())
                 .path(appEndpoint.getPath())
                 .values(Arrays.asList())
+                .requestType(appEndpoint.getMethod().toString())
                 .build();
 
         Mockito.when(appEndpointRepo.findById(appEndpoint.getId())).thenReturn(Optional.of(appEndpoint));
@@ -301,50 +316,51 @@ class MetricsServiceImplTest {
     @Test
     void getCountOfMetricsForAppEndpointTest() {
         Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));        
-        Mockito.when(appEndpointRepo.findByPathAndAppSource(appEndpoint.getPath(), appSource)).thenReturn(appEndpoint);
-        Mockito.when(repository.sumByAppSourceAndAppClientForEndpoint(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric1));
-        EndpointCountMetricDto result = metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), new Date(), new Date());
-        assertThat(result).isEqualTo(endpointCountMetricDto);
+        Mockito.when(appEndpointRepo.findByPathAndAppSourceAndMethod(appEndpoint.getPath(), appSource, appEndpoint.getMethod())).thenReturn(appEndpoint);
+        Mockito.when(repository.sumByAppSourceAndAppClientForEndpoint(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric2));
+        AppEndpointCountMetricDto result = metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), appEndpoint.getMethod(), new Date(), new Date());
+        assertThat(result).isEqualTo(appEndpointCountMetricDto);
     }
 
     @Test
     void getCountOfMetricsForAppEndpointTestWhereAppSourceDNETest() {
         Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.empty());
         assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
-    		metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), new Date(), new Date());
+    		metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), appEndpoint.getMethod(), new Date(), new Date());
     	});
     }
 
     @Test
     void getCountOfMetricsForAppEndpointTestWhereEndpointDNETest() {
         Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource)); 
-        Mockito.when(appEndpointRepo.findByPathAndAppSource(appEndpoint.getPath(), appSource)).thenReturn(null);
+        Mockito.when(appEndpointRepo.findByPathAndAppSourceAndMethod(appEndpoint.getPath(), appSource, appEndpoint.getMethod())).thenReturn(null);
         assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
-    		metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), new Date(), new Date());
+    		metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), appEndpoint.getMethod(), new Date(), new Date());
     	});
     }
 
     @Test
     void getCountOfMetricsForAppEndpointTestWhereNoMetricsExistTest() {
         appSource.getAppEndpoints().clear();
-        endpointCountMetricDto = EndpointCountMetricDto.builder()
+        appEndpointCountMetricDto = AppEndpointCountMetricDto.builder()
                 .id(appEndpoint.getId())
                 .appClients(new ArrayList<>())
                 .path(appEndpoint.getPath())
                 .appSource(appSource.getName())
+                .requestType("GET")
                 .build();
 
         Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));
-        Mockito.when(appEndpointRepo.findByPathAndAppSource(appEndpoint.getPath(), appSource)).thenReturn(appEndpoint);
-        EndpointCountMetricDto result = metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), new Date(), new Date());
-        assertThat(result).isEqualTo(endpointCountMetricDto);
+        Mockito.when(appEndpointRepo.findByPathAndAppSourceAndMethod(appEndpoint.getPath(), appSource, appEndpoint.getMethod())).thenReturn(appEndpoint);
+        AppEndpointCountMetricDto result = metricService.getCountOfMetricsForEndpoint(appSource.getId(), appEndpoint.getPath(), appEndpoint.getMethod(), new Date(), new Date());
+        assertThat(result).isEqualTo(appEndpointCountMetricDto);
     }
 
     @Test
     void getCountOfMetricsForAppClientUserTest() {
         Mockito.when(appSourceRepo.findById(appSource.getId())).thenReturn(Optional.of(appSource));        
         Mockito.when(appClientUserRepo.findByNameIgnoreCase(appClientUser.getName())).thenReturn(Optional.of(appClientUser));
-        Mockito.when(repository.sumByAppSourceAndEndpointForAppClient(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric2));      
+        Mockito.when(repository.sumByAppSourceAndEndpointForAppClient(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(Arrays.asList(countMetric1));      
         AppClientCountMetricDto result = metricService.getCountOfMetricsForAppClient(appSource.getId(), appClientUser.getName(), new Date(), new Date());
         assertThat(result).isEqualTo(appClientCountMetricDto);
     }
@@ -394,23 +410,14 @@ class MetricsServiceImplTest {
         .register(mockRegistry);
         counter.increment();
 
-        Meter.Id counterId = counter.getId();
-
-        appSource = AppSource.builder()
-            .id(UUID.fromString(counterId.getTag("AppSource")))
-            .build();
-        appEndpoint = AppEndpoint.builder()
-            .id(UUID.fromString(counterId.getTag("Endpoint")))
-            .build();
-        appClientUser = AppClientUser.builder()
-            .id(UUID.fromString(counterId.getTag("AppClient")))
-            .build();
-
+        Mockito.when(appSourceRepo.findById(Mockito.any())).thenReturn(Optional.of(appSource));
+        Mockito.when(appEndpointRepo.findById(Mockito.any())).thenReturn(Optional.of(appEndpoint));
+        Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
 
         Mockito.when(repository.save(Mockito.any(MeterValue.class))).thenReturn(null);
 
         ArgumentCaptor<MeterValue> savedCaptor = ArgumentCaptor.forClass(MeterValue.class);
-        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date);
+        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date, mockRegistry);
 
         // Verify we saved, and capture what we tried to save
         verify(repository, times(1)).save(savedCaptor.capture());
@@ -427,6 +434,81 @@ class MetricsServiceImplTest {
     }
 
     @Test
+    void publishToDataBaseNoAppSourceRemoveMeterTest() {
+        Date date = new Date();
+        MeterRegistry mockRegistry = new SimpleMeterRegistry();
+        Counter counter = Counter.builder("gateway-counter.test")
+        .tags(
+            "AppSource", appSource.getId().toString(),
+            "Endpoint", appEndpoint.getId().toString(),
+            "AppClient", appClientUser.getId().toString())
+        .register(mockRegistry);
+        counter.increment();
+
+        Mockito.when(appSourceRepo.findById(Mockito.any())).thenReturn(Optional.empty());
+        Mockito.when(appEndpointRepo.findById(Mockito.any())).thenReturn(Optional.of(appEndpoint));
+        Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
+
+        Mockito.when(meterRegistry.remove(Mockito.any(Meter.Id.class))).thenReturn(counter);
+
+        ArgumentCaptor<Meter.Id> meterCaptor = ArgumentCaptor.forClass(Meter.Id.class);
+        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date, meterRegistry);
+
+        // Verify we removed the meter
+        verify(meterRegistry, times(1)).remove(meterCaptor.capture());
+    }
+
+    @Test
+    void publishToDataBaseNoAppEndpointRemoveMeterTest() {
+        Date date = new Date();
+        MeterRegistry mockRegistry = new SimpleMeterRegistry();
+        Counter counter = Counter.builder("gateway-counter.test")
+        .tags(
+            "AppSource", appSource.getId().toString(),
+            "Endpoint", appEndpoint.getId().toString(),
+            "AppClient", appClientUser.getId().toString())
+        .register(mockRegistry);
+        counter.increment();
+
+        Mockito.when(appSourceRepo.findById(Mockito.any())).thenReturn(Optional.of(appSource));
+        Mockito.when(appEndpointRepo.findById(Mockito.any())).thenReturn(Optional.empty());
+        Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
+
+        Mockito.when(meterRegistry.remove(Mockito.any(Meter.Id.class))).thenReturn(counter);
+
+        ArgumentCaptor<Meter.Id> meterCaptor = ArgumentCaptor.forClass(Meter.Id.class);
+        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date, meterRegistry);
+
+        // Verify we removed the meter
+        verify(meterRegistry, times(1)).remove(meterCaptor.capture());
+    }
+
+    @Test
+    void publishToDataBaseNoAppClientUserRemoveMeterTest() {
+        Date date = new Date();
+        MeterRegistry mockRegistry = new SimpleMeterRegistry();
+        Counter counter = Counter.builder("gateway-counter.test")
+        .tags(
+            "AppSource", appSource.getId().toString(),
+            "Endpoint", appEndpoint.getId().toString(),
+            "AppClient", appClientUser.getId().toString())
+        .register(mockRegistry);
+        counter.increment();
+
+        Mockito.when(appSourceRepo.findById(Mockito.any())).thenReturn(Optional.of(appSource));
+        Mockito.when(appEndpointRepo.findById(Mockito.any())).thenReturn(Optional.of(appEndpoint));
+        Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.empty());
+
+        Mockito.when(meterRegistry.remove(Mockito.any(Meter.Id.class))).thenReturn(counter);
+
+        ArgumentCaptor<Meter.Id> meterCaptor = ArgumentCaptor.forClass(Meter.Id.class);
+        metricService.publishToDatabase(Arrays.asList(Arrays.asList(counter)), date, meterRegistry);
+
+        // Verify we removed the meter
+        verify(meterRegistry, times(1)).remove(meterCaptor.capture());
+    }
+
+    @Test
     void publishNonCounters() {
         MeterRegistry registry = new SimpleMeterRegistry();
         List<List<Meter>> meters = Arrays.asList(Arrays.asList(
@@ -439,7 +521,7 @@ class MetricsServiceImplTest {
             FunctionTimer.builder("gateway-function-timer.test", null, null, null, null).register(registry),
             Meter.builder("gateway-meter.test", null, null).register(registry)
         ));
-        metricService.publishToDatabase(meters, new Date());
+        metricService.publishToDatabase(meters, new Date(), meterRegistry);
 
         // Verify we saved nothing
         verify(repository, times(0)).save(Mockito.any());

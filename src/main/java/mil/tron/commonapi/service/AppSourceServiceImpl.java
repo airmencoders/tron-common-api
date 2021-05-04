@@ -151,6 +151,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .id(appEndpoint.getId())
                         .path(appEndpoint.getPath())
                         .requestType(appEndpoint.getMethod().toString())
+                        .deleted(appEndpoint.isDeleted())
                         .build()).collect(Collectors.toList()))
                 .appClients(appSource.getAppPrivs().stream()
                     .map(appEndpointPriv -> AppClientUserPrivDto.builder()
@@ -179,6 +180,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .appSource(appSourceToSave)
                 .method(RequestMethod.valueOf(endpointDto.getRequestType()))
                 .path(endpointDto.getPath())
+                .deleted(endpointDto.isDeleted())
                 .build()).collect(Collectors.toSet());
         
         Set<AppEndpointPriv> appEndpointPrivs = appSource.getAppClients()
@@ -209,7 +211,8 @@ public class AppSourceServiceImpl implements AppSourceService {
         Iterable<AppEndpointPriv> existingPrivileges = this.appEndpointPrivRepository.findAllByAppSource(appSourceToSave);
         this.appEndpointPrivRepository.deleteAll(existingPrivileges);
 
-        Iterable<AppEndpoint> existingEndpoints = this.appEndpointRepository.findAllByAppSource(appSourceToSave);
+        List<AppEndpoint> existingEndpoints = this.appEndpointRepository.findAllByAppSource(appSourceToSave);
+        existingEndpoints.removeAll(appEndpoints);
         this.appEndpointRepository.deleteAll(existingEndpoints);
 
         this.appEndpointRepository.saveAll(appEndpoints);
@@ -346,13 +349,14 @@ public class AppSourceServiceImpl implements AppSourceService {
 
     /**
      * Private helper to examine a set of privileges to see if there's other-than-app-source-admin
-     * priv in it... used for removing Dashboard user from an AppSource
+     * and dashboard user privs in it... used for removing Dashboard user from an AppSource
      * @param privs set of privileges to examine
      * @return if there's other privileges than App Source Admin
      */
     private boolean privSetHasPrivsOtherThanAppSource(Set<Privilege> privs) {
         for (Privilege priv : privs) {
-            if (!priv.getName().equals(APP_SOURCE_ADMIN_PRIV)) return true;
+            if (!priv.getName().equals(APP_SOURCE_ADMIN_PRIV) &&
+                !priv.getName().equals("DASHBOARD_USER")) return true;
         }
         return false;
     }

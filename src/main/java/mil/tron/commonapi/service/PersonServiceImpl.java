@@ -1,15 +1,11 @@
 package mil.tron.commonapi.service;
 
-import com.google.common.collect.Sets;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
+import com.google.common.collect.Sets;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.persons.*;
@@ -29,7 +25,12 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.modelmapper.Conditions;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
@@ -40,6 +41,7 @@ public class PersonServiceImpl implements PersonService {
 	private RankRepository rankRepository;
 	private PersonMetadataRepository personMetadataRepository;
 	private EventManagerService eventManagerService;
+	private OrganizationService organizationService;
 	private final DtoMapper modelMapper;
 	private final ObjectMapper objMapper;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
@@ -52,16 +54,20 @@ public class PersonServiceImpl implements PersonService {
 			Branch.OTHER, Collections.emptySet()
 	);
 
+	private static final String DODID_ALREADY_EXISTS_ERROR = "Person resource with the dodid: %s already exists";
+
 	public PersonServiceImpl(PersonRepository repository,
 							 PersonUniqueChecksService personChecksService,
 							 RankRepository rankRepository,
 							 PersonMetadataRepository personMetadataRepository,
-							 EventManagerService eventManagerService) {
+							 EventManagerService eventManagerService,
+							 @Lazy OrganizationService organizationService) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
 		this.personMetadataRepository = personMetadataRepository;
 		this.eventManagerService = eventManagerService;
+		this.organizationService = organizationService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -84,6 +90,10 @@ public class PersonServiceImpl implements PersonService {
 
 		if (!personChecksService.personEmailIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format("Person resource with the email: %s already exists", entity.getEmail()));
+
+		if (!personChecksService.personDodidIsUnique(entity))
+			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
+
 
 		checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
 		Person resultEntity = repository.save(entity);
@@ -131,6 +141,10 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personEmailIsUnique(entity)) {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", entity.getEmail()));
 		}
+
+		if (!personChecksService.personDodidIsUnique(entity))
+			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
+
 
 		PersonDto updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
 
@@ -208,6 +222,10 @@ public class PersonServiceImpl implements PersonService {
 			throw new InvalidRecordUpdateRequest(String.format("Email: %s is already in use.", patchedPerson.getEmail()));
 		}
 
+		if (!personChecksService.personDodidIsUnique(patchedPerson))
+			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, patchedPerson.getDodid()));
+
+
 		PersonDto updatedPerson = updateMetadata(patchedPersonDto.getBranch(), patchedPerson, dbPerson, patchedPersonDto.getMeta());
 
 		PersonChangedMessage message = new PersonChangedMessage();
@@ -220,6 +238,8 @@ public class PersonServiceImpl implements PersonService {
 	@Override
 	public void deletePerson(UUID id) {
 		if (repository.existsById(id)) {
+
+			organizationService.removeLeaderByUuid(id);
 			repository.deleteById(id);
 
 			PersonDeleteMessage message = new PersonDeleteMessage();
@@ -232,11 +252,8 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public Iterable<PersonDto> getPersons(PersonConversionOptions options) {
-		return StreamSupport
-				.stream(repository.findAll().spliterator(), false)
-				.map(p -> convertToDto(p, options))
-				.collect(Collectors.toList());
+	public Iterable<PersonDto> getPersons(PersonConversionOptions options, Pageable page) {
+		return repository.findBy(page).stream().map(person -> convertToDto(person, options)).collect(Collectors.toList());
 	}
 
 	@Override

@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,9 +25,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
+import mil.tron.commonapi.dto.metrics.AppEndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
-import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -134,7 +135,7 @@ public class MetricsController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-						content = @Content(schema = @Schema(implementation = EndpointCountMetricDto.class))),
+						content = @Content(schema = @Schema(implementation = AppEndpointCountMetricDto.class))),
             @ApiResponse(responseCode = "400",
                 description = "Bad Rquest (Start date, end date, and path are all required. Start date must be before end date)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -147,16 +148,17 @@ public class MetricsController {
 	})
     @PreAuthorizeDashboardAdmin
     @GetMapping("/count/{id}/endpoint")
-    public ResponseEntity<EndpointCountMetricDto> getCountOfMetricsForEndpoint (
+    public ResponseEntity<AppEndpointCountMetricDto> getCountOfMetricsForEndpoint (
         @Parameter(description = "App Source Id to search with", required = true) @PathVariable("id") UUID id,
         @Parameter(description = "Endpoint Path to search with", required = true) @RequestParam("path") String path,
+        @Parameter(description = "Endpoint Request Method Type", required = true) @RequestParam("method") RequestMethod method,
         @Parameter(description = "Earliest date to include", required = true) @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startDate,
         @Parameter(description = "Latest date to include", required = true) @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
     ) {
         if(startDate.compareTo(endDate) > -1) {
             throw new BadRequestException(dateMessage);
         }
-        return new ResponseEntity<>(metricService.getCountOfMetricsForEndpoint(id, path, startDate, endDate), HttpStatus.OK);
+        return new ResponseEntity<>(metricService.getCountOfMetricsForEndpoint(id, path, method, startDate, endDate), HttpStatus.OK);
     }
 
     @Operation(summary = "Retrieves sum of stored metric values for given app client name on given app source", description = "Retrieves sum of stored metric values for given app client name on given app source for each endpoint")

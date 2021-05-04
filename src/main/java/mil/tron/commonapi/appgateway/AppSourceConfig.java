@@ -87,7 +87,7 @@ public class AppSourceConfig {
                 log.warn(String.format("Unable to add app source %s.", appDef.getName()), e);
             }
         }
-        return this.appSourceRepository.findByNameIgnoreCase(appDef.getName());
+        return this.appSourceRepository.findByNameIgnoreCaseWithEndpoints(appDef.getName());
     }
 
 }

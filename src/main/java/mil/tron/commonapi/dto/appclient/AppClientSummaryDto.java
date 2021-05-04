@@ -1,31 +1,27 @@
-package mil.tron.commonapi.dto;
+package mil.tron.commonapi.dto.appclient;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
-import mil.tron.commonapi.entity.Privilege;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
+/**
+ * DTO used by the App Source Controller to get a list of available app clients, but
+ * this DTO just shares the UUID and name of the app client - nothing else.
+ */
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @EqualsAndHashCode
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class AppClientUserDto {
+public class AppClientSummaryDto {
     @Getter
     @Setter
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
-	@Getter
-	@Setter
-	@Builder.Default
-	private List<Privilege> privileges = new ArrayList<>();
-
-	@Getter
-	@Setter
-	private String name;
-
+    @Getter
+    @Setter
+    private String name;
 }
+

@@ -3,6 +3,7 @@ package mil.tron.commonapi.entity;
 import java.util.Date;
 import java.util.UUID;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -10,6 +11,9 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.validation.constraints.NotBlank;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -44,12 +48,12 @@ public class MeterValue {
     @NonNull
     private Double value;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private AppEndpoint appEndpoint;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private AppSource appSource;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private AppClientUser appClientUser;
 }

@@ -34,6 +34,7 @@ import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -326,9 +327,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return filtered list of Organizations
 	 */
 	@Override
-	public Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch) {
-		return StreamSupport
-				.stream(repository.findAll().spliterator(), false)
+	public Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch, Pageable page) {
+		return repository.findBy(page).stream()
 				.filter(item -> item.getName().toLowerCase().contains(searchQuery.toLowerCase()))
 				.filter(item -> {
 					if (type == null && branch == null) return true;
@@ -348,9 +348,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return The filtered list of organizations
 	 */
 	@Override
-	public Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch) {
+	public Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch, Pageable page) {
 		return StreamSupport
-				.stream(this.findOrganizationsByTypeAndService(searchQuery, type, branch).spliterator(), false)
+				.stream(this.findOrganizationsByTypeAndService(searchQuery, type, branch, page).spliterator(), false)
 				.map(this::convertToDto)
 				.collect(Collectors.toList());
 	}
@@ -521,9 +521,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return Iterable of OrganizationDTOs
 	 */
 	@Override
-	public Iterable<OrganizationDto> getOrganizations(String searchQuery) {
-		return StreamSupport
-				.stream(repository.findAll().spliterator(), false)
+	public Iterable<OrganizationDto> getOrganizations(String searchQuery, Pageable page) {
+		return repository.findBy(page).stream()
 				.filter(item -> item.getName().toLowerCase().contains(searchQuery.toLowerCase()))
 				.map(this::convertToDto)
 				.collect(Collectors.toList());
@@ -930,5 +929,18 @@ public class OrganizationServiceImpl implements OrganizationService {
 			parent.removeSubordinateOrganization(org);
 			repository.save(parent);
 		}
+	}
+
+	/**
+	 * Searches all organizations that have a leader by given UUID and removes them.
+	 * Used by the Person service to remove hard links to a Person entity before deletion.
+	 * @param leaderUuid id of the leader to remove from leader position(s)
+	 */
+	public void removeLeaderByUuid(UUID leaderUuid) {
+		List<Organization> modifiedOrgs = repository.deleteByLeaderId(leaderUuid);
+		List<UUID> modifiedIds = modifiedOrgs.stream().map(Organization::getId).collect(Collectors.toList());
+		OrganizationChangedMessage message = new OrganizationChangedMessage();
+		message.setOrgIds(Sets.newHashSet(modifiedIds));
+		eventManagerService.recordEventAndPublish(message);
 	}
 }

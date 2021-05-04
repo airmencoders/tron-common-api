@@ -1,25 +1,13 @@
 package mil.tron.commonapi.entity;
 
+import lombok.*;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+
+import javax.persistence.*;
+import javax.validation.constraints.NotBlank;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.ManyToMany;
-import javax.persistence.OneToMany;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
-import javax.validation.constraints.NotBlank;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 
 /**
  * Class that represents a Client User entity that is an Application
@@ -50,6 +38,15 @@ public class AppClientUser {
 	@Builder.Default
 	@ManyToMany
 	private Set<Privilege> privileges = new HashSet<>();
+
+	/**
+	 * List of App Client Developers that can see what app sources this client is connected to
+	 * An app client can have many developers...
+	 */
+	@Getter
+	@Setter
+	@ManyToMany
+	private Set<DashboardUser> appClientDevelopers = new HashSet<>();
 
 	@Getter
 	@Setter

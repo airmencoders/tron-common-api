@@ -31,7 +31,7 @@ public class AppSourceCountMetricDto {
     @Setter
     @Builder.Default
     @Valid
-    private List<CountMetricDto> endpoints = new ArrayList<>();
+    private List<EndpointCountMetricDto> endpoints = new ArrayList<>();
 
     @Getter
     @Setter

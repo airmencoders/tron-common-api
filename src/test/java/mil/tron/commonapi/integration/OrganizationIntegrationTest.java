@@ -111,10 +111,10 @@ public class OrganizationIntegrationTest {
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(s4)))).andExpect(status().isConflict());
 
         // test pagination
-        mockMvc.perform(get(ENDPOINT + "?page=1&limit=")).andExpect(status().isOk())
+        mockMvc.perform(get(ENDPOINT + "?page=0&size=")).andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)));
 
-        mockMvc.perform(get(ENDPOINT + "?page=2&limit=2")).andExpect(status().isOk())
+        mockMvc.perform(get(ENDPOINT + "?page=1&size=2")).andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
 
     }

@@ -77,7 +77,7 @@ public class PersonControllerTest {
 			List<PersonDto> persons = new ArrayList<>();
 			persons.add(testPerson);
 
-			Mockito.when(personService.getPersons(Mockito.any())).thenReturn(persons);
+			Mockito.when(personService.getPersons(Mockito.any(), Mockito.any())).thenReturn(persons);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
@@ -120,7 +120,7 @@ public class PersonControllerTest {
             mockMvc.perform(get(ENDPOINT + "?memberships=true"))
                 .andExpect(status().isOk());
 
-            Mockito.verify(personService).getPersons(optionsCaptor.capture());
+            Mockito.verify(personService).getPersons(optionsCaptor.capture(), Mockito.any());
             assertEquals(true, optionsCaptor.getValue().isMembershipsIncluded());
             assertEquals(false, optionsCaptor.getValue().isLeadershipsIncluded());
         }
@@ -130,7 +130,7 @@ public class PersonControllerTest {
             mockMvc.perform(get(ENDPOINT + "?leaderships=true"))
                 .andExpect(status().isOk());
 
-            Mockito.verify(personService).getPersons(optionsCaptor.capture());
+            Mockito.verify(personService).getPersons(optionsCaptor.capture(), Mockito.any());
             assertEquals(false, optionsCaptor.getValue().isMembershipsIncluded());
             assertEquals(true, optionsCaptor.getValue().isLeadershipsIncluded());
         }
@@ -140,7 +140,7 @@ public class PersonControllerTest {
             mockMvc.perform(get(ENDPOINT + "?memberships=true&leaderships=true"))
                 .andExpect(status().isOk());
 
-            Mockito.verify(personService).getPersons(optionsCaptor.capture());
+            Mockito.verify(personService).getPersons(optionsCaptor.capture(), Mockito.any());
             assertEquals(true, optionsCaptor.getValue().isMembershipsIncluded());
             assertEquals(true, optionsCaptor.getValue().isLeadershipsIncluded());
         }
