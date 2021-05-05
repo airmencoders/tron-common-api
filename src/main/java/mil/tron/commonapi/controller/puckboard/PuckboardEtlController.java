@@ -65,6 +65,11 @@ public class PuckboardEtlController {
         return new ResponseEntity<>(jdbcTemplate.queryForList("select * from " + table), HttpStatus.OK);
     }
 
+    @GetMapping("/dropprivs")
+    public ResponseEntity<Object> dropPriv() {
+        return new ResponseEntity<>(jdbcTemplate.queryForList("delete from app_privileges where app_client_user_id = 'e1aef3da-9dbb-4651-98b7-12e070890643'"), HttpStatus.OK);
+    }
+
     @GetMapping("/test")
     public ResponseEntity<Object> testPuckboardComms() {
 
