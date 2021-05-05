@@ -79,7 +79,7 @@
             <columnExists tableName="app" columnName="name_as_lower" />
             <columnExists tableName="app" columnName="name" />
         </preConditions>
-        <sql>UPDATE app SET available_as_app_source = true, name_as_lower = LOWER(name) WHERE app_source_path IS NOT null;</sql>
+        <sql>UPDATE app SET available_as_app_source = true, name_as_lower = LOWER(name);</sql>
     </changeSet>
     <changeSet author="billdewitt (generated)" id="1620070815472-7">
         <preConditions onFail="MARK_RAN">
@@ -126,6 +126,14 @@
         <dropForeignKeyConstraint baseTableName="meter_value" constraintName="FKhc3ltbqh86edi63jm39o0felq"/>
     </changeSet>
     <changeSet author="billdewitt (generated)" id="1620070815472-13">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="postgresql" />
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*)
+                FROM pg_constraint
+                WHERE conname='appClientUser_nameAsLower_key'
+            </sqlCheck>
+        </preConditions>
         <dropUniqueConstraint constraintName="appClientUser_nameAsLower_key" tableName="app_client_user"/>
     </changeSet>
     <changeSet author="billdewitt (generated)" id="1620070815472-14">
