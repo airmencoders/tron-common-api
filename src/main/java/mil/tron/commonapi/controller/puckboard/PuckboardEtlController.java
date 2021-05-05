@@ -73,7 +73,7 @@ public class PuckboardEtlController {
         @PathVariable String table,
         @RequestParam(name = "column", required = true) String column,
         @RequestParam(name = "id", required = true) UUID id) {
-        return new ResponseEntity<>(jdbcTemplate.queryForList("delete from " + table + " where " + column + " = " + id), HttpStatus.OK);
+        return new ResponseEntity<>(jdbcTemplate.queryForList("delete from " + table + " where " + column + " = '" + id + "'"), HttpStatus.OK);
     }
 
     @GetMapping("/dropprivs")
