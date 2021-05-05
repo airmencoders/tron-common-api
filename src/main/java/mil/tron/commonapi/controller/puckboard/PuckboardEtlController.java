@@ -59,27 +59,6 @@ public class PuckboardEtlController {
     @Autowired
     private HttpServletRequest request;
 
-    
-    @Autowired
-    JdbcTemplate jdbcTemplate;
-
-    @GetMapping("/{table}")
-    public ResponseEntity<Object> getDb(@PathVariable String table) {
-        return new ResponseEntity<>(jdbcTemplate.queryForList("select * from " + table), HttpStatus.OK);
-    }
-
-    @GetMapping("/delete/{table}")
-    public ResponseEntity<Object> deleteSomething(
-        @PathVariable String table,
-        @RequestParam(name = "column", required = true) String column,
-        @RequestParam(name = "id", required = true) UUID id) {
-        return new ResponseEntity<>(jdbcTemplate.queryForList("delete from " + table + " where " + column + " = '" + id + "'"), HttpStatus.OK);
-    }
-
-    @GetMapping("/dropprivs")
-    public ResponseEntity<Object> dropPriv() {
-        return new ResponseEntity<>(jdbcTemplate.queryForList("delete from app_privileges where app_client_user_id = 'e1aef3da-9dbb-4651-98b7-12e070890643'"), HttpStatus.OK);
-    }
 
     @GetMapping("/test")
     public ResponseEntity<Object> testPuckboardComms() {
