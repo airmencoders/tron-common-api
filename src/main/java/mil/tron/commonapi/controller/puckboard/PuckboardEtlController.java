@@ -1,5 +1,7 @@
 package mil.tron.commonapi.controller.puckboard;
 
+import java.util.UUID;
+
 import javax.servlet.http.HttpServletRequest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,6 +22,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -63,6 +66,14 @@ public class PuckboardEtlController {
     @GetMapping("/{table}")
     public ResponseEntity<Object> getDb(@PathVariable String table) {
         return new ResponseEntity<>(jdbcTemplate.queryForList("select * from " + table), HttpStatus.OK);
+    }
+
+    @GetMapping("/delete/{table}")
+    public ResponseEntity<Object> deleteSomething(
+        @PathVariable String table,
+        @RequestParam(name = "column", required = true) String column,
+        @RequestParam(name = "id", required = true) UUID id) {
+        return new ResponseEntity<>(jdbcTemplate.queryForList("delete from " + table + " where " + column + " = " + id), HttpStatus.OK);
     }
 
     @GetMapping("/dropprivs")
