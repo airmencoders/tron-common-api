@@ -29,6 +29,10 @@ public class AppEndpointClientInfoDto {
     @Getter
     @Setter
     String path;
+    
+    @Getter
+    @Setter
+    String requestPath;
 
     @Getter
     @Setter
