@@ -33,6 +33,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
+
 @Service
 public class AppSourceServiceImpl implements AppSourceService {
 
@@ -73,7 +76,8 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .map(appSource -> AppSourceDto.builder().id(appSource.getId())
                         .name(appSource.getName())
                         .endpointCount(appSource.getAppEndpoints().size())
-                        .clientCount(appSource.getAppPrivs().size())
+                        .clientCount(appSource.getAppPrivs()
+                  			  .stream().collect(groupingBy(AppEndpointPriv::getAppClientUser, counting())).size())
                         .build()).collect(Collectors.toList());
     }
 
@@ -164,6 +168,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .appSourceAdminUserEmails(appSource.getAppSourceAdmins().stream()
                         .map(DashboardUser::getEmail)
                         .collect(Collectors.toList()))
+                .appSourcePath(appSource.getAppSourcePath())
                 .build();
     }
 

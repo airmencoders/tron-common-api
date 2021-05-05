@@ -60,6 +60,23 @@ public class PuckboardEtlController {
         return new ResponseEntity<>(jdbcTemplate.queryForList("select * from " + table), HttpStatus.OK);
     }
 
+    @GetMapping("/test")
+    public ResponseEntity<Object> testPuckboardComms() {
+
+        // grab puckboard organizations
+        JsonNode orgs;
+        try {
+            ResponseEntity<String> orgsString = restTemplate.getForEntity(
+                    this.puckboardUrl + "/organizations?isSchedulingUnit=true",
+                    String.class);
+            orgs = mapper.readTree(orgsString.getBody());
+            return new ResponseEntity<>(orgs, HttpStatus.OK);
+
+        } catch (RestClientException | JsonProcessingException e) {
+            return new ResponseEntity<>("Puckboard Organization Fetch error - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @GetMapping("/extract")
     public ResponseEntity<Object> getPuckboardData() {
 
