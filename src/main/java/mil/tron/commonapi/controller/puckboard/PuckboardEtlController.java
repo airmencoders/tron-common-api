@@ -3,6 +3,7 @@ package mil.tron.commonapi.controller.puckboard;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.puckboard.PuckboardExtractorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -10,12 +11,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.persistence.EntityManager;
 import javax.servlet.http.HttpServletRequest;
 
 @RestController
@@ -47,6 +51,14 @@ public class PuckboardEtlController {
 
     @Autowired
     private HttpServletRequest request;
+
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+
+    @GetMapping("/{table}")
+    public ResponseEntity<Object> getDb(@PathVariable String table) {
+        return new ResponseEntity<>(jdbcTemplate.queryForList("select * from " + table), HttpStatus.OK);
+    }
 
     @GetMapping("/test")
     public ResponseEntity<Object> testPuckboardComms() {
