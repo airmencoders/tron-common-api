@@ -60,6 +60,11 @@ public class PuckboardEtlController {
         return new ResponseEntity<>(jdbcTemplate.queryForList("select * from " + table), HttpStatus.OK);
     }
 
+    @GetMapping("/droprows")
+    public ResponseEntity<Object> dropRows() {
+        return new ResponseEntity<>(jdbcTemplate.update("delete from databasechangelog where id ~ '1620070815472'"), HttpStatus.OK);
+    }
+
     @GetMapping("/test")
     public ResponseEntity<Object> testPuckboardComms() {
 
