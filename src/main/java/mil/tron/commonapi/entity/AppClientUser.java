@@ -36,6 +36,7 @@ public class AppClientUser extends App {
      */    
     @Getter
     @Builder.Default
+	@Setter
     private boolean availableAsAppClient = true;
 
 	@Getter
