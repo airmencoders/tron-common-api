@@ -7,6 +7,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
 import mil.tron.commonapi.entity.pubsub.PubSubLedger;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -107,8 +111,8 @@ public class SubscriberController {
     @Operation(summary = "Retrieves most current counts for each event type", description = "Retrieves latest counts for each event type in a key-value pair object")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
-                    description = "Successful operation")
-    })
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(example="{\n  \"ORGANIZATION_DELETE\": 0,\n  \"PERSON_CHANGE\": 0,\n  \"PERSON_DELETE\": 0,\n  \"PERSON_ORG_ADD\": 0,\n  \"PERSON_ORG_REMOVE\": 0,\n  \"ORGANIZATION_CHANGE\": 0,\n  \"SUB_ORG_REMOVE\": 0,\n  \"SUB_ORG_ADD\": 0\n}")))})
     @GetMapping("/events/latest")
     public ResponseEntity<Object> getLatestCounts() {
         return new ResponseEntity<>(eventManagerService.getEventTypeCounts(), HttpStatus.OK);
