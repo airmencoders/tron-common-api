@@ -196,7 +196,7 @@ public class AppSourceServiceImplTest {
     class Get {
     	@Test
         void getAppSources() {
-            Mockito.when(appSourceRepository.findAll()).thenReturn(entries);
+            Mockito.when(appSourceRepository.findByAvailableAsAppSourceTrue()).thenReturn(entries);
             assertEquals(1, service.getAppSources().size());
         }
 

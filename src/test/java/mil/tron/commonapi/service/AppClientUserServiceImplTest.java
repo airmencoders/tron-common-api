@@ -89,7 +89,7 @@ class AppClientUserServiceImplTest {
 	
 	@Test
     void getAppClientUsersTest() {
-    	Mockito.when(repository.findAll()).thenReturn(users);
+    	Mockito.when(repository.findByAvailableAsAppClientTrue()).thenReturn(users);
     	Iterable<AppClientUserDto> appUsers = userService.getAppClientUsers();
     	List<AppClientUserDto> result = StreamSupport.stream(appUsers.spliterator(), false).collect(Collectors.toList());
     	assertThat(result).hasSize(1);
@@ -98,7 +98,7 @@ class AppClientUserServiceImplTest {
 
 	@Test
 	void getAppClientUsersSummariesTest() {
-		Mockito.when(repository.findAll()).thenReturn(users);
+		Mockito.when(repository.findByAvailableAsAppClientTrue()).thenReturn(users);
 		List<AppClientSummaryDto> result = Lists.newArrayList(userService.getAppClientUserSummaries());
 		assertThat(result.get(0).getId()).isEqualTo(users.get(0).getId());
 	}

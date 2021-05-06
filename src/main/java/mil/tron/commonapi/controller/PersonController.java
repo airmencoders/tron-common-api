@@ -141,7 +141,10 @@ public class PersonController {
 	})
 	@PreAuthorizeWrite
 	@PostMapping
-	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create", required = true) @Valid @RequestBody PersonDto person) {
+	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create",
+		required = true,
+		schema = @Schema(implementation = PersonDto.class)) 
+		@Valid @RequestBody PersonDto person) {
 		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
 
@@ -156,9 +159,13 @@ public class PersonController {
 	})
 	@PreAuthorizeWrite
 	@PutMapping(value = "/{id}")
-	public ResponseEntity<PersonDto> updatePerson(
-			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
-			@Parameter(description = "Updated person", required = true) @Valid @RequestBody PersonDto person) {
+	public ResponseEntity<Object> updatePerson(
+			@Parameter(name = "personId", description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
+			@Parameter(name = "person",
+				description = "Updated person", 
+				required = true, 
+				schema = @Schema(implementation = PersonDto.class))
+				@Valid @RequestBody PersonDto person) {
 
 		PersonDto updatedPerson = personService.updatePerson(personId, person);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);

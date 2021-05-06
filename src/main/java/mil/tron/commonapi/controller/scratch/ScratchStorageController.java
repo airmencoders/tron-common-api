@@ -106,7 +106,10 @@ public class ScratchStorageController {
                     description = "Successful operation",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntry.class)))),
             @ApiResponse(responseCode = "403",
-                    description = "No DASHBOARD_ADMIN privileges")
+                    description = "No DASHBOARD_ADMIN privileges"),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed request body",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PreAuthorizeDashboardAdmin  // only admin can see everyone's key-value pairs
     @GetMapping("")
@@ -260,7 +263,8 @@ public class ScratchStorageController {
                     description = "Application ID / Key name not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "400",
-                    description = "Malformed Request Body")
+                    description = "Malformed request body",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @DeleteMapping("/{appId}/key/{key}")
     public ResponseEntity<Object> deleteKeyValuePair(

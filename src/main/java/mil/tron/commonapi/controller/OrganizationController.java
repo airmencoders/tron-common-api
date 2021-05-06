@@ -180,7 +180,10 @@ public class OrganizationController {
 	@PreAuthorizeWrite
 	@PostMapping
 	public ResponseEntity<OrganizationDto> createOrganization(
-			@Parameter(description = "Organization to create", required = true) @Valid @RequestBody OrganizationDto organization) {
+			@Parameter(description = "Organization to create",
+			required = true,
+			schema = @Schema(implementation = OrganizationDto.class))
+			@Valid @RequestBody OrganizationDto organization) {
 
 		return new ResponseEntity<>(organizationService.createOrganization(organization), HttpStatus.CREATED);
 	}
@@ -201,7 +204,10 @@ public class OrganizationController {
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<OrganizationDto> updateOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
-			@Parameter(description = "Updated organization", required = true) @Valid @RequestBody OrganizationDto organization) {
+			@Parameter(description = "Updated organization",
+				required = true,
+				schema = @Schema(implementation = OrganizationDto.class))
+				@Valid @RequestBody OrganizationDto organization) {
 
 		OrganizationDto org = organizationService.updateOrganization(organizationId, organization);
 		
