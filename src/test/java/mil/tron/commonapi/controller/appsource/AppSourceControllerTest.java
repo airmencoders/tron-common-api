@@ -28,6 +28,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -178,6 +180,41 @@ public class AppSourceControllerTest {
 
 			mockMvc.perform(get(ENDPOINT + "app-clients"))
 					.andExpect(status().isOk());
+		}
+
+		@Test
+		void getAPISpecResource() throws Exception {
+			Resource resource = new ByteArrayResource(new byte[] { 'T', 'E', 'S', 'T'}, "description");
+			Mockito.when(service.getApiSpecForAppSource(Mockito.any(UUID.class))).thenReturn(resource);
+
+			mockMvc.perform(get(ENDPOINT + "spec/{appId}", appSource.getId()))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo("TEST"));
+		}
+
+		@Test
+		void getAPISpecResourceBadPathIdVariable() throws Exception {
+			mockMvc.perform(get(ENDPOINT + "spec/{appId}", "asdfasdf"))
+				.andExpect(status().isBadRequest())
+				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
+		}
+
+		@Test
+		void getAPISpecResourceByEndpointPriv() throws Exception {
+			Resource resource = new ByteArrayResource(new byte[] { 'T', 'E', 'S', 'T'}, "description");
+			Mockito.when(service.getApiSpecForAppSourceByEndpointPriv(Mockito.any(UUID.class))).thenReturn(resource);
+
+			mockMvc.perform(get(ENDPOINT + "spec/endpoint-priv/{appId}", appSource.getId()))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo("TEST"));
+		}
+
+		
+		@Test
+		void getAPISpecResourceByEndpointPrivBadPathIdVariable() throws Exception {
+			mockMvc.perform(get(ENDPOINT + "spec/endpoint-priv/{appId}", "asdfasdf"))
+				.andExpect(status().isBadRequest())
+				.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentTypeMismatchException));
 		}
 	}
 	

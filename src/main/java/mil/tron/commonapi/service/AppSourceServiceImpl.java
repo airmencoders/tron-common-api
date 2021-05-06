@@ -510,9 +510,6 @@ public class AppSourceServiceImpl implements AppSourceService {
     }
 
     private Resource getResource(UUID id, String filename) {
-        if(appSourceApiDefinitionsLocation == null) {
-            throw new RecordNotFoundException(String.format(APP_API_SPEC_NOT_FOUND_MSG, id));
-        }
         Resource resource = new ClassPathResource(appSourceApiDefinitionsLocation +  filename);
         if(resource.exists()) {
             return resource;

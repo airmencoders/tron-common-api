@@ -20,7 +20,6 @@ import mil.tron.commonapi.service.AppSourceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -452,9 +451,9 @@ public class AppSourceController {
                 description = "App Source or API Specification file not found",
                 content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
-    @GetMapping("spec/endpoint/{endpointPrivId}")
+    @GetMapping("spec/endpoint-priv/{endpointPrivId}")
     @PostAuthorize("hasAuthority('DASHBOARD_ADMIN') || @accessCheckAppSource.checkByAppEndpointPrivId(authentication, #endpointPrivId)")
-    public ResponseEntity<Resource> getSpecFileByEndpoint(@Parameter(name = "endpointPrivId", description = "App Endpoint Privilege UUID", required = true) @PathVariable UUID endpointPrivId) {
+    public ResponseEntity<Resource> getSpecFileByEndpointPriv(@Parameter(name = "endpointPrivId", description = "App Endpoint Privilege UUID", required = true) @PathVariable UUID endpointPrivId) {
         return new ResponseEntity<>(appSourceService.getApiSpecForAppSourceByEndpointPriv(endpointPrivId), HttpStatus.OK);
     }
 }

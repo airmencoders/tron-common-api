@@ -16,6 +16,7 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
@@ -928,5 +930,65 @@ public class AppSourceIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isNoContent());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testGetApiSpecResource() throws Exception {
+        UUID appSourceId = UUID.randomUUID();
+        appSourceRepository.save(AppSource.builder()
+                .id(appSourceId)
+                .appSourcePath("path")
+                .availableAsAppSource(true)
+                .name("Name")
+                // Note: This is actually pulling from src/main/resources/appsourceapis
+                .openApiSpecFilename("mock.yml")
+                .build());
+
+        Resource resource = appSourceServiceImpl.getApiSpecForAppSource(appSourceId);
+
+        assertNotNull(resource);
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testGetApiSpecResourceByEndpointPriv() throws Exception {
+        AppClientUser appClientUser = appClientUserRespository.save(
+                AppClientUser.builder()
+                        .id(UUID.randomUUID())
+                        .name("App User 1")
+                        .build()
+        );
+
+        AppSource appSource = appSourceRepository.save(AppSource.builder()
+                .id(UUID.randomUUID())
+                .appSourcePath("path")
+                .appEndpoints(null)
+                .availableAsAppSource(true)
+                .name("Name")
+                // Note: This is actually pulling from src/main/resources/appsourceapis
+                .openApiSpecFilename("mock.yml")
+                .build());
+
+        AppEndpoint appEndpoint = endpointRepository.save(AppEndpoint.builder()
+                .id(UUID.randomUUID())
+                .path("/path")
+                .method(RequestMethod.GET)
+                .appSource(appSource)
+                .build());
+        
+        UUID appEndpointPrivId = UUID.randomUUID();
+        appSourcePrivRepository.save(AppEndpointPriv.builder()
+                .id(appEndpointPrivId)
+                .appClientUser(appClientUser)
+                .appEndpoint(appEndpoint)
+                .appSource(appSource)
+                .build());
+
+        Resource resource = appSourceServiceImpl.getApiSpecForAppSourceByEndpointPriv(appEndpointPrivId);
+
+        assertNotNull(resource);
     }
 }
