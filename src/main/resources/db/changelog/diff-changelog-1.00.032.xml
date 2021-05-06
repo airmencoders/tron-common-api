@@ -1,0 +1,217 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="billdewitt (generated)" id="1620070815472-0">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app_endpoint_privs"/>
+        </preConditions>
+        <sql>DELETE FROM app_endpoint_privs WHERE app_client_user_id = app_source_id;</sql>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-1">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="app"/>
+            </not> 
+            <tableExists tableName="app_source"/>
+        </preConditions>
+        <renameTable newTableName="app" oldTableName="app_source"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-2">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>            
+            <not>
+                <columnExists tableName="app" columnName="available_as_app_source" />
+            </not>
+            <not>
+                <columnExists tableName="app" columnName="available_as_app_client" />
+            </not>
+            <not>
+                <columnExists tableName="app" columnName="name_as_lower" />
+            </not>
+        </preConditions>
+        <addColumn tableName="app">
+            <column name="available_as_app_source" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="app">
+            <column name="available_as_app_client" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="app">
+            <column name="name_as_lower" type="VARCHAR(255)">
+            <constraints unique="true" uniqueConstraintName="appClientUser_nameAsLower_ukey"/>
+            </column>
+        </addColumn>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-3">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="app_app_client_developers"/>
+            </not> 
+            <tableExists tableName="app_client_user_app_client_developers"/>
+        </preConditions>
+        <renameTable newTableName="app_app_client_developers" oldTableName="app_client_user_app_client_developers"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-4">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="app_app_source_admins"/>
+            </not> 
+            <tableExists tableName="app_source_app_source_admins"/>
+        </preConditions>
+        <renameTable newTableName="app_app_source_admins" oldTableName="app_source_app_source_admins"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-5">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="app_privileges"/>
+            </not> 
+            <tableExists tableName="app_client_user_privileges"/>
+        </preConditions>
+        <renameTable newTableName="app_privileges" oldTableName="app_client_user_privileges"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-6">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>
+            <columnExists tableName="app" columnName="available_as_app_source" />
+            <columnExists tableName="app" columnName="app_source_path" />
+            <columnExists tableName="app" columnName="name_as_lower" />
+            <columnExists tableName="app" columnName="name" />
+        </preConditions>
+        <sql>UPDATE app SET available_as_app_source = true, name_as_lower = LOWER(name);</sql>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-7">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>
+        </preConditions>
+        <sql>INSERT INTO app (id, name, name_as_lower) SELECT id, name, name_as_lower FROM app_client_user WHERE name_as_lower NOT IN (SELECT name_as_lower FROM app);</sql>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-8">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>
+            <tableExists tableName="app_client_user"/>
+            <columnExists tableName="app" columnName="available_as_app_client" />
+            <columnExists tableName="app" columnName="name_as_lower" />
+            <columnExists tableName="app_client_user" columnName="name_as_lower" />
+        </preConditions>
+        <sql>UPDATE app SET available_as_app_client = true WHERE name_as_lower IN (SELECT name_as_lower from app_client_user);</sql>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-9">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app_app_client_developers"/>
+            <foreignKeyConstraintExists foreignKeyName="FKaa9gt3m0gwo6h1k0rtat4xa7c"/>
+        </preConditions>
+        <dropForeignKeyConstraint baseTableName="app_app_client_developers" constraintName="FKaa9gt3m0gwo6h1k0rtat4xa7c"/>
+    </changeSet>    
+    <changeSet author="billdewitt (generated)" id="1620070815472-10">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app_privileges"/>
+            <foreignKeyConstraintExists foreignKeyName="FKb0359mfinfxq2ia5f7y416oo9"/>
+        </preConditions>
+        <dropForeignKeyConstraint baseTableName="app_privileges" constraintName="FKb0359mfinfxq2ia5f7y416oo9"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-11">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app_endpoint_privs"/>
+            <foreignKeyConstraintExists foreignKeyName="FKdmj6bf0tncgkdkg893ngfnarh"/>
+        </preConditions>
+        <dropForeignKeyConstraint baseTableName="app_endpoint_privs" constraintName="FKdmj6bf0tncgkdkg893ngfnarh"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-12">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="meter_value"/>
+            <foreignKeyConstraintExists foreignKeyName="FKhc3ltbqh86edi63jm39o0felq"/>
+        </preConditions>
+        <dropForeignKeyConstraint baseTableName="meter_value" constraintName="FKhc3ltbqh86edi63jm39o0felq"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-13">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="postgresql" />
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*)
+                FROM pg_constraint
+                WHERE conname='appClientUser_nameAsLower_key'
+            </sqlCheck>
+        </preConditions>
+        <dropUniqueConstraint constraintName="appClientUser_nameAsLower_key" tableName="app_client_user"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-14">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>
+            <tableExists tableName="app_app_client_developers"/>
+            <tableExists tableName="app_client_user"/>
+        </preConditions>
+        <sql>UPDATE app_app_client_developers app_client_dev SET app_client_user_id = (SELECT app.id FROM app app JOIN app_client_user client_user ON app.name_as_lower = client_user.name_as_lower WHERE client_user.id = app_client_dev.app_client_user_id);</sql>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-15">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>
+            <tableExists tableName="app_privileges"/>
+            <tableExists tableName="app_client_user"/>
+        </preConditions>
+        <sql>UPDATE app_privileges app_priv SET app_client_user_id = (SELECT app.id FROM app app JOIN app_client_user client_user ON app.name_as_lower = client_user.name_as_lower WHERE client_user.id = app_priv.app_client_user_id);</sql>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-16">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>
+            <tableExists tableName="app_endpoint_privs"/>
+            <tableExists tableName="app_client_user"/>
+        </preConditions>
+        <sql>UPDATE app_endpoint_privs app_priv SET app_client_user_id = (SELECT app.id FROM app app JOIN app_client_user client_user ON app.name_as_lower = client_user.name_as_lower WHERE client_user.id = app_priv.app_client_user_id);</sql>
+    </changeSet>
+        <changeSet author="billdewitt (generated)" id="1620070815472-17">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app"/>
+            <tableExists tableName="meter_value"/>
+            <tableExists tableName="app_client_user"/>
+        </preConditions>
+        <sql>UPDATE meter_value meter_val SET app_client_user_id = (SELECT app.id FROM app app JOIN app_client_user client_user ON app.name_as_lower = client_user.name_as_lower WHERE client_user.id = meter_val.app_client_user_id);</sql>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-18">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app_app_client_developers"/>
+            <columnExists tableName="app_app_client_developers" columnName="app_client_user_id" />
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="FKqnq1e50kt4jj8ev1bisgn0hxk"/>
+            </not>
+        </preConditions>
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_app_client_developers" constraintName="FKqnq1e50kt4jj8ev1bisgn0hxk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-19">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="meter_value"/>
+            <columnExists tableName="meter_value" columnName="app_client_user_id" />
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="FKin5kkqryi4eukyqfgrs0d7xyl"/>
+            </not>
+        </preConditions>
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="meter_value" constraintName="FKin5kkqryi4eukyqfgrs0d7xyl" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-20">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app_privileges"/>
+            <columnExists tableName="app_privileges" columnName="app_client_user_id" />            
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="FKkrauiqo64rr6kh1edi19q59a3"/>
+            </not>
+        </preConditions>
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_privileges" constraintName="FKkrauiqo64rr6kh1edi19q59a3" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-21">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app_endpoint_privs"/>
+            <columnExists tableName="app_endpoint_privs" columnName="app_client_user_id" />
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="FKo6abtx1xmu9c8kc6ya1opq39b"/>
+            </not>
+        </preConditions>
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="app_endpoint_privs" constraintName="FKo6abtx1xmu9c8kc6ya1opq39b" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
+    </changeSet>
+    <changeSet author="billdewitt (generated)" id="1620070815472-22">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="app_client_user"/>
+        </preConditions>
+        <dropTable tableName="app_client_user"/>
+    </changeSet>
+</databaseChangeLog>
