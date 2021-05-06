@@ -18,8 +18,11 @@ import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.service.AppClientUserService;
 import mil.tron.commonapi.service.AppSourceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -401,4 +404,57 @@ public class AppSourceController {
         return new ResponseEntity<>(appSourceService.removeEndPointPrivilege(appId, privId), HttpStatus.OK);
     }
 
+    @Operation(summary = "Gets a copy of the openapispec file for the app source")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200",
+                description = "Successful operation",
+                content = @Content(
+                        mediaType = "application/vnd.oai.openapi",
+                        schema = @Schema(implementation = Resource.class)
+                )),
+        @ApiResponse(responseCode = "400",
+                description = "Id is malformed",
+                content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+        @ApiResponse(responseCode = "403",
+                description = "Insufficient privileges",
+                content = @Content(
+                        mediaType = "application/json",
+                        schema = @Schema(implementation = ExceptionResponse.class)
+                )),
+        @ApiResponse(responseCode = "404",
+                description = "App Source or API Specification file not found",
+                content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+    })
+    @GetMapping("spec/{appId}")
+    @PostAuthorize("hasAuthority('DASHBOARD_ADMIN') || @accessCheckAppSource.checkByAppSourceId(authentication, #appId)")
+    public ResponseEntity<Resource> getSpecFile(@Parameter(name = "appId", description = "App Source UUID", required = true) @PathVariable UUID appId) {
+        return new ResponseEntity<>(appSourceService.getApiSpecForAppSource(appId), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Gets a copy of the openapispec file for the app source related to the endpoint")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200",
+                description = "Successful operation",
+                content = @Content(
+                        mediaType = "application/vnd.oai.openapi",
+                        schema = @Schema(implementation = Resource.class)
+                )),
+        @ApiResponse(responseCode = "400",
+                description = "Id is malformed",
+                content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+        @ApiResponse(responseCode = "403",
+                description = "Insufficient privileges",
+                content = @Content(
+                        mediaType = "application/json",
+                        schema = @Schema(implementation = ExceptionResponse.class)
+                )),
+        @ApiResponse(responseCode = "404",
+                description = "App Source or API Specification file not found",
+                content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+    })
+    @GetMapping("spec/endpoint/{endpointPrivId}")
+    @PostAuthorize("hasAuthority('DASHBOARD_ADMIN') || @accessCheckAppSource.checkByAppEndpointPrivId(authentication, #endpointPrivId)")
+    public ResponseEntity<Resource> getSpecFileByEndpoint(@Parameter(name = "endpointPrivId", description = "App Endpoint Privilege UUID", required = true) @PathVariable UUID endpointPrivId) {
+        return new ResponseEntity<>(appSourceService.getApiSpecForAppSourceByEndpointPriv(endpointPrivId), HttpStatus.OK);
+    }
 }
