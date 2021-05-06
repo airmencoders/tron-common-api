@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
+
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -56,12 +57,14 @@ public class OrganizationDto {
     @Setter
     private UUID id = UUID.randomUUID();
 
+    @Schema(nullable = true)
     @Getter
     private UUID leader;
 
     @Getter
     private List<UUID> members = new ArrayList<>();
 
+    @Schema(nullable = true)
     @Getter
     private UUID parentOrganization;
 
