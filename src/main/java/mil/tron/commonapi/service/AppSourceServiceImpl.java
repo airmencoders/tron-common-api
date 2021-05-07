@@ -67,6 +67,8 @@ public class AppSourceServiceImpl implements AppSourceService {
     
     private String appSourceApiDefinitionsLocation;
 
+    // Per Sonarqube documentation, this shouldn't even be flagged for S107. It is though, and we should ignore it.
+    @java.lang.SuppressWarnings("squid:S00107")
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
                                 AppEndpointPrivRepository appEndpointPrivRepository,
@@ -75,7 +77,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                                 PrivilegeRepository privilegeRepository,
                                 DashboardUserRepository dashboardUserRepository,
                                 DashboardUserService dashboardUserService,
-                                @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation) //NOSONAR
+                                @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation)
     {
         this.appSourceRepository = appSourceRepository;
         this.appEndpointPrivRepository = appEndpointPrivRepository;
