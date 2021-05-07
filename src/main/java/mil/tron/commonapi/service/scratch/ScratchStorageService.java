@@ -2,6 +2,8 @@ package mil.tron.commonapi.service.scratch;
 
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.ScratchStorageEntryDto;
+import mil.tron.commonapi.dto.ScratchStorageUserDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
@@ -9,13 +11,13 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import java.util.UUID;
 
 public interface ScratchStorageService {
-    Iterable<ScratchStorageEntry> getAllEntries();
-    Iterable<ScratchStorageEntry> getAllEntriesByApp(UUID appId);
-    ScratchStorageEntry getEntryById(UUID id);
-    ScratchStorageEntry getKeyValueEntryByAppId(UUID appId, String keyName);
-    ScratchStorageEntry setKeyValuePair(UUID appId, String key, String value);
-    ScratchStorageEntry deleteKeyValuePair(UUID appId, String key);
-    Iterable<ScratchStorageEntry> deleteAllKeyValuePairsForAppId(UUID appId);
+    Iterable<ScratchStorageEntryDto> getAllEntries();
+    Iterable<ScratchStorageEntryDto> getAllEntriesByApp(UUID appId);
+    ScratchStorageEntryDto getEntryById(UUID id);
+    ScratchStorageEntryDto getKeyValueEntryByAppId(UUID appId, String keyName);
+    ScratchStorageEntryDto setKeyValuePair(UUID appId, String key, String value);
+    ScratchStorageEntryDto deleteKeyValuePair(UUID appId, String key);
+    Iterable<ScratchStorageEntryDto> deleteAllKeyValuePairsForAppId(UUID appId);
     Iterable<String> getAllKeysForAppId(UUID appId);
 
     // scratch storage app management...
@@ -36,10 +38,10 @@ public interface ScratchStorageService {
     ScratchStorageAppRegistryEntry setImplicitReadForApp(UUID appId, boolean implicitRead);
 
     // scratch storage users management
-    Iterable<ScratchStorageUser> getAllScratchUsers();
-    ScratchStorageUser editScratchUser(UUID id, ScratchStorageUser user);
-    ScratchStorageUser addNewScratchUser(ScratchStorageUser user);
-    ScratchStorageUser deleteScratchUser(UUID id);
+    Iterable<ScratchStorageUserDto> getAllScratchUsers();
+    ScratchStorageUserDto editScratchUser(UUID id, ScratchStorageUserDto user);
+    ScratchStorageUserDto addNewScratchUser(ScratchStorageUserDto newUser);
+    ScratchStorageUserDto deleteScratchUser(UUID id);
 
     boolean userCanReadFromAppId(UUID appId, String email);
     boolean userCanWriteToAppId(UUID appId, String email);

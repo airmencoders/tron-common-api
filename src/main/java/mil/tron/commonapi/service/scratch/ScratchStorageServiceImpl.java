@@ -9,6 +9,8 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.ScratchStorageEntryDto;
+import mil.tron.commonapi.dto.ScratchStorageUserDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
@@ -66,14 +68,20 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     }
 
     @Override
-    public Iterable<ScratchStorageEntry> getAllEntries() {
-        return repository.findAll();
+    public Iterable<ScratchStorageEntryDto> getAllEntries() {
+        return Lists.newArrayList(repository.findAll())
+                .stream()
+                .map(item -> dtoMapper.map(item, ScratchStorageEntryDto.class))
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Iterable<ScratchStorageEntry> getAllEntriesByApp(UUID appId) {
+    public Iterable<ScratchStorageEntryDto> getAllEntriesByApp(UUID appId) {
         validateAppId(appId);
-        return repository.findAllByAppId(appId);
+        return Lists.newArrayList(repository.findAllByAppId(appId))
+                .stream()
+                .map(item -> dtoMapper.map(item, ScratchStorageEntryDto.class))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -83,14 +91,18 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     }
 
     @Override
-    public ScratchStorageEntry getEntryById(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new RecordNotFoundException("Cannot find record with that UUID"));
+    public ScratchStorageEntryDto getEntryById(UUID id) {
+        return dtoMapper.map(repository
+                .findById(id)
+                .orElseThrow(() -> new RecordNotFoundException("Cannot find record with that UUID")), ScratchStorageEntryDto.class);
     }
 
     @Override
-    public ScratchStorageEntry getKeyValueEntryByAppId(UUID appId, String keyName) {
+    public ScratchStorageEntryDto getKeyValueEntryByAppId(UUID appId, String keyName) {
         validateAppId(appId);
-        return repository.findByAppIdAndKey(appId, keyName).orElseThrow(() -> new RecordNotFoundException("Cannot find record with that AppId/Key Name"));
+        return dtoMapper.map(repository
+                .findByAppIdAndKey(appId, keyName)
+                .orElseThrow(() -> new RecordNotFoundException("Cannot find record with that AppId/Key Name")), ScratchStorageEntryDto.class);
     }
 
     /**
@@ -101,7 +113,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      * @return the persisted/updated ScratchStorageEntry entity
      */
     @Override
-    public ScratchStorageEntry setKeyValuePair(UUID appId, String key, String value) {
+    public ScratchStorageEntryDto setKeyValuePair(UUID appId, String key, String value) {
 
         validateAppId(appId);
         Optional<ScratchStorageEntry> entry = repository.findByAppIdAndKey(appId, key);
@@ -110,7 +122,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             // update
             ScratchStorageEntry existingEntry = entry.get();
             existingEntry.setValue(value);
-            return repository.save(existingEntry);
+            return dtoMapper.map(repository.save(existingEntry), ScratchStorageEntryDto.class);
         } else {
             // create new
             ScratchStorageEntry newEntry = ScratchStorageEntry
@@ -121,13 +133,13 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                     .value(value)
                     .build();
 
-            return repository.save(newEntry);
+            return dtoMapper.map(repository.save(newEntry), ScratchStorageEntryDto.class);
         }
 
     }
 
     @Override
-    public ScratchStorageEntry deleteKeyValuePair(UUID appId, String key) {
+    public ScratchStorageEntryDto deleteKeyValuePair(UUID appId, String key) {
 
         validateAppId(appId);
 
@@ -137,19 +149,19 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         repository.deleteByAppIdAndKey(appId, key);
 
         // return the entity deleted
-        return entry;
+        return dtoMapper.map(entry, ScratchStorageEntryDto.class);
     }
 
     @Override
-    public Iterable<ScratchStorageEntry> deleteAllKeyValuePairsForAppId(UUID appId) {
+    public Iterable<ScratchStorageEntryDto> deleteAllKeyValuePairsForAppId(UUID appId) {
 
         validateAppId(appId);
 
-        List<ScratchStorageEntry> deletedEntries = new ArrayList<>();
+        List<ScratchStorageEntryDto> deletedEntries = new ArrayList<>();
         List<ScratchStorageEntry> entries = Lists.newArrayList(repository.findAllByAppId(appId));
         for (ScratchStorageEntry entry : entries) {
             repository.deleteById(entry.getId());
-            deletedEntries.add(entry);
+            deletedEntries.add(dtoMapper.map(entry, ScratchStorageEntryDto.class));
         }
 
         // return all key-values deleted
@@ -306,11 +318,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     private ScratchStorageAppUserPriv mapUserPrivDtoToEntity(ScratchStorageAppUserPrivDto dto) {
 
         Optional<ScratchStorageUser> user = scratchUserRepo.findByEmailIgnoreCase(dto.getEmail());
-        ScratchStorageUser appUser;
+        ScratchStorageUserDto appUser;
         if (user.isEmpty()) {
             // user didn't exist, create them in the scratch space universe, and attach only to
             //  this current app
-            appUser = this.addNewScratchUser(ScratchStorageUser.
+            appUser = this.addNewScratchUser(ScratchStorageUserDto.
                     builder()
                     .id(UUID.randomUUID())
                     .email(dto.getEmail())
@@ -319,7 +331,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         }
         else {
             // user existed already, no worries, just use the return from the db
-            appUser = user.get();
+            appUser = dtoMapper.map(user.get(), ScratchStorageUserDto.class);
         }
 
 
@@ -329,7 +341,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         return ScratchStorageAppUserPriv
                 .builder()
                 .id(dto.getId())
-                .user(appUser)
+                .user(dtoMapper.map(appUser, ScratchStorageUser.class))
                 .privilege(priv)
                 .build();
 
@@ -341,12 +353,18 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
 
     @Override
-    public Iterable<ScratchStorageUser> getAllScratchUsers() {
-        return scratchUserRepo.findAll();
+    public Iterable<ScratchStorageUserDto> getAllScratchUsers() {
+        return Lists.newArrayList(scratchUserRepo.findAll())
+                .stream()
+                .map(item -> dtoMapper.map(item, ScratchStorageUserDto.class))
+                .collect(Collectors.toList());
     }
 
     @Override
-    public ScratchStorageUser addNewScratchUser(ScratchStorageUser user) {
+    public ScratchStorageUserDto addNewScratchUser(ScratchStorageUserDto newUser) {
+
+        ScratchStorageUser user = dtoMapper.map(newUser, ScratchStorageUser.class);
+
         if (user.getId() == null) {
             user.setId(UUID.randomUUID());
         }
@@ -356,11 +374,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             throw new ResourceAlreadyExistsException("Scratch Space user with that UUID or email already exists");
         }
 
-        return scratchUserRepo.save(user);
+        return dtoMapper.map(scratchUserRepo.save(user), ScratchStorageUserDto.class);
     }
 
     @Override
-    public ScratchStorageUser editScratchUser(UUID id, ScratchStorageUser user) {
+    public ScratchStorageUserDto editScratchUser(UUID id, ScratchStorageUserDto existingUser) {
+
+        ScratchStorageUser user = dtoMapper.map(existingUser, ScratchStorageUser.class);
+
         if (!id.equals(user.getId()))
             throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, user.getId()));
 
@@ -373,11 +394,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             throw new ResourceAlreadyExistsException("Scratch Space user already exists with that email address");
         }
 
-        return scratchUserRepo.save(user);
+        return dtoMapper.map(scratchUserRepo.save(user), ScratchStorageUserDto.class);
     }
 
     @Override
-    public ScratchStorageUser deleteScratchUser(UUID id) {
+    public ScratchStorageUserDto deleteScratchUser(UUID id) {
         ScratchStorageUser user = scratchUserRepo.findById(id)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot delete non-existent scratch user with UUID: " + id));
 
@@ -393,7 +414,8 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         }
 
         scratchUserRepo.deleteById(id);
-        return user;
+
+        return dtoMapper.map(user, ScratchStorageUserDto.class);
     }
 
     /**
@@ -502,7 +524,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      */
     @Override
     public String getKeyValueJson(UUID appId, String keyName, String jsonPathSpec) {
-        ScratchStorageEntry value = this.getKeyValueEntryByAppId(appId, keyName);
+        ScratchStorageEntryDto value = this.getKeyValueEntryByAppId(appId, keyName);
 
         try {
             Object results = JsonPath.parse(value.getValue()).read(jsonPathSpec);
@@ -532,7 +554,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     public void patchKeyValueJson(UUID appId, String keyName, String value, String jsonPathSpec) {
 
         // must already exist as a key-value pair to modify...
-        ScratchStorageEntry existingJsonValue = this.getKeyValueEntryByAppId(appId, keyName);
+        ScratchStorageEntryDto existingJsonValue = this.getKeyValueEntryByAppId(appId, keyName);
 
         try {
             // parse it to Json
