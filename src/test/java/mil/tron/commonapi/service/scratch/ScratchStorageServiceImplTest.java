@@ -2,6 +2,7 @@ package mil.tron.commonapi.service.scratch;
 
 
 import com.google.common.collect.Lists;
+import com.jayway.jsonpath.JsonPath;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -14,6 +15,7 @@ import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.scratch.InvalidJsonPathQueryException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
@@ -729,5 +731,58 @@ public class ScratchStorageServiceImplTest {
 
         assertThrows(InvalidFieldValueException.class, () -> service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.age"));
         assertThrows(InvalidFieldValueException.class, () -> service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.name"));
+    }
+
+    // tests for JsonDB
+
+    @Test
+    void testAddElement() {
+
+        UUID appId = UUID.randomUUID();
+
+        String jsonValue = "[{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102d\", \"age\": 40, \"name\": \"Frank\", \"email\": \"f@test.com\" }]";
+        String schema = "{ \"id\": \"uuid\", \"age\": \"number\", \"name\": \"string\", \"email\": \"email!\" }";
+
+
+        ScratchStorageEntry invalidJson = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table")
+                .value("{f}")
+                .build();
+
+        ScratchStorageEntry entry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table")
+                .value(jsonValue)
+                .build();
+
+        ScratchStorageEntry schemaEntry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table_schema")
+                .value(schema)
+                .build();
+
+        Mockito.when(repository.save(Mockito.any())).then(returnsFirstArg());
+
+        Mockito.when(repository.findByAppIdAndKey(appId, "table_schema"))
+                .thenReturn(Optional.ofNullable(schemaEntry));
+
+        Mockito.when(repository.findByAppIdAndKey(appId, "table"))
+                .thenThrow(new RecordNotFoundException("Not Found"))
+                .thenReturn(Optional.ofNullable(invalidJson))
+                .thenReturn(Optional.ofNullable(entry));
+
+        assertThrows(RecordNotFoundException.class, () -> service.addElement(appId, "table", "{}"));
+        assertThrows(InvalidJsonPathQueryException.class, ()-> service.addElement(appId, "table", "{}"));
+
+        // make sure age is populated to default for type number -> which is 0
+        service.addElement(appId, "table", "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"name\": \"John\", \"email\": \"J@test.com\" }");
+        List<Map<String, Object>> result = JsonPath.read(entry.getValue(), "$[?(@.age == 0)]");
+        assertEquals(1, result.size());
+
+        // make sure id is auto generated as a UUID
+        service.addElement(appId, "table", "{ \"name\": \"Chris\", \"age\": 50, \"email\": \"c@test.com\" }");
+        List<Map<String, Object>> idResult = JsonPath.read(entry.getValue(), "$[?(@.age == 50)]");
+        assertDoesNotThrow(()-> UUID.fromString(idResult.get(0).get("id").toString()));
     }
 }
