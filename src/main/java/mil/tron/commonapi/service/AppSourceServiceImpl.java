@@ -1,5 +1,29 @@
 package mil.tron.commonapi.service;
 
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import javax.transaction.Transactional;
+
+import org.assertj.core.util.Lists;
+import org.assertj.core.util.Sets;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMethod;
+
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
@@ -22,19 +46,6 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import org.assertj.core.util.Lists;
-import org.assertj.core.util.Sets;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestMethod;
-
-import javax.transaction.Transactional;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-import static java.util.stream.Collectors.counting;
-import static java.util.stream.Collectors.groupingBy;
 
 @Service("appSourceService")
 public class AppSourceServiceImpl implements AppSourceService {
@@ -49,8 +60,15 @@ public class AppSourceServiceImpl implements AppSourceService {
     private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
     private static final String APP_SOURCE_NOT_FOUND_MSG = "No App Source found with id %s.";
     private static final String APP_SOURCE_NO_ENDPOINT_FOUND_MSG = "No App Source Endpoint found with id %s.";
+    private static final String APP_SOURCE_WITH_APP_ENDPOINT_NOT_FOUND_MSG = "No App Source found with App Endpoint that has id %s.";
     private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
+    private static final String APP_API_SPEC_NOT_FOUND_MSG = "Could not find API Specification for App Source with id %s.";
+    
+    
+    private String appSourceApiDefinitionsLocation;
 
+    // Per Sonarqube documentation, this shouldn't even be flagged for S107. It is though, and we should ignore it.
+    @java.lang.SuppressWarnings("squid:S00107")
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
                                 AppEndpointPrivRepository appEndpointPrivRepository,
@@ -58,7 +76,9 @@ public class AppSourceServiceImpl implements AppSourceService {
                                 AppClientUserRespository appClientUserRespository,
                                 PrivilegeRepository privilegeRepository,
                                 DashboardUserRepository dashboardUserRepository,
-                                DashboardUserService dashboardUserService) {
+                                DashboardUserService dashboardUserService,
+                                @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation)
+    {
         this.appSourceRepository = appSourceRepository;
         this.appEndpointPrivRepository = appEndpointPrivRepository;
         this.appEndpointRepository = appEndpointRepository;
@@ -66,6 +86,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.dashboardUserRepository = dashboardUserRepository;
         this.privilegeRepository = privilegeRepository;
         this.dashboardUserService = dashboardUserService;
+        this.appSourceApiDefinitionsLocation = appSourceApiDefinitionsLocation;
     }
 
     @Override
@@ -501,6 +522,35 @@ public class AppSourceServiceImpl implements AppSourceService {
         for (AppSource appSource : usersAppSources) {
             appSource.getAppSourceAdmins().remove(user);
             appSourceRepository.saveAndFlush(appSource);
+        }
+    }
+
+    /**
+     * Searches AppSourceDefs to find open API spec file, returns file if found
+     * @param id App Source Id to get API specification for
+     * @return Resource that is guaranteed to exist
+     */
+    public Resource getApiSpecForAppSource(UUID id) {
+        AppSource appSource = appSourceRepository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, id)));
+        return getResource(id, appSource.getOpenApiSpecFilename());
+    }
+
+    /**
+     * Searches AppSourceDefs to find open API spec file, returns file if found
+     * @param id App Endpoint Id to get parent App Source's API specification for
+     * @return Resource that is guaranteed to exist
+     */
+    public Resource getApiSpecForAppSourceByEndpointPriv(UUID id) {
+        AppSource appSource = appSourceRepository.findByAppPrivs_Id(id).orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_WITH_APP_ENDPOINT_NOT_FOUND_MSG, id)));
+        return getResource(id, appSource.getOpenApiSpecFilename());
+    }
+
+    private Resource getResource(UUID id, String filename) {
+        Resource resource = new ClassPathResource(appSourceApiDefinitionsLocation +  filename);
+        if(resource.exists()) {
+            return resource;
+        } else {
+            throw new RecordNotFoundException(String.format(APP_API_SPEC_NOT_FOUND_MSG, id));
         }
     }
 }

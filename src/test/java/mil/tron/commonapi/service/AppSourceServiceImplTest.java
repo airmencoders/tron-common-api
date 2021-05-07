@@ -212,8 +212,33 @@ public class AppSourceServiceImplTest {
         	Mockito.when(appSourceRepository.findById(APP_SOURCE_UUID)).thenReturn(Optional.ofNullable(null));
         	assertThrows(RecordNotFoundException.class, () -> service.getAppSource(APP_SOURCE_UUID));
         }
+		
+		@Test
+		void getApiSpecResource_ResourcenotFound() {
+			appSource.setOpenApiSpecFilename("abcdefg.yml");
+			Mockito.when(appSourceRepository.findById(APP_SOURCE_UUID)).thenReturn(Optional.of(appSource));
+			assertThrows(RecordNotFoundException.class, () -> service.getApiSpecForAppSource(APP_SOURCE_UUID));
+		}
+
+		@Test
+		void getApiSpecResource_AppSourcenotFound() {
+			Mockito.when(appSourceRepository.findById(APP_SOURCE_UUID)).thenReturn(Optional.empty());
+			assertThrows(RecordNotFoundException.class, () -> service.getApiSpecForAppSource(APP_SOURCE_UUID));
+		}
+
+		@Test
+		void getApiSpecResourceEndpointPriv_ResourcenotFound() {
+			appSource.setOpenApiSpecFilename("abcdefg.yml");
+			Mockito.when(appSourceRepository.findByAppPrivs_Id(Mockito.any(UUID.class))).thenReturn(Optional.of(appSource));
+			assertThrows(RecordNotFoundException.class, () -> service.getApiSpecForAppSourceByEndpointPriv(APP_SOURCE_UUID));
+		}
+
+		@Test
+		void getApiSpecResourceEndpointPriv_AppSourcenotFound() {
+			Mockito.when(appSourceRepository.findByAppPrivs_Id(Mockito.any(UUID.class))).thenReturn(Optional.empty());
+			assertThrows(RecordNotFoundException.class, () -> service.getApiSpecForAppSourceByEndpointPriv(APP_SOURCE_UUID));
+		}
     }
-    
     
     @Nested
     class Update {
