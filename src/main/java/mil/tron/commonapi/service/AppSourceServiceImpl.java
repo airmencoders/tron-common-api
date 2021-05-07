@@ -76,8 +76,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .map(appSource -> AppSourceDto.builder().id(appSource.getId())
                         .name(appSource.getName())
                         .endpointCount(appSource.getAppEndpoints().size())
-                        .clientCount(appSource.getAppPrivs()
-                  			  .stream().collect(groupingBy(AppEndpointPriv::getAppClientUser, counting())).size())
+                        .clientCount(getAppSourceUniqueClientCount(appSource.getAppPrivs()))
                         .build()).collect(Collectors.toList());
     }
 
@@ -145,6 +144,10 @@ public class AppSourceServiceImpl implements AppSourceService {
             .findAny()
             .orElseThrow(() ->new RecordNotFoundException(String.format("No app endpoint with id %s found.", appEndpointId)));
     }
+    
+    private int getAppSourceUniqueClientCount(Set<AppEndpointPriv> privileges) {
+    	return privileges.stream().collect(groupingBy(AppEndpointPriv::getAppClientUser, counting())).size();
+    }
 
     private AppSourceDetailsDto buildAppSourceDetailsDto(AppSource appSource) {
         return AppSourceDetailsDto.builder()
@@ -157,6 +160,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .requestType(appEndpoint.getMethod().toString())
                         .deleted(appEndpoint.isDeleted())
                         .build()).collect(Collectors.toList()))
+                .endpointCount(appSource.getAppEndpoints().size())
                 .appClients(appSource.getAppPrivs().stream()
                     .map(appEndpointPriv -> AppClientUserPrivDto.builder()
                         .id(appEndpointPriv.getId())
@@ -165,6 +169,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .privilege(appEndpointPriv.getAppEndpoint().getPath())
                         .appEndpoint(appEndpointPriv.getAppEndpoint().getId())
                         .build()).collect(Collectors.toList()))
+                .clientCount(getAppSourceUniqueClientCount(appSource.getAppPrivs()))
                 .appSourceAdminUserEmails(appSource.getAppSourceAdmins().stream()
                         .map(DashboardUser::getEmail)
                         .collect(Collectors.toList()))
@@ -224,6 +229,9 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.appEndpointPrivRepository.saveAll(appEndpointPrivs);
         
         appSource.setId(savedAppSource.getId());
+        appSource.setClientCount(getAppSourceUniqueClientCount(savedAppSource.getAppPrivs()));
+        appSource.setEndpointCount(savedAppSource.getAppEndpoints().size());
+        appSource.setAppSourcePath(savedAppSource.getAppSourcePath());
 
         return appSource;
     }
