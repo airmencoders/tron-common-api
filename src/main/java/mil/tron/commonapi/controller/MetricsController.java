@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +24,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppEndpointCountMetricDto;
 import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
@@ -35,6 +35,7 @@ import mil.tron.commonapi.service.MetricService;
 
 @RestController
 @RequestMapping("${api-prefix.v1}/metrics")
+@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or @appSourceService.userIsAdminForAppSource(#id, principal.username)")
 public class MetricsController {
     private MetricService metricService;
     private final String dateMessage = "Start date must be before End Date";
@@ -56,13 +57,13 @@ public class MetricsController {
                 description = "Bad Rquest (Start date and end date are both required. Start date must be before end date)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "403",
-                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege or must be an Admin of the endpoint's App Source)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "404",
                 description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @PreAuthorizeDashboardAdmin
+    @PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or @appSourceService.userIsAdminForAppSourceByEndpoint(#id, principal.username)")
     @GetMapping("/endpoint/{id}")
     public ResponseEntity<EndpointMetricDto> getAllMetricsForEndpoint (
         @Parameter(description = "Endpoint Id to search with", required = true) @PathVariable("id") UUID id,
@@ -84,13 +85,12 @@ public class MetricsController {
                 description = "Bad Rquest (Start date and end date are both required. Start date must be before end date)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "403",
-                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege or must be an Admin of the App Source)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "404",
                 description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @PreAuthorizeDashboardAdmin
     @GetMapping("/appsource/{id}")
     public ResponseEntity<AppSourceMetricDto> getAllMetricsForAppSource (
         @Parameter(description = "App Source Id to search with", required = true) @PathVariable("id") UUID id,
@@ -112,13 +112,12 @@ public class MetricsController {
                 description = "Bad Rquest (Start date and end date are both required. Start date must be before end date)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "403",
-                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege or must be an Admin of the App Source)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "404",
                 description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @PreAuthorizeDashboardAdmin
     @GetMapping("/count/{id}")
     public ResponseEntity<AppSourceCountMetricDto> getCountOfMetricsForAppSource (
         @Parameter(description = "App Source Id to search with", required = true) @PathVariable("id") UUID id,
@@ -140,13 +139,12 @@ public class MetricsController {
                 description = "Bad Rquest (Start date, end date, and path are all required. Start date must be before end date)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "403",
-                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege or must be an Admin of the App Source)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "404",
                 description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @PreAuthorizeDashboardAdmin
     @GetMapping("/count/{id}/endpoint")
     public ResponseEntity<AppEndpointCountMetricDto> getCountOfMetricsForEndpoint (
         @Parameter(description = "App Source Id to search with", required = true) @PathVariable("id") UUID id,
@@ -170,13 +168,12 @@ public class MetricsController {
                 description = "Bad Rquest (Start date, end date, and name are all required. Start date must be before end date)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "403",
-                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege or must be an Admin of the App Source)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "404",
                 description = "Resource not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @PreAuthorizeDashboardAdmin
     @GetMapping("/count/{id}/appclient")
     public ResponseEntity<AppClientCountMetricDto> getCountOfMetricsForAppClient (
         @Parameter(description = "App Source Id to search with", required = true) @PathVariable("id") UUID id,

@@ -36,7 +36,7 @@ import java.util.stream.StreamSupport;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 
-@Service
+@Service("appSourceService")
 public class AppSourceServiceImpl implements AppSourceService {
 
     private AppSourceRepository appSourceRepository;
@@ -291,7 +291,32 @@ public class AppSourceServiceImpl implements AppSourceService {
         AppSource appSource = this.appSourceRepository.findById(appId)
                 .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, appId)));
 
-        for (DashboardUser user : appSource.getAppSourceAdmins()) {
+        return appSourceContainsAdminEmail(appSource, email);
+    }
+    
+    /**
+     * Check if the given email address is APP_SOURCE_ADMIN for given endpoint UUID
+     * @param endpointId UUID of the endpoint
+     * @param email email of user
+     * @return true if user is an assigned admin for the app source of the given endpoint
+     */
+    @Override
+    public boolean userIsAdminForAppSourceByEndpoint(UUID endpointId, String email) {
+    	AppEndpoint appEndpoint = appEndpointRepository.findById(endpointId)
+    			.orElseThrow(() -> new RecordNotFoundException(String.format("App Endpoint with id %s not found", endpointId.toString())));
+    	AppSource appSource = appEndpoint.getAppSource();
+    	
+        return appSourceContainsAdminEmail(appSource, email);
+    }
+    
+    /**
+     * Check if the App Source has an Admin with the given email
+     * @param appSource the App Source to check
+     * @param email the email to check against
+     * @return true if App Source has an admin with the given email, false otherwise
+     */
+    private boolean appSourceContainsAdminEmail(AppSource appSource, String email) {
+    	for (DashboardUser user : appSource.getAppSourceAdmins()) {
             if (user.getEmail().equalsIgnoreCase(email)) {
                 for (Privilege priv : user.getPrivileges()) {
                     if (priv.getName().equalsIgnoreCase(APP_SOURCE_ADMIN_PRIV)) return true;

@@ -467,6 +467,44 @@ public class AppSourceServiceImplTest {
 
 		assertTrue(service.userIsAdminForAppSource(newAppSource.getId(), newUser.getEmail()));
 		assertFalse(service.userIsAdminForAppSource(newAppSource.getId(), "randomdude@test.com"));
+		
+		Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
+		assertThrows(RecordNotFoundException.class, () -> service.userIsAdminForAppSource(newAppSource.getId(), "randomdude@test.com"));
+	}
+	
+	@Test
+	void testUserIsAdminForAppSourceByEndpoint() {
+		DashboardUser newUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dude@dude.com")
+				.privileges(Set.of(appSourceAdminPriv))
+				.build();
+
+		AppSource newAppSource = AppSource.builder()
+				.id(UUID.randomUUID())
+				.name("Some App")
+				.appSourcePath("")
+				.openApiSpecFilename("")
+				.appSourceAdmins(Sets.newHashSet(newUser))
+				.appPrivs(new HashSet<>())
+				.build();
+		
+		AppEndpoint endpoint = AppEndpoint.builder()
+				.appSource(newAppSource)
+				.id(UUID.randomUUID())
+				.path("/test/path")
+				.method(RequestMethod.DELETE)
+				.build();
+		
+		newAppSource.setAppEndpoints(Sets.newHashSet(endpoint));
+
+		Mockito.when(appEndpointRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(endpoint));
+
+		assertTrue(service.userIsAdminForAppSourceByEndpoint(endpoint.getId(), newUser.getEmail()));
+		assertFalse(service.userIsAdminForAppSourceByEndpoint(endpoint.getId(), "randomdude@test.com"));
+		
+		Mockito.when(appEndpointRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
+		assertThrows(RecordNotFoundException.class, () -> service.userIsAdminForAppSourceByEndpoint(endpoint.getId(), "randomdude@test.com"));
 	}
 
 	@Test
