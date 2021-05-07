@@ -15,8 +15,8 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.OrganizationService;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
-
 import org.assertj.core.util.Lists;
+import org.hamcrest.Matchers;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -382,6 +383,16 @@ public class OrganizationIntegrationTest {
                     .andExpect(status().isOk())
                     .andReturn();
             assertTrue(result.getResponse().getContentAsString().contains(newLeaderId.toString()));
+
+            // now delete the leader as a person
+            personService.deletePerson(newLeaderId);
+
+            // make sure they're not on this org anymore and the org is still there (bug TRONAPI-386)
+            mockMvc.perform(get(ENDPOINT + "{id}", this.existingOrgDto.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.leader", equalTo(null)))
+                    .andExpect(jsonPath("$.members", Matchers.not(Matchers.contains(newLeaderId.toString()))));
+
         }
 
         @Test

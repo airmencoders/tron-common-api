@@ -43,6 +43,7 @@ public class AppSource extends App {
      * This flag allows an App Source to be identified as an App Source in the App table
      */    
     @Getter
+    @Setter
     @Builder.Default
     private boolean availableAsAppSource = true;
 
