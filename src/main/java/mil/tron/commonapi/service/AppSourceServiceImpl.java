@@ -75,7 +75,8 @@ public class AppSourceServiceImpl implements AppSourceService {
                                 PrivilegeRepository privilegeRepository,
                                 DashboardUserRepository dashboardUserRepository,
                                 DashboardUserService dashboardUserService,
-                                @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation) { //NOSONAR
+                                @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation) //NOSONAR
+    {
         this.appSourceRepository = appSourceRepository;
         this.appEndpointPrivRepository = appEndpointPrivRepository;
         this.appEndpointRepository = appEndpointRepository;
