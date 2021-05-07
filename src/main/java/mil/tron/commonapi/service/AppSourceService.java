@@ -26,4 +26,5 @@ public interface AppSourceService {
     void deleteAdminFromAllAppSources(DashboardUser user);
 
     boolean userIsAdminForAppSource(UUID appId, String email);
+    boolean userIsAdminForAppSourceByEndpoint(UUID endpointId, String email);
 }
