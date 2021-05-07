@@ -937,8 +937,17 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @param leaderUuid id of the leader to remove from leader position(s)
 	 */
 	public void removeLeaderByUuid(UUID leaderUuid) {
-		List<Organization> modifiedOrgs = repository.deleteByLeaderId(leaderUuid);
+		Person leaderPerson = personRepository.findById(leaderUuid)
+				.orElseThrow(() -> new RecordNotFoundException("Leader person with ID " + leaderUuid + " not found"));
+
+		List<Organization> modifiedOrgs = repository.findOrganizationsByLeader(leaderPerson);
+		for (Organization org : modifiedOrgs) {
+			org.setLeaderAndUpdateMembers(null);
+			repository.save(org);
+		}
+
 		List<UUID> modifiedIds = modifiedOrgs.stream().map(Organization::getId).collect(Collectors.toList());
+
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.setOrgIds(Sets.newHashSet(modifiedIds));
 		eventManagerService.recordEventAndPublish(message);

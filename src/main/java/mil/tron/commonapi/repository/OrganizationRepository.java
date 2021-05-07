@@ -2,6 +2,7 @@ package mil.tron.commonapi.repository;
 
 import mil.tron.commonapi.entity.Organization;
 
+import mil.tron.commonapi.entity.Person;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,8 +20,7 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
 	List<Organization> findOrganizationsByParentOrganization(Organization org);
 	List<Organization> findOrganizationsBySubordinateOrganizationsContaining(Organization org);
 
-	@Transactional
-	List<Organization> deleteByLeaderId(UUID id);
+	List<Organization> findOrganizationsByLeader(Person leader);
 	
 	Slice<Organization> findBy(Pageable page);
 }

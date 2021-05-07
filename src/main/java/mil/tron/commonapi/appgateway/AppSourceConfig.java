@@ -73,19 +73,28 @@ public class AppSourceConfig {
 
     @Transactional
     AppSource registerAppSource(AppSourceInterfaceDefinition appDef) {
+        AppSource appSource;
         if (!this.appSourceRepository.existsByNameIgnoreCase(appDef.getName())) {
             // add new app source
-            AppSource newAppSource = AppSource.builder()
+            appSource = AppSource.builder()
                     .name(appDef.getName())
                     .openApiSpecFilename(appDef.getOpenApiSpecFilename())
                     .appSourcePath(appDef.getAppSourcePath())
+                    .availableAsAppSource(true)
+                    .nameAsLower(appDef.getName().toLowerCase())
                     .build();
-            try {
-                return this.appSourceRepository.save(newAppSource);                
-            }
-            catch (Exception e) {
-                log.warn(String.format("Unable to add app source %s.", appDef.getName()), e);
-            }
+        } else {
+            appSource = this.appSourceRepository.findByNameIgnoreCaseWithEndpoints(appDef.getName());
+            // refresh the database to always be correct
+            appSource.setAvailableAsAppSource(true);
+            appSource.setOpenApiSpecFilename(appDef.getOpenApiSpecFilename());
+            appSource.setAppSourcePath(appDef.getAppSourcePath());
+        }
+        try {
+            this.appSourceRepository.save(appSource);                
+        }
+        catch (Exception e) {
+            log.warn(String.format("Unable to add app source %s.", appDef.getName()), e);
         }
         return this.appSourceRepository.findByNameIgnoreCaseWithEndpoints(appDef.getName());
     }
