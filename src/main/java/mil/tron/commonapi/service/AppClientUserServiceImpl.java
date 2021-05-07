@@ -100,18 +100,17 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 							.method(item.getAppEndpoint().getMethod())
 							.deleted(item.getAppEndpoint().isDeleted())
 							.id(item.getId())
-							.requestPath(generateAppEndpointRequestPath(item.getAppSource().getAppSourcePath(), item.getAppEndpoint().getPath()))
+							.basePath(generateAppSourceBasePath(item.getAppSource().getAppSourcePath()))
 							.build())
 						.collect(Collectors.toList()))
 				.build();
 	}
 	
-	private String generateAppEndpointRequestPath(String appSourcePath, String appSourceEndpointPath) {
+	private String generateAppSourceBasePath(String appSourcePath) {
 		return ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path(apiPrefix + "/")
                 .path(appSourcePrefix + "/")
-                .path(appSourcePath + "/")
-                .path(appSourceEndpointPath)
+                .path(appSourcePath)
                 .toUriString();
 	}
 

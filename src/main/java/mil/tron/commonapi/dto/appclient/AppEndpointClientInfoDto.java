@@ -32,7 +32,7 @@ public class AppEndpointClientInfoDto {
     
     @Getter
     @Setter
-    String requestPath;
+    String basePath;
 
     @Getter
     @Setter
