@@ -160,9 +160,8 @@ public class PersonController {
 	@PreAuthorizeWrite
 	@PutMapping(value = "/{id}")
 	public ResponseEntity<Object> updatePerson(
-			@Parameter(name = "personId", description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
-			@Parameter(name = "person",
-				description = "Updated person", 
+			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
+			@Parameter(description = "Updated person", 
 				required = true, 
 				schema = @Schema(implementation = PersonDto.class))
 				@Valid @RequestBody PersonDto person) {
