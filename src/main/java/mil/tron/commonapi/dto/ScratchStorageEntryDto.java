@@ -26,9 +26,8 @@ public class ScratchStorageEntryDto {
 
     @Getter
     @Setter
-    @NotNull
-    private UUID appId;
-
+    private String value;
+    
     @Getter
     @Setter
     @NotNull
@@ -37,5 +36,8 @@ public class ScratchStorageEntryDto {
 
     @Getter
     @Setter
-    private String value;
+    @NotNull
+    private UUID appId;
+
+
 }

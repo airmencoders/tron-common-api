@@ -25,9 +25,7 @@ public class SubscriberDto {
 
     @Getter
     @Setter
-    @NotNull
-    @ValidSubscriberAddress
-    private String subscriberAddress;
+    private String secret;
 
     @Getter
     @Setter
@@ -36,5 +34,8 @@ public class SubscriberDto {
 
     @Getter
     @Setter
-    private String secret;
+    @NotNull
+    @ValidSubscriberAddress
+    private String subscriberAddress;
+
 }

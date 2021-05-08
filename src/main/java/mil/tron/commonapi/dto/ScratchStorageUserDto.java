@@ -21,13 +21,13 @@ public class ScratchStorageUserDto {
 
     @Getter
     @Setter
-    @Builder.Default
-    private UUID id = UUID.randomUUID();
-
-    @Getter
-    @Setter
     @NotNull
     @NotBlank
     @Email(message = "Malformed email address")
     private String email;
+
+    @Getter
+    @Setter
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 }
