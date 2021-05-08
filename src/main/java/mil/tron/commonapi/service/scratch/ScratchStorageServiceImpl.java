@@ -206,7 +206,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     }
 
     @Override
-    public ScratchStorageAppRegistryEntry addNewScratchAppName(ScratchStorageAppRegistryEntry entry) {
+    public ScratchStorageAppRegistryDto addNewScratchAppName(ScratchStorageAppRegistryDto entry) {
         if (entry.getId() == null) {
             entry.setId(UUID.randomUUID());
         }
@@ -216,31 +216,31 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             throw new ResourceAlreadyExistsException("Scratch Space app by that UUID or AppName already exists");
         }
 
-        return appRegistryRepo.save(entry);
+        return dtoMapper.map(appRegistryRepo
+                .save(dtoMapper.map(entry, ScratchStorageAppRegistryEntry.class)), ScratchStorageAppRegistryDto.class);
     }
 
     @Override
-    public ScratchStorageAppRegistryEntry editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryEntry entry) {
+    public ScratchStorageAppRegistryDto editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryDto entry) {
         if (!id.equals(entry.getId()))
             throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, entry.getId()));
 
-        if (!appRegistryRepo.existsById(entry.getId())) {
-            throw new RecordNotFoundException("Scratch Space app by that UUID does not exist");
-        }
-
         // check here for dups - even though at the db layer it will be inhibited -- albeit with a nasty 500 error there
-        Optional<ScratchStorageAppRegistryEntry> dbAppRegistry = appRegistryRepo.findById(id);
+        ScratchStorageAppRegistryEntry dbAppRegistry = appRegistryRepo
+                .findById(id)
+                .orElseThrow(() -> new RecordNotFoundException("Scratch Space app by that UUID does not exist"));
 
-        if (!dbAppRegistry.get().getAppName().equalsIgnoreCase(entry.getAppName()) &&
+        if (!dbAppRegistry.getAppName().equalsIgnoreCase(entry.getAppName()) &&
             appRegistryRepo.existsByAppNameIgnoreCase(entry.getAppName().trim())) {
             throw new ResourceAlreadyExistsException("Scratch space application with that name already exists");
         }
 
-        return appRegistryRepo.save(entry);
+        return dtoMapper.map(appRegistryRepo
+                .save(dtoMapper.map(entry, ScratchStorageAppRegistryEntry.class)), ScratchStorageAppRegistryDto.class);
     }
 
     @Override
-    public ScratchStorageAppRegistryEntry deleteScratchStorageApp(UUID id) {
+    public ScratchStorageAppRegistryDto deleteScratchStorageApp(UUID id) {
 
         ScratchStorageAppRegistryEntry app = appRegistryRepo.findById(id)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot delete non-existent app with UUID: " + id));
@@ -259,11 +259,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         appRegistryRepo.deleteById(id);
 
-        return app;
+        return dtoMapper.map(app, ScratchStorageAppRegistryDto.class);
     }
 
     @Override
-    public ScratchStorageAppRegistryEntry addUserPrivToApp(UUID appId, ScratchStorageAppUserPrivDto priv) {
+    public ScratchStorageAppRegistryDto addUserPrivToApp(UUID appId, ScratchStorageAppUserPrivDto priv) {
 
         ScratchStorageAppRegistryEntry app = appRegistryRepo.findById(appId)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot find app with UUID: " + appId));
@@ -287,13 +287,13 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         // save the app user priv entity to db
         appPrivRepo.save(entity);
-
         app.addUserAndPriv(entity);
-        return appRegistryRepo.save(app);
+
+        return dtoMapper.map(appRegistryRepo.save(app), ScratchStorageAppRegistryDto.class);
     }
 
     @Override
-    public ScratchStorageAppRegistryEntry removeUserPrivFromApp(UUID appId, UUID appPrivIdEntry) {
+    public ScratchStorageAppRegistryDto removeUserPrivFromApp(UUID appId, UUID appPrivIdEntry) {
 
         ScratchStorageAppRegistryEntry app = appRegistryRepo.findById(appId)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot find app with UUID: " + appId));
@@ -306,7 +306,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         // delete the priv combo
         appPrivRepo.deleteById(appPrivIdEntry);
 
-        return appRegistryRepo.save(app);
+        return dtoMapper.map(appRegistryRepo.save(app), ScratchStorageAppRegistryDto.class);
     }
 
     /**
@@ -461,10 +461,10 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      * @return the modified App record or throws exception if appId wasn't valid
      */
     @Override
-    public ScratchStorageAppRegistryEntry setImplicitReadForApp(UUID appId, boolean implicitRead) {
+    public ScratchStorageAppRegistryDto setImplicitReadForApp(UUID appId, boolean implicitRead) {
         ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
         appEntry.setAppHasImplicitRead(implicitRead);
-        return appRegistryRepo.save(appEntry);
+        return dtoMapper.map(appRegistryRepo.save(appEntry), ScratchStorageAppRegistryDto.class);
     }
 
     /**

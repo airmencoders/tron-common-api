@@ -2,6 +2,7 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
@@ -24,6 +25,7 @@ import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -50,6 +52,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     private static final String APP_SOURCE_NOT_FOUND_MSG = "No App Source found with id %s.";
     private static final String APP_SOURCE_NO_ENDPOINT_FOUND_MSG = "No App Source Endpoint found with id %s.";
     private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
+    private ModelMapper mapper = new ModelMapper();
 
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
@@ -246,7 +249,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                             .builder()
                             .id(UUID.randomUUID())
                             .email(email)
-                            .privileges(Lists.newArrayList(appSourcePriv))
+                            .privileges(Lists.newArrayList(mapper.map(appSourcePriv, PrivilegeDto.class)))
                             .build()));
         }
         else {

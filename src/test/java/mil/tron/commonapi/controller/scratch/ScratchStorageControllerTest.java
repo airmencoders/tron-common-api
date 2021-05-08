@@ -52,7 +52,7 @@ public class ScratchStorageControllerTest {
     private PrivilegeService privService;
 
     private List<ScratchStorageEntryDto> entries = new ArrayList<>();
-    private List<ScratchStorageAppRegistryEntry> registeredApps = new ArrayList<>();
+    private List<ScratchStorageAppRegistryDto> registeredApps = new ArrayList<>();
     private List<ScratchStorageAppUserPriv> registeredAppsUserPrivs = new ArrayList<>();
 
     private ScratchStorageUser user1 = ScratchStorageUser
@@ -89,13 +89,13 @@ public class ScratchStorageControllerTest {
                 .value("value")
                 .build());
 
-        registeredApps.add(ScratchStorageAppRegistryEntry
+        registeredApps.add(ScratchStorageAppRegistryDto
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("Area51")
                 .build());
 
-        registeredApps.add(ScratchStorageAppRegistryEntry
+        registeredApps.add(ScratchStorageAppRegistryDto
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("CoolApp")
@@ -262,7 +262,7 @@ public class ScratchStorageControllerTest {
 
         DtoMapper mapper = new DtoMapper();
         List<ScratchStorageAppRegistryDto> dtos = new ArrayList<>();
-        for (ScratchStorageAppRegistryEntry entry : registeredApps) {
+        for (ScratchStorageAppRegistryDto entry : registeredApps) {
             dtos.add(mapper.map(registeredApps, ScratchStorageAppRegistryDto.class));
         }
 
@@ -279,7 +279,7 @@ public class ScratchStorageControllerTest {
     	DtoMapper mapper = new DtoMapper();
     	
     	List<ScratchStorageAppRegistryDto> dtos = new ArrayList<>();
-    	for (ScratchStorageAppRegistryEntry entry : registeredApps) {
+    	for (ScratchStorageAppRegistryDto entry : registeredApps) {
             dtos.add(mapper.map(entry, ScratchStorageAppRegistryDto.class));
         }
     	
@@ -310,10 +310,10 @@ public class ScratchStorageControllerTest {
     void testAddNewRegisteredApp() throws Exception {
         // test we can add a new app
 
-        Mockito.when(service.addNewScratchAppName(Mockito.any(ScratchStorageAppRegistryEntry.class)))
+        Mockito.when(service.addNewScratchAppName(Mockito.any(ScratchStorageAppRegistryDto.class)))
                 .then(returnsFirstArg());
 
-        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+        ScratchStorageAppRegistryDto newEntry = ScratchStorageAppRegistryDto
                 .builder()
                 .id(null)
                 .appName("TestApp")
@@ -324,17 +324,17 @@ public class ScratchStorageControllerTest {
                 .content(OBJECT_MAPPER.writeValueAsString(newEntry)))
                 .andExpect(status().isCreated())
                 .andExpect(result ->
-                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryEntry.class).getAppName()));
+                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class).getAppName()));
     }
 
     @Test
     void testEditRegisteredApp() throws Exception {
         // test we can edit an existing app entry
 
-        Mockito.when(service.editExistingScratchAppEntry(Mockito.any(UUID.class), Mockito.any(ScratchStorageAppRegistryEntry.class)))
+        Mockito.when(service.editExistingScratchAppEntry(Mockito.any(UUID.class), Mockito.any(ScratchStorageAppRegistryDto.class)))
                 .then(returnsSecondArg());
 
-        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+        ScratchStorageAppRegistryDto newEntry = ScratchStorageAppRegistryDto
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("TestApp")
@@ -345,14 +345,14 @@ public class ScratchStorageControllerTest {
                 .content(OBJECT_MAPPER.writeValueAsString(newEntry)))
                 .andExpect(status().isOk())
                 .andExpect(result ->
-                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryEntry.class).getAppName()));
+                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class).getAppName()));
     }
 
     @Test
     void testDeleteRegisteredApp() throws Exception {
         // test we can delete a registered app
 
-        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+        ScratchStorageAppRegistryDto newEntry = ScratchStorageAppRegistryDto
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("TestApp")
@@ -363,13 +363,13 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(delete(SCRATCH_ENDPOINT + "{id}", newEntry.getId()))
                 .andExpect(status().isOk())
                 .andExpect(result ->
-                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryEntry.class).getAppName()));
+                        assertEquals(newEntry.getAppName(), OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class).getAppName()));
     }
 
     @Test
     void testAddingUserPrivToApp() throws Exception {
 
-        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+        ScratchStorageAppRegistryDto newEntry = ScratchStorageAppRegistryDto
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("TestApp")
@@ -405,7 +405,7 @@ public class ScratchStorageControllerTest {
     @Test
     void testRemovingUserPrivFromApp() throws Exception {
 
-        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+        ScratchStorageAppRegistryDto newEntry = ScratchStorageAppRegistryDto
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("TestApp")

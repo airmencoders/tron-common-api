@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.*;
-import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.exception.*;
 import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
@@ -343,7 +342,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201",
                     description = "App Registered OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body or app name already exists",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -356,7 +355,7 @@ public class ScratchStorageController {
     @PreAuthorizeDashboardAdmin
     @PostMapping("/apps")
     public ResponseEntity<Object> postNewScratchSpaceApp(
-            @Parameter(name = "entry", description = "New Application Information", required = true) @Valid @RequestBody ScratchStorageAppRegistryEntry entry) {
+            @Parameter(name = "entry", description = "New Application Information", required = true) @Valid @RequestBody ScratchStorageAppRegistryDto entry) {
         return new ResponseEntity<>(scratchStorageService.addNewScratchAppName(entry), HttpStatus.CREATED);
     }
 
@@ -365,7 +364,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Info Changed OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body / app name already exists or appId is malformed",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -382,7 +381,7 @@ public class ScratchStorageController {
     @PutMapping("/apps/{id}")
     public ResponseEntity<Object> editExistingAppEntry(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
-            @Parameter(name = "entry", description = "Application Information Object", required = true) @Valid @RequestBody ScratchStorageAppRegistryEntry entry) {
+            @Parameter(name = "entry", description = "Application Information Object", required = true) @Valid @RequestBody ScratchStorageAppRegistryDto entry) {
         return new ResponseEntity<>(scratchStorageService.editExistingScratchAppEntry(id, entry), HttpStatus.OK);
     }
 
@@ -391,7 +390,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Priv Added OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body / app name already exists or appId is malformed",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -410,7 +409,7 @@ public class ScratchStorageController {
             @Parameter(name = "priv", description = "Application User-Priv Object", required = true) @Valid @RequestBody ScratchStorageAppUserPrivDto priv) {
 
         checkUserIsDashBoardAdminOrScratchAdmin(id);
-        ScratchStorageAppRegistryEntry p = scratchStorageService.addUserPrivToApp(id, priv);
+        ScratchStorageAppRegistryDto p = scratchStorageService.addUserPrivToApp(id, priv);
         return new ResponseEntity<>(p, HttpStatus.OK);
     }
 
@@ -419,7 +418,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Modified OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed appId or query parameter",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -436,7 +435,7 @@ public class ScratchStorageController {
                 @RequestParam(name = "value", required = false, defaultValue = "false") boolean implicitRead) {
 
         checkUserIsDashBoardAdminOrScratchAdmin(id);
-        ScratchStorageAppRegistryEntry p = scratchStorageService.setImplicitReadForApp(id, implicitRead);
+        ScratchStorageAppRegistryDto p = scratchStorageService.setImplicitReadForApp(id, implicitRead);
         return new ResponseEntity<>(p, HttpStatus.OK);
     }
 
@@ -445,7 +444,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Priv Removed OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body / app name already exists or appId is malformed",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -469,7 +468,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Removed OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "AppId is malformed",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),

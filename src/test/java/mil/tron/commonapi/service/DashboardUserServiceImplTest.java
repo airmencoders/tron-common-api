@@ -2,6 +2,7 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.DashboardUserDto;
 
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -18,10 +19,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -49,6 +52,7 @@ public class DashboardUserServiceImplTest {
 
     private DashboardUser testDashboardUser;
     private DashboardUserDto testDashboardUserDto;
+    private ModelMapper mapper = new ModelMapper();
 
     @BeforeEach
     public void beforeEaschSetup() {
@@ -130,12 +134,20 @@ public class DashboardUserServiceImplTest {
             // Test updating email to one that already exists in database
             DashboardUserDto userWithEmail = new DashboardUserDto();
             userWithEmail.setEmail(testDashboardUser.getEmail());
-            userWithEmail.setPrivileges(new ArrayList<>(testDashboardUser.getPrivileges()));
+            userWithEmail.setPrivileges(new ArrayList<>(testDashboardUser
+                    .getPrivileges()
+                    .stream()
+                    .map(item -> mapper.map(item, PrivilegeDto.class))
+                    .collect(Collectors.toList())));
             UUID testId = userWithEmail.getId();
 
             DashboardUserDto existingUserWithEmail = new DashboardUserDto();
             existingUserWithEmail.setEmail(testDashboardUser.getEmail());
-            existingUserWithEmail.setPrivileges(new ArrayList<>(testDashboardUser.getPrivileges()));
+            existingUserWithEmail.setPrivileges(new ArrayList<>(testDashboardUser
+                    .getPrivileges()
+                    .stream()
+                    .map(item -> mapper.map(item, PrivilegeDto.class))
+                    .collect(Collectors.toList())));
 
             Mockito.when(dashboardUserRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testDashboardUser));
             Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(false);

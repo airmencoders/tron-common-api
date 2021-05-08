@@ -4,9 +4,6 @@ import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.ScratchStorageEntryDto;
 import mil.tron.commonapi.dto.ScratchStorageUserDto;
-import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
-import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
-import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 
 import java.util.UUID;
 
@@ -30,12 +27,12 @@ public interface ScratchStorageService {
      */
     Iterable<ScratchStorageAppRegistryDto> getAllScratchAppsContainingUser(String userEmail);
     ScratchStorageAppRegistryDto getRegisteredScratchApp(UUID appId);
-    ScratchStorageAppRegistryEntry addNewScratchAppName(ScratchStorageAppRegistryEntry entry);
-    ScratchStorageAppRegistryEntry editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryEntry entry);
-    ScratchStorageAppRegistryEntry deleteScratchStorageApp(UUID id);
-    ScratchStorageAppRegistryEntry addUserPrivToApp(UUID appId, ScratchStorageAppUserPrivDto priv);
-    ScratchStorageAppRegistryEntry removeUserPrivFromApp(UUID appId, UUID appPrivIdEntry);
-    ScratchStorageAppRegistryEntry setImplicitReadForApp(UUID appId, boolean implicitRead);
+    ScratchStorageAppRegistryDto addNewScratchAppName(ScratchStorageAppRegistryDto entry);
+    ScratchStorageAppRegistryDto editExistingScratchAppEntry(UUID id, ScratchStorageAppRegistryDto entry);
+    ScratchStorageAppRegistryDto deleteScratchStorageApp(UUID id);
+    ScratchStorageAppRegistryDto addUserPrivToApp(UUID appId, ScratchStorageAppUserPrivDto priv);
+    ScratchStorageAppRegistryDto removeUserPrivFromApp(UUID appId, UUID appPrivIdEntry);
+    ScratchStorageAppRegistryDto setImplicitReadForApp(UUID appId, boolean implicitRead);
 
     // scratch storage users management
     Iterable<ScratchStorageUserDto> getAllScratchUsers();

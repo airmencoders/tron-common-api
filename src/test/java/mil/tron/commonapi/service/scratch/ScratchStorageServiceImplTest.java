@@ -79,7 +79,7 @@ public class ScratchStorageServiceImplTest {
 
     private List<ScratchStorageEntry> entries = new ArrayList<>();
     private List<ScratchStorageAppRegistryEntry> registeredApps = new ArrayList<>();
-
+    private ModelMapper mapper = new ModelMapper();
     private ScratchStorageUser user1 = ScratchStorageUser
             .builder()
             .id(UUID.randomUUID())
@@ -144,14 +144,12 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testGetAllEntries() {
-        ModelMapper mapper = new ModelMapper();
         Mockito.when(repository.findAll()).thenReturn(entries);
         assertEquals(entries.stream().map(item -> mapper.map(item, ScratchStorageEntryDto.class)).collect(Collectors.toList()), service.getAllEntries());
     }
 
     @Test
     void testGetAllEntriesByApp() {
-        ModelMapper mapper = new ModelMapper();
         Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findAllByAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0)));
         assertEquals(Lists.newArrayList(mapper.map(entries.get(0), ScratchStorageEntryDto.class)), service.getAllEntriesByApp(entries.get(0).getAppId()));
@@ -178,7 +176,6 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testGetEntryById() {
-        ModelMapper mapper = new ModelMapper();
         Mockito.when(repository.findById(entries.get(0).getId()))
                 .thenReturn(Optional.of(entries.get(0)))
                 .thenReturn(Optional.empty());
@@ -190,7 +187,6 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testGetKeyValueByAppId() {
-        ModelMapper mapper = new ModelMapper();
         Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findByAppIdAndKey(entries.get(0).getId(), "hello"))
                 .thenReturn(Optional.of(entries.get(0)))
@@ -237,8 +233,6 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testDeleteKeyValuePairByAppId() {
-
-        ModelMapper mapper = new ModelMapper();
         Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
                 .thenReturn(Optional.of(entries.get(0))) // return an item first call
@@ -252,7 +246,6 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testDeleteAllPairsByAppId() {
-        ModelMapper mapper = new ModelMapper();
         Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findAllByAppId(Mockito.any(UUID.class))).thenReturn(entries);
         Mockito.doNothing().when(repository).deleteById(Mockito.any(UUID.class));
@@ -285,7 +278,7 @@ public class ScratchStorageServiceImplTest {
                 .thenReturn(false)
                 .thenReturn(true);
 
-        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+        ScratchStorageAppRegistryDto newEntry = ScratchStorageAppRegistryDto
                 .builder()
                 .id(null)
                 .appName("TestApp")
@@ -305,16 +298,15 @@ public class ScratchStorageServiceImplTest {
                 .appName("TestApp")
                 .build();
 
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class)))
-                .thenReturn(false)
-                .thenReturn(true);
+        ScratchStorageAppRegistryDto newEntryDto = mapper.map(newEntry, ScratchStorageAppRegistryDto.class);
 
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenThrow(new RecordNotFoundException("Not Found"))
                 .thenReturn(Optional.of(newEntry));
 
-        assertThrows(InvalidRecordUpdateRequest.class, () -> service.editExistingScratchAppEntry(UUID.randomUUID(), newEntry));
-        assertThrows(RecordNotFoundException.class, () -> service.editExistingScratchAppEntry(newEntry.getId(), newEntry));
-        assertEquals(newEntry, service.editExistingScratchAppEntry(newEntry.getId(), newEntry));
+        assertThrows(InvalidRecordUpdateRequest.class, () -> service.editExistingScratchAppEntry(UUID.randomUUID(), newEntryDto));
+        assertThrows(RecordNotFoundException.class, () -> service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto));
+        assertEquals(newEntryDto, service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto));
     }
 
     @Test
@@ -330,11 +322,13 @@ public class ScratchStorageServiceImplTest {
                 .appName("TestApp")
                 .build();
 
+        ScratchStorageAppRegistryDto newDto = mapper.map(newEntry, ScratchStorageAppRegistryDto.class);
+
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
                 .thenReturn(Optional.of(newEntry))
                 .thenReturn(Optional.empty());
 
-        assertEquals(newEntry, service.deleteScratchStorageApp(newEntry.getId()));
+        assertEquals(newDto, service.deleteScratchStorageApp(newEntry.getId()));
         assertThrows(RecordNotFoundException.class, () -> service.deleteScratchStorageApp(newEntry.getId()));
     }
 

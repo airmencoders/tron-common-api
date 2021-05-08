@@ -3,6 +3,7 @@ package mil.tron.commonapi.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import org.mockito.Mockito;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -47,6 +49,7 @@ public class DashboardUserControllerTest {
     private DashboardUserDto testDashboardUserDto;
     private String testDashboardUserJson;
     private List<DashboardUserDto> dashboardUsers;
+    private ModelMapper mapper = new ModelMapper();
 
     @BeforeEach
     public void beforeEachTest() throws JsonProcessingException {
@@ -54,8 +57,8 @@ public class DashboardUserControllerTest {
         testDashboardUserDto = new DashboardUserDto();
         testDashboardUserDto.setEmail("admin@mvc.com");
         Privilege priv = new Privilege((long)3,"DASHBOARD_ADMIN");
-        List<Privilege> privileges = new ArrayList<>();
-        privileges.add(priv);
+        List<PrivilegeDto> privileges = new ArrayList<>();
+        privileges.add(mapper.map(priv, PrivilegeDto.class));
         testDashboardUserDto.setPrivileges(privileges);
 
         testDashboardUserJson = OBJECT_MAPPER.writeValueAsString(testDashboardUserDto);

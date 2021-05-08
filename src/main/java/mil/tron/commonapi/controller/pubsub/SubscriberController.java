@@ -7,12 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
-import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
-import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
-import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
-import mil.tron.commonapi.entity.pubsub.PubSubLedger;
-import mil.tron.commonapi.entity.pubsub.Subscriber;
+import mil.tron.commonapi.dto.pubsub.PubSubLedgerEntryDto;
+import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.pubsub.EventManagerService;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
@@ -43,7 +39,7 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Subscriber.class))))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = SubscriberDto.class))))
     })
     @PreAuthorizeDashboardAdmin
     @GetMapping("")
@@ -56,10 +52,10 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Subscriber.class)))
+                    content = @Content(schema = @Schema(implementation = SubscriberDto.class)))
     })
     @PostMapping("")
-    public ResponseEntity<Subscriber> createSubscription(@Valid @RequestBody Subscriber subscriber) {
+    public ResponseEntity<SubscriberDto> createSubscription(@Valid @RequestBody SubscriberDto subscriber) {
         return new ResponseEntity<>(subService.upsertSubscription(subscriber), HttpStatus.OK);
     }
 
@@ -68,13 +64,13 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Subscriber.class))),
+                    content = @Content(schema = @Schema(implementation = SubscriberDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Record not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Subscriber> getSubscription(@PathVariable UUID id) {
+    public ResponseEntity<SubscriberDto> getSubscription(@PathVariable UUID id) {
         return new ResponseEntity<>(subService.getSubscriberById(id), HttpStatus.OK);
     }
 
@@ -83,7 +79,7 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Subscriber.class))),
+                    content = @Content(schema = @Schema(implementation = SubscriberDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Record not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -99,7 +95,7 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PubSubLedger.class))))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PubSubLedgerEntryDto.class))))
     })
     @GetMapping("/events/replay")
     public ResponseEntity<Object> getEventSinceDate(@RequestParam(name="sinceDateTime") @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") Date sinceDate) {

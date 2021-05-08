@@ -2,20 +2,27 @@ package mil.tron.commonapi.pubsub;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.pubsub.PubSubLedgerEntryDto;
 import mil.tron.commonapi.entity.pubsub.PubSubLedger;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.BadRequestException;
-import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.logging.CommonApiLogger;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.repository.pubsub.PubSubLedgerRepository;
 import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.assertj.core.util.Lists;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * This service manages the launching of the pubsub events, its methods
@@ -29,6 +36,7 @@ public class EventManagerServiceImpl implements EventManagerService {
 
     private static final Log APP_LOGGER = LogFactory.getLog(CommonApiLogger.class);
     private static final String LEDGER_ERROR = "Error pushing changes to pub-sub ledger";
+    private ModelMapper mapper = new ModelMapper();
 
     @Autowired
     private PubSubLedgerRepository pubSubLedgerRepository;
@@ -91,8 +99,12 @@ public class EventManagerServiceImpl implements EventManagerService {
      * @return List of ledger entries
      */
     @Override
-    public Iterable<PubSubLedger> getMessagesSinceDateTime(Date timeDateStamp) {
-        return pubSubLedgerRepository.findByDateCreatedGreaterThan(timeDateStamp);
+    public Iterable<PubSubLedgerEntryDto> getMessagesSinceDateTime(Date timeDateStamp) {
+        return Lists.newArrayList(pubSubLedgerRepository
+                .findByDateCreatedGreaterThan(timeDateStamp))
+                .stream()
+                .map(item -> mapper.map(item, PubSubLedgerEntryDto.class))
+                .collect(Collectors.toList());
     }
 
     /**
