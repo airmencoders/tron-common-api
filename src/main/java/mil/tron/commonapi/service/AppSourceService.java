@@ -8,12 +8,16 @@ import mil.tron.commonapi.entity.DashboardUser;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.core.io.Resource;
+
 public interface AppSourceService {
     List<AppSourceDto> getAppSources();
     AppSourceDetailsDto createAppSource(AppSourceDetailsDto appSource);
     AppSourceDetailsDto getAppSource(UUID id);
     AppSourceDetailsDto updateAppSource(UUID id, AppSourceDetailsDto appSourceDetailsDto);
     AppSourceDetailsDto deleteAppSource(UUID id);
+    Resource getApiSpecForAppSource(UUID id);
+    Resource getApiSpecForAppSourceByEndpointPriv(UUID id);
 
     // app source and app client endpoint management
     AppSourceDetailsDto deleteAllAppClientPrivs(UUID appSourceId);
@@ -26,4 +30,5 @@ public interface AppSourceService {
     void deleteAdminFromAllAppSources(DashboardUser user);
 
     boolean userIsAdminForAppSource(UUID appId, String email);
+    boolean userIsAdminForAppSourceByEndpoint(UUID endpointId, String email);
 }

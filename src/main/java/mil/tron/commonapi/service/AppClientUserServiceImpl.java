@@ -23,7 +23,9 @@ import org.assertj.core.util.Sets;
 import org.modelmapper.Converter;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.spi.MappingContext;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,6 +36,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
+	
+	private final String apiPrefix;
+	private final String appSourcePrefix;
 
 	private AppClientUserRespository appClientRepository;
 	private DashboardUserService dashboardUserService;
@@ -46,7 +51,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 									DashboardUserService dashboardUserService,
 									DashboardUserRepository dashboardUserRepository,
 									PrivilegeRepository privilegeRepository,
-									AppEndpointPrivRepository appEndpointPrivRepository) {
+									AppEndpointPrivRepository appEndpointPrivRepository,
+									@Value("${api-prefix.v1}") String apiPrefix,
+									@Value("${app-sources-prefix}") String appSourcePrefix) {
 
 		this.appClientRepository = appClientRepository;
 		this.dashboardUserService = dashboardUserService;
@@ -62,6 +69,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		
 		MODEL_MAPPER.addConverter(convertPrivilegesToSet);
 		MODEL_MAPPER.addConverter(convertPrivilegesToArr);
+		
+		this.apiPrefix = apiPrefix;
+		this.appSourcePrefix = appSourcePrefix;
 	}
 	
 	@Override
@@ -97,9 +107,18 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 							.method(item.getAppEndpoint().getMethod())
 							.deleted(item.getAppEndpoint().isDeleted())
 							.id(item.getId())
+							.basePath(generateAppSourceBasePath(item.getAppSource().getAppSourcePath()))
 							.build())
 						.collect(Collectors.toList()))
 				.build();
+	}
+	
+	private String generateAppSourceBasePath(String appSourcePath) {
+		return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path(apiPrefix + "/")
+                .path(appSourcePrefix + "/")
+                .path(appSourcePath)
+                .toUriString();
 	}
 
 	/**
