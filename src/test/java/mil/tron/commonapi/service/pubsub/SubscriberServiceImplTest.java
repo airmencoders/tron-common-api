@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service.pubsub;
 
+import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -14,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -30,7 +32,7 @@ public class SubscriberServiceImplTest {
     SubscriberRepository subscriberRepository;
 
     private Subscriber subscriber;
-
+    private ModelMapper mapper = new ModelMapper();
 
     @BeforeEach
     void setup() {
@@ -69,7 +71,7 @@ public class SubscriberServiceImplTest {
         Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class)))
             .thenAnswer(s -> s.getArgument(0));
 
-        var result = subscriberService.upsertSubscription(subscriber);
+        var result = subscriberService.upsertSubscription(mapper.map(subscriber, SubscriberDto.class));
         assertEquals(subscriber.getSecret(), result.getSecret());
         assertEquals(subscriber.getSubscribedEvent(), result.getSubscribedEvent());
         assertEquals(subscriber.getSubscriberAddress(), result.getSubscriberAddress());
@@ -84,7 +86,7 @@ public class SubscriberServiceImplTest {
         Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class)))
             .thenAnswer(s -> s.getArgument(0));
 
-        var result = subscriberService.upsertSubscription(Subscriber.builder()
+        var result = subscriberService.upsertSubscription(SubscriberDto.builder()
             .subscribedEvent(subscriber.getSubscribedEvent())
             .subscriberAddress(subscriber.getSubscriberAddress())
             .secret("new secret")

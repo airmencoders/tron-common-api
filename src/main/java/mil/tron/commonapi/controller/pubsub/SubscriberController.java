@@ -9,8 +9,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.EventInfoDto;
-import mil.tron.commonapi.entity.pubsub.PubSubLedger;
-import mil.tron.commonapi.entity.pubsub.Subscriber;
+import mil.tron.commonapi.dto.pubsub.PubSubLedgerEntryDto;
+import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.pubsub.EventManagerService;
@@ -45,7 +45,7 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Subscriber.class))))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = SubscriberDto.class))))
     })
     @PreAuthorizeDashboardAdmin
     @GetMapping("")
@@ -58,10 +58,10 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Subscriber.class)))
+                    content = @Content(schema = @Schema(implementation = SubscriberDto.class)))
     })
     @PostMapping("")
-    public ResponseEntity<Subscriber> createSubscription(@Valid @RequestBody Subscriber subscriber) {
+    public ResponseEntity<SubscriberDto> createSubscription(@Valid @RequestBody SubscriberDto subscriber) {
         return new ResponseEntity<>(subService.upsertSubscription(subscriber), HttpStatus.OK);
     }
 
@@ -70,13 +70,13 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Subscriber.class))),
+                    content = @Content(schema = @Schema(implementation = SubscriberDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Record not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Subscriber> getSubscription(@PathVariable UUID id) {
+    public ResponseEntity<SubscriberDto> getSubscription(@PathVariable UUID id) {
         return new ResponseEntity<>(subService.getSubscriberById(id), HttpStatus.OK);
     }
 
@@ -85,7 +85,7 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = Subscriber.class))),
+                    content = @Content(schema = @Schema(implementation = SubscriberDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Record not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -102,7 +102,7 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PubSubLedger.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PubSubLedgerEntryDto.class)))),
             @ApiResponse(responseCode = "400",
                     description = "Bad Request - malformed date/time",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = BadRequestException.class))))
@@ -132,7 +132,7 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PubSubLedger.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PubSubLedgerEntryDto.class)))),
             @ApiResponse(responseCode = "400",
                     description = "Bad Request - malformed date/time",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = BadRequestException.class))))

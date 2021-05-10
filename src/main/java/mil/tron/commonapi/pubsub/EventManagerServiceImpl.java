@@ -2,7 +2,9 @@ package mil.tron.commonapi.pubsub;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import liquibase.pro.packaged.M;
 import mil.tron.commonapi.dto.EventInfoDto;
+import mil.tron.commonapi.dto.pubsub.PubSubLedgerEntryDto;
 import mil.tron.commonapi.entity.pubsub.PubSubLedger;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -13,11 +15,16 @@ import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.assertj.core.util.Lists;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +39,7 @@ public class EventManagerServiceImpl implements EventManagerService {
 
     private static final Log APP_LOGGER = LogFactory.getLog(CommonApiLogger.class);
     private static final String LEDGER_ERROR = "Error pushing changes to pub-sub ledger";
+    private ModelMapper mapper = new ModelMapper();
 
     @Autowired
     private PubSubLedgerRepository pubSubLedgerRepository;
@@ -43,6 +51,7 @@ public class EventManagerServiceImpl implements EventManagerService {
     private HttpServletRequest servletRequest;
 
     private ObjectMapper objectMapper = new ObjectMapper();
+    private final ModelMapper modelMapper = new ModelMapper();
 
     /**
      * Records a pub-sub event to the ledger and passes the message on to the EventPublisher for broadcast
@@ -94,8 +103,12 @@ public class EventManagerServiceImpl implements EventManagerService {
      * @return List of ledger entries
      */
     @Override
-    public Iterable<PubSubLedger> getMessagesSinceDateTime(Date timeDateStamp) {
-        return pubSubLedgerRepository.findByDateCreatedGreaterThan(timeDateStamp);
+    public Iterable<PubSubLedgerEntryDto> getMessagesSinceDateTime(Date timeDateStamp) {
+        return Lists.newArrayList(pubSubLedgerRepository
+                .findByDateCreatedGreaterThan(timeDateStamp))
+                .stream()
+                .map(item -> mapper.map(item, PubSubLedgerEntryDto.class))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -124,11 +137,11 @@ public class EventManagerServiceImpl implements EventManagerService {
      * @return List of ledger entries containing only the supplied event types
      */
     @Override
-    public Iterable<PubSubLedger> getMessagesSinceEventCountByType(List<EventInfoDto> events) {
+    public Iterable<PubSubLedgerEntryDto> getMessagesSinceEventCountByType(List<EventInfoDto> events) {
 
         // for each of the objects (EventInfoDto) given in the input list, find their date/time in the ledger
         //  so we can find which is the oldest later on
-        List<PubSubLedger> entries = new ArrayList<>();
+        List<PubSubLedgerEntryDto> entries = new ArrayList<>();
         Map<EventType, Long> eventsMap = new HashMap<>();
         for (EventInfoDto dto : events) {
             if (dto.getEventCount() < 0L)
@@ -137,7 +150,7 @@ public class EventManagerServiceImpl implements EventManagerService {
             eventsMap.put(dto.getEventType(), dto.getEventCount());
             pubSubLedgerRepository
                     .findByEventTypeEqualsAndCountForEventTypeEquals(dto.getEventType(), dto.getEventCount() + 1L) // incr count by one to get next one
-                    .ifPresent(entries::add);
+                    .ifPresent(item -> entries.add(mapper.map(item, PubSubLedgerEntryDto.class)));
         }
 
         if (entries.isEmpty())
@@ -160,7 +173,10 @@ public class EventManagerServiceImpl implements EventManagerService {
                 .stream()
                 .filter(item -> eventsMap.containsKey(item.getEventType())
                         && item.getCountForEventType() > eventsMap.get(item.getEventType()))
-                .collect(Collectors.toList());
+                .collect(Collectors.toList())
+                    .stream()
+                    .map(item -> mapper.map(item, PubSubLedgerEntryDto.class))
+                    .collect(Collectors.toList());
     }
 
 }

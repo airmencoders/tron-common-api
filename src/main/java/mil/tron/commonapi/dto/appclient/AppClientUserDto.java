@@ -2,7 +2,7 @@ package mil.tron.commonapi.dto.appclient;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
-import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.dto.PrivilegeDto;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -24,7 +24,7 @@ public class AppClientUserDto {
 	@Getter
 	@Setter
 	@Builder.Default
-	private List<Privilege> privileges = new ArrayList<>();
+	private List<PrivilegeDto> privileges = new ArrayList<>();
 
 	@Getter
 	@Setter

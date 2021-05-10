@@ -6,9 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import lombok.val;
-import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
@@ -454,7 +455,7 @@ public class AppSourceIntegrationTest {
         boolean foundUser1Priv = false;
         for (DashboardUserDto d : users) {
            if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
-               for (Privilege p : d.getPrivileges()) {
+               for (PrivilegeDto p : d.getPrivileges()) {
                    if (p.getName().equals("APP_SOURCE_ADMIN")) {
                        foundAdminsPriv = true;
                        break;
@@ -462,7 +463,7 @@ public class AppSourceIntegrationTest {
                }
            }
            else if (d.getEmail().equalsIgnoreCase(USER1_EMAIL)) {
-               for (Privilege p : d.getPrivileges()) {
+               for (PrivilegeDto p : d.getPrivileges()) {
                    if (p.getName().equals("APP_SOURCE_ADMIN")) {
                        foundUser1Priv = true;
                        break;
@@ -590,7 +591,7 @@ public class AppSourceIntegrationTest {
         boolean foundUser4Priv = false;
         for (DashboardUserDto d : users) {
             if (d.getEmail().equalsIgnoreCase(USER4_EMAIL)) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("APP_SOURCE_ADMIN")) {
                         foundUser4Priv = true;
                         break;
@@ -630,7 +631,7 @@ public class AppSourceIntegrationTest {
                 foundAdminUser = true;
 
                 // make sure admin does have the app_source_admin anymore, not needed
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equalsIgnoreCase("APP_SOURCE_ADMIN")) {
                         adminHasNoMoreAppSourceAdmin = false;
                         break;
@@ -718,7 +719,7 @@ public class AppSourceIntegrationTest {
         boolean foundPriv = false;
         for (DashboardUserDto d : dtos) {
             if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equalsIgnoreCase("APP_SOURCE_ADMIN")) {
                         foundPriv = true;
                         break;
@@ -915,7 +916,7 @@ public class AppSourceIntegrationTest {
         boolean foundAdminsPriv = false;
         for (DashboardUserDto d : users) {
             if (d.getEmail().equalsIgnoreCase("tester@test.com")) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("APP_SOURCE_ADMIN")) {
                         foundAdminsPriv = true;
                         break;

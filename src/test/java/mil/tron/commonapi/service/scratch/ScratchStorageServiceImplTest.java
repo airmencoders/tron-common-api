@@ -4,6 +4,8 @@ package mil.tron.commonapi.service.scratch;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.ScratchStorageEntryDto;
+import mil.tron.commonapi.dto.ScratchStorageUserDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
@@ -27,8 +29,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -75,7 +79,7 @@ public class ScratchStorageServiceImplTest {
 
     private List<ScratchStorageEntry> entries = new ArrayList<>();
     private List<ScratchStorageAppRegistryEntry> registeredApps = new ArrayList<>();
-
+    private ModelMapper mapper = new ModelMapper();
     private ScratchStorageUser user1 = ScratchStorageUser
             .builder()
             .id(UUID.randomUUID())
@@ -141,14 +145,14 @@ public class ScratchStorageServiceImplTest {
     @Test
     void testGetAllEntries() {
         Mockito.when(repository.findAll()).thenReturn(entries);
-        assertEquals(entries, service.getAllEntries());
+        assertEquals(entries.stream().map(item -> mapper.map(item, ScratchStorageEntryDto.class)).collect(Collectors.toList()), service.getAllEntries());
     }
 
     @Test
     void testGetAllEntriesByApp() {
         Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(repository.findAllByAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0)));
-        assertEquals(Lists.newArrayList(entries.get(0)), service.getAllEntriesByApp(entries.get(0).getAppId()));
+        assertEquals(Lists.newArrayList(mapper.map(entries.get(0), ScratchStorageEntryDto.class)), service.getAllEntriesByApp(entries.get(0).getAppId()));
     }
 
     @Test
@@ -176,7 +180,7 @@ public class ScratchStorageServiceImplTest {
                 .thenReturn(Optional.of(entries.get(0)))
                 .thenReturn(Optional.empty());
 
-        assertEquals(entries.get(0), service.getEntryById(entries.get(0).getId()));
+        assertEquals(mapper.map(entries.get(0), ScratchStorageEntryDto.class), service.getEntryById(entries.get(0).getId()));
         assertThrows(RecordNotFoundException.class, () -> service.getEntryById(entries.get(0).getId()));
 
     }
@@ -188,7 +192,7 @@ public class ScratchStorageServiceImplTest {
                 .thenReturn(Optional.of(entries.get(0)))
                 .thenReturn(Optional.empty());
 
-        assertEquals(entries.get(0), service.getKeyValueEntryByAppId(entries.get(0).getId(), "hello"));
+        assertEquals(mapper.map(entries.get(0), ScratchStorageEntryDto.class), service.getKeyValueEntryByAppId(entries.get(0).getId(), "hello"));
         assertThrows(RecordNotFoundException.class, () -> service.getKeyValueEntryByAppId(entries.get(0).getId(), "hello"));
     }
     
@@ -220,10 +224,10 @@ public class ScratchStorageServiceImplTest {
 
         Mockito.when(repository.save(Mockito.any(ScratchStorageEntry.class))).then(returnsFirstArg());
 
-        ScratchStorageEntry entry = service.setKeyValuePair(entries.get(0).getAppId(), entries.get(0).getKey(), "new value");
+        ScratchStorageEntryDto entry = service.setKeyValuePair(entries.get(0).getAppId(), entries.get(0).getKey(), "new value");
         assertEquals("new value", entry.getValue());
 
-        ScratchStorageEntry newEntry = service.setKeyValuePair(entries.get(0).getAppId(), entries.get(0).getKey(), "new value");
+        ScratchStorageEntryDto newEntry = service.setKeyValuePair(entries.get(0).getAppId(), entries.get(0).getKey(), "new value");
         assertEquals("new value", entry.getValue());
     }
 
@@ -236,7 +240,7 @@ public class ScratchStorageServiceImplTest {
 
         Mockito.doNothing().when(repository).deleteByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString());
 
-        assertEquals(entries.get(0), service.deleteKeyValuePair(entries.get(0).getId(), entries.get(0).getKey()));
+        assertEquals(mapper.map(entries.get(0), ScratchStorageEntryDto.class), service.deleteKeyValuePair(entries.get(0).getId(), entries.get(0).getKey()));
         assertThrows(RecordNotFoundException.class, () -> service.deleteKeyValuePair(entries.get(0).getId(), entries.get(0).getKey()));
     }
 
@@ -246,7 +250,11 @@ public class ScratchStorageServiceImplTest {
         Mockito.when(repository.findAllByAppId(Mockito.any(UUID.class))).thenReturn(entries);
         Mockito.doNothing().when(repository).deleteById(Mockito.any(UUID.class));
 
-        assertEquals(entries, service.deleteAllKeyValuePairsForAppId(UUID.randomUUID()));
+        assertEquals(entries
+                .stream()
+                .map(item -> mapper.map(item, ScratchStorageEntryDto.class))
+                .collect(Collectors.toList())
+                    , service.deleteAllKeyValuePairsForAppId(UUID.randomUUID()));
     }
 
     // test scratch space app registration services
@@ -270,7 +278,7 @@ public class ScratchStorageServiceImplTest {
                 .thenReturn(false)
                 .thenReturn(true);
 
-        ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
+        ScratchStorageAppRegistryDto newEntry = ScratchStorageAppRegistryDto
                 .builder()
                 .id(null)
                 .appName("TestApp")
@@ -290,16 +298,15 @@ public class ScratchStorageServiceImplTest {
                 .appName("TestApp")
                 .build();
 
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class)))
-                .thenReturn(false)
-                .thenReturn(true);
+        ScratchStorageAppRegistryDto newEntryDto = mapper.map(newEntry, ScratchStorageAppRegistryDto.class);
 
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenThrow(new RecordNotFoundException("Not Found"))
                 .thenReturn(Optional.of(newEntry));
 
-        assertThrows(InvalidRecordUpdateRequest.class, () -> service.editExistingScratchAppEntry(UUID.randomUUID(), newEntry));
-        assertThrows(RecordNotFoundException.class, () -> service.editExistingScratchAppEntry(newEntry.getId(), newEntry));
-        assertEquals(newEntry, service.editExistingScratchAppEntry(newEntry.getId(), newEntry));
+        assertThrows(InvalidRecordUpdateRequest.class, () -> service.editExistingScratchAppEntry(UUID.randomUUID(), newEntryDto));
+        assertThrows(RecordNotFoundException.class, () -> service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto));
+        assertEquals(newEntryDto, service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto));
     }
 
     @Test
@@ -315,11 +322,13 @@ public class ScratchStorageServiceImplTest {
                 .appName("TestApp")
                 .build();
 
+        ScratchStorageAppRegistryDto newDto = mapper.map(newEntry, ScratchStorageAppRegistryDto.class);
+
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
                 .thenReturn(Optional.of(newEntry))
                 .thenReturn(Optional.empty());
 
-        assertEquals(newEntry, service.deleteScratchStorageApp(newEntry.getId()));
+        assertEquals(newDto, service.deleteScratchStorageApp(newEntry.getId()));
         assertThrows(RecordNotFoundException.class, () -> service.deleteScratchStorageApp(newEntry.getId()));
     }
 
@@ -430,7 +439,7 @@ public class ScratchStorageServiceImplTest {
 
         Mockito.when(scratchUserRepo.save(Mockito.any(ScratchStorageUser.class))).then(returnsFirstArg());
 
-        ScratchStorageUser newUser = ScratchStorageUser
+        ScratchStorageUserDto newUser = ScratchStorageUserDto
                 .builder()
                 .id(null)
                 .email("john@test.com")
@@ -449,7 +458,7 @@ public class ScratchStorageServiceImplTest {
 
         Mockito.when(scratchUserRepo.save(Mockito.any(ScratchStorageUser.class))).then(returnsFirstArg());
 
-        ScratchStorageUser newUser = ScratchStorageUser
+        ScratchStorageUserDto newUser = ScratchStorageUserDto
                 .builder()
                 .id(UUID.randomUUID())
                 .email("john@test.com")

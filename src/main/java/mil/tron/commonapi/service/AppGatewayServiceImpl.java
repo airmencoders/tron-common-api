@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
