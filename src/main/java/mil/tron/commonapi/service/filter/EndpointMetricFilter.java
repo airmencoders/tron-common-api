@@ -1,22 +1,5 @@
 package mil.tron.commonapi.service.filter;
 
-import java.io.IOException;
-import java.util.Locale;
-
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMethod;
-
 import io.micrometer.core.instrument.MeterRegistry;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
@@ -24,6 +7,16 @@ import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 
 @Component
 @ConditionalOnProperty("metrics.gateway.count")

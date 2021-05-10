@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.val;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
@@ -32,6 +33,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.*;
@@ -85,6 +87,7 @@ public class AppSourceServiceImplTest {
     private AppEndpoint appEndpoint;
     private Set<AppEndpoint> appEndpoints = new HashSet<>();
     private List<AppEndpointDto> appEndpointDtos;
+    private ModelMapper mapper = new ModelMapper();
 
     @BeforeEach
     void setup() {
@@ -400,7 +403,12 @@ public class AppSourceServiceImplTest {
 		Mockito.when(dashboardUserService.createDashboardUserDto(Mockito.any())).thenReturn(DashboardUserDto
 				.builder()
 				.id(newUser2.getId())
-				.privileges(Lists.newArrayList(newUser2.getPrivileges()))
+				.privileges(Lists
+						.newArrayList(newUser2
+								.getPrivileges()
+									.stream()
+									.map(item -> mapper.map(item, PrivilegeDto.class))
+									.collect(Collectors.toList())))
 				.email(newUser2.getEmail())
 				.build());
 		Mockito.when(dashboardUserService.convertToEntity(Mockito.any())).thenReturn(newUser2);
