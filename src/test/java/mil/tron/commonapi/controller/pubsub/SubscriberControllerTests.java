@@ -2,6 +2,7 @@ package mil.tron.commonapi.controller.pubsub;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.dto.EventInfoDto;
 import mil.tron.commonapi.entity.pubsub.PubSubLedger;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
@@ -20,9 +21,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -96,7 +95,7 @@ public class SubscriberControllerTests {
     }
 
     @Test
-    void testGetLedgerEntries() throws Exception {
+    void testGetLedgerEntriesSinceDateTime() throws Exception {
         Mockito.when(eventManagerService.getMessagesSinceDateTime(Mockito.any(Date.class)))
                 .thenReturn(
                         Lists.newArrayList(PubSubLedger.builder().build()));
@@ -108,8 +107,30 @@ public class SubscriberControllerTests {
     }
 
     @Test
+    void testGetLedgerEntriesSinceEventCountAndType() throws Exception {
+        Mockito.when(eventManagerService.getMessagesSinceEventCountByType(Mockito.anyList()))
+                .thenReturn(Set.of(PubSubLedger.builder().eventType(EventType.PERSON_CHANGE).countForEventType(1L).build()));
+
+        mockMvc.perform(post(ENDPOINT + "/events/replay-events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(
+                        Lists.newArrayList(
+                                EventInfoDto
+                                    .builder()
+                                    .eventCount(1L)
+                                    .eventType(EventType.PERSON_CHANGE)
+                                    .build(),
+                                EventInfoDto
+                                    .builder()
+                                    .eventCount(2L)
+                                    .eventType(EventType.PERSON_DELETE)
+                                    .build()))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void testGetEventCounts() throws Exception {
-        Mockito.when(eventManagerService.getEventTypeCounts()).thenReturn(new HashMap<>());
+        Mockito.when(eventManagerService.getEventTypeCounts()).thenReturn(new ArrayList<>());
         mockMvc.perform(get(ENDPOINT + "/events/latest")).andExpect(status().isOk());
     }
 
