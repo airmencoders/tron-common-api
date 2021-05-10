@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -41,8 +40,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @TestPropertySource(locations = "classpath:application-test.properties")
 @AutoConfigureMockMvc
-@Test
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class PubSubRecallEventsIntegrationTest {
 
     private static final String ENDPOINT = "/v1/subscriptions/";
@@ -151,13 +148,6 @@ public class PubSubRecallEventsIntegrationTest {
         pubSubLedgerRepository.saveAll(entries);
 
     }
-
-    @AfterEach
-    void cleanUp() {
-        pubSubLedgerRepository.deleteAllInBatch();
-        pubSubLedgerRepository.flush();
-    }
-
 
     @Test
     @Transactional
