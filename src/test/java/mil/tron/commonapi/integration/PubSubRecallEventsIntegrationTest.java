@@ -6,7 +6,6 @@ import mil.tron.commonapi.dto.EventInfoDto;
 import mil.tron.commonapi.entity.pubsub.PubSubLedger;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.repository.pubsub.PubSubLedgerRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
