@@ -6,6 +6,7 @@ import mil.tron.commonapi.dto.EventInfoDto;
 import mil.tron.commonapi.entity.pubsub.PubSubLedger;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.repository.pubsub.PubSubLedgerRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -146,6 +147,12 @@ public class PubSubRecallEventsIntegrationTest {
         // populate our ledger
         pubSubLedgerRepository.saveAll(entries);
 
+    }
+
+    @AfterEach
+    void cleanUp() {
+        pubSubLedgerRepository.deleteAllInBatch();
+        pubSubLedgerRepository.flush();
     }
 
     @Test
