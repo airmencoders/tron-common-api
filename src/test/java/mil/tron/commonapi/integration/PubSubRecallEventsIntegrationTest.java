@@ -144,6 +144,9 @@ public class PubSubRecallEventsIntegrationTest {
     @BeforeEach
     void setup() {
 
+        pubSubLedgerRepository.deleteAllInBatch();
+        pubSubLedgerRepository.flush();
+
         // populate our ledger
         pubSubLedgerRepository.saveAll(entries);
 
