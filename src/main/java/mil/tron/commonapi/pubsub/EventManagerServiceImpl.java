@@ -46,7 +46,6 @@ public class EventManagerServiceImpl implements EventManagerService {
     private HttpServletRequest servletRequest;
 
     private ObjectMapper objectMapper = new ObjectMapper();
-    private final ModelMapper modelMapper = new ModelMapper();
 
     /**
      * Records a pub-sub event to the ledger and passes the message on to the EventPublisher for broadcast
