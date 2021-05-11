@@ -1,9 +1,10 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDetailsDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
-import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.appclient.AppEndpointClientInfoDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -20,8 +21,11 @@ import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.modelmapper.Converter;
+import org.modelmapper.ModelMapper;
 import org.modelmapper.spi.MappingContext;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,18 +36,24 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
+	
+	private final String apiPrefix;
+	private final String appSourcePrefix;
 
 	private AppClientUserRespository appClientRepository;
 	private DashboardUserService dashboardUserService;
 	private PrivilegeRepository privilegeRepository;
 	private DashboardUserRepository dashboardUserRepository;
 	private AppEndpointPrivRepository appEndpointPrivRepository;
+	private ModelMapper mapper = new ModelMapper();
 
 	public AppClientUserServiceImpl(AppClientUserRespository appClientRepository,
 									DashboardUserService dashboardUserService,
 									DashboardUserRepository dashboardUserRepository,
 									PrivilegeRepository privilegeRepository,
-									AppEndpointPrivRepository appEndpointPrivRepository) {
+									AppEndpointPrivRepository appEndpointPrivRepository,
+									@Value("${api-prefix.v1}") String apiPrefix,
+									@Value("${app-sources-prefix}") String appSourcePrefix) {
 
 		this.appClientRepository = appClientRepository;
 		this.dashboardUserService = dashboardUserService;
@@ -59,6 +69,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		
 		MODEL_MAPPER.addConverter(convertPrivilegesToSet);
 		MODEL_MAPPER.addConverter(convertPrivilegesToArr);
+		
+		this.apiPrefix = apiPrefix;
+		this.appSourcePrefix = appSourcePrefix;
 	}
 	
 	@Override
@@ -81,7 +94,11 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 						.stream()
 						.map(DashboardUser::getEmail)
 						.collect(Collectors.toList()))
-				.privileges(Lists.newArrayList(client.getPrivileges()))
+				.privileges(Lists.newArrayList(client
+						.getPrivileges()
+						.stream()
+						.map(item -> mapper.map(item, PrivilegeDto.class))
+						.collect(Collectors.toList())))
 				.appEndpointPrivs(client.getAppEndpointPrivs()
 						.stream()
 						.map(item -> AppEndpointClientInfoDto.builder()
@@ -90,9 +107,18 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 							.method(item.getAppEndpoint().getMethod())
 							.deleted(item.getAppEndpoint().isDeleted())
 							.id(item.getId())
+							.basePath(generateAppSourceBasePath(item.getAppSource().getAppSourcePath()))
 							.build())
 						.collect(Collectors.toList()))
 				.build();
+	}
+	
+	private String generateAppSourceBasePath(String appSourcePath) {
+		return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path(apiPrefix + "/")
+                .path(appSourcePrefix + "/")
+                .path(appSourcePath)
+                .toUriString();
 	}
 
 	/**
@@ -118,7 +144,11 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		AppClientUser newUser = AppClientUser.builder()
 				.id(appClient.getId())
 				.name(appClient.getName())
-				.privileges(new HashSet<>(appClient.getPrivileges()))
+				.privileges(new HashSet<>(appClient
+						.getPrivileges()
+						.stream()
+						.map(item -> mapper.map(item, Privilege.class))
+						.collect(Collectors.toList())))
 				.build();
 		
 		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(newUser, appClient)));
@@ -148,7 +178,10 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 			throw new InvalidRecordUpdateRequest(String.format("Client Name: %s is already in use.", appClient.getName()));
 		}
 
-		dbUser.setPrivileges(new HashSet<>(appClient.getPrivileges()));
+		dbUser.setPrivileges(new HashSet<>(appClient.getPrivileges()
+				.stream()
+				.map(item -> mapper.map(item, Privilege.class))
+				.collect(Collectors.toList())));
 
 		// save/update and return
 		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(dbUser, appClient)));
@@ -266,7 +299,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 							.builder()
 							.id(UUID.randomUUID())
 							.email(email)
-							.privileges(Lists.newArrayList(appClientPriv))
+							.privileges(Lists.newArrayList(mapper.map(appClientPriv, PrivilegeDto.class)))
 							.build()));
 		}
 		else {

@@ -42,6 +42,16 @@ public class AppSourceDetailsDto {
     @Getter
     @Setter
     @Builder.Default
+    private Integer endpointCount = 0;
+
+    @Getter
+    @Setter
+    @Builder.Default
+    private Integer clientCount = 0;
+    
+    @Getter
+    @Setter
+    @Builder.Default
     @Valid
     private List<String> appSourceAdminUserEmails = new ArrayList<>();
 

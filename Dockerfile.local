@@ -14,7 +14,7 @@ COPY . .
 RUN rm -rf target/
 RUN mvn package -Dmaven.test.skip=true
 VOLUME /tmp
-COPY target/*.jar /app/commonapi.jar
+COPY target/common-api.jar /app/commonapi.jar
 
 # Copy the wget binaries build in stage 1
 COPY --from=wgetsrc /usr/bin/wget /usr/bin

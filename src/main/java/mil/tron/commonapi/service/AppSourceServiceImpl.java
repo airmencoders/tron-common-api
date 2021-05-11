@@ -2,6 +2,7 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
@@ -24,7 +25,11 @@ import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -36,7 +41,7 @@ import java.util.stream.StreamSupport;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 
-@Service
+@Service("appSourceService")
 public class AppSourceServiceImpl implements AppSourceService {
 
     private AppSourceRepository appSourceRepository;
@@ -49,8 +54,15 @@ public class AppSourceServiceImpl implements AppSourceService {
     private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
     private static final String APP_SOURCE_NOT_FOUND_MSG = "No App Source found with id %s.";
     private static final String APP_SOURCE_NO_ENDPOINT_FOUND_MSG = "No App Source Endpoint found with id %s.";
+    private static final String APP_SOURCE_WITH_APP_ENDPOINT_NOT_FOUND_MSG = "No App Source found with App Endpoint that has id %s.";
     private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
+    private ModelMapper mapper = new ModelMapper();
+    private static final String APP_API_SPEC_NOT_FOUND_MSG = "Could not find API Specification for App Source with id %s.";
+    private String appSourceApiDefinitionsLocation;
 
+
+    // Per Sonarqube documentation, this shouldn't even be flagged for S107. It is though, and we should ignore it.
+    @java.lang.SuppressWarnings("squid:S00107")
     @Autowired
     public AppSourceServiceImpl(AppSourceRepository appSourceRepository,
                                 AppEndpointPrivRepository appEndpointPrivRepository,
@@ -58,7 +70,9 @@ public class AppSourceServiceImpl implements AppSourceService {
                                 AppClientUserRespository appClientUserRespository,
                                 PrivilegeRepository privilegeRepository,
                                 DashboardUserRepository dashboardUserRepository,
-                                DashboardUserService dashboardUserService) {
+                                DashboardUserService dashboardUserService,
+                                @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation)
+    {
         this.appSourceRepository = appSourceRepository;
         this.appEndpointPrivRepository = appEndpointPrivRepository;
         this.appEndpointRepository = appEndpointRepository;
@@ -66,6 +80,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.dashboardUserRepository = dashboardUserRepository;
         this.privilegeRepository = privilegeRepository;
         this.dashboardUserService = dashboardUserService;
+        this.appSourceApiDefinitionsLocation = appSourceApiDefinitionsLocation;
     }
 
     @Override
@@ -76,8 +91,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .map(appSource -> AppSourceDto.builder().id(appSource.getId())
                         .name(appSource.getName())
                         .endpointCount(appSource.getAppEndpoints().size())
-                        .clientCount(appSource.getAppPrivs()
-                  			  .stream().collect(groupingBy(AppEndpointPriv::getAppClientUser, counting())).size())
+                        .clientCount(getAppSourceUniqueClientCount(appSource.getAppPrivs()))
                         .build()).collect(Collectors.toList());
     }
 
@@ -145,6 +159,10 @@ public class AppSourceServiceImpl implements AppSourceService {
             .findAny()
             .orElseThrow(() ->new RecordNotFoundException(String.format("No app endpoint with id %s found.", appEndpointId)));
     }
+    
+    private int getAppSourceUniqueClientCount(Set<AppEndpointPriv> privileges) {
+    	return privileges.stream().collect(groupingBy(AppEndpointPriv::getAppClientUser, counting())).size();
+    }
 
     private AppSourceDetailsDto buildAppSourceDetailsDto(AppSource appSource) {
         return AppSourceDetailsDto.builder()
@@ -157,6 +175,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .requestType(appEndpoint.getMethod().toString())
                         .deleted(appEndpoint.isDeleted())
                         .build()).collect(Collectors.toList()))
+                .endpointCount(appSource.getAppEndpoints().size())
                 .appClients(appSource.getAppPrivs().stream()
                     .map(appEndpointPriv -> AppClientUserPrivDto.builder()
                         .id(appEndpointPriv.getId())
@@ -165,6 +184,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .privilege(appEndpointPriv.getAppEndpoint().getPath())
                         .appEndpoint(appEndpointPriv.getAppEndpoint().getId())
                         .build()).collect(Collectors.toList()))
+                .clientCount(getAppSourceUniqueClientCount(appSource.getAppPrivs()))
                 .appSourceAdminUserEmails(appSource.getAppSourceAdmins().stream()
                         .map(DashboardUser::getEmail)
                         .collect(Collectors.toList()))
@@ -224,6 +244,9 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.appEndpointPrivRepository.saveAll(appEndpointPrivs);
         
         appSource.setId(savedAppSource.getId());
+        appSource.setClientCount(getAppSourceUniqueClientCount(savedAppSource.getAppPrivs()));
+        appSource.setEndpointCount(savedAppSource.getAppEndpoints().size());
+        appSource.setAppSourcePath(savedAppSource.getAppSourcePath());
 
         return appSource;
     }
@@ -246,7 +269,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                             .builder()
                             .id(UUID.randomUUID())
                             .email(email)
-                            .privileges(Lists.newArrayList(appSourcePriv))
+                            .privileges(Lists.newArrayList(mapper.map(appSourcePriv, PrivilegeDto.class)))
                             .build()));
         }
         else {
@@ -283,7 +306,32 @@ public class AppSourceServiceImpl implements AppSourceService {
         AppSource appSource = this.appSourceRepository.findById(appId)
                 .orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, appId)));
 
-        for (DashboardUser user : appSource.getAppSourceAdmins()) {
+        return appSourceContainsAdminEmail(appSource, email);
+    }
+    
+    /**
+     * Check if the given email address is APP_SOURCE_ADMIN for given endpoint UUID
+     * @param endpointId UUID of the endpoint
+     * @param email email of user
+     * @return true if user is an assigned admin for the app source of the given endpoint
+     */
+    @Override
+    public boolean userIsAdminForAppSourceByEndpoint(UUID endpointId, String email) {
+    	AppEndpoint appEndpoint = appEndpointRepository.findById(endpointId)
+    			.orElseThrow(() -> new RecordNotFoundException(String.format("App Endpoint with id %s not found", endpointId.toString())));
+    	AppSource appSource = appEndpoint.getAppSource();
+    	
+        return appSourceContainsAdminEmail(appSource, email);
+    }
+    
+    /**
+     * Check if the App Source has an Admin with the given email
+     * @param appSource the App Source to check
+     * @param email the email to check against
+     * @return true if App Source has an admin with the given email, false otherwise
+     */
+    private boolean appSourceContainsAdminEmail(AppSource appSource, String email) {
+    	for (DashboardUser user : appSource.getAppSourceAdmins()) {
             if (user.getEmail().equalsIgnoreCase(email)) {
                 for (Privilege priv : user.getPrivileges()) {
                     if (priv.getName().equalsIgnoreCase(APP_SOURCE_ADMIN_PRIV)) return true;
@@ -468,6 +516,35 @@ public class AppSourceServiceImpl implements AppSourceService {
         for (AppSource appSource : usersAppSources) {
             appSource.getAppSourceAdmins().remove(user);
             appSourceRepository.saveAndFlush(appSource);
+        }
+    }
+
+    /**
+     * Searches AppSourceDefs to find open API spec file, returns file if found
+     * @param id App Source Id to get API specification for
+     * @return Resource that is guaranteed to exist
+     */
+    public Resource getApiSpecForAppSource(UUID id) {
+        AppSource appSource = appSourceRepository.findById(id).orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_NOT_FOUND_MSG, id)));
+        return getResource(id, appSource.getOpenApiSpecFilename());
+    }
+
+    /**
+     * Searches AppSourceDefs to find open API spec file, returns file if found
+     * @param id App Endpoint Id to get parent App Source's API specification for
+     * @return Resource that is guaranteed to exist
+     */
+    public Resource getApiSpecForAppSourceByEndpointPriv(UUID id) {
+        AppSource appSource = appSourceRepository.findByAppPrivs_Id(id).orElseThrow(() -> new RecordNotFoundException(String.format(APP_SOURCE_WITH_APP_ENDPOINT_NOT_FOUND_MSG, id)));
+        return getResource(id, appSource.getOpenApiSpecFilename());
+    }
+
+    private Resource getResource(UUID id, String filename) {
+        Resource resource = new ClassPathResource(appSourceApiDefinitionsLocation +  filename);
+        if(resource.exists()) {
+            return resource;
+        } else {
+            throw new RecordNotFoundException(String.format(APP_API_SPEC_NOT_FOUND_MSG, id));
         }
     }
 }

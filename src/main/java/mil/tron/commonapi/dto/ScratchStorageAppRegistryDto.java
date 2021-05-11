@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.collect.Lists;
 import lombok.*;
-import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
+import org.modelmapper.ModelMapper;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -59,7 +59,7 @@ public class ScratchStorageAppRegistryDto {
 
         @Getter
         @Setter
-        private Privilege priv;
+        private PrivilegeDto priv;
     }
 
     /**
@@ -119,6 +119,7 @@ public class ScratchStorageAppRegistryDto {
      */
     public void setUserPrivs(List<ScratchStorageAppUserPriv> privs) {
 
+        ModelMapper mapper = new ModelMapper();
         Map<ScratchStorageUser, Set<PrivilegeIdPair>> privHash = new HashMap<>();
 
         // build out a map keyed by ScratchUser with their list of privileges
@@ -127,7 +128,7 @@ public class ScratchStorageAppRegistryDto {
                 Set<PrivilegeIdPair> privList = privHash.get(priv.getUser());
                 privList.add(PrivilegeIdPair.builder()
                         .userPrivPairId(priv.getId())
-                        .priv(priv.getPrivilege())
+                        .priv(mapper.map(priv.getPrivilege(), PrivilegeDto.class))
                         .build());
                 privHash.put(priv.getUser(), privList);
             }
@@ -135,7 +136,7 @@ public class ScratchStorageAppRegistryDto {
                 Set<PrivilegeIdPair> newPrivList = new HashSet<>();
                 newPrivList.add(PrivilegeIdPair.builder()
                         .userPrivPairId(priv.getId())
-                        .priv(priv.getPrivilege())
+                        .priv(mapper.map(priv.getPrivilege(), PrivilegeDto.class))
                         .build());
                 privHash.put(priv.getUser(), newPrivList);
             }

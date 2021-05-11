@@ -27,9 +27,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.UUID;
 
-import static mil.tron.commonapi.security.Utility.*;
+import static mil.tron.commonapi.security.Utility.hmac;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.client.ExpectedCount.once;
@@ -188,6 +189,8 @@ public class PubSubIntegrationTest {
         // make subscriber go silent
         Date downTime = new Date();
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        df.setTimeZone(TimeZone.getTimeZone("UTC"));
+
         mockServer.reset();
 
         // make a new person

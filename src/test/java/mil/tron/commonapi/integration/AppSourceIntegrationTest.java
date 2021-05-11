@@ -6,9 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import lombok.val;
-import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
@@ -16,6 +17,7 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
@@ -452,7 +455,7 @@ public class AppSourceIntegrationTest {
         boolean foundUser1Priv = false;
         for (DashboardUserDto d : users) {
            if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
-               for (Privilege p : d.getPrivileges()) {
+               for (PrivilegeDto p : d.getPrivileges()) {
                    if (p.getName().equals("APP_SOURCE_ADMIN")) {
                        foundAdminsPriv = true;
                        break;
@@ -460,7 +463,7 @@ public class AppSourceIntegrationTest {
                }
            }
            else if (d.getEmail().equalsIgnoreCase(USER1_EMAIL)) {
-               for (Privilege p : d.getPrivileges()) {
+               for (PrivilegeDto p : d.getPrivileges()) {
                    if (p.getName().equals("APP_SOURCE_ADMIN")) {
                        foundUser1Priv = true;
                        break;
@@ -588,7 +591,7 @@ public class AppSourceIntegrationTest {
         boolean foundUser4Priv = false;
         for (DashboardUserDto d : users) {
             if (d.getEmail().equalsIgnoreCase(USER4_EMAIL)) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("APP_SOURCE_ADMIN")) {
                         foundUser4Priv = true;
                         break;
@@ -628,7 +631,7 @@ public class AppSourceIntegrationTest {
                 foundAdminUser = true;
 
                 // make sure admin does have the app_source_admin anymore, not needed
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equalsIgnoreCase("APP_SOURCE_ADMIN")) {
                         adminHasNoMoreAppSourceAdmin = false;
                         break;
@@ -716,7 +719,7 @@ public class AppSourceIntegrationTest {
         boolean foundPriv = false;
         for (DashboardUserDto d : dtos) {
             if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equalsIgnoreCase("APP_SOURCE_ADMIN")) {
                         foundPriv = true;
                         break;
@@ -913,7 +916,7 @@ public class AppSourceIntegrationTest {
         boolean foundAdminsPriv = false;
         for (DashboardUserDto d : users) {
             if (d.getEmail().equalsIgnoreCase("tester@test.com")) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("APP_SOURCE_ADMIN")) {
                         foundAdminsPriv = true;
                         break;
@@ -928,5 +931,65 @@ public class AppSourceIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isNoContent());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testGetApiSpecResource() throws Exception {
+        UUID appSourceId = UUID.randomUUID();
+        appSourceRepository.save(AppSource.builder()
+                .id(appSourceId)
+                .appSourcePath("path")
+                .availableAsAppSource(true)
+                .name("Name")
+                // Note: This is actually pulling from src/main/resources/appsourceapis
+                .openApiSpecFilename("mock.yml")
+                .build());
+
+        Resource resource = appSourceServiceImpl.getApiSpecForAppSource(appSourceId);
+
+        assertNotNull(resource);
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testGetApiSpecResourceByEndpointPriv() throws Exception {
+        AppClientUser appClientUser = appClientUserRespository.save(
+                AppClientUser.builder()
+                        .id(UUID.randomUUID())
+                        .name("App User 1")
+                        .build()
+        );
+
+        AppSource appSource = appSourceRepository.save(AppSource.builder()
+                .id(UUID.randomUUID())
+                .appSourcePath("path")
+                .appEndpoints(null)
+                .availableAsAppSource(true)
+                .name("Name")
+                // Note: This is actually pulling from src/main/resources/appsourceapis
+                .openApiSpecFilename("mock.yml")
+                .build());
+
+        AppEndpoint appEndpoint = endpointRepository.save(AppEndpoint.builder()
+                .id(UUID.randomUUID())
+                .path("/path")
+                .method(RequestMethod.GET)
+                .appSource(appSource)
+                .build());
+        
+        UUID appEndpointPrivId = UUID.randomUUID();
+        appSourcePrivRepository.save(AppEndpointPriv.builder()
+                .id(appEndpointPrivId)
+                .appClientUser(appClientUser)
+                .appEndpoint(appEndpoint)
+                .appSource(appSource)
+                .build());
+
+        Resource resource = appSourceServiceImpl.getApiSpecForAppSourceByEndpointPriv(appEndpointPrivId);
+
+        assertNotNull(resource);
     }
 }
