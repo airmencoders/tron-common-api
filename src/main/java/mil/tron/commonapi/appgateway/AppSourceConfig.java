@@ -38,30 +38,18 @@ public class AppSourceConfig {
     private AppSourceInterfaceDefinition[] parseAppSourceDefs(String configFile) {
         ObjectMapper objectMapper = new ObjectMapper();
         AppSourceInterfaceDefinition[] defs = null;
-        InputStream in = null;
-        BufferedReader reader = null;
-        try {
-            in = getClass().getResourceAsStream(configFile);
-            if (in == null) {
-                throw new NullPointerException(String.format("Unable to find config for %s",
-                        configFile));
-            }
-            reader = new BufferedReader(new InputStreamReader(in));
+        try (
+            InputStream in = getClass().getResourceAsStream(configFile);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+        ) {
+
             defs = objectMapper.readValue(reader, AppSourceInterfaceDefinition[].class);
-            in.close();
-            reader.close();
         }
         catch (IOException e) {
             log.warn("Could not parse app source file config.");
         }
         catch (NullPointerException e) {
             log.warn("Could not find resource file.", e);
-        }
-        finally {
-            try {
-                if (reader != null) reader.close();
-                if (in != null) in.close();
-            } catch (IOException ignored) {}
         }
         return defs;
     }
