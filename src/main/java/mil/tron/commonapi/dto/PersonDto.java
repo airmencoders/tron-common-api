@@ -82,7 +82,7 @@ public class PersonDto {
      * The person's email address
      */
     @PiiField
-    @Email(message = "Malformed email address")
+    @Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
     @Getter
     @Setter
     private String email;
