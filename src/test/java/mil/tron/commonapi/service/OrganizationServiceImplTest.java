@@ -30,8 +30,11 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -216,60 +219,143 @@ class OrganizationServiceImplTest {
 			});
 		}
 	}
+	
+	@Nested
+	class GetOrganizationTest {
+		@Test
+		void getOrganizationsTest() {
+			Mockito.when(repository.findBy(Mockito.any())).thenReturn(new SliceImpl<>(Lists.newArrayList(testOrg)));
+	    	Iterable<OrganizationDto> persons = organizationService.getOrganizations("", Mockito.any());
+	    	assertThat(persons).hasSize(1);
 
-	@Test
-	void getOrganizationsTest() {
-		Mockito.when(repository.findBy(Mockito.any())).thenReturn(new SliceImpl<>(Lists.newArrayList(testOrg)));
-    	Iterable<OrganizationDto> persons = organizationService.getOrganizations("", Mockito.any());
-    	assertThat(persons).hasSize(1);
+		}
 
-	}
+		@Test
+		void getOrganizationsByTypeAndServiceTest() {
+			Mockito.when(repository.findBy(Mockito.any())).thenReturn(new SliceImpl<>(Lists.newArrayList(testOrg)));
+			Iterable<OrganizationDto> persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USAF, Mockito.any());
+			assertThat(persons).hasSize(1);
 
-	@Test
-	void getOrganizationsByTypeAndServiceTest() {
-		Mockito.when(repository.findBy(Mockito.any())).thenReturn(new SliceImpl<>(Lists.newArrayList(testOrg)));
-		Iterable<OrganizationDto> persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USAF, Mockito.any());
-		assertThat(persons).hasSize(1);
+			persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, null, Mockito.any());
+			assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, null, Mockito.any());
-		assertThat(persons).hasSize(1);
+			persons = organizationService.getOrganizationsByTypeAndService("", Unit.WING, null, Mockito.any());
+			assertThat(persons).hasSize(0);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", Unit.WING, null, Mockito.any());
-		assertThat(persons).hasSize(0);
+			persons = organizationService.getOrganizationsByTypeAndService("", null, null, Mockito.any());
+			assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", null, null, Mockito.any());
-		assertThat(persons).hasSize(1);
+			persons = organizationService.getOrganizationsByTypeAndService("", null, Branch.USAF, Mockito.any());
+			assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", null, Branch.USAF, Mockito.any());
-		assertThat(persons).hasSize(1);
+			persons = organizationService.getOrganizationsByTypeAndService("some org", null, Branch.USAF, Mockito.any());
+			assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("some org", null, Branch.USAF, Mockito.any());
-		assertThat(persons).hasSize(1);
+			persons = organizationService.getOrganizationsByTypeAndService("some org", null, null, Mockito.any());
+			assertThat(persons).hasSize(1);
 
-		persons = organizationService.getOrganizationsByTypeAndService("some org", null, null, Mockito.any());
-		assertThat(persons).hasSize(1);
+			persons = organizationService.getOrganizationsByTypeAndService("area 51", null, null, Mockito.any());
+			assertThat(persons).hasSize(0);
 
-		persons = organizationService.getOrganizationsByTypeAndService("area 51", null, null, Mockito.any());
-		assertThat(persons).hasSize(0);
+			persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USMC, Mockito.any());
+			assertThat(persons).hasSize(0);
 
-		persons = organizationService.getOrganizationsByTypeAndService("", Unit.SQUADRON, Branch.USMC, Mockito.any());
-		assertThat(persons).hasSize(0);
+		}
 
-	}
+		@Test
+		void getOrganizationTest() {
+			// Test organization exists
+	    	Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
+	    	OrganizationDto retrievedOrganization = organizationService.getOrganization(testOrgDto.getId());
+	    	assertThat(retrievedOrganization.getId()).isEqualTo(testOrgDto.getId());
+	    	
+	    	// Test organization not exists
+	    	Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.empty());
+	    	
+	    	assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
+	    		organizationService.getOrganization(testOrg.getId());
+	    	});
+		}
+		
+		@Test
+		void getOrganizationsPageTest() {
+			Mockito.when(repository.findAllByNameContainsIgnoreCase(testOrg.getName(), PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+			
+			Page<OrganizationDto> organizationPage = organizationService.getOrganizationsPage(testOrg.getName(), PageRequest.of(0, 1));
+	    	assertThat(organizationPage.getContent()).hasSize(1);
+		}
+		
+		@Test
+		void getOrganizationsSliceTest() {
+			Mockito.when(repository.findByNameContainsIgnoreCase(testOrg.getName(), PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+			
+			Slice<OrganizationDto> organizationSlice = organizationService.getOrganizationsSlice(testOrg.getName(), PageRequest.of(0, 1));
+	    	assertThat(organizationSlice.getContent()).hasSize(1);
+		}
+		
+		@Test
+		void getOrganizationsByTypeAndServicePageTest() {
+			// test no org type and no org branch
+			Mockito.when(repository.findAllByNameContainsIgnoreCase("", PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+			
+			Page<OrganizationDto> organizationPage = organizationService.getOrganizationsByTypeAndServicePage("", null, null, PageRequest.of(0, 1));
+			assertThat(organizationPage.getContent()).hasSize(1);
+			
+			// Test only org type
+			Mockito.when(repository.findAllByNameContainsIgnoreCaseAndOrgType("", testOrg.getOrgType(), PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+		
+			organizationPage = organizationService.getOrganizationsByTypeAndServicePage("", testOrg.getOrgType(), null, PageRequest.of(0, 1));
+			assertThat(organizationPage.getContent()).hasSize(1);
+			
+			// Test only branch
+			Mockito.when(repository.findAllByNameContainsIgnoreCaseAndBranchType("", testOrg.getBranchType(), PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+		
+			organizationPage = organizationService.getOrganizationsByTypeAndServicePage("", null, testOrg.getBranchType(), PageRequest.of(0, 1));
+			assertThat(organizationPage.getContent()).hasSize(1);
+		
+			// Test both org type and branch type
+			Mockito.when(repository.findAllByNameContainsIgnoreCaseAndOrgTypeAndBranchType("", testOrg.getOrgType(), testOrg.getBranchType(), PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
 
-	@Test
-	void getOrganizationTest() {
-		// Test organization exists
-    	Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
-    	OrganizationDto retrievedOrganization = organizationService.getOrganization(testOrgDto.getId());
-    	assertThat(retrievedOrganization.getId()).isEqualTo(testOrgDto.getId());
-    	
-    	// Test organization not exists
-    	Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.empty());
-    	
-    	assertThatExceptionOfType(RecordNotFoundException.class).isThrownBy(() -> {
-    		organizationService.getOrganization(testOrg.getId());
-    	});
+			organizationPage = organizationService.getOrganizationsByTypeAndServicePage("", testOrg.getOrgType(), testOrg.getBranchType(), PageRequest.of(0, 1));
+			assertThat(organizationPage.getContent()).hasSize(1);
+		}
+		
+		@Test
+		void getOrganizationsByTypeAndServiceSliceTest() {
+			// test no org type and no org branch
+			Mockito.when(repository.findByNameContainsIgnoreCase("", PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+			
+			Slice<OrganizationDto> organizationSlice = organizationService.getOrganizationsByTypeAndServiceSlice("", null, null, PageRequest.of(0, 1));
+			assertThat(organizationSlice.getContent()).hasSize(1);
+			
+			// Test only org type
+			Mockito.when(repository.findByNameContainsIgnoreCaseAndOrgType("", testOrg.getOrgType(), PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+		
+			organizationSlice = organizationService.getOrganizationsByTypeAndServiceSlice("", testOrg.getOrgType(), null, PageRequest.of(0, 1));
+			assertThat(organizationSlice.getContent()).hasSize(1);
+			
+			// Test only branch
+			Mockito.when(repository.findByNameContainsIgnoreCaseAndBranchType("", testOrg.getBranchType(), PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+		
+			organizationSlice = organizationService.getOrganizationsByTypeAndServiceSlice("", null, testOrg.getBranchType(), PageRequest.of(0, 1));
+			assertThat(organizationSlice.getContent()).hasSize(1);
+		
+			// Test both org type and branch type
+			Mockito.when(repository.findByNameContainsIgnoreCaseAndOrgTypeAndBranchType("", testOrg.getOrgType(), testOrg.getBranchType(), PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+
+			organizationSlice = organizationService.getOrganizationsByTypeAndServiceSlice("", testOrg.getOrgType(), testOrg.getBranchType(), PageRequest.of(0, 1));
+			assertThat(organizationSlice.getContent()).hasSize(1);
+		}
 	}
 
 	@Test

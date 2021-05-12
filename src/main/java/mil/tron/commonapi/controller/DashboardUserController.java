@@ -22,7 +22,7 @@ import java.security.Principal;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/dashboard-users")
+@RequestMapping({"${api-prefix.v1}/dashboard-users", "${api-prefix.v2}/dashboard-users"})
 public class DashboardUserController {
 
     DashboardUserService dashboardUserService;

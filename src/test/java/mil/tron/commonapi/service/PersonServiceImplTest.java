@@ -3,6 +3,7 @@ package mil.tron.commonapi.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
+
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
@@ -30,6 +31,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 
@@ -376,44 +380,65 @@ class PersonServiceImplTest {
         Mockito.verify(repository, Mockito.times(1)).deleteById(testPerson.getId());    
     }
 
-    @Test
-    void getPersonsTest() {
-    	Mockito.when(repository.findBy(null)).thenReturn(new SliceImpl<>(Arrays.asList(testPerson)));
-    	Iterable<PersonDto> persons = personService.getPersons(null, Mockito.any());
-    	assertThat(persons).hasSize(1);
-    }
+    @Nested
+    class GetPersonTest {
+    	@Test
+        void getPersonsTest() {
+        	Mockito.when(repository.findBy(null)).thenReturn(new SliceImpl<>(Arrays.asList(testPerson)));
+        	Iterable<PersonDto> persons = personService.getPersons(null, Mockito.any());
+        	assertThat(persons).hasSize(1);
+        }
 
-    @Test
-    void getPersonTest() {
-    	// Test person exists
-    	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.of(testPerson));
-    	Person retrievedPerson = personService.getPerson(testPerson.getId());
-    	assertThat(retrievedPerson).isEqualTo(testPerson);
-    	
-    	// Test person not exists
-    	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.ofNullable(null));
-    	assertThrows(RecordNotFoundException.class, () -> personService.getPerson(testPerson.getId()));
-    }
-    
-    @Test
-    void getPersonByFieldTest() {
-    	// email filter
-    	Mockito.when(repository.findByEmailIgnoreCase(testPerson.getEmail())).thenReturn(Optional.of(testPerson));
-    	Person retrievedPerson = personService.getPersonFilter(PersonFilterType.EMAIL, testPerson.getEmail());
-    	assertThat(retrievedPerson).isEqualTo(testPerson);
-    	
-    	// dodid filter
-    	Mockito.when(repository.findByDodidIgnoreCase(testPerson.getDodid())).thenReturn(Optional.of(testPerson));
-    	retrievedPerson = personService.getPersonFilter(PersonFilterType.DODID, testPerson.getDodid());
-    	assertThat(retrievedPerson).isEqualTo(testPerson);
-    	
-    	// test not found
-    	Mockito.when(repository.findByDodidIgnoreCase(testPerson.getDodid())).thenReturn(Optional.ofNullable(null));
-    	assertThrows(RecordNotFoundException.class, () -> personService.getPersonFilter(PersonFilterType.DODID, testPerson.getDodid()));
-    	
-    	// test null parameters
-    	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(null, testPerson.getDodid()));
-    	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(PersonFilterType.EMAIL, null));
+        @Test
+        void getPersonTest() {
+        	// Test person exists
+        	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.of(testPerson));
+        	Person retrievedPerson = personService.getPerson(testPerson.getId());
+        	assertThat(retrievedPerson).isEqualTo(testPerson);
+        	
+        	// Test person not exists
+        	Mockito.when(repository.findById(testPerson.getId())).thenReturn(Optional.ofNullable(null));
+        	assertThrows(RecordNotFoundException.class, () -> personService.getPerson(testPerson.getId()));
+        }
+        
+        @Test
+        void getPersonByFieldTest() {
+        	// email filter
+        	Mockito.when(repository.findByEmailIgnoreCase(testPerson.getEmail())).thenReturn(Optional.of(testPerson));
+        	Person retrievedPerson = personService.getPersonFilter(PersonFilterType.EMAIL, testPerson.getEmail());
+        	assertThat(retrievedPerson).isEqualTo(testPerson);
+        	
+        	// dodid filter
+        	Mockito.when(repository.findByDodidIgnoreCase(testPerson.getDodid())).thenReturn(Optional.of(testPerson));
+        	retrievedPerson = personService.getPersonFilter(PersonFilterType.DODID, testPerson.getDodid());
+        	assertThat(retrievedPerson).isEqualTo(testPerson);
+        	
+        	// test not found
+        	Mockito.when(repository.findByDodidIgnoreCase(testPerson.getDodid())).thenReturn(Optional.ofNullable(null));
+        	assertThrows(RecordNotFoundException.class, () -> personService.getPersonFilter(PersonFilterType.DODID, testPerson.getDodid()));
+        	
+        	// test null parameters
+        	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(null, testPerson.getDodid()));
+        	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(PersonFilterType.EMAIL, null));
+        }
+        
+        @Test
+		void getPersonsPageTest() {
+			Mockito.when(repository.findAll(PageRequest.of(0, 1)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testPerson)));
+			
+			Page<PersonDto> personsPage = personService.getPersonsPage(null, PageRequest.of(0, 1));
+	    	assertThat(personsPage.getContent()).hasSize(1);
+		}
+		
+		@Test
+		void getPersonsSliceTest() {
+			Mockito.when(repository.findBy(PageRequest.of(0, 1)))
+				.thenReturn(new SliceImpl<>(Lists.newArrayList(testPerson)));
+			
+			Slice<PersonDto> personsSlice = personService.getPersonsSlice(null, PageRequest.of(0, 1));
+	    	assertThat(personsSlice.getContent()).hasSize(1);
+		}
     }
 
     @Test

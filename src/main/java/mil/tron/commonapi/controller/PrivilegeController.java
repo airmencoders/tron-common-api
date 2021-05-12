@@ -17,7 +17,7 @@ import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.service.PrivilegeService;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/privilege")
+@RequestMapping({"${api-prefix.v1}/privilege", "${api-prefix.v2}/privilege"})
 @PreAuthorizeDashboardAdmin
 public class PrivilegeController {
 	

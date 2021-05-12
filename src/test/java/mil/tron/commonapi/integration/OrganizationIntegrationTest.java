@@ -2,9 +2,13 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
+
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.organizations.Squadron;
+import mil.tron.commonapi.dto.response.PaginationResponse;
+import mil.tron.commonapi.dto.response.pagination.Pagination;
+import mil.tron.commonapi.dto.response.pagination.PaginationLink;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -15,6 +19,7 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.service.OrganizationService;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
+
 import org.assertj.core.util.Lists;
 import org.hamcrest.Matchers;
 import org.json.JSONArray;
@@ -54,6 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class OrganizationIntegrationTest {
 
     private static final String ENDPOINT = "/v1/organization/";
+    private static final String ENDPOINT_V2 = "/v2/organization/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -472,6 +478,92 @@ public class OrganizationIntegrationTest {
             organizationService.deleteOrganization(orgId);
             personRepository.deleteAll();
         }
+    }
+    
+    @Test
+    @Rollback
+    @Transactional
+    void testWrappedResponse() throws Exception {
+
+        OrganizationDto parent = new OrganizationDto();
+        parent.setName("Father");
+        parent.setOrgType(Unit.SQUADRON);
+        parent.setBranchType(Branch.USAF);
+        OrganizationDto theOrg = new OrganizationDto();
+        theOrg.setName("Son");
+        theOrg.setOrgType(Unit.SQUADRON);
+        theOrg.setBranchType(Branch.USAF);
+
+        PersonDto p1 = PersonDto.builder().id(UUID.randomUUID()).firstName("Donny").middleName("Dont").lastName("Does")
+                .rank("Capt").branch(Branch.USAF).build();
+        PersonDto p2 = PersonDto.builder().id(UUID.randomUUID()).firstName("John").middleName("Q").lastName("Public")
+                .rank("Capt").branch(Branch.USAF).build();
+
+        personService.createPerson(p1);
+        personService.createPerson(p2);
+
+        organizationService.createOrganization(parent);
+
+        theOrg.setParentOrganizationUUID(parent.getId());
+        theOrg.setMembersUUID(List.of(p1.getId(), p2.getId()));
+        organizationService.createOrganization(theOrg);
+
+        parent.setSubOrgsUUID(Set.of(theOrg.getId()));
+        organizationService.updateOrganization(parent.getId(), parent);
+       
+        
+        PaginationResponse<List<OrganizationDto>> response = 
+				PaginationResponse.<List<OrganizationDto>>builder()
+				.data(Lists.newArrayList(parent))
+				.pagination(Pagination.builder()
+						.page(0)
+						.size(1)
+						.totalElements(2L)
+						.totalPages(2)
+						.links(PaginationLink.builder()
+								.next("http://localhost" + ENDPOINT_V2 + "?people=id,firstName&organizations=id,name&page=1&size=1")
+								.last("http://localhost" + ENDPOINT_V2 + "?people=id,firstName&organizations=id,name&page=1&size=1")
+								.build())
+						.build())
+				.build();
+        
+
+        mockMvc.perform(get(ENDPOINT_V2 + "?people=id,firstName&organizations=id,name&size=1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(1)))
+            .andExpect(jsonPath("$.data[0].id").value(response.getData().get(0).getId().toString()))
+            .andExpect(jsonPath("$.pagination.page").value(response.getPagination().getPage()))
+            .andExpect(jsonPath("$.pagination.size").value(response.getPagination().getSize()))
+            .andExpect(jsonPath("$.pagination.totalElements").value(response.getPagination().getTotalElements()))
+            .andExpect(jsonPath("$.pagination.totalPages").value(response.getPagination().getTotalPages()));
+        
+        mockMvc.perform(get(ENDPOINT_V2 + "?size=1"))
+        	.andExpect(status().isOk())
+	        .andExpect(jsonPath("$.data", hasSize(1)))
+	        .andExpect(jsonPath("$.data[0].id").value(response.getData().get(0).getId().toString()))
+	        .andExpect(jsonPath("$.pagination.page").value(response.getPagination().getPage()))
+	        .andExpect(jsonPath("$.pagination.size").value(response.getPagination().getSize()))
+	        .andExpect(jsonPath("$.pagination.totalElements").value(response.getPagination().getTotalElements()))
+	        .andExpect(jsonPath("$.pagination.totalPages").value(response.getPagination().getTotalPages()));
+        
+        mockMvc.perform(get(ENDPOINT_V2 + "?people=id,firstName&organizations=id,name&size=1&branch=usaf"))
+	        .andExpect(status().isOk())
+	        .andExpect(jsonPath("$.data", hasSize(1)))
+	        .andExpect(jsonPath("$.data[0].id").value(response.getData().get(0).getId().toString()))
+	        .andExpect(jsonPath("$.pagination.page").value(response.getPagination().getPage()))
+	        .andExpect(jsonPath("$.pagination.size").value(response.getPagination().getSize()))
+	        .andExpect(jsonPath("$.pagination.totalElements").value(response.getPagination().getTotalElements()))
+	        .andExpect(jsonPath("$.pagination.totalPages").value(response.getPagination().getTotalPages()));
+        
+        mockMvc.perform(get(ENDPOINT_V2 + "?size=1&branch=usaf"))
+	        .andExpect(status().isOk())
+	        .andExpect(jsonPath("$.data", hasSize(1)))
+	        .andExpect(jsonPath("$.data[0].id").value(response.getData().get(0).getId().toString()))
+	        .andExpect(jsonPath("$.pagination.page").value(response.getPagination().getPage()))
+	        .andExpect(jsonPath("$.pagination.size").value(response.getPagination().getSize()))
+	        .andExpect(jsonPath("$.pagination.totalElements").value(response.getPagination().getTotalElements()))
+	        .andExpect(jsonPath("$.pagination.totalPages").value(response.getPagination().getTotalPages()));
+
     }
 
     private static String resource(String name) throws IOException {

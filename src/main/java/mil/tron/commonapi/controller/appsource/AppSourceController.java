@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  * Controller for App Source endpoints.
  */
  @RestController
-@RequestMapping("${api-prefix.v1}/app-source")
+@RequestMapping({"${api-prefix.v1}/app-source", "${api-prefix.v2}/app-source"})
 public class AppSourceController {
 
     private AppClientUserService appClientUserService;
