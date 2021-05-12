@@ -14,10 +14,13 @@ import mil.tron.commonapi.dto.response.pagination.Pagination;
  */
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
 @Builder
 public class PaginationResponse<T> {
+	@Getter
+	@Setter
 	private T data;
+	
+	@Getter
+	@Setter
 	private Pagination pagination;
 }
