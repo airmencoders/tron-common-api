@@ -11,13 +11,22 @@ import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
 @Builder
 @JsonInclude(Include.NON_NULL)
 public class PaginationLink {
+	@Getter
+	@Setter
 	private String next;
+	
+	@Getter
+	@Setter
 	private String last;
+	
+	@Getter
+	@Setter
 	private String prev;
+	
+	@Getter
+	@Setter
 	private String first;
 }

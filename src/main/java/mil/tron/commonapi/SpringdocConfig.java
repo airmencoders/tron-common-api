@@ -43,7 +43,6 @@ public class SpringdocConfig {
     	String[] paths = {
 			String.format("%s/app-client/**", apiPrefix),
 			String.format("%s/privilege/**", apiPrefix),
-			String.format("%s/list-request-headers", apiPrefix),
 			String.format("%s/logfile/**", apiPrefix),
 			String.format("%s/dashboard-users/**", apiPrefix),
 			String.format("%s/app-source/**", apiPrefix),
@@ -74,7 +73,6 @@ public class SpringdocConfig {
     	String[] paths = {
 			String.format("%s/app-client/**", apiPrefix),
 			String.format("%s/privilege/**", apiPrefix),
-			String.format("%s/list-request-headers", apiPrefix),
 			String.format("%s/logfile/**", apiPrefix),
 			String.format("%s/dashboard-users/**", apiPrefix),
 			String.format("%s/app-source/**", apiPrefix),

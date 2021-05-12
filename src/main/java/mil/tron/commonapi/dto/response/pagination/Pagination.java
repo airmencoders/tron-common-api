@@ -11,14 +11,26 @@ import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
 @Builder
 @JsonInclude(Include.NON_NULL)
 public class Pagination {
+	@Getter
+	@Setter
 	private int page;
+	
+	@Getter
+	@Setter
 	private int size;
+	
+	@Getter
+	@Setter
 	private Long totalElements;
+	
+	@Getter
+	@Setter
 	private Integer totalPages;
+	
+	@Getter
+	@Setter
 	private PaginationLink links;
 }
