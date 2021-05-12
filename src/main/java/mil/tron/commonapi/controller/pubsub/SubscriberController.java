@@ -148,7 +148,7 @@ public class SubscriberController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(example="{\n  \"ORGANIZATION_DELETE\": 0,\n  \"PERSON_CHANGE\": 0,\n  \"PERSON_DELETE\": 0,\n  \"PERSON_ORG_ADD\": 0,\n  \"PERSON_ORG_REMOVE\": 0,\n  \"ORGANIZATION_CHANGE\": 0,\n  \"SUB_ORG_REMOVE\": 0,\n  \"SUB_ORG_ADD\": 0\n}")))})
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = EventInfoDto.class))))})
     @GetMapping("/events/latest")
     public ResponseEntity<Object> getLatestCounts() {
         return new ResponseEntity<>(eventManagerService.getEventTypeCounts(), HttpStatus.OK);
