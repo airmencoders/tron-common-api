@@ -26,7 +26,7 @@ import java.util.UUID;
  * Allows RESTful creation and management of event subscriptions
  */
 @RestController
-@RequestMapping("${api-prefix.v1}/subscriptions")
+@RequestMapping({"${api-prefix.v1}/subscriptions", "${api-prefix.v2}/subscriptions"})
 public class SubscriberController {
 
     @Autowired

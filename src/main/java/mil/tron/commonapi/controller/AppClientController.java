@@ -29,7 +29,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/app-client")
+@RequestMapping({"${api-prefix.v1}/app-client", "${api-prefix.v2}/app-client"})
 public class AppClientController {
 	
 	private AppClientUserService appClientService;
@@ -38,6 +38,7 @@ public class AppClientController {
 	private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
 	private static final String INVALID_PERMS = "Invalid User Permissions";
+	
 
 	public AppClientController(AppClientUserService appClientService, PrivilegeService privilegeService) {
 		this.appClientService = appClientService;

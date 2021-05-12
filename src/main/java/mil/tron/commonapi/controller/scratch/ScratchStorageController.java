@@ -26,7 +26,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/scratch")
+@RequestMapping({"${api-prefix.v1}/scratch", "${api-prefix.v2}/scratch"})
 public class ScratchStorageController {
     private ScratchStorageService scratchStorageService;
     private PrivilegeService privilegeService;
