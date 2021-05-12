@@ -610,17 +610,33 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      * @param fieldName the field name of the field being checked
      * @param schemaType the type of data this field is supposed to be (as defined in the table_schema key)
      * @param fieldValue the value sent to the controller to check for proper type
+     * @param fieldValueIsUnique true if this field is marked as a unique column (its value should be unique)
+     * @param blob the json value (the entire table) of json data used for uniqueness checks if needed
      */
-    private void validateField(String fieldName, String schemaType, JsonNode fieldValue) {
+    private void validateField(String fieldName, String schemaType, JsonNode fieldValue, boolean fieldValueIsUnique, DocumentContext blob) {
         if (schemaType.contains("string")) {
-            if (!fieldValue.isTextual())
+            if (!fieldValue.isTextual()) {
                 throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a string but wasnt");
+            }
+            if (fieldValueIsUnique) {
+                String[] elems = JsonPath.read(blob, "$[?(@." + fieldName + " == " + fieldValue.asText() + ")]");
+                if (fieldValue.asText() != null && !fieldValue.asText().isBlank() && elems.length != 0) {
+                    throw new ResourceAlreadyExistsException("Field " + fieldName + " violated uniqueness");
+                }
+            }
         }
         if (schemaType.contains("email")) {
             if (!fieldValue.isTextual()
-                    && EmailValidator.getInstance().isValid(fieldValue.asText()))
-
+                    && EmailValidator.getInstance().isValid(fieldValue.asText())) {
                 throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be an email but wasnt");
+            }
+            if (fieldValueIsUnique) {
+                String jsonPath = "$[?(@." + fieldName + " == '" + fieldValue.asText() + "')]";
+                List<Map<String, Object>> elems = JsonPath.read(blob.jsonString(), jsonPath);
+                if (fieldValue.asText() != null && !fieldValue.asText().isBlank() && elems.size() != 0) {
+                    throw new ResourceAlreadyExistsException("Field " + fieldName + " violated uniqueness");
+                }
+            }
         }
         if (schemaType.contains("number")) {
             if (!fieldValue.isNumber())
@@ -647,9 +663,10 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      * @param appId UUID of the scratch storage app
      * @param tableName the "table" name - (the key name)
      * @param json blob of json we're attempting to validate against the schema
+     * @param cxt the JsonPath DocumentContext that is the parsed json of the table
      * @return the (possibly modified) blob of json (modified if it had missing fields when compared to the schema).
      */
-    private Object validateEntityValue(UUID appId, String tableName, Object json) {
+    private Object validateEntityValue(UUID appId, String tableName, Object json, DocumentContext cxt) {
 
         ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName + "_schema")
                 .orElseThrow(() -> new RecordNotFoundException("Cant find table schema with name " + tableName + "_schema"));
@@ -684,7 +701,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             }
             else {
                 // field was there, now just validate it
-                validateField(fieldName, schemaNodes.get(fieldName).asText(), nodes.get(fieldName));
+                validateField(fieldName,
+                        schemaNodes.get(fieldName).asText(),
+                        nodes.get(fieldName),
+                        schemaNodes.get(fieldName).asText().contains("*"),
+                        cxt);
                 obj.put(fieldName, nodes.get(fieldName));
             }
         }
@@ -716,7 +737,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         }
 
         try {
-            cxt = cxt.add("$", validateEntityValue(appId, tableName, json));
+            cxt = cxt.add("$", validateEntityValue(appId, tableName, json, cxt));
         }
         catch (Exception e) {
             throw new InvalidJsonPathQueryException(e.getMessage());
@@ -799,7 +820,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         if (cxt.read(path) != null) {
             try {
-                cxt = cxt.set(path, validateEntityValue(appId, tableName, json));
+                cxt = cxt.set(path, validateEntityValue(appId, tableName, json, cxt));
             } catch (Exception e) {
                 throw new InvalidJsonPathQueryException(e.getMessage());
             }

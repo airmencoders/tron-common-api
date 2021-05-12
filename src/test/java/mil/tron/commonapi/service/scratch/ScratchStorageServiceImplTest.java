@@ -750,7 +750,7 @@ public class ScratchStorageServiceImplTest {
         UUID appId = UUID.randomUUID();
 
         String jsonValue = "[{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102d\", \"age\": 40, \"name\": \"Frank\", \"email\": \"f@test.com\" }]";
-        String schema = "{ \"id\": \"uuid\", \"age\": \"number\", \"name\": \"string\", \"email\": \"email!\" }";
+        String schema = "{ \"id\": \"uuid\", \"age\": \"number\", \"name\": \"string\", \"email\": \"email!*\" }";
 
 
         ScratchStorageEntry invalidJson = ScratchStorageEntry.builder()
@@ -793,5 +793,9 @@ public class ScratchStorageServiceImplTest {
         service.addElement(appId, "table", "{ \"name\": \"Chris\", \"age\": 50, \"email\": \"c@test.com\" }");
         List<Map<String, Object>> idResult = JsonPath.read(entry.getValue(), "$[?(@.age == 50)]");
         assertDoesNotThrow(()-> UUID.fromString(idResult.get(0).get("id").toString()));
+
+        // make sure the uniqueness check works
+        assertThrows(Exception.class,
+                () -> service.addElement(appId, "table", "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"name\": \"John\", \"email\": \"J@test.com\" }"));
     }
 }
