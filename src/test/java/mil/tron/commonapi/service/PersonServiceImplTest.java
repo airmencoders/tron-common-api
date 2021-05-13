@@ -405,21 +405,21 @@ class PersonServiceImplTest {
         void getPersonByFieldTest() {
         	// email filter
         	Mockito.when(repository.findByEmailIgnoreCase(testPerson.getEmail())).thenReturn(Optional.of(testPerson));
-        	Person retrievedPerson = personService.getPersonFilter(PersonFilterType.EMAIL, testPerson.getEmail());
+        	Person retrievedPerson = personService.getPersonFilter(PersonFindType.EMAIL, testPerson.getEmail());
         	assertThat(retrievedPerson).isEqualTo(testPerson);
         	
         	// dodid filter
         	Mockito.when(repository.findByDodidIgnoreCase(testPerson.getDodid())).thenReturn(Optional.of(testPerson));
-        	retrievedPerson = personService.getPersonFilter(PersonFilterType.DODID, testPerson.getDodid());
+        	retrievedPerson = personService.getPersonFilter(PersonFindType.DODID, testPerson.getDodid());
         	assertThat(retrievedPerson).isEqualTo(testPerson);
         	
         	// test not found
         	Mockito.when(repository.findByDodidIgnoreCase(testPerson.getDodid())).thenReturn(Optional.ofNullable(null));
-        	assertThrows(RecordNotFoundException.class, () -> personService.getPersonFilter(PersonFilterType.DODID, testPerson.getDodid()));
+        	assertThrows(RecordNotFoundException.class, () -> personService.getPersonFilter(PersonFindType.DODID, testPerson.getDodid()));
         	
         	// test null parameters
         	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(null, testPerson.getDodid()));
-        	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(PersonFilterType.EMAIL, null));
+        	assertThrows(BadRequestException.class, () -> personService.getPersonFilter(PersonFindType.EMAIL, null));
         }
         
         @Test

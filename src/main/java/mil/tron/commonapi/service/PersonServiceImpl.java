@@ -283,7 +283,7 @@ public class PersonServiceImpl implements PersonService {
 	}
 	
 	@Override
-	public Person getPersonFilter(PersonFilterType type, String value) {
+	public Person getPersonFilter(PersonFindType type, String value) {
 		if (type == null || value == null) {
 			throw new BadRequestException("Filter Type and Value cannot be null");
 		}

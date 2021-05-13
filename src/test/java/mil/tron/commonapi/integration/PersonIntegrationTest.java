@@ -5,11 +5,13 @@ import com.google.common.io.Resources;
 
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonFindDto;
 import mil.tron.commonapi.dto.response.PaginationResponse;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
 
 import org.assertj.core.util.Lists;
@@ -414,6 +416,68 @@ public class PersonIntegrationTest {
 	        .andExpect(jsonPath("$.pagination.totalPages").value(response.getPagination().getTotalPages()))
 	        .andExpect(jsonPath("$.pagination.links.next").value(response.getPagination().getLinks().getNext()))
 	        .andExpect(jsonPath("$.pagination.links.last").value(response.getPagination().getLinks().getLast()));
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testPersonPostFilter() throws Exception {
+    	PersonDto person = PersonDto.builder()
+                .firstName("test")
+                .lastName("member")
+                .email("test@member.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("12345")
+                .build();
+    	
+    	PersonDto person1 = PersonDto.builder()
+                .firstName("1")
+                .lastName("2")
+                .email("1@2.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("34567")
+                .build();
+                
+                
+		mockMvc.perform(post(ENDPOINT_V2).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person)));
+		mockMvc.perform(post(ENDPOINT_V2).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person1)));
+		
+		PersonFindDto personFindDto = PersonFindDto.builder()
+				.findType(PersonFindType.EMAIL)
+				.value(person.getEmail())
+				.build();
+		
+		// Try to filter by email
+		mockMvc.perform(post(ENDPOINT_V2 + "find")
+				.content(OBJECT_MAPPER.writeValueAsString(personFindDto))
+				.contentType(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(person.getId().toString()));
+		
+		// Try to filter by dodid
+		personFindDto.setFindType(PersonFindType.DODID);
+		personFindDto.setValue(person1.getDodid());
+		mockMvc.perform(post(ENDPOINT_V2 + "find")
+				.content(OBJECT_MAPPER.writeValueAsString(personFindDto))
+				.contentType(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(person1.getId().toString()));
+
+		
+		// Try an invalid filter
+		personFindDto.setFindType(null);
+		mockMvc.perform(post(ENDPOINT_V2 + "find")
+				.content(OBJECT_MAPPER.writeValueAsString(personFindDto))
+				.contentType(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isBadRequest());
+		
+		mockMvc.perform(delete(ENDPOINT_V2 + "{id}", person.getId()));
+		mockMvc.perform(delete(ENDPOINT_V2 + "{id}", person1.getId()));
     }
 
     private static String resource(String name) throws IOException {

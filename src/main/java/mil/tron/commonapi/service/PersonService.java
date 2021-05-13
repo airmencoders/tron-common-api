@@ -22,7 +22,7 @@ public interface PersonService {
 	Slice<PersonDto> getPersonsSlice(PersonConversionOptions options, Pageable page);
 	PersonDto getPersonDto(UUID id, PersonConversionOptions options);
 	Person getPerson(UUID id);
-	Person getPersonFilter(PersonFilterType type, String value);
+	Person getPersonFilter(PersonFindType type, String value);
 	boolean exists(UUID id);
 
 	List<PersonDto> bulkAddPeople(List<PersonDto> dtos);

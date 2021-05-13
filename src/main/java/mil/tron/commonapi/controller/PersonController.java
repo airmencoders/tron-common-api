@@ -13,6 +13,7 @@ import mil.tron.commonapi.annotation.response.WrappedPaginationResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonFindDto;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
@@ -22,12 +23,13 @@ import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.PersonConversionOptions;
-import mil.tron.commonapi.service.PersonFilterType;
+import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
 
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -124,6 +126,14 @@ public class PersonController {
 	
 	
 	
+	/**
+	 * @deprecated Method no longer valid to fulfill T219 / CWE-598. {@link #findPersonBy(boolean, boolean, PersonFindDto)} for the new usage.
+	 * @param memberships
+	 * @param leaderships
+	 * @param findByField
+	 * @param value
+	 * @return
+	 */
 	@Operation(summary = "Retrieves a person by email or dodid", description = "Retrieves a person using a single identifying property.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
@@ -141,24 +151,57 @@ public class PersonController {
 	@Parameter(name = "findByField", 
 				description = "The field to search for", 
 				required = true,
-				content= @Content(schema = @Schema(implementation = PersonFilterType.class)))
+				content= @Content(schema = @Schema(implementation = PersonFindType.class)))
 	@Parameter(name = "value", description = "The value to search against", required = true)
+	@Deprecated(since = "v2")
 	@PreAuthorizeRead
-	@GetMapping(value = {"${api-prefix.v1}/person/find", "${api-prefix.v2}/person/find"})
+	@GetMapping(value = {"${api-prefix.v1}/person/find"})
 	public ResponseEntity<PersonDto> findPersonBy(
 				@RequestParam(name = "memberships", required = false) boolean memberships,
                 @RequestParam(name = "leaderships", required = false) boolean leaderships,
                 @RequestParam(name = "findByField", required = true) String findByField,
                 @RequestParam(name = "value", required = true) String value) {
 		
-		PersonFilterType filter = null;
+		PersonFindType filter = null;
 		try {
-			filter = PersonFilterType.valueOf(findByField.toUpperCase());
+			filter = PersonFindType.valueOf(findByField.toUpperCase());
 		} catch (Exception ex) {
 			throw new BadRequestException(String.format("findByField: %s is invalid.", findByField));
 		}
 
 		Person person = personService.getPersonFilter(filter, value);
+		PersonDto dto = personService.convertToDto(person, PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build());
+		
+		return new ResponseEntity<>(dto, HttpStatus.OK);
+	}
+	
+	@Operation(summary = "Retrieves a person by email or dodid", description = "Retrieves a person using a single identifying property.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeRead
+	@PostMapping(
+			value = {"${api-prefix.v2}/person/find"},
+			consumes = MediaType.APPLICATION_JSON_VALUE,
+			produces = MediaType.APPLICATION_JSON_VALUE
+	)
+	public ResponseEntity<PersonDto> findPersonBy(
+			@Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
+				@RequestParam(name = "memberships", required = false) boolean memberships,
+			@Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
+                @RequestParam(name = "leaderships", required = false) boolean leaderships,
+            @Parameter(description = "The information to find a person by", required = true, schema = @Schema(implementation = PersonFindDto.class))
+                @Valid @RequestBody PersonFindDto personFindDto) {
+		
+		Person person = personService.getPersonFilter(personFindDto.getFindType(), personFindDto.getValue());
 		PersonDto dto = personService.convertToDto(person, PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build());
 		
 		return new ResponseEntity<>(dto, HttpStatus.OK);
