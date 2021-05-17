@@ -6,9 +6,9 @@ import com.google.common.io.Resources;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PersonFindDto;
-import mil.tron.commonapi.dto.response.PaginationResponse;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
+import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.service.PersonFindType;
@@ -391,8 +391,8 @@ public class PersonIntegrationTest {
     	personService.createPerson(person);
     	personService.createPerson(person1);
 		
-		PaginationResponse<List<PersonDto>> response = 
-				PaginationResponse.<List<PersonDto>>builder()
+		PaginationWrappedResponse<List<PersonDto>> response = 
+				PaginationWrappedResponse.<List<PersonDto>>builder()
 				.data(Lists.newArrayList(person))
 				.pagination(Pagination.builder()
 						.page(0)

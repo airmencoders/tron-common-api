@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
@@ -38,8 +37,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ScratchStorageControllerTest {
 
     private static final String ENDPOINT = "/v1/scratch/";
+    private static final String ENDPOINT_V2 = "/v2/scratch/";
     private static final String SCRATCH_ENDPOINT = "/v1/scratch/apps/";
+    private static final String SCRATCH_ENDPOINT_V2 = "/v2/scratch/apps/";
     private static final String SCRATCH_USERS_ENDPOINT = "/v1/scratch/users/";
+    private static final String SCRATCH_USERS_ENDPOINT_V2 = "/v2/scratch/users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -126,6 +128,11 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(get(ENDPOINT))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
+        
+        // V2
+        mockMvc.perform(get(ENDPOINT_V2))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
     }
 
     @Test
@@ -167,6 +174,12 @@ public class ScratchStorageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0]", equalTo(entries.get(0).getKey())));
+        
+        // V2
+        mockMvc.perform(get(ENDPOINT_V2  + "apps/{appId}/keys", appId))
+	        .andExpect(status().isOk())
+	        .andExpect(jsonPath("$.data", hasSize(1)))
+	        .andExpect(jsonPath("$.data[0]", equalTo(entries.get(0).getKey())));
 
     }
 
@@ -272,6 +285,11 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(get(SCRATCH_ENDPOINT))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
+        
+        // V2
+        mockMvc.perform(get(SCRATCH_ENDPOINT_V2))
+	        .andExpect(status().isOk())
+	        .andExpect(jsonPath("$.data", hasSize(2)));
     }
     
     @Test
@@ -449,6 +467,11 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(get(SCRATCH_USERS_ENDPOINT))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+        
+        // V2
+        mockMvc.perform(get(SCRATCH_USERS_ENDPOINT_V2))
+	        .andExpect(status().isOk())
+	        .andExpect(jsonPath("$.data", hasSize(1)));
     }
 
     @Test
@@ -511,6 +534,11 @@ public class ScratchStorageControllerTest {
         mockMvc.perform(get("/v1/scratch/users/privs"))
                 .andExpect(status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$", hasSize(1)));
+        
+        // V2
+        mockMvc.perform(get(ENDPOINT_V2 + "users/privs"))
+	        .andExpect(status().isOk())
+	        .andExpect(MockMvcResultMatchers.jsonPath("$.data", hasSize(1)));
     }
 
     @Test

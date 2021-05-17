@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.response.WrappedPaginationResponse;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.PersonDto;
@@ -18,7 +18,7 @@ import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
-import mil.tron.commonapi.dto.response.PersonPaginationResponseWrapper;
+import mil.tron.commonapi.dto.response.pagination.PersonPaginationResponseWrapper;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -84,7 +84,7 @@ public class PersonController {
 							schema = @Schema(type = "string")))
 	})
 	@PreAuthorizeRead
-	@WrappedPaginationResponse
+	@WrappedEnvelopeResponse
 	@GetMapping({"${api-prefix.v2}/person"})
 	public ResponseEntity<Object> getPersonsWrapped(
             @Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)

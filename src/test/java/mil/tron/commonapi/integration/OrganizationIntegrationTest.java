@@ -6,9 +6,9 @@ import com.google.common.io.Resources;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.organizations.Squadron;
-import mil.tron.commonapi.dto.response.PaginationResponse;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
+import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -512,8 +512,8 @@ public class OrganizationIntegrationTest {
         organizationService.updateOrganization(parent.getId(), parent);
        
         
-        PaginationResponse<List<OrganizationDto>> response = 
-				PaginationResponse.<List<OrganizationDto>>builder()
+        PaginationWrappedResponse<List<OrganizationDto>> response = 
+				PaginationWrappedResponse.<List<OrganizationDto>>builder()
 				.data(Lists.newArrayList(parent))
 				.pagination(Pagination.builder()
 						.page(0)

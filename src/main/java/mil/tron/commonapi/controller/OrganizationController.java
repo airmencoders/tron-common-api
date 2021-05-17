@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.response.WrappedPaginationResponse;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.OrganizationDto;
@@ -18,7 +18,7 @@ import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
-import mil.tron.commonapi.dto.response.OrganizationPaginationResponseWrapper;
+import mil.tron.commonapi.dto.response.pagination.OrganizationPaginationResponseWrapper;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -154,7 +154,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeRead
-	@WrappedPaginationResponse
+	@WrappedEnvelopeResponse
 	@GetMapping("${api-prefix.v2}/organization")
 	public ResponseEntity<Object> getOrganizationsWrapped(
 			@Parameter(description = "Unit type to filter on", required = false, content= @Content(schema =  @Schema(implementation = Unit.class)))
