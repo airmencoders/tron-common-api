@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.organizations.Squadron;
-import mil.tron.commonapi.dto.response.organization.OrganizationDtoResponseWrapper;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
 import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;

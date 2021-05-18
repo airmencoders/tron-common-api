@@ -14,12 +14,12 @@ import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
+import mil.tron.commonapi.dto.OrganizationDtoPaginationResponseWrapper;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
-import mil.tron.commonapi.dto.response.organization.OrganizationDtoResponseWrapper;
-import mil.tron.commonapi.dto.response.pagination.organization.OrganizationPaginationResponseWrapper;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -143,7 +143,7 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = OrganizationPaginationResponseWrapper.class)),
+					content = @Content(schema = @Schema(implementation = OrganizationDtoPaginationResponseWrapper.class)),
 					headers = @Header(
 							name="link",
 							description = "Contains the appropriate pagination links if application. "

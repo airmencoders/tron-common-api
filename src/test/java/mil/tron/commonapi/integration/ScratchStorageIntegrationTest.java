@@ -6,8 +6,6 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.*;
-import mil.tron.commonapi.dto.response.privilege.PrivilegeDtoResponseWrapper;
-import mil.tron.commonapi.dto.response.scratch.ScratchStorageAppRegistryDtoResponseWrapper;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;

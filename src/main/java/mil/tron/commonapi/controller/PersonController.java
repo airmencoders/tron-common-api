@@ -13,13 +13,13 @@ import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonFindDto;
+import mil.tron.commonapi.dto.PersonDtoPaginationResponseWrapper;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
-import mil.tron.commonapi.dto.response.pagination.person.PersonPaginationResponseWrapper;
-import mil.tron.commonapi.dto.response.person.PersonDtoResponseWrapper;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -76,7 +76,7 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-					content = @Content(schema = @Schema(implementation = PersonPaginationResponseWrapper.class)),
+					content = @Content(schema = @Schema(implementation = PersonDtoPaginationResponseWrapper.class)),
 					headers = @Header(
 							name="link",
 							description = "Contains the appropriate pagination links if application. "

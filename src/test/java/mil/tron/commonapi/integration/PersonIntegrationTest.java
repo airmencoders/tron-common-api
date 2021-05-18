@@ -5,11 +5,11 @@ import com.google.common.io.Resources;
 
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonFindDto;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
 import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
-import mil.tron.commonapi.dto.response.person.PersonDtoResponseWrapper;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.service.PersonFindType;
