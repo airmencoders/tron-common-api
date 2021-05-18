@@ -136,6 +136,12 @@
 			<scope>test</scope>
 		</dependency>
         <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>3.9.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.github.java-json-tools</groupId>
             <artifactId>json-patch</artifactId>
             <version>1.12</version>
