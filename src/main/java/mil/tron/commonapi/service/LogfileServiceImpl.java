@@ -56,6 +56,11 @@ public class LogfileServiceImpl implements LogfileService {
 		} catch (InvalidPathException ex) {
 			throw new BadRequestException("Could not resolve filename: " + fileName);
 		}
+
+		if (Files.isSymbolicLink(path)) {
+			throw new BadRequestException(String.format("File %s requested is a symlink and will not be " +
+					"processed.", fileName));
+		}
 		
 		Resource resource = null;
 		
