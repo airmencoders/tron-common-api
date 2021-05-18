@@ -52,6 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class PubSubIntegrationTest {
     private static final String ENDPOINT = "/v1/subscriptions/";
+    private static final String ENDPOINT_V2 = "/v2/subscriptions/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -210,11 +211,11 @@ public class PubSubIntegrationTest {
 
         // go down for 3 secs
         try { Thread.sleep(3000); } catch (InterruptedException e) {}
-
+        
         // come back up online, we should only get one change since our last communication time
-        mockMvc.perform(get(ENDPOINT + "/events/replay?sinceDateTime={stamp}", df.format(downTime)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$", hasSize(1)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].eventType", equalTo("PERSON_CHANGE")))
+        mockMvc.perform(get(ENDPOINT_V2 + "/events/replay?sinceDateTime={stamp}", df.format(downTime)))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data", hasSize(1)))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data[0].eventType", equalTo("PERSON_CHANGE")))
                 .andExpect(status().isOk());
 
     }
