@@ -100,7 +100,7 @@ public class AppClientController {
 				description = "Successful operation", 
 				content = @Content(array = @ArraySchema(schema = @Schema(implementation = AppClientUserDto.class))))
 	})
-	@GetMapping
+	@GetMapping({"${api-prefix.v1}/app-client", "${api-prefix.v2}/app-client"})
 	public ResponseEntity<Object> getAppClientUsers() {
 		List<AppClientUserDto> dtos = Lists.newArrayList(this.appClientService
 				.getAppClientUsers())
@@ -127,7 +127,7 @@ public class AppClientController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@GetMapping("/{id}")
+	@GetMapping({"${api-prefix.v1}/app-client/{id}", "${api-prefix.v2}/app-client/{id}"})
 	public ResponseEntity<Object> getAppClientRecord(@PathVariable UUID id) {
 
 		checkUserIsDashBoardAdminOrAppClientDeveloper(id);
@@ -148,7 +148,7 @@ public class AppClientController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeDashboardAdmin
-	@PostMapping
+	@PostMapping({"${api-prefix.v1}/app-client", "${api-prefix.v2}/app-client"})
 	public ResponseEntity<AppClientUserDto> createAppClientUser(
 			@Parameter(description = "App Client to create", required = true) @Valid @RequestBody AppClientUserDto appClient) {
 
@@ -171,7 +171,7 @@ public class AppClientController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PutMapping(value = "/{id}")
+	@PutMapping({"${api-prefix.v1}/app-client/{id}", "${api-prefix.v2}/app-client/{id}"})
 	public ResponseEntity<AppClientUserDto> updateAppClient(
 			@Parameter(description = "App Client ID to update", required = true) @PathVariable("id") UUID appClientId,
 			@Parameter(description = "Updated app client record", required = true) @Valid @RequestBody AppClientUserDto appClient) {
@@ -202,7 +202,7 @@ public class AppClientController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
 	@PreAuthorizeDashboardAdmin
-    @DeleteMapping(value = "/{id}")
+    @DeleteMapping({"${api-prefix.v1}/app-client/{id}", "${api-prefix.v2}/app-client/{id}"})
     public ResponseEntity<Object> deleteAppClient(
             @Parameter(description = "App Client ID to delete", required = true) @PathVariable("id") UUID id) {
 
@@ -217,7 +217,7 @@ public class AppClientController {
 					description = "Operation Successful",
 					content = @Content(array = @ArraySchema(schema = @Schema(implementation = PrivilegeDto.class))))
 	})
-	@GetMapping("/privs")
+	@GetMapping({"${api-prefix.v1}/app-client/privs", "${api-prefix.v2}/app-client/privs"})
 	@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') || hasAuthority('APP_CLIENT_DEVELOPER')")
 	public ResponseEntity<Object> getClientTypePrivs() {
 		List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
