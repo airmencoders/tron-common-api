@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import mil.tron.commonapi.dto.response.pagination.Pagination;
 
 /**
  * Wraps data response in envelope
@@ -15,12 +14,9 @@ import mil.tron.commonapi.dto.response.pagination.Pagination;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PaginationResponse<T> {
+public class WrappedResponse<T> {
 	@Getter
 	@Setter
 	private T data;
-	
-	@Getter
-	@Setter
-	private Pagination pagination;
 }
+

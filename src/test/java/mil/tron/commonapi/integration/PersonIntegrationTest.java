@@ -5,10 +5,11 @@ import com.google.common.io.Resources;
 
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonFindDto;
-import mil.tron.commonapi.dto.response.PaginationResponse;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
+import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.service.PersonFindType;
@@ -83,11 +84,11 @@ public class PersonIntegrationTest {
                 a2
         );
 
-        mockMvc.perform(post(ENDPOINT + "persons")
+        mockMvc.perform(post(ENDPOINT_V2 + "persons")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newPeople)))
                 .andExpect(status().isCreated())
-                .andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), PersonDto[].class).length));
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), PersonDtoResponseWrapper.class).getData().size()));
 
         PersonDto a3 = new PersonDto();
         a3.setEmail("test1@test.com");
@@ -96,7 +97,7 @@ public class PersonIntegrationTest {
         a3.setBranch(Branch.USAF);
 
         // test that we can't add someone with a dup email
-        mockMvc.perform(post(ENDPOINT + "persons")
+        mockMvc.perform(post(ENDPOINT_V2 + "persons")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(a3))))
                 .andExpect(status().isConflict());
@@ -391,8 +392,8 @@ public class PersonIntegrationTest {
     	personService.createPerson(person);
     	personService.createPerson(person1);
 		
-		PaginationResponse<List<PersonDto>> response = 
-				PaginationResponse.<List<PersonDto>>builder()
+		PaginationWrappedResponse<List<PersonDto>> response = 
+				PaginationWrappedResponse.<List<PersonDto>>builder()
 				.data(Lists.newArrayList(person))
 				.pagination(Pagination.builder()
 						.page(0)

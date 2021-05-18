@@ -6,6 +6,7 @@ import com.github.fge.jsonpatch.JsonPatch;
 
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PersonFindDto;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.PersonConversionOptions;
@@ -191,7 +192,15 @@ public class PersonControllerTest {
 					.content(OBJECT_MAPPER.writeValueAsString(people)))
 					.andExpect(status().isCreated())
 					.andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(people), result.getResponse().getContentAsString()));
-
+			
+			// V2
+			WrappedResponse<List<PersonDto>> personWrappedResponse = WrappedResponse.<List<PersonDto>>builder().data(people).build();
+			mockMvc.perform(post(ENDPOINT_V2 + "/persons")
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(people)))
+					.andExpect(status().isCreated())
+					.andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(personWrappedResponse), result.getResponse().getContentAsString()));
 		}
 		
 		@Test

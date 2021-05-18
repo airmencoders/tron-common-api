@@ -17,19 +17,25 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import mil.tron.commonapi.annotation.response.WrappedPaginationResponse;
-import mil.tron.commonapi.dto.response.PaginationResponse;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
 import mil.tron.commonapi.dto.response.pagination.PaginationLinkType;
+import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
 
 
+/**
+ * Controller Advice that wraps a response in an envelope wrapper.
+ * Method must be annotated with {@link WrappedEnvelopeResponse} to designate it to be wrapped.
+ *
+ */
 @ControllerAdvice
-public class PaginationResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
+public class ResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
 
 	@Override
 	public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-		return returnType.hasMethodAnnotation(WrappedPaginationResponse.class);
+		return returnType.hasMethodAnnotation(WrappedEnvelopeResponse.class);
 	}
 
 	@Override
@@ -38,12 +44,11 @@ public class PaginationResponseWrapperAdvice implements ResponseBodyAdvice<Objec
 			ServerHttpResponse response) {
 		
 		// Don't wrap if it's already wrapped
-		if (body instanceof PaginationResponse) {
+		if (body instanceof PaginationWrappedResponse || body instanceof WrappedResponse) {
 			return body;
 		}
 		
 		// Check if response is paginated to set correct headers
-		// else just set the data
 		if (body instanceof Page) {
 			Page<?> page = (Page<?>)body;
 			EnumMap<PaginationLinkType, String> links = createPaginationLinks(page);
@@ -53,7 +58,7 @@ public class PaginationResponseWrapperAdvice implements ResponseBodyAdvice<Objec
 				response.getHeaders().add(HttpHeaders.LINK, linkHeader);
 			}
 			
-			return PaginationResponse.builder()
+			return PaginationWrappedResponse.builder()
 				.data(page.getContent())
 				.pagination(Pagination.builder()
 						.page(page.getPageable().getPageNumber())
@@ -80,7 +85,7 @@ public class PaginationResponseWrapperAdvice implements ResponseBodyAdvice<Objec
 				response.getHeaders().add(HttpHeaders.LINK, linkHeader);
 			}
 			
-			return PaginationResponse.builder()
+			return PaginationWrappedResponse.builder()
 					.data(slice.getContent())
 					.pagination(Pagination.builder()
 							.page(slice.getPageable().getPageNumber())
@@ -94,10 +99,16 @@ public class PaginationResponseWrapperAdvice implements ResponseBodyAdvice<Objec
 							.build())
 					.build();
 		} 
-			
-		return PaginationResponse.builder().data(body).build();
+		
+		// Return non-paginated response wrapper
+		return WrappedResponse.builder().data(body).build();
 	}
 
+	/**
+	 * Creates the LINK header string
+	 * @param links the links to be converted to header
+	 * @return the LINK header string
+	 */
 	private static String createPaginationLinkHeader(EnumMap<PaginationLinkType, String> links) {
 		final StringJoiner header = new StringJoiner(", ");
 		for (Map.Entry<PaginationLinkType, String> entry : links.entrySet()) {
@@ -110,6 +121,14 @@ public class PaginationResponseWrapperAdvice implements ResponseBodyAdvice<Objec
 		return header.toString();
 	}
 	
+	/**
+	 * 
+	 * Creates map containing possible pagination links for an associated Page or Slice
+	 * 
+	 * @param <T> Page or Slice
+	 * @param pagination the Page or Slice to generate links off of
+	 * @return A map containing the applicable pagination links
+	 */
 	private static <T extends Slice<?>> EnumMap<PaginationLinkType, String> createPaginationLinks(T pagination) {
         final EnumMap<PaginationLinkType, String> links = new EnumMap<>(PaginationLinkType.class);
         

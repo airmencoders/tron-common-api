@@ -4,11 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.organizations.Squadron;
-import mil.tron.commonapi.dto.response.PaginationResponse;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
+import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -106,15 +107,15 @@ public class OrganizationIntegrationTest {
 
         // test go path for controller to db for adding build organizations, add 3 get
         // back 3
-        mockMvc.perform(post(ENDPOINT + "organizations").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(ENDPOINT_V2 + "organizations").contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newOrganizations))).andExpect(status().isCreated())
                 .andExpect(result -> assertEquals(3, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(),
-                        OrganizationDto[].class).length));
+                        OrganizationDtoResponseWrapper.class).getData().size()));
 
         // now try to add again one that already has an existing name
         OrganizationDto s4 = new OrganizationDto();
         s4.setName(organization.getName());
-        mockMvc.perform(post(ENDPOINT + "organizations").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(ENDPOINT_V2 + "organizations").contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(s4)))).andExpect(status().isConflict());
 
         // test pagination
@@ -512,8 +513,8 @@ public class OrganizationIntegrationTest {
         organizationService.updateOrganization(parent.getId(), parent);
        
         
-        PaginationResponse<List<OrganizationDto>> response = 
-				PaginationResponse.<List<OrganizationDto>>builder()
+        PaginationWrappedResponse<List<OrganizationDto>> response = 
+				PaginationWrappedResponse.<List<OrganizationDto>>builder()
 				.data(Lists.newArrayList(parent))
 				.pagination(Pagination.builder()
 						.page(0)

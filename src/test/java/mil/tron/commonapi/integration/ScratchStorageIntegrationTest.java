@@ -76,6 +76,7 @@ public class ScratchStorageIntegrationTest {
     private static final String COOL_APP_NAME = "CoolApp";
     private static final String TEST_APP_NAME = "TestApp";
     private static final String ENDPOINT = "/v1/scratch/";
+    private static final String ENDPOINT_V2 = "/v2/scratch/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private ModelMapper mapper = new ModelMapper();
 
@@ -353,6 +354,14 @@ public class ScratchStorageIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
+        
+        // have to be a dashboard admin to do this
+        // V2
+        mockMvc.perform(get(ENDPOINT_V2)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
     }
 
     @Transactional
@@ -557,29 +566,26 @@ public class ScratchStorageIntegrationTest {
 
 
         // get the priv ID of SCRATCH_ADMIN from the REST interface
-        MvcResult privList = mockMvc.perform(get("/v1/scratch/users/privs")
+        MvcResult privList = mockMvc.perform(get(ENDPOINT_V2 + "users/privs")
                 .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
                 .andReturn();
-        PrivilegeDto[] privArray = OBJECT_MAPPER
-                .readValue(privList.getResponse().getContentAsString(), PrivilegeDto[].class);
+        List<PrivilegeDto> privArray = OBJECT_MAPPER
+                .readValue(privList.getResponse().getContentAsString(), PrivilegeDtoResponseWrapper.class).getData();
 
         // yank out the SCRATCH_ADMIN from the JSON
-        PrivilegeDto adminPriv = Arrays
-                .stream(privArray)
+        PrivilegeDto adminPriv = privArray.stream()
                 .filter(item -> item.getName().equals("SCRATCH_ADMIN"))
                 .collect(Collectors.toList()).get(0);
 
         // yank out the SCRATCH_WRITE details from the JSON
-        PrivilegeDto writePriv = Arrays
-                .stream(privArray)
+        PrivilegeDto writePriv = privArray.stream()
                 .filter(item -> item.getName().equals("SCRATCH_WRITE"))
                 .collect(Collectors.toList()).get(0);
 
         // yank out the SCRATCH_READ details from the JSON
-        PrivilegeDto readPriv = Arrays
-                .stream(privArray)
+        PrivilegeDto readPriv = privArray.stream()
                 .filter(item -> item.getName().equals("SCRATCH_READ"))
                 .collect(Collectors.toList()).get(0);
 
@@ -720,6 +726,13 @@ public class ScratchStorageIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(newUserDto.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk());
+        
+        // make sure the READ priv works - get the app's key names
+        // V2 wrapped response
+        mockMvc.perform(get(ENDPOINT_V2 + "/apps/{appId}/keys", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(newUserDto.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
 
         // finally revoke the new guys privs - but the system will not delete that user from the
         //   scratch space universe, since they may be referenced for other apps!
@@ -832,14 +845,14 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(status().isOk());
 
         // verify that user2 is no longer listed in COOL_APP or TEST_APP's privs
-        MvcResult allAppRecords = mockMvc.perform(get(ENDPOINT + "/apps")
+        MvcResult allAppRecords = mockMvc.perform(get(ENDPOINT_V2 + "apps")
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        ScratchStorageAppRegistryDto[] appArray = OBJECT_MAPPER.readValue(allAppRecords.getResponse().getContentAsString(),
-                ScratchStorageAppRegistryDto[].class);
+        List<ScratchStorageAppRegistryDto> appArray = OBJECT_MAPPER.readValue(allAppRecords.getResponse().getContentAsString(),
+                ScratchStorageAppRegistryDtoResponseWrapper.class).getData();
 
         boolean foundUser2Id = false;
         for (ScratchStorageAppRegistryDto entry : appArray) {

@@ -37,6 +37,7 @@ import lombok.val;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppSource;
@@ -50,6 +51,7 @@ import mil.tron.commonapi.service.AppSourceService;
 @WebMvcTest(AppSourceController.class)
 public class AppSourceControllerTest {
 	private static final String ENDPOINT = "/v1/app-source/";
+	private static final String ENDPOINT_V2 = "/v2/app-source/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	@Autowired
@@ -153,6 +155,12 @@ public class AppSourceControllerTest {
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(appSourceDtos)));
+			
+			// V2
+			WrappedResponse<List<AppSourceDto>> wrappedResponse = WrappedResponse.<List<AppSourceDto>>builder().data(appSourceDtos).build();
+			mockMvc.perform(get(ENDPOINT_V2))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(wrappedResponse)));
 		}	
 		
 		@Test
@@ -180,6 +188,10 @@ public class AppSourceControllerTest {
 
 			mockMvc.perform(get(ENDPOINT + "app-clients"))
 					.andExpect(status().isOk());
+			
+			// V2
+			mockMvc.perform(get(ENDPOINT_V2 + "app-clients"))
+				.andExpect(status().isOk());
 		}
 
 		@Test

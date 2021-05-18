@@ -9,16 +9,17 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.response.WrappedPaginationResponse;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonFindDto;
+import mil.tron.commonapi.dto.PersonDtoPaginationResponseWrapper;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
-import mil.tron.commonapi.dto.response.PersonPaginationResponseWrapper;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -75,7 +76,7 @@ public class PersonController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-					content = @Content(schema = @Schema(implementation = PersonPaginationResponseWrapper.class)),
+					content = @Content(schema = @Schema(implementation = PersonDtoPaginationResponseWrapper.class)),
 					headers = @Header(
 							name="link",
 							description = "Contains the appropriate pagination links if application. "
@@ -84,7 +85,7 @@ public class PersonController {
 							schema = @Schema(type = "string")))
 	})
 	@PreAuthorizeRead
-	@WrappedPaginationResponse
+	@WrappedEnvelopeResponse
 	@GetMapping({"${api-prefix.v2}/person"})
 	public ResponseEntity<Object> getPersonsWrapped(
             @Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
@@ -295,6 +296,11 @@ public class PersonController {
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
+	/**
+	 * @deprecated No longer valid T166. See {@link #addPersonsWrapped(List)} for new usage.
+	 * @param people
+	 * @return
+	 */
 	@Operation(summary = "Add one or more members to the database",
 			description = "Adds one or more person entities - returns that same array of input persons with their assigned UUIDs. " +
 					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
@@ -311,12 +317,37 @@ public class PersonController {
 					description = "A person already exists with the id provided",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@Deprecated(since = "v2")
 	@PreAuthorizeWrite
-	@PostMapping({"${api-prefix.v1}/person/persons", "${api-prefix.v2}/person/persons"})
+	@PostMapping({"${api-prefix.v1}/person/persons"})
 	public ResponseEntity<Object> addPersons(
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
 		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
 	}
+	
+	@Operation(summary = "Add one or more members to the database",
+			description = "Adds one or more person entities - returns that same array of input persons with their assigned UUIDs. " +
+					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
+					"no new persons will have been committed to the database (if one entity fails, the entire operation fails). " +
+					"The return error message will list the offending UUID or other data that caused the error.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad data or validation error",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "A person already exists with the id provided",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorizeWrite
+	@PostMapping({"${api-prefix.v2}/person/persons"})
+	public ResponseEntity<Object> addPersonsWrapped(
+			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
+		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
+	}
 }

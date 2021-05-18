@@ -10,15 +10,16 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.response.WrappedPaginationResponse;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
+import mil.tron.commonapi.dto.OrganizationDtoPaginationResponseWrapper;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
-import mil.tron.commonapi.dto.response.OrganizationPaginationResponseWrapper;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -142,7 +143,7 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = OrganizationPaginationResponseWrapper.class)),
+					content = @Content(schema = @Schema(implementation = OrganizationDtoPaginationResponseWrapper.class)),
 					headers = @Header(
 							name="link",
 							description = "Contains the appropriate pagination links if application. "
@@ -154,7 +155,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeRead
-	@WrappedPaginationResponse
+	@WrappedEnvelopeResponse
 	@GetMapping("${api-prefix.v2}/organization")
 	public ResponseEntity<Object> getOrganizationsWrapped(
 			@Parameter(description = "Unit type to filter on", required = false, content= @Content(schema =  @Schema(implementation = Unit.class)))
@@ -473,6 +474,11 @@ public class OrganizationController {
 			return new ResponseEntity<>(organizationService.modify(organizationId, attribs), HttpStatus.OK);
 	}
 
+	/**
+	 * @deprecated No longer valid T166. See {@link #addNewOrganizationsWrapped(List)} for new usage.
+	 * @param orgs
+	 * @return
+	 */
 	@Operation(summary = "Adds one or more organization entities",
 			description = "Adds one or more organization entities - returns that same array of input organizations with their assigned UUIDs. " +
 					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
@@ -490,8 +496,32 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PostMapping({"${api-prefix.v1}/organization/organizations", "${api-prefix.v2}/organization/organizations"})
+	@Deprecated(since = "v2")
+	@PostMapping({"${api-prefix.v1}/organization/organizations"})
 	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
+		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
+	}
+	
+	@Operation(summary = "Adds one or more organization entities",
+			description = "Adds one or more organization entities - returns that same array of input organizations with their assigned UUIDs. " +
+					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
+					"any new organizations up to that organization that caused the failure will have been committed (but none thereafter)" +
+					"The return error message will list the offending UUID or other data that caused the error.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = OrganizationDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad data or validation error",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Bad Request / One of the supplied organizations contained a UUID that already exists or other duplicate data",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorizeWrite
+	@PostMapping({"${api-prefix.v2}/organization/organizations"})
+	public ResponseEntity<Object> addNewOrganizationsWrapped(@RequestBody List<OrganizationDto> orgs) {
 		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
 	}
 
