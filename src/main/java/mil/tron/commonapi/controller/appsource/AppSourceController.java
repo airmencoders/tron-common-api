@@ -36,8 +36,7 @@ import java.util.stream.Collectors;
 /***
  * Controller for App Source endpoints.
  */
- @RestController
-@RequestMapping({"${api-prefix.v1}/app-source", "${api-prefix.v2}/app-source"})
+@RestController
 public class AppSourceController {
 
     private AppClientUserService appClientUserService;
@@ -115,7 +114,7 @@ public class AppSourceController {
                     ))
     })
     @PreAuthorizeDashboardAdmin
-    @PostMapping
+    @PostMapping({"${api-prefix.v1}/app-source", "${api-prefix.v2}/app-source"})
     public ResponseEntity<AppSourceDetailsDto> createAppSource(
             @Parameter(name = "App Source", required = true) @Valid @RequestBody AppSourceDetailsDto appSourceDto) {
         return new ResponseEntity<>(this.appSourceService.createAppSource(appSourceDto), HttpStatus.CREATED);
@@ -135,7 +134,7 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
 					))
     })
-    @GetMapping
+    @GetMapping({"${api-prefix.v1}/app-source", "${api-prefix.v2}/app-source"})
     public ResponseEntity<List<AppSourceDto>> getAppSources() {
         List<AppSourceDto> dtos = this.appSourceService
                 .getAppSources()
@@ -166,7 +165,7 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
                     ))
     })
-    @GetMapping("/{id}")
+    @GetMapping({"${api-prefix.v1}/app-source/{id}", "${api-prefix.v2}/app-source/{id}"})
     public ResponseEntity<AppSourceDetailsDto> getAppSourceDetails(
             @Parameter(name = "id", description = "App Source UUID", required = true) @PathVariable UUID id) {
         checkUserIsDashBoardAdminOrAppSourceAdmin(id);
@@ -203,7 +202,7 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
                     ))
     })
-    @PutMapping("/{id}")
+    @PutMapping({"${api-prefix.v1}/app-source/{id}", "${api-prefix.v2}/app-source/{id}"})
     public ResponseEntity<AppSourceDetailsDto> updateAppSourceDetails(
             @Parameter(name = "id", description = "App Source id to update", required = true)
                     @PathVariable UUID id,
@@ -234,7 +233,7 @@ public class AppSourceController {
 					))
     })
     @PreAuthorizeDashboardAdmin
-    @DeleteMapping("/{id}")
+    @DeleteMapping({"${api-prefix.v1}/app-source/{id}", "${api-prefix.v2}/app-source/{id}"})
     public ResponseEntity<Object> deleteAppSource(
             @Parameter(name = "id", description = "App Source UUID", required = true) @PathVariable UUID id) {
 
@@ -264,7 +263,7 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
                     ))
     })
-    @PatchMapping("/admins/{id}")
+    @PatchMapping({"${api-prefix.v1}/app-source/admins/{id}", "${api-prefix.v2}/app-source/admins/{id}"})
     public ResponseEntity<Object> addAppSourceAdmin(
             @Parameter(name = "id", description = "App Source UUID", required = true) @PathVariable UUID id,
             @Parameter(name = "Email", description = "Email of user to add as an App Source admin", required = true) @Valid @RequestBody DashboardUserDto user) {
@@ -293,7 +292,7 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
                     ))
     })
-    @DeleteMapping("/admins/{id}")
+    @DeleteMapping({"${api-prefix.v1}/app-source/admins/{id}", "${api-prefix.v2}/app-source/admins/{id}"})
     public ResponseEntity<Object> removeAppSourceAdmin(
             @Parameter(name = "id", description = "App Source UUID", required = true) @PathVariable UUID id,
             @Parameter(name = "Email", description = "Admin To Remove Email", required = true) @Valid @RequestBody DashboardUserDto user) {
@@ -323,7 +322,7 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
                     ))
     })
-    @DeleteMapping("/app-clients/all/{id}")
+    @DeleteMapping({"${api-prefix.v1}/app-source/app-clients/all/{id}", "${api-prefix.v2}/app-source/app-clients/all/{id}"})
     public ResponseEntity<Object> removeAllAppClientPrivs(
             @Parameter(name = "id", description = "App Source UUID", required = true) @PathVariable UUID id) {
         checkUserIsDashBoardAdminOrAppSourceAdmin(id);
@@ -344,7 +343,7 @@ public class AppSourceController {
                     schema = @Schema(implementation = ExceptionResponse.class)
             ))
     })
-    @GetMapping("/app-clients")
+    @GetMapping({"${api-prefix.v1}/app-source/app-clients", "${api-prefix.v2}/app-source/app-clients"})
     @PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or hasAuthority('APP_SOURCE_ADMIN')")
     public ResponseEntity<Object> getAvailableAppClients() {
         return new ResponseEntity<>(appClientUserService.getAppClientUserSummaries(), HttpStatus.OK);
@@ -369,7 +368,7 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
                     ))
     })
-    @PostMapping("/app-clients")
+    @PostMapping({"${api-prefix.v1}/app-source/app-clients", "${api-prefix.v2}/app-source/app-clients"})
     public ResponseEntity<Object> addClientToEndpointPriv(
             @Parameter(name = "appId", description = "App Source UUID", required = true) @Valid @RequestBody AppEndPointPrivDto dto) {
         checkUserIsDashBoardAdminOrAppSourceAdmin(dto.getAppSourceId());
@@ -395,7 +394,7 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
                     ))
     })
-    @DeleteMapping("/app-clients/{appId}/{privId}")
+    @DeleteMapping({"${api-prefix.v1}/app-source/app-clients/{appId}/{privId}", "${api-prefix.v2}/app-source/app-clients/{appId}/{privId}"})
     public ResponseEntity<Object> removeClientToEndPointPriv(
             @Parameter(name = "appId", description = "App Source UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "privId", description = "App Source Endpoint Privilege UUID", required = true) @PathVariable UUID privId) {
@@ -424,7 +423,7 @@ public class AppSourceController {
                 description = "App Source or API Specification file not found",
                 content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
-    @GetMapping("spec/{appId}")
+    @GetMapping({"${api-prefix.v1}/app-source/spec/{appId}", "${api-prefix.v2}/app-source/spec/{appId}"})
     @PostAuthorize("hasAuthority('DASHBOARD_ADMIN') || @accessCheckAppSource.checkByAppSourceId(authentication, #appId)")
     public ResponseEntity<Resource> getSpecFile(@Parameter(name = "appId", description = "App Source UUID", required = true) @PathVariable UUID appId) {
         return new ResponseEntity<>(appSourceService.getApiSpecForAppSource(appId), HttpStatus.OK);
@@ -451,7 +450,7 @@ public class AppSourceController {
                 description = "App Source or API Specification file not found",
                 content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
-    @GetMapping("spec/endpoint-priv/{endpointPrivId}")
+    @GetMapping({"${api-prefix.v1}/app-source/spec/endpoint-priv/{endpointPrivId}", "${api-prefix.v2}/app-source/spec/endpoint-priv/{endpointPrivId}"})
     @PostAuthorize("hasAuthority('DASHBOARD_ADMIN') || @accessCheckAppSource.checkByAppEndpointPrivId(authentication, #endpointPrivId)")
     public ResponseEntity<Resource> getSpecFileByEndpointPriv(@Parameter(name = "endpointPrivId", description = "App Endpoint Privilege UUID", required = true) @PathVariable UUID endpointPrivId) {
         return new ResponseEntity<>(appSourceService.getApiSpecForAppSourceByEndpointPriv(endpointPrivId), HttpStatus.OK);
