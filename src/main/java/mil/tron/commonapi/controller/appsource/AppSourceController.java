@@ -7,12 +7,15 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDtoResponseWrapper;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDtoResponseWrapper;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.service.AppClientUserService;
@@ -120,6 +123,10 @@ public class AppSourceController {
         return new ResponseEntity<>(this.appSourceService.createAppSource(appSourceDto), HttpStatus.CREATED);
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getAppSourcesWrapped()} for new usage.
+     * @return
+     */
     @Operation(summary = "Gets all App Sources.", description = "Requires DASHBOARD_ADMIN rights")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
@@ -134,8 +141,35 @@ public class AppSourceController {
                             schema = @Schema(implementation = ExceptionResponse.class)
 					))
     })
-    @GetMapping({"${api-prefix.v1}/app-source", "${api-prefix.v2}/app-source"})
+    @Deprecated(since = "v2")
+    @GetMapping({"${api-prefix.v1}/app-source"})
     public ResponseEntity<List<AppSourceDto>> getAppSources() {
+        List<AppSourceDto> dtos = this.appSourceService
+                .getAppSources()
+                .stream()
+                .filter(source -> userIsDashBoardAdminOrAppSourceAdmin(source.getId()))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(dtos, HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Gets all App Sources.", description = "Requires DASHBOARD_ADMIN rights")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AppSourceDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges",
+            		content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExceptionResponse.class)
+					))
+    })
+    @WrappedEnvelopeResponse
+    @GetMapping({"${api-prefix.v2}/app-source"})
+    public ResponseEntity<List<AppSourceDto>> getAppSourcesWrapped() {
         List<AppSourceDto> dtos = this.appSourceService
                 .getAppSources()
                 .stream()
@@ -329,6 +363,10 @@ public class AppSourceController {
         return new ResponseEntity<>(appSourceService.deleteAllAppClientPrivs(id), HttpStatus.OK);
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getAvailableAppClientsWrapped()} for new usage.
+     * @return
+     */
     @Operation(summary = "Gets a list of the available app clients (their names and UUIDs)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
@@ -343,9 +381,31 @@ public class AppSourceController {
                     schema = @Schema(implementation = ExceptionResponse.class)
             ))
     })
-    @GetMapping({"${api-prefix.v1}/app-source/app-clients", "${api-prefix.v2}/app-source/app-clients"})
+    @Deprecated(since = "v2")
+    @GetMapping({"${api-prefix.v1}/app-source/app-clients"})
     @PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or hasAuthority('APP_SOURCE_ADMIN')")
     public ResponseEntity<Object> getAvailableAppClients() {
+        return new ResponseEntity<>(appClientUserService.getAppClientUserSummaries(), HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Gets a list of the available app clients (their names and UUIDs)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+            		content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AppClientSummaryDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "403",
+            description = "Insufficient privileges",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ExceptionResponse.class)
+            ))
+    })
+    @WrappedEnvelopeResponse
+    @GetMapping({"${api-prefix.v2}/app-source/app-clients"})
+    @PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or hasAuthority('APP_SOURCE_ADMIN')")
+    public ResponseEntity<Object> getAvailableAppClientsWrapped() {
         return new ResponseEntity<>(appClientUserService.getAppClientUserSummaries(), HttpStatus.OK);
     }
 
