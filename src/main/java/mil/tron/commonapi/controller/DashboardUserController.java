@@ -22,7 +22,6 @@ import java.security.Principal;
 import java.util.UUID;
 
 @RestController
-@RequestMapping({"${api-prefix.v1}/dashboard-users", "${api-prefix.v2}/dashboard-users"})
 public class DashboardUserController {
 
     DashboardUserService dashboardUserService;
@@ -38,7 +37,7 @@ public class DashboardUserController {
 						content = @Content(array = @ArraySchema(schema = @Schema(implementation = DashboardUserDto.class))))
 	})
     @PreAuthorizeDashboardUser
-    @GetMapping("")
+    @GetMapping({"${api-prefix.v1}/dashboard-users", "${api-prefix.v2}/dashboard-users"})
     public ResponseEntity<Iterable<DashboardUserDto>> getAllDashboardUsers() {
         return new ResponseEntity<>(dashboardUserService.getAllDashboardUsersDto(), HttpStatus.OK);
     }
@@ -56,7 +55,7 @@ public class DashboardUserController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PreAuthorizeDashboardUser
-    @GetMapping(value = "/{id}")
+    @GetMapping({"${api-prefix.v1}/dashboard-users/{id}", "${api-prefix.v2}/dashboard-users/{id}"})
     public ResponseEntity<DashboardUserDto> getDashboardUser(
             @Parameter(description = "Dashboard User ID to retrieve", required = true) @PathVariable("id") UUID id) {
 
@@ -78,7 +77,7 @@ public class DashboardUserController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @PreAuthorizeDashboardAdmin
-    @PostMapping("")
+    @PostMapping({"${api-prefix.v1}/dashboard-users", "${api-prefix.v2}/dashboard-users"})
     public ResponseEntity<DashboardUserDto> addDashboardUser(@Parameter(description = "Dashboard user to add", required = true) @Valid @RequestBody DashboardUserDto dashboardUser) {
         return new ResponseEntity<>(dashboardUserService.createDashboardUserDto(dashboardUser), HttpStatus.CREATED);
     }
@@ -93,7 +92,7 @@ public class DashboardUserController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PreAuthorizeDashboardAdmin
-    @PutMapping(value = "/{id}")
+    @PutMapping({"${api-prefix.v1}/dashboard-users/{id}", "${api-prefix.v2}/dashboard-users/{id}"})
     public ResponseEntity<DashboardUserDto> updateDashboardUser(
             @Parameter(description = "Dashboard User ID to update", required = true) @PathVariable("id") UUID id,
             @Parameter(description = "Updated person", required = true) @Valid @RequestBody DashboardUserDto dashboardUserDto) {
@@ -112,7 +111,7 @@ public class DashboardUserController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PreAuthorizeDashboardAdmin
-    @DeleteMapping(value = "/{id}")
+    @DeleteMapping({"${api-prefix.v1}/dashboard-users/{id}", "${api-prefix.v2}/dashboard-users/{id}"})
     public ResponseEntity<Object> deleteDashboardUser(
             @Parameter(description = "Dashboard ID to delete", required = true) @PathVariable("id") UUID id) {
         dashboardUserService.deleteDashboardUser(id);
@@ -129,7 +128,7 @@ public class DashboardUserController {
                     description = "Forbidden (user does not exist)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
-    @GetMapping(value = "/self")
+    @GetMapping({"${api-prefix.v1}/dashboard-users/self", "${api-prefix.v2}/dashboard-users/self"})
     public ResponseEntity<DashboardUserDto> getSelfDashboardUser(Principal principal) {
         DashboardUserDto dashboardUser = dashboardUserService.getSelf(principal.getName());
         return new ResponseEntity<>(dashboardUser, HttpStatus.OK);
