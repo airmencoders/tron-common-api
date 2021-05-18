@@ -7,9 +7,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardUser;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.DashboardUserDtoResponseWrapper;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.springframework.http.HttpStatus;
@@ -30,15 +32,33 @@ public class DashboardUserController {
         this.dashboardUserService = dashboardUserService;
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getAllDashboardUsersWrapped()} for new usage.
+     * @return
+     */
     @Operation(summary = "Retrieves all Dashboard Users", description = "Retrieves all Dashboard Users")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
 						content = @Content(array = @ArraySchema(schema = @Schema(implementation = DashboardUserDto.class))))
 	})
+    @Deprecated(since = "v2")
     @PreAuthorizeDashboardUser
-    @GetMapping({"${api-prefix.v1}/dashboard-users", "${api-prefix.v2}/dashboard-users"})
+    @GetMapping({"${api-prefix.v1}/dashboard-users"})
     public ResponseEntity<Iterable<DashboardUserDto>> getAllDashboardUsers() {
+        return new ResponseEntity<>(dashboardUserService.getAllDashboardUsersDto(), HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Retrieves all Dashboard Users", description = "Retrieves all Dashboard Users")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+						content = @Content(schema = @Schema(implementation = DashboardUserDtoResponseWrapper.class)))
+	})
+    @WrappedEnvelopeResponse
+    @PreAuthorizeDashboardUser
+    @GetMapping({"${api-prefix.v2}/dashboard-users"})
+    public ResponseEntity<Iterable<DashboardUserDto>> getAllDashboardUsersWrapped() {
         return new ResponseEntity<>(dashboardUserService.getAllDashboardUsersDto(), HttpStatus.OK);
     }
 

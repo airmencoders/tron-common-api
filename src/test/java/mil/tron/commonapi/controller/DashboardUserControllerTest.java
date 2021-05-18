@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
@@ -35,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 public class DashboardUserControllerTest {
     private static final String ENDPOINT = "/v1/dashboard-users/";
+    private static final String ENDPOINT_V2 = "/v2/dashboard-users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -75,6 +77,12 @@ public class DashboardUserControllerTest {
             mockMvc.perform(get(ENDPOINT))
                     .andExpect(status().isOk())
                     .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(dashboardUsers)));
+            
+            // V2
+            WrappedResponse<List<DashboardUserDto>> wrappedResponse = WrappedResponse.<List<DashboardUserDto>>builder().data(dashboardUsers).build();
+            mockMvc.perform(get(ENDPOINT_V2))
+	            .andExpect(status().isOk())
+	            .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(wrappedResponse)));
         }
 
         @Test
