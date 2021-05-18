@@ -32,7 +32,6 @@ import java.util.UUID;
  * Allows RESTful creation and management of event subscriptions
  */
 @RestController
-@RequestMapping({"${api-prefix.v1}/subscriptions", "${api-prefix.v2}/subscriptions"})
 public class SubscriberController {
 
     @Autowired
@@ -48,7 +47,7 @@ public class SubscriberController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = SubscriberDto.class))))
     })
     @PreAuthorizeDashboardAdmin
-    @GetMapping("")
+    @GetMapping({"${api-prefix.v1}/subscriptions", "${api-prefix.v2}/subscriptions"})
     public ResponseEntity<Object> getAllSubscriptions() {
         return new ResponseEntity<>(subService.getAllSubscriptions(), HttpStatus.OK);
     }
@@ -60,7 +59,7 @@ public class SubscriberController {
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = SubscriberDto.class)))
     })
-    @PostMapping("")
+    @PostMapping({"${api-prefix.v1}/subscriptions", "${api-prefix.v2}/subscriptions"})
     public ResponseEntity<SubscriberDto> createSubscription(@Valid @RequestBody SubscriberDto subscriber) {
         return new ResponseEntity<>(subService.upsertSubscription(subscriber), HttpStatus.OK);
     }
@@ -75,7 +74,7 @@ public class SubscriberController {
                     description = "Record not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
-    @GetMapping("/{id}")
+    @GetMapping({"${api-prefix.v1}/subscriptions/{id}", "${api-prefix.v2}/subscriptions/{id}"})
     public ResponseEntity<SubscriberDto> getSubscription(@PathVariable UUID id) {
         return new ResponseEntity<>(subService.getSubscriberById(id), HttpStatus.OK);
     }
@@ -90,7 +89,7 @@ public class SubscriberController {
                     description = "Record not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
-    @DeleteMapping("/{id}")
+    @DeleteMapping({"${api-prefix.v1}/subscriptions/{id}", "${api-prefix.v2}/subscriptions/{id}"})
     public ResponseEntity<Object> cancelSubscription(@PathVariable UUID id) {
         subService.cancelSubscription(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -107,7 +106,7 @@ public class SubscriberController {
                     description = "Bad Request - malformed date/time",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = BadRequestException.class))))
     })
-    @GetMapping("/events/replay")
+    @GetMapping({"${api-prefix.v1}/subscriptions/events/replay", "${api-prefix.v2}/subscriptions/events/replay"})
     public ResponseEntity<Object> getEventSinceDate(
             @RequestParam(name="sinceDateTime", required = false) String sinceDate) {
 
@@ -137,7 +136,7 @@ public class SubscriberController {
                     description = "Bad Request - malformed date/time",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = BadRequestException.class))))
     })
-    @PostMapping("/events/replay-events")
+    @PostMapping({"${api-prefix.v1}/subscriptions/events/replay-events", "${api-prefix.v2}/subscriptions/events/replay-events"})
     public ResponseEntity<Object> getEventsSinceCountAndType(
             @Parameter(description = "List of events and counts to rewind to and playback", required = true) @Valid @RequestBody List<EventInfoDto> events) {
         return new ResponseEntity<>(eventManagerService.getMessagesSinceEventCountByType(events), HttpStatus.OK);
@@ -149,7 +148,7 @@ public class SubscriberController {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = EventInfoDto.class))))})
-    @GetMapping("/events/latest")
+    @GetMapping({"${api-prefix.v1}/subscriptions/events/latest", "${api-prefix.v2}/subscriptions/events/latest"})
     public ResponseEntity<Object> getLatestCounts() {
         return new ResponseEntity<>(eventManagerService.getEventTypeCounts(), HttpStatus.OK);
     }
