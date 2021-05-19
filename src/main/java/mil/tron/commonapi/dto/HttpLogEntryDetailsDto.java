@@ -19,12 +19,12 @@ public class HttpLogEntryDetailsDto {
 
     @Getter
     @Setter
-    private UUID id;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
+    private Date requestTimestamp;
 
     @Getter
     @Setter
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
-    private Date requestTimestamp;
+    private UUID id;
 
     @Getter
     @Setter
