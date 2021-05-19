@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * DTO for holding http log info + its request body and response body
@@ -15,6 +16,10 @@ import java.util.Date;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class HttpLogEntryDetailsDto {
+
+    @Getter
+    @Setter
+    private UUID id;
 
     @Getter
     @Setter

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * DTO for holding http log info
@@ -13,6 +14,10 @@ import java.util.Date;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class HttpLogEntryDto {
+
+    @Getter
+    @Setter
+    private UUID id;
 
     @Getter
     @Setter

@@ -40,7 +40,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/").permitAll()  // for swagger redirect to work at root of api
 				.antMatchers("/api-docs/**").permitAll()
         		.antMatchers("/api-docs**").permitAll()
-				.antMatchers("/actuator/httptrace").denyAll()
+				.antMatchers("/actuator/httptrace").denyAll() // deny viewing http trace (have to look in db)
 				.antMatchers("/actuator/health/**").hasAuthority("DASHBOARD_USER")
 				.antMatchers("/actuator/logfile").hasAuthority("DASHBOARD_ADMIN")
 	            .anyRequest()
