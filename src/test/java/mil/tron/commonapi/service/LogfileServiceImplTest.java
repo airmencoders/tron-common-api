@@ -2,10 +2,12 @@ package mil.tron.commonapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -14,6 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -130,6 +134,15 @@ class LogfileServiceImplTest {
 	@Test
 	void gzipFile_InvalidPath() {
 		assertThrows(FileCompressionException.class, () -> service.gzipFileAsBytes(tempDir.resolve("fakepath.txt")));
+	}
+
+	@Test
+	void testExceptionIfSymbolicLink() {
+		String testFile = "testFile";
+		try (MockedStatic<Files> filesMockedStatic = Mockito.mockStatic(Files.class)) {
+			filesMockedStatic.when(() -> Files.isSymbolicLink(any())).thenReturn(true);
+			assertThrows(BadRequestException.class, () -> service.getLogfileResource(testFile));
+		}
 	}
 	
 }

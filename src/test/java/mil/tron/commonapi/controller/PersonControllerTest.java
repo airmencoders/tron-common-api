@@ -4,9 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonFindDto;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.PersonConversionOptions;
+import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
@@ -46,6 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class PersonControllerTest {
 	private static final String ENDPOINT = "/v1/person/";
+	private static final String ENDPOINT_V2 = "/v2/person/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	
 	@Autowired
@@ -187,7 +191,43 @@ public class PersonControllerTest {
 					.content(OBJECT_MAPPER.writeValueAsString(people)))
 					.andExpect(status().isCreated())
 					.andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(people), result.getResponse().getContentAsString()));
-
+			
+			// V2
+			WrappedResponse<List<PersonDto>> personWrappedResponse = WrappedResponse.<List<PersonDto>>builder().data(people).build();
+			mockMvc.perform(post(ENDPOINT_V2 + "/persons")
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(people)))
+					.andExpect(status().isCreated())
+					.andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(personWrappedResponse), result.getResponse().getContentAsString()));
+		}
+		
+		@Test
+		void testPostFilter() throws Exception {
+			Person entity = personService.convertToEntity(testPerson);
+			Mockito.when(personService.getPersonFilter(Mockito.any(), Mockito.any())).thenReturn(entity);
+			Mockito.when(personService.convertToDto(Mockito.any(), Mockito.any())).thenReturn(testPerson);
+			
+			PersonFindDto personFindDto = PersonFindDto.builder()
+					.findType(PersonFindType.EMAIL)
+					.value(testPerson.getEmail())
+					.build();
+			
+			mockMvc.perform(post(ENDPOINT_V2 + "find")
+					.content(OBJECT_MAPPER.writeValueAsString(personFindDto))
+					.contentType(MediaType.APPLICATION_JSON_VALUE)
+				)
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.isEqualTo(testPersonJson));
+			
+			
+			Mockito.when(personService.getPersonFilter(Mockito.any(), Mockito.any())).thenThrow(RecordNotFoundException.class);
+			mockMvc.perform(post(ENDPOINT_V2 + "find")
+					.content(OBJECT_MAPPER.writeValueAsString(personFindDto))
+					.contentType(MediaType.APPLICATION_JSON_VALUE)
+				)
+				.andExpect(status().isNotFound());
 		}
 	}
 	

@@ -43,8 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
 public class PubSubRecallEventsIntegrationTest {
-
-    private static final String ENDPOINT = "/v1/subscriptions/";
+    private static final String ENDPOINT_V2 = "/v2/subscriptions/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -164,9 +163,8 @@ public class PubSubRecallEventsIntegrationTest {
     @Transactional
     @Rollback
     void testReplaySinceTimeDate() throws Exception {
-
-        mockMvc.perform(get(ENDPOINT + "events/replay?sinceDateTime=2021-05-09T12:00:00"))
-                .andExpect(jsonPath("$", hasSize(11)));
+        mockMvc.perform(get(ENDPOINT_V2 + "events/replay?sinceDateTime=2021-05-09T12:00:00"))
+        	.andExpect(jsonPath("$.data", hasSize(11)));
     }
 
     @Test
@@ -175,7 +173,7 @@ public class PubSubRecallEventsIntegrationTest {
     void testReplayByEventCountAndType() throws Exception {
 
         // try it with since PERSON_CHANGE: 5L and PERSON_DELETE: 0L
-        mockMvc.perform(post(ENDPOINT + "events/replay-events")
+        mockMvc.perform(post(ENDPOINT_V2 + "events/replay-events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(
                         EventInfoDto
@@ -189,10 +187,10 @@ public class PubSubRecallEventsIntegrationTest {
                                 .eventType(EventType.PERSON_DELETE)
                                 .build()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(5)));
+                .andExpect(jsonPath("$.data", hasSize(5)));
 
         // try it with since PERSON_CHANGE: 4L and PERSON_DELETE: 2L
-        mockMvc.perform(post(ENDPOINT + "events/replay-events")
+        mockMvc.perform(post(ENDPOINT_V2 + "events/replay-events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(
                         EventInfoDto
@@ -206,10 +204,10 @@ public class PubSubRecallEventsIntegrationTest {
                                 .eventType(EventType.PERSON_DELETE)
                                 .build()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(jsonPath("$.data", hasSize(2)));
 
         // try it with since PERSON_CHANGE: 1000L and PERSON_DELETE: 2L
-        mockMvc.perform(post(ENDPOINT + "events/replay-events")
+        mockMvc.perform(post(ENDPOINT_V2 + "events/replay-events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(
                         EventInfoDto
@@ -223,10 +221,10 @@ public class PubSubRecallEventsIntegrationTest {
                                 .eventType(EventType.PERSON_DELETE)
                                 .build()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.data", hasSize(1)));
 
         // try it with since PERSON_CHANGE: 1000L and PERSON_DELETE: 1000L
-        mockMvc.perform(post(ENDPOINT + "events/replay-events")
+        mockMvc.perform(post(ENDPOINT_V2 + "events/replay-events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(
                         EventInfoDto
@@ -240,10 +238,10 @@ public class PubSubRecallEventsIntegrationTest {
                                 .eventType(EventType.PERSON_DELETE)
                                 .build()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.data", hasSize(0)));
 
         // try it with duplicate events, takes the latest
-        mockMvc.perform(post(ENDPOINT + "events/replay-events")
+        mockMvc.perform(post(ENDPOINT_V2 + "events/replay-events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(
                         EventInfoDto
@@ -262,10 +260,10 @@ public class PubSubRecallEventsIntegrationTest {
                                 .eventType(EventType.PERSON_CHANGE)
                                 .build()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.data", hasSize(1)));
 
         // try it with a zero
-        mockMvc.perform(post(ENDPOINT + "events/replay-events")
+        mockMvc.perform(post(ENDPOINT_V2 + "events/replay-events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(
                         EventInfoDto
@@ -279,10 +277,10 @@ public class PubSubRecallEventsIntegrationTest {
                                 .eventType(EventType.PERSON_DELETE)
                                 .build()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(8)));
+                .andExpect(jsonPath("$.data", hasSize(8)));
 
         // try it with a negative number
-        mockMvc.perform(post(ENDPOINT + "events/replay-events")
+        mockMvc.perform(post(ENDPOINT_V2 + "events/replay-events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(
                         EventInfoDto
@@ -298,7 +296,7 @@ public class PubSubRecallEventsIntegrationTest {
                 .andExpect(status().isBadRequest());
 
         // try it with a negative number
-        mockMvc.perform(post(ENDPOINT + "events/replay-events")
+        mockMvc.perform(post(ENDPOINT_V2 + "events/replay-events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(
                         EventInfoDto

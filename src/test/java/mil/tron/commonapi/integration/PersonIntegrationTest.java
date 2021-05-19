@@ -5,8 +5,15 @@ import com.google.common.io.Resources;
 
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
+import mil.tron.commonapi.dto.PersonFindDto;
+import mil.tron.commonapi.dto.response.pagination.Pagination;
+import mil.tron.commonapi.dto.response.pagination.PaginationLink;
+import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.service.PersonFindType;
+import mil.tron.commonapi.service.PersonService;
 
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
@@ -43,11 +50,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class PersonIntegrationTest {
     private static final String ENDPOINT = "/v1/person/";
+    private static final String ENDPOINT_V2 = "/v2/person/";
     private static final String ORGANIZATION = "/v1/organization/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
     private MockMvc mockMvc;
+    
+    @Autowired
+    private PersonService personService;
 
     @Transactional
     @Rollback
@@ -75,11 +86,11 @@ public class PersonIntegrationTest {
                 a2
         );
 
-        mockMvc.perform(post(ENDPOINT + "persons")
+        mockMvc.perform(post(ENDPOINT_V2 + "persons")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(newPeople)))
                 .andExpect(status().isCreated())
-                .andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), PersonDto[].class).length));
+                .andExpect(result -> assertEquals(2, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), PersonDtoResponseWrapper.class).getData().size()));
 
         PersonDto a3 = new PersonDto();
         a3.setEmail("test1@test.com");
@@ -88,7 +99,7 @@ public class PersonIntegrationTest {
         a3.setBranch(Branch.USAF);
 
         // test that we can't add someone with a dup email
-        mockMvc.perform(post(ENDPOINT + "persons")
+        mockMvc.perform(post(ENDPOINT_V2 + "persons")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(a3))))
                 .andExpect(status().isConflict());
@@ -267,31 +278,33 @@ public class PersonIntegrationTest {
         mockMvc.perform(delete(ENDPOINT + userId)).andExpect(status().is2xxSuccessful());
     }
 
+    @Transactional
+    @Rollback
     @Test
     public void testAirmanMetadata() throws Exception {
-        String id = OBJECT_MAPPER.readTree(
-                mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(resource("newAirman.json")))
-                        .andExpect(status().isCreated())
-                        .andExpect(jsonPath("afsc").value("11FX"))
-                        .andExpect(jsonPath("imds").value("sucks"))
-                        .andReturn().getResponse().getContentAsString()).get("id").asText();
+    	PersonDto person = new PersonDto();
+        person.setId(UUID.randomUUID());
+        person.setFirstName("John");
+        person.setMiddleName("Hero");
+        person.setLastName("Public");
+        person.setEmail("john1@test.com");
+        person.setTitle("CAPT");
+        person.setMetaProperty("afsc", "11FX");
+        person.setRank("CIV");
+        person.setBranch(Branch.USAF);
+        person.setMetaProperty("afsc", "99A");
+        
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(person)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(person.getId().toString()));
 
-        mockMvc.perform(get(ENDPOINT + id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("afsc").value("11FX"))
-                .andExpect(jsonPath("imds").value("sucks"));
-
-        mockMvc.perform(put(ENDPOINT + id).contentType(MediaType.APPLICATION_JSON).content(resource("updatedAirman.json")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("imds").doesNotExist())
-                .andExpect(jsonPath("go81").value("tperson"))
-                .andExpect(jsonPath("afsc").value("99A"));
-
-        mockMvc.perform(get(ENDPOINT + id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("imds").doesNotExist())
-                .andExpect(jsonPath("go81").value("tperson"))
-                .andExpect(jsonPath("afsc").value("99A"));
+        person.setMetaProperty("afsc", null);
+        
+        mockMvc.perform(put(ENDPOINT + person.getId()).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person)))
+        		.andExpect(status().isOk())
+    			.andExpect(jsonPath("afsc").doesNotExist());
     }
 
     @Test
@@ -350,6 +363,124 @@ public class PersonIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rank", equalTo("Unk")))
                 .andExpect(jsonPath("$.branch", equalTo("OTHER")));
+        
+        mockMvc.perform(delete(ENDPOINT + person.getId()))
+    		.andExpect(status().is2xxSuccessful());
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testWrappedResponse() throws Exception {
+    	PersonDto person = PersonDto.builder()
+                .firstName("test")
+                .lastName("member")
+                .email("test@member.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("12345")
+                .build();
+    	
+    	PersonDto person1 = PersonDto.builder()
+                .firstName("1")
+                .lastName("2")
+                .email("1@2.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("34567")
+                .build();
+                
+                
+    	personService.createPerson(person);
+    	personService.createPerson(person1);
+		
+		PaginationWrappedResponse<List<PersonDto>> response = 
+				PaginationWrappedResponse.<List<PersonDto>>builder()
+				.data(Lists.newArrayList(person))
+				.pagination(Pagination.builder()
+						.page(0)
+						.size(1)
+						.totalElements(2L)
+						.totalPages(2)
+						.links(PaginationLink.builder()
+								.next("http://localhost" + ENDPOINT_V2 + "?page=1&size=1")
+								.last("http://localhost" + ENDPOINT_V2 + "?page=1&size=1")
+								.build())
+						.build())
+				.build();
+		
+
+		mockMvc.perform(get(ENDPOINT_V2 + "?size=1"))
+			.andExpect(status().isOk())
+	        .andExpect(jsonPath("$.data", hasSize(1)))
+	        .andExpect(jsonPath("$.pagination.page").value(response.getPagination().getPage()))
+	        .andExpect(jsonPath("$.pagination.size").value(response.getPagination().getSize()))
+	        .andExpect(jsonPath("$.pagination.totalElements").value(response.getPagination().getTotalElements()))
+	        .andExpect(jsonPath("$.pagination.totalPages").value(response.getPagination().getTotalPages()))
+	        .andExpect(jsonPath("$.pagination.links.next").value(response.getPagination().getLinks().getNext()))
+	        .andExpect(jsonPath("$.pagination.links.last").value(response.getPagination().getLinks().getLast()));
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testPersonPostFilter() throws Exception {
+    	PersonDto person = PersonDto.builder()
+                .firstName("test")
+                .lastName("member")
+                .email("test@member.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("12345")
+                .build();
+    	
+    	PersonDto person1 = PersonDto.builder()
+                .firstName("1")
+                .lastName("2")
+                .email("1@2.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("34567")
+                .build();
+                
+                
+		mockMvc.perform(post(ENDPOINT_V2).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person)));
+		mockMvc.perform(post(ENDPOINT_V2).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person1)));
+		
+		PersonFindDto personFindDto = PersonFindDto.builder()
+				.findType(PersonFindType.EMAIL)
+				.value(person.getEmail())
+				.build();
+		
+		// Try to filter by email
+		mockMvc.perform(post(ENDPOINT_V2 + "find")
+				.content(OBJECT_MAPPER.writeValueAsString(personFindDto))
+				.contentType(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(person.getId().toString()));
+		
+		// Try to filter by dodid
+		personFindDto.setFindType(PersonFindType.DODID);
+		personFindDto.setValue(person1.getDodid());
+		mockMvc.perform(post(ENDPOINT_V2 + "find")
+				.content(OBJECT_MAPPER.writeValueAsString(personFindDto))
+				.contentType(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(person1.getId().toString()));
+
+		
+		// Try an invalid filter
+		personFindDto.setFindType(null);
+		mockMvc.perform(post(ENDPOINT_V2 + "find")
+				.content(OBJECT_MAPPER.writeValueAsString(personFindDto))
+				.contentType(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isBadRequest());
+		
+		mockMvc.perform(delete(ENDPOINT_V2 + "{id}", person.getId()));
+		mockMvc.perform(delete(ENDPOINT_V2 + "{id}", person1.getId()));
     }
 
     private static String resource(String name) throws IOException {

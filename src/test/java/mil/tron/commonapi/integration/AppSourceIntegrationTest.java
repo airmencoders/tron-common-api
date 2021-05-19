@@ -10,6 +10,7 @@ import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDtoResponseWrapper;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
@@ -73,6 +74,7 @@ public class AppSourceIntegrationTest {
             .toString();
 
     private static final String ENDPOINT = "/v1/app-source/";
+    private static final String ENDPOINT_V2 = "/v2/app-source/";
     private static final String DASHBOARD_USERS_ENDPOINT = "/v1/dashboard-users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -704,11 +706,11 @@ public class AppSourceIntegrationTest {
                 .andExpect(status().isCreated());
 
         // verify if a DASHBOARD admin requests anything we get everything -  3 apps
-        mockMvc.perform(get(ENDPOINT)
+        mockMvc.perform(get(ENDPOINT_V2)
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(3)));
+                .andExpect(jsonPath("$.data", hasSize(3)));
 
         // verify admin user has additional APP_SOURCE_ADMIN priv
         MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
@@ -732,18 +734,18 @@ public class AppSourceIntegrationTest {
         assertTrue(foundPriv);
 
         // verify if a USER1 sees one record
-        mockMvc.perform(get(ENDPOINT)
+        mockMvc.perform(get(ENDPOINT_V2)
                 .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.data", hasSize(1)));
 
         // verify if a USER2 sees one record
-        mockMvc.perform(get(ENDPOINT)
+        mockMvc.perform(get(ENDPOINT_V2)
                 .header(AUTH_HEADER_NAME, createToken(USER2_EMAIL))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.data", hasSize(1)));
     }
 
     @Transactional
@@ -796,14 +798,14 @@ public class AppSourceIntegrationTest {
         app1Main.setAppEndpoints(Set.of(endPoint));
         appSourceRepository.saveAndFlush(app1Main);
 
-        MvcResult clientApps = mockMvc.perform(get(ENDPOINT + "app-clients")
+        MvcResult clientApps = mockMvc.perform(get(ENDPOINT_V2 + "app-clients")
                 .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        AppClientSummaryDto[] availableClientApps = OBJECT_MAPPER
-                .readValue(clientApps.getResponse().getContentAsString(), AppClientSummaryDto[].class);
+        List<AppClientSummaryDto> availableClientApps = OBJECT_MAPPER
+                .readValue(clientApps.getResponse().getContentAsString(), AppClientSummaryDtoResponseWrapper.class).getData();
 
         UUID clientAppId = null;
         for (AppClientSummaryDto d : availableClientApps) {

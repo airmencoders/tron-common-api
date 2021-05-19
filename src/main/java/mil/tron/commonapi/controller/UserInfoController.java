@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/userinfo")
+@RequestMapping({"${api-prefix.v1}/userinfo", "${api-prefix.v2}/userinfo"})
 public class UserInfoController {
 	private UserInfoService userInfoService;
 	

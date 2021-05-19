@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.EventInfoDto;
 import mil.tron.commonapi.dto.pubsub.PubSubLedgerEntryDto;
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
+import mil.tron.commonapi.dto.pubsub.SubscriberDtoResponseWrapper;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.pubsub.EventManagerService;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
@@ -38,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class SubscriberControllerTests {
     private static final String ENDPOINT = "/v1/subscriptions";
+    private static final String ENDPOINT_V2 = "/v2/subscriptions";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -68,6 +70,12 @@ public class SubscriberControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(result ->
                         assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), SubscriberDto[].class).length));
+        
+        // V2
+        mockMvc.perform(get(ENDPOINT_V2))
+        .andExpect(status().isOk())
+        .andExpect(result ->
+                assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), SubscriberDtoResponseWrapper.class).getData().size()));
     }
 
     @Test
@@ -106,6 +114,11 @@ public class SubscriberControllerTests {
         mockMvc.perform(get(ENDPOINT + "/events/replay?sinceDateTime={dt}","2021-03-04T12:00:00"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+        
+        // V2
+        mockMvc.perform(get(ENDPOINT_V2 + "/events/replay?sinceDateTime={dt}","2021-03-04T12:00:00"))
+	        .andExpect(status().isOk())
+	        .andExpect(jsonPath("$.data", hasSize(1)));
 
     }
 
@@ -129,12 +142,32 @@ public class SubscriberControllerTests {
                                     .eventType(EventType.PERSON_DELETE)
                                     .build()))))
                 .andExpect(status().isOk());
+        
+        // V2
+        mockMvc.perform(post(ENDPOINT_V2 + "/events/replay-events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(
+                        Lists.newArrayList(
+                                EventInfoDto
+                                    .builder()
+                                    .eventCount(1L)
+                                    .eventType(EventType.PERSON_CHANGE)
+                                    .build(),
+                                EventInfoDto
+                                    .builder()
+                                    .eventCount(2L)
+                                    .eventType(EventType.PERSON_DELETE)
+                                    .build()))))
+                .andExpect(status().isOk());
     }
 
     @Test
     void testGetEventCounts() throws Exception {
         Mockito.when(eventManagerService.getEventTypeCounts()).thenReturn(new ArrayList<>());
         mockMvc.perform(get(ENDPOINT + "/events/latest")).andExpect(status().isOk());
+        
+        // V2
+        mockMvc.perform(get(ENDPOINT_V2 + "/events/latest")).andExpect(status().isOk());
     }
 
 }

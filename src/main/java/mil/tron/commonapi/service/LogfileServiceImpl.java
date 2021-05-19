@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -32,7 +33,7 @@ public class LogfileServiceImpl implements LogfileService {
 	private final Path logsPath;
 	private final String apiEndpoint;
 	
-	public LogfileServiceImpl(@Value("${logging.file.path}") String logsDirectory, @Value("${api-prefix.v1}") String apiPrefix) {
+	public LogfileServiceImpl(@Value("${logging.file.path}") String logsDirectory, @Value("${api-prefix.v2}") String apiPrefix) {
 		this.logsPath = Paths.get(logsDirectory).toAbsolutePath().normalize();
 		this.apiEndpoint = String.format("/%s/logfile/", apiPrefix);
 	}
@@ -51,10 +52,19 @@ public class LogfileServiceImpl implements LogfileService {
 	@Override
 	public Resource getLogfileResource(String fileName) {
 		Path path;
+		
+		// Retrieve only the filename to further help
+		// prevent path traversal
+		fileName = FilenameUtils.getName(fileName);
 		try {
 			path = logsPath.resolve(fileName).normalize();
 		} catch (InvalidPathException ex) {
 			throw new BadRequestException("Could not resolve filename: " + fileName);
+		}
+
+		if (Files.isSymbolicLink(path)) {
+			throw new BadRequestException(String.format("File %s requested is a symlink and will not be " +
+					"processed.", fileName));
 		}
 		
 		Resource resource = null;

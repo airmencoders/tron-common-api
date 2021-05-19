@@ -3,14 +3,19 @@ package mil.tron.commonapi.controller;
 import com.github.fge.jsonpatch.JsonPatch;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
+import mil.tron.commonapi.dto.PersonFindDto;
+import mil.tron.commonapi.dto.PersonDtoPaginationResponseWrapper;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
@@ -19,12 +24,13 @@ import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.PersonConversionOptions;
-import mil.tron.commonapi.service.PersonFilterType;
+import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
 
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,7 +39,6 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/person")
 public class PersonController {
 	private PersonService personService;
 
@@ -41,6 +46,13 @@ public class PersonController {
 		this.personService = personService;
 	}
 	
+	/**
+	 * @deprecated No longer acceptable as it returns array json data as top most parent.
+	 * @param memberships
+	 * @param leaderships
+	 * @param page
+	 * @return
+	 */
 	@Operation(summary = "Retrieves all persons", description = "Retrieves all persons")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
@@ -48,7 +60,8 @@ public class PersonController {
 						content = @Content(array = @ArraySchema(schema = @Schema(implementation = PersonDto.class))))
 	})
 	@PreAuthorizeRead
-	@GetMapping
+	@Deprecated(since="${api-prefix.v2}")
+	@GetMapping({"${api-prefix.v1}/person"})
 	public ResponseEntity<Object> getPersons(
             @Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
 				@RequestParam(name = "memberships", required = false) boolean memberships,
@@ -57,6 +70,34 @@ public class PersonController {
                 @ParameterObject Pageable page) {
 
 		return new ResponseEntity<>(personService.getPersons(PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build(), page), HttpStatus.OK);
+	}
+	
+	@Operation(summary = "Retrieves all persons", description = "Retrieves all persons  with pagination information")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+					content = @Content(schema = @Schema(implementation = PersonDtoPaginationResponseWrapper.class)),
+					headers = @Header(
+							name="link",
+							description = "Contains the appropriate pagination links if application. "
+									+ "If no pagination query params given, then no pagination links will exist. "
+									+ "Possible rel values include: first, last, prev, next",
+							schema = @Schema(type = "string")))
+	})
+	@PreAuthorizeRead
+	@WrappedEnvelopeResponse
+	@GetMapping({"${api-prefix.v2}/person"})
+	public ResponseEntity<Object> getPersonsWrapped(
+            @Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
+				@RequestParam(name = "memberships", required = false) boolean memberships,
+            @Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
+                @RequestParam(name = "leaderships", required = false) boolean leaderships,
+                @ParameterObject Pageable page) {
+		
+		return new ResponseEntity<>(personService
+				.getPersonsPage(PersonConversionOptions
+						.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build(), page),
+				HttpStatus.OK);
 	}
 	
 	@Operation(summary = "Retrieves a person by ID", description = "Retrieves a person by ID")
@@ -72,7 +113,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeRead
-	@GetMapping(value = "/{id}")
+	@GetMapping(value = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"})
 	public ResponseEntity<PersonDto> getPerson(
 			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId,
             @Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
@@ -86,6 +127,14 @@ public class PersonController {
 	
 	
 	
+	/**
+	 * @deprecated Method no longer valid to fulfill T219 / CWE-598. {@link #findPersonBy(boolean, boolean, PersonFindDto)} for the new usage.
+	 * @param memberships
+	 * @param leaderships
+	 * @param findByField
+	 * @param value
+	 * @return
+	 */
 	@Operation(summary = "Retrieves a person by email or dodid", description = "Retrieves a person using a single identifying property.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
@@ -103,24 +152,57 @@ public class PersonController {
 	@Parameter(name = "findByField", 
 				description = "The field to search for", 
 				required = true,
-				content= @Content(schema = @Schema(implementation = PersonFilterType.class)))
+				content= @Content(schema = @Schema(implementation = PersonFindType.class)))
 	@Parameter(name = "value", description = "The value to search against", required = true)
+	@Deprecated(since = "v2")
 	@PreAuthorizeRead
-	@GetMapping(value = "/find")
+	@GetMapping(value = {"${api-prefix.v1}/person/find"})
 	public ResponseEntity<PersonDto> findPersonBy(
 				@RequestParam(name = "memberships", required = false) boolean memberships,
                 @RequestParam(name = "leaderships", required = false) boolean leaderships,
                 @RequestParam(name = "findByField", required = true) String findByField,
                 @RequestParam(name = "value", required = true) String value) {
 		
-		PersonFilterType filter = null;
+		PersonFindType filter = null;
 		try {
-			filter = PersonFilterType.valueOf(findByField.toUpperCase());
+			filter = PersonFindType.valueOf(findByField.toUpperCase());
 		} catch (Exception ex) {
 			throw new BadRequestException(String.format("findByField: %s is invalid.", findByField));
 		}
 
 		Person person = personService.getPersonFilter(filter, value);
+		PersonDto dto = personService.convertToDto(person, PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build());
+		
+		return new ResponseEntity<>(dto, HttpStatus.OK);
+	}
+	
+	@Operation(summary = "Retrieves a person by email or dodid", description = "Retrieves a person using a single identifying property.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeRead
+	@PostMapping(
+			value = {"${api-prefix.v2}/person/find"},
+			consumes = MediaType.APPLICATION_JSON_VALUE,
+			produces = MediaType.APPLICATION_JSON_VALUE
+	)
+	public ResponseEntity<PersonDto> findPersonBy(
+			@Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
+				@RequestParam(name = "memberships", required = false) boolean memberships,
+			@Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
+                @RequestParam(name = "leaderships", required = false) boolean leaderships,
+            @Parameter(description = "The information to find a person by", required = true, schema = @Schema(implementation = PersonFindDto.class))
+                @Valid @RequestBody PersonFindDto personFindDto) {
+		
+		Person person = personService.getPersonFilter(personFindDto.getFindType(), personFindDto.getValue());
 		PersonDto dto = personService.convertToDto(person, PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build());
 		
 		return new ResponseEntity<>(dto, HttpStatus.OK);
@@ -140,7 +222,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PostMapping
+	@PostMapping({"${api-prefix.v1}/person", "${api-prefix.v2}/person"})
 	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create",
 		required = true,
 		schema = @Schema(implementation = PersonDto.class)) 
@@ -158,7 +240,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PutMapping(value = "/{id}")
+	@PutMapping(value = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"})
 	public ResponseEntity<Object> updatePerson(
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
 			@Parameter(description = "Updated person", 
@@ -183,7 +265,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PatchMapping(path = "/{id}", consumes = "application/json-patch+json")
+	@PatchMapping(path = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<PersonDto> patchPerson(
 			@Parameter(description = "Person ID to patch", required = true) @PathVariable("id") UUID personId,
 			@Parameter(description = "Patched person",
@@ -207,13 +289,18 @@ public class PersonController {
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@DeleteMapping(value = "/{id}")
+	@DeleteMapping(value = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"})
 	public ResponseEntity<Object> deletePerson(
 			@Parameter(description = "Person ID to delete", required = true) @PathVariable("id") UUID personId) {
 		personService.deletePerson(personId);
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
+	/**
+	 * @deprecated No longer valid T166. See {@link #addPersonsWrapped(List)} for new usage.
+	 * @param people
+	 * @return
+	 */
 	@Operation(summary = "Add one or more members to the database",
 			description = "Adds one or more person entities - returns that same array of input persons with their assigned UUIDs. " +
 					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
@@ -230,12 +317,37 @@ public class PersonController {
 					description = "A person already exists with the id provided",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@Deprecated(since = "v2")
 	@PreAuthorizeWrite
-	@PostMapping("/persons")
+	@PostMapping({"${api-prefix.v1}/person/persons"})
 	public ResponseEntity<Object> addPersons(
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
 		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
 	}
+	
+	@Operation(summary = "Add one or more members to the database",
+			description = "Adds one or more person entities - returns that same array of input persons with their assigned UUIDs. " +
+					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
+					"no new persons will have been committed to the database (if one entity fails, the entire operation fails). " +
+					"The return error message will list the offending UUID or other data that caused the error.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad data or validation error",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "A person already exists with the id provided",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorizeWrite
+	@PostMapping({"${api-prefix.v2}/person/persons"})
+	public ResponseEntity<Object> addPersonsWrapped(
+			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
+		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
+	}
 }
