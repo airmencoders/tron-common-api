@@ -32,6 +32,10 @@ public class HttpLogEntryDetailsDto {
 
     @Getter
     @Setter
+    private String requestBody;
+
+    @Getter
+    @Setter
     private String remoteIp;
 
     @Getter
@@ -40,19 +44,19 @@ public class HttpLogEntryDetailsDto {
 
     @Getter
     @Setter
+    private String responseBody;
+
+    @Getter
+    @Setter
     private String requestHost;
 
     @Getter
     @Setter
-    private String queryString;
-
-    @Getter
-    @Setter
-    private int statusCode;
-
-    @Getter
-    @Setter
     private String userAgent;
+
+    @Getter
+    @Setter
+    private String queryString;
 
     @Getter
     @Setter
@@ -64,9 +68,6 @@ public class HttpLogEntryDetailsDto {
 
     @Getter
     @Setter
-    private String requestBody;
+    private int statusCode;
 
-    @Getter
-    @Setter
-    private String responseBody;
 }

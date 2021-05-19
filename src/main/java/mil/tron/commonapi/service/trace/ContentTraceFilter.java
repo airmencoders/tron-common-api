@@ -15,6 +15,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+/**
+ * Custom filter that caches and wraps the ServletRequest/Response so that we can read its contents
+ * while still allowing it to be forwarded to the controllers for reading.
+ * Adapted from https://developer.okta.com/blog/2019/07/17/monitoring-with-actuator
+ *
+ * This bean not active in unit tests since it would require stubbing of it all throughout, rather
+ * its just on during dev/prod profiles and in the integration tests.
+ */
 @Component
 @Profile("production | development")
 public class ContentTraceFilter extends OncePerRequestFilter {

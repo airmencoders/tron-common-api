@@ -17,6 +17,10 @@ import java.util.stream.Collectors;
 
 /**
  * A class that intercepts traffic in a request and the response we send back for logging.
+ * This is used by Spring Acutator's HTTP Trace - hence the need to implement findAll() and add().
+ *
+ * It is in the add() method we convert the Trace (and our custom ContentTrace) into the HttpLogEntry
+ * POJO for storage to the database.
  */
 @Service
 @Profile("production | development")
@@ -34,6 +38,13 @@ public class HttpTraceService implements HttpTraceRepository {
         this.contentTraceManager = contentTraceManager;
     }
 
+    /**
+     * Gets http logs from a given ISO date/time in UTC timezone.  This is called from the
+     * /logs controller
+     * @param fromDate date in form yyyy-MM-dd'T'HH:mm:ss
+     * @param pageable Pageable object from the controller (i.e. page= & size= & sort=)
+     * @return HttpLogEntryDto list (not including response and request bodies)
+     */
     public List<HttpLogEntryDto> getLogsFromDate(Date fromDate, Pageable pageable) {
         return httpLogsRepository
                 .findByRequestTimestampGreaterThanEqual(fromDate, pageable)
@@ -42,6 +53,11 @@ public class HttpTraceService implements HttpTraceRepository {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Gets a single http log by its UUID, which will include response and request bodies
+     * @param id UUID of the http record
+     * @return the HttpLogEntryDetailsDto
+     */
     public HttpLogEntryDetailsDto getLogInfoDetails(UUID id) {
         HttpLogEntry dto = httpLogsRepository
                 .findById(id)
@@ -55,6 +71,13 @@ public class HttpTraceService implements HttpTraceRepository {
         return new ArrayList<>();
     }
 
+    /**
+     * Spring actuator calls this to add a trace to our database.  We also fetch our @RequestScope'd
+     * ContentTrace POJO so we can add in the request body and response body.  This operation is synchronized
+     * to ensure no other requests can "cross" here since we need to ensure the ContentTrace POJOs stay with
+     * their respective requests.
+     * @param trace the injected HTTP trace
+     */
     @Override
     public void add(HttpTrace trace) {
         synchronized (lockObj) {
@@ -74,7 +97,7 @@ public class HttpTraceService implements HttpTraceRepository {
             List<String> userAgentHeader = lowerCaseHeaders.get("user-agent");
             String userAgent = userAgentHeader != null ? userAgentHeader.get(0) : "Unknown";
 
-            httpLogsRepository.saveAndFlush(
+            httpLogsRepository.save(
                     HttpLogEntry
                             .builder()
                             .userName(user)

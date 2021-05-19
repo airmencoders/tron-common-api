@@ -8,6 +8,10 @@ import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 
+/**
+ * This configures the HttpTracer to NOT log requests to specific endpoints - which we really don't care about,
+ * or they are just reachable in a dev environment.
+ */
 @Component
 @Profile("production | development")
 public class TraceRequestFilter extends HttpTraceFilter {
