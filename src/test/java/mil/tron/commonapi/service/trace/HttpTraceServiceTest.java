@@ -37,7 +37,14 @@ public class HttpTraceServiceTest {
                         .remoteIp("blah2")
                         .build())));
 
-        assertEquals(2, service.getLogsFromDate(new Date(), null).size());
+        assertEquals(2, service.getLogsFromDate(new Date(),
+                "",
+                "",
+                 -1,
+                "",
+                "",
+                "",
+                null).size());
     }
 
 

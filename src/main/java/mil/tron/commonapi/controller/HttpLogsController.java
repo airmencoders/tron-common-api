@@ -1,6 +1,7 @@
 package mil.tron.commonapi.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -25,7 +26,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/logs")
+@RequestMapping(value = { "${api-prefix.v1}/logs", "${api-prefix.v2}/logs" })
 @PreAuthorizeDashboardAdmin
 @Profile("production | development")
 public class HttpLogsController {
@@ -47,13 +48,36 @@ public class HttpLogsController {
                     description = "Insufficient privileges (requires DASHBOARD_ADMIN)")
     })
     @GetMapping("")
-    public ResponseEntity<Object> getHttpLogs(@RequestParam(name="fromDate") String fromDate, @ParameterObject Pageable page) {
+    public ResponseEntity<Object> getHttpLogs(
+            @Parameter(required = true, description = "The date/time from which to query from - format yyyy-MM-dd'T'HH:mm:ss - in UTC")
+                @RequestParam(name="fromDate") String fromDate,
+            @Parameter(description = "HTTP method to filter on, e.g. GET, POST, etc")
+                @RequestParam(name="method", required = false, defaultValue = "") String method,
+            @Parameter(description = "Username to filter on")
+                @RequestParam(name="userName", required = false, defaultValue = "") String userName,
+            @Parameter(description = "HTTP response status to sort on")
+                @RequestParam(name="status", required = false, defaultValue = "-1") int status,
+            @Parameter(description = "Filter by user agent containing given string")
+                @RequestParam(name="userAgentContains", required = false, defaultValue = "") String userAgentContains,
+            @Parameter(description = "Filter by requested url containing given string")
+                @RequestParam(name="requestedUrlContains", required = false, defaultValue = "") String requestedUrlContains,
+            @Parameter(description = "Filter by requester's hostname containing given string")
+                @RequestParam(name="requestHostContains", required = false, defaultValue = "") String requestHostContains,
+            @ParameterObject Pageable page) {
         try {
             if (!fromDate.isBlank()) {
                 SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
                 fmt.setTimeZone(TimeZone.getTimeZone("UTC"));
                 Date date = fmt.parse(fromDate);
-                return new ResponseEntity<>(httpTraceService.getLogsFromDate(date, page), HttpStatus.OK);
+                return new ResponseEntity<>(httpTraceService
+                        .getLogsFromDate(date,
+                                method,
+                                userName,
+                                status,
+                                userAgentContains,
+                                requestedUrlContains,
+                                requestHostContains,
+                                page), HttpStatus.OK);
             }
 
             throw new BadRequestException("Could not parse date and time");

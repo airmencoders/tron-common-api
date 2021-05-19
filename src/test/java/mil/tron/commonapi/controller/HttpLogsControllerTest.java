@@ -48,7 +48,15 @@ public class HttpLogsControllerTest {
         mockMvc.perform(get(ENDPOINT + "?fromDate="))
                 .andExpect(status().isBadRequest());
 
-        Mockito.when(httpTraceService.getLogsFromDate(Mockito.any(), Mockito.any()))
+        Mockito.when(httpTraceService.getLogsFromDate(
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.anyInt(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any()))
                 .thenReturn(new ArrayList<>());
 
         mockMvc.perform(get(ENDPOINT + "?fromDate=2020-05-01T12:00:00"))
