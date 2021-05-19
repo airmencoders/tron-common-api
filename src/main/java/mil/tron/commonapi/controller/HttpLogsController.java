@@ -61,8 +61,6 @@ public class HttpLogsController {
                 @RequestParam(name="userAgentContains", required = false, defaultValue = "") String userAgentContains,
             @Parameter(description = "Filter by requested url containing given string")
                 @RequestParam(name="requestedUrlContains", required = false, defaultValue = "") String requestedUrlContains,
-            @Parameter(description = "Filter by requester's hostname containing given string")
-                @RequestParam(name="requestHostContains", required = false, defaultValue = "") String requestHostContains,
             @ParameterObject Pageable page) {
         try {
             if (!fromDate.isBlank()) {
@@ -76,7 +74,6 @@ public class HttpLogsController {
                                 status,
                                 userAgentContains,
                                 requestedUrlContains,
-                                requestHostContains,
                                 page), HttpStatus.OK);
             }
 

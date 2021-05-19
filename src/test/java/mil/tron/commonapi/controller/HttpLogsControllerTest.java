@@ -55,7 +55,6 @@ public class HttpLogsControllerTest {
                 Mockito.anyInt(),
                 Mockito.any(),
                 Mockito.any(),
-                Mockito.any(),
                 Mockito.any()))
                 .thenReturn(new ArrayList<>());
 

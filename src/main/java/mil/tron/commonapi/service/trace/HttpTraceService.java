@@ -47,7 +47,6 @@ public class HttpTraceService implements HttpTraceRepository {
      * @param status optional status code to filter on
      * @param userAgentContains optional user agent string to filter on
      * @param requestedUrlContains optional url string to filter on
-     * @param requestHostContains optional host to filter on
      * @param pageable Pageable object from the controller (i.e. page= & size= & sort=)
      * @return HttpLogEntryDto list (not including response and request bodies)
      */
@@ -57,7 +56,6 @@ public class HttpTraceService implements HttpTraceRepository {
                                                  int status,
                                                  String userAgentContains,
                                                  String requestedUrlContains,
-                                                 String requestHostContains,
                                                  Pageable pageable) {
         return httpLogsRepository
                 .findByRequestTimestampGreaterThanEqual(fromDate, pageable)
@@ -67,7 +65,6 @@ public class HttpTraceService implements HttpTraceRepository {
                 .filter(item -> status == -1 || item.getStatusCode() == status)
                 .filter(item -> userAgentContains.isEmpty() || item.getUserAgent().toLowerCase().contains(userAgentContains.toLowerCase()))
                 .filter(item -> requestedUrlContains.isEmpty() || item.getRequestedUrl().toLowerCase().contains(requestedUrlContains.toLowerCase()))
-                .filter(item -> requestHostContains.isEmpty() || item.getRequestHost().toLowerCase().contains(requestHostContains.toLowerCase()))
                 .map(item -> modelMapper.map(item, HttpLogEntryDto.class))
                 .collect(Collectors.toList());
     }
