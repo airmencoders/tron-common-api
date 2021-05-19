@@ -43,7 +43,6 @@ public class HttpTraceServiceTest {
                  -1,
                 "",
                 "",
-                "",
                 null).size());
     }
 
