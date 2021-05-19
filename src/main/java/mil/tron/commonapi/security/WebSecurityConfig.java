@@ -1,5 +1,7 @@
 package mil.tron.commonapi.security;
 
+import mil.tron.commonapi.exception.AuthManagerException;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
@@ -10,9 +12,6 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
 
-import mil.tron.commonapi.exception.AuthManagerException;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-
 @Configuration
 @ConditionalOnProperty(name = "security.enabled", havingValue="true")
 @EnableWebSecurity
@@ -22,7 +21,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	private String apiPrefix;
 	
 	private AppClientUserPreAuthenticatedService appClientUserService;
-	
 	public WebSecurityConfig(AppClientUserPreAuthenticatedService appClientUserService) {
 		this.appClientUserService = appClientUserService;
 	}
@@ -42,7 +40,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/").permitAll()  // for swagger redirect to work at root of api
 				.antMatchers("/api-docs/**").permitAll()
         		.antMatchers("/api-docs**").permitAll()
-				.antMatchers("/" + this.apiPrefix + "/list-request-headers").permitAll()
+				.antMatchers("/actuator/httptrace").denyAll()
 				.antMatchers("/actuator/health/**").hasAuthority("DASHBOARD_USER")
 				.antMatchers("/actuator/logfile").hasAuthority("DASHBOARD_ADMIN")
 	            .anyRequest()
