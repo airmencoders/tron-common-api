@@ -109,7 +109,10 @@ public class EventPublisher {
                 }
 
                 // throttle this loop to prevent resource starvation (even though its in its own thread)...
-                try { Thread.sleep(webhookDelayMs); } catch (InterruptedException e) { publisherLog.warn("Webhook delay failed"); }
+                try { Thread.sleep(webhookDelayMs); } catch (InterruptedException e) {
+                    publisherLog.warn("Webhook delay failed");
+                    break;
+                }
             }
         }
 
