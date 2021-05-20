@@ -4,10 +4,10 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.entity.DashboardUser;
-import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -37,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = { "security.enabled=true" })
+@ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
 public class AppClientIntegrationTest {
 
@@ -153,7 +155,7 @@ public class AppClientIntegrationTest {
         boolean foundUser1Priv = false;
         for (DashboardUserDto d : users) {
             if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("DASHBOARD_ADMIN")) {
                         foundAdminsPriv = true;
                         break;
@@ -161,7 +163,7 @@ public class AppClientIntegrationTest {
                 }
             }
             else if (d.getEmail().equalsIgnoreCase(USER1_EMAIL)) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("APP_CLIENT_DEVELOPER")) {
                         foundUser1Priv = true;
                         break;
@@ -259,7 +261,7 @@ public class AppClientIntegrationTest {
         boolean foundUser4Priv = false;
         for (DashboardUserDto d : users) {
             if (d.getEmail().equalsIgnoreCase(USER4_EMAIL)) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("APP_CLIENT_DEVELOPER")) {
                         foundUser4Priv = true;
                         break;
@@ -299,7 +301,7 @@ public class AppClientIntegrationTest {
                 foundAdminUser = true;
 
                 // make sure admin does have the APP_CLIENT_DEVELOPER anymore, not needed
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equalsIgnoreCase("APP_CLIENT_DEVELOPER")) {
                         adminHasNoMoreAppClientAdmin = false;
                         break;

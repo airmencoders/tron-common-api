@@ -7,10 +7,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.appclient.AppClientUserDetailsDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
+import mil.tron.commonapi.dto.appclient.AppClientUserDtoResponseWrapped;
 import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.PrivilegeDtoResponseWrapper;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.service.AppClientUserService;
@@ -29,7 +32,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/app-client")
 public class AppClientController {
 	
 	private AppClientUserService appClientService;
@@ -38,6 +40,7 @@ public class AppClientController {
 	private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
 	private static final String INVALID_PERMS = "Invalid User Permissions";
+	
 
 	public AppClientController(AppClientUserService appClientService, PrivilegeService privilegeService) {
 		this.appClientService = appClientService;
@@ -92,6 +95,10 @@ public class AppClientController {
 		return result;
 	}
 	
+	/**
+	 * @deprecated No longer valid T166. See {@link #getAppClientUsersWrapped()} for new usage.
+	 * @return
+	 */
 	@Operation(summary = "Retrieves all application client user information",
 			description = "Retrieves application client user information.  Requires Dashboard Admin access or App Client Developer.")
 	@ApiResponses(value = {
@@ -99,8 +106,28 @@ public class AppClientController {
 				description = "Successful operation", 
 				content = @Content(array = @ArraySchema(schema = @Schema(implementation = AppClientUserDto.class))))
 	})
-	@GetMapping
+	@Deprecated(since = "v2")
+	@GetMapping({"${api-prefix.v1}/app-client"})
 	public ResponseEntity<Object> getAppClientUsers() {
+		List<AppClientUserDto> dtos = Lists.newArrayList(this.appClientService
+				.getAppClientUsers())
+				.stream()
+				.filter(source -> userIsDashBoardAdminOrAppClientDeveloper(source.getId()))
+				.collect(Collectors.toList());
+
+		return new ResponseEntity<>(dtos, HttpStatus.OK);
+	}
+	
+	@Operation(summary = "Retrieves all application client user information",
+			description = "Retrieves application client user information.  Requires Dashboard Admin access or App Client Developer.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation", 
+				content = @Content(schema = @Schema(implementation = AppClientUserDtoResponseWrapped.class)))
+	})
+	@WrappedEnvelopeResponse
+	@GetMapping({"${api-prefix.v2}/app-client"})
+	public ResponseEntity<Object> getAppClientUsersWrapped() {
 		List<AppClientUserDto> dtos = Lists.newArrayList(this.appClientService
 				.getAppClientUsers())
 				.stream()
@@ -126,7 +153,7 @@ public class AppClientController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@GetMapping("/{id}")
+	@GetMapping({"${api-prefix.v1}/app-client/{id}", "${api-prefix.v2}/app-client/{id}"})
 	public ResponseEntity<Object> getAppClientRecord(@PathVariable UUID id) {
 
 		checkUserIsDashBoardAdminOrAppClientDeveloper(id);
@@ -147,7 +174,7 @@ public class AppClientController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeDashboardAdmin
-	@PostMapping
+	@PostMapping({"${api-prefix.v1}/app-client", "${api-prefix.v2}/app-client"})
 	public ResponseEntity<AppClientUserDto> createAppClientUser(
 			@Parameter(description = "App Client to create", required = true) @Valid @RequestBody AppClientUserDto appClient) {
 
@@ -170,7 +197,7 @@ public class AppClientController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PutMapping(value = "/{id}")
+	@PutMapping({"${api-prefix.v1}/app-client/{id}", "${api-prefix.v2}/app-client/{id}"})
 	public ResponseEntity<AppClientUserDto> updateAppClient(
 			@Parameter(description = "App Client ID to update", required = true) @PathVariable("id") UUID appClientId,
 			@Parameter(description = "Updated app client record", required = true) @Valid @RequestBody AppClientUserDto appClient) {
@@ -201,13 +228,17 @@ public class AppClientController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
 	@PreAuthorizeDashboardAdmin
-    @DeleteMapping(value = "/{id}")
+    @DeleteMapping({"${api-prefix.v1}/app-client/{id}", "${api-prefix.v2}/app-client/{id}"})
     public ResponseEntity<Object> deleteAppClient(
             @Parameter(description = "App Client ID to delete", required = true) @PathVariable("id") UUID id) {
 
         return new ResponseEntity<>(appClientService.deleteAppClientUser(id), HttpStatus.OK);
     }
 
+	/**
+	 * @deprecated No longer valid T166. See {@link #getClientTypePrivsWrapped()} for new usage.
+	 * @return
+	 */
 	@Operation(summary = "Gets all available privileges available for an app-client",
 			description = "Gets all the app client privileges so that privilege names can be mapped to their IDs. " +
 							"Must be a DASHBOARD_ADMIN or APP_CLIENT_DEVELOPER")
@@ -216,9 +247,32 @@ public class AppClientController {
 					description = "Operation Successful",
 					content = @Content(array = @ArraySchema(schema = @Schema(implementation = PrivilegeDto.class))))
 	})
-	@GetMapping("/privs")
+	@Deprecated(since = "v2")
+	@GetMapping({"${api-prefix.v1}/app-client/privs"})
 	@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') || hasAuthority('APP_CLIENT_DEVELOPER')")
 	public ResponseEntity<Object> getClientTypePrivs() {
+		List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
+				.stream()
+				.filter(item -> item.getName().startsWith(APP_CLIENT_DEVELOPER_PRIV)
+						|| item.getName().startsWith("WRITE")
+						|| item.getName().startsWith("READ"))
+				.collect(Collectors.toList());
+
+		return new ResponseEntity<>(scratchPrivs, HttpStatus.OK);
+	}
+	
+	@Operation(summary = "Gets all available privileges available for an app-client",
+			description = "Gets all the app client privileges so that privilege names can be mapped to their IDs. " +
+							"Must be a DASHBOARD_ADMIN or APP_CLIENT_DEVELOPER")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Operation Successful",
+					content = @Content(schema = @Schema(implementation = PrivilegeDtoResponseWrapper.class)))
+	})
+	@WrappedEnvelopeResponse
+	@GetMapping({"${api-prefix.v2}/app-client/privs"})
+	@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') || hasAuthority('APP_CLIENT_DEVELOPER')")
+	public ResponseEntity<Object> getClientTypePrivsWrapped() {
 		List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
 				.stream()
 				.filter(item -> item.getName().startsWith(APP_CLIENT_DEVELOPER_PRIV)

@@ -1,6 +1,8 @@
 package mil.tron.commonapi.dto.persons;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import mil.tron.commonapi.dto.PersonDto;
@@ -12,6 +14,7 @@ public class Airman extends PersonDto {
      * An airman's Air Force Specialty Code.
      * e.g. "17D" is cyber warfare officer.
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String afsc;
@@ -20,6 +23,7 @@ public class Airman extends PersonDto {
      * An airman's Expiration of Term of Service.
      * e.g. When their enlistment expires - N/A for officers
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
@@ -28,6 +32,7 @@ public class Airman extends PersonDto {
     /**
      * An airman's date of most recent physical fitness evalulation.
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
@@ -35,10 +40,12 @@ public class Airman extends PersonDto {
     /**
      * Integrated Maintenance Data System id
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String imds;
 
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String unit;
@@ -46,6 +53,7 @@ public class Airman extends PersonDto {
     /**
      * Service member's owning Wing
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String wing;
@@ -53,6 +61,7 @@ public class Airman extends PersonDto {
     /**
      * Service member's owning Group
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String gp;
@@ -60,6 +69,7 @@ public class Airman extends PersonDto {
     /**
      * Service member's owning squadron
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String squadron;
@@ -67,6 +77,7 @@ public class Airman extends PersonDto {
     /**
      * Work Center (Office Symbol)
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String wc;
@@ -74,6 +85,7 @@ public class Airman extends PersonDto {
     /**
      * ID in the GO81 training requirements system
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String go81;
@@ -81,6 +93,7 @@ public class Airman extends PersonDto {
     /**
      * Date current rank was obtained (date of rank)
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
@@ -89,6 +102,7 @@ public class Airman extends PersonDto {
     /**
      * Date estimated return from overseas (DEROS)
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
@@ -101,6 +115,7 @@ public class Airman extends PersonDto {
     @Setter
     private boolean admin;
 
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String fltChief;
@@ -109,6 +124,7 @@ public class Airman extends PersonDto {
     @Setter
     private boolean approved;
 
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String manNumber;

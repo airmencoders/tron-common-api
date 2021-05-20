@@ -49,6 +49,7 @@ public class PersonDto {
     /**
      * The person's first (given) name
      */
+    @Schema(nullable = true)
     @PiiField
     @Getter
     @Setter
@@ -57,6 +58,7 @@ public class PersonDto {
     /**
      * The person's middle name
      */
+    @Schema(nullable = true)
     @PiiField
     @Getter
     @Setter
@@ -65,6 +67,7 @@ public class PersonDto {
     /**
      * The person's last (family) name
      */
+    @Schema(nullable = true)
     @PiiField
     @Getter
     @Setter
@@ -74,6 +77,7 @@ public class PersonDto {
      * The title of a person, as in how they should be addressed.
      * Examples: Mr., Ms., Dr., SSgt, PFC, PO2, LCpl
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String title;
@@ -82,7 +86,7 @@ public class PersonDto {
      * The person's email address
      */
     @PiiField
-    @Email(message = "Malformed email address")
+    @Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
     @Getter
     @Setter
     private String email;
@@ -90,6 +94,7 @@ public class PersonDto {
     /**
      * An 10-digit airman's DOD Identification number.
      */
+    @Schema(nullable = true)
     @PiiField
     @Getter
     @Setter
@@ -113,6 +118,7 @@ public class PersonDto {
     /**
      * The person's phone number
      */
+    @Schema(nullable = true)
     @PiiField
     @Getter
     @Setter
@@ -122,6 +128,7 @@ public class PersonDto {
     /**
      * The person's address
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String address;
@@ -129,6 +136,7 @@ public class PersonDto {
     /**
      * The person's duty (work) phone number
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     @ValidPhoneNumber
@@ -137,6 +145,7 @@ public class PersonDto {
     /**
      * The person's official job title
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String dutyTitle;
@@ -144,6 +153,7 @@ public class PersonDto {
     /**
      * The primary organization for this person
      */
+    @Schema(nullable = true)
     @Getter
     @Setter
     private UUID primaryOrganizationId;

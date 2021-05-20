@@ -1,6 +1,6 @@
 package mil.tron.commonapi.service;
 
-public enum PersonFilterType {
+public enum PersonFindType {
 	EMAIL,
 	DODID
 }

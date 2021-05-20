@@ -6,9 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import lombok.val;
-import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDtoResponseWrapper;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
@@ -35,6 +37,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -53,6 +56,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = { "security.enabled=true" })
 @TestPropertySource(locations = "classpath:application-test.properties")
+@ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
 public class AppSourceIntegrationTest {
 
@@ -70,6 +74,7 @@ public class AppSourceIntegrationTest {
             .toString();
 
     private static final String ENDPOINT = "/v1/app-source/";
+    private static final String ENDPOINT_V2 = "/v2/app-source/";
     private static final String DASHBOARD_USERS_ENDPOINT = "/v1/dashboard-users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -454,7 +459,7 @@ public class AppSourceIntegrationTest {
         boolean foundUser1Priv = false;
         for (DashboardUserDto d : users) {
            if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
-               for (Privilege p : d.getPrivileges()) {
+               for (PrivilegeDto p : d.getPrivileges()) {
                    if (p.getName().equals("APP_SOURCE_ADMIN")) {
                        foundAdminsPriv = true;
                        break;
@@ -462,7 +467,7 @@ public class AppSourceIntegrationTest {
                }
            }
            else if (d.getEmail().equalsIgnoreCase(USER1_EMAIL)) {
-               for (Privilege p : d.getPrivileges()) {
+               for (PrivilegeDto p : d.getPrivileges()) {
                    if (p.getName().equals("APP_SOURCE_ADMIN")) {
                        foundUser1Priv = true;
                        break;
@@ -590,7 +595,7 @@ public class AppSourceIntegrationTest {
         boolean foundUser4Priv = false;
         for (DashboardUserDto d : users) {
             if (d.getEmail().equalsIgnoreCase(USER4_EMAIL)) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("APP_SOURCE_ADMIN")) {
                         foundUser4Priv = true;
                         break;
@@ -630,7 +635,7 @@ public class AppSourceIntegrationTest {
                 foundAdminUser = true;
 
                 // make sure admin does have the app_source_admin anymore, not needed
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equalsIgnoreCase("APP_SOURCE_ADMIN")) {
                         adminHasNoMoreAppSourceAdmin = false;
                         break;
@@ -701,11 +706,11 @@ public class AppSourceIntegrationTest {
                 .andExpect(status().isCreated());
 
         // verify if a DASHBOARD admin requests anything we get everything -  3 apps
-        mockMvc.perform(get(ENDPOINT)
+        mockMvc.perform(get(ENDPOINT_V2)
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(3)));
+                .andExpect(jsonPath("$.data", hasSize(3)));
 
         // verify admin user has additional APP_SOURCE_ADMIN priv
         MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
@@ -718,7 +723,7 @@ public class AppSourceIntegrationTest {
         boolean foundPriv = false;
         for (DashboardUserDto d : dtos) {
             if (d.getEmail().equalsIgnoreCase(admin.getEmail())) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equalsIgnoreCase("APP_SOURCE_ADMIN")) {
                         foundPriv = true;
                         break;
@@ -729,18 +734,18 @@ public class AppSourceIntegrationTest {
         assertTrue(foundPriv);
 
         // verify if a USER1 sees one record
-        mockMvc.perform(get(ENDPOINT)
+        mockMvc.perform(get(ENDPOINT_V2)
                 .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.data", hasSize(1)));
 
         // verify if a USER2 sees one record
-        mockMvc.perform(get(ENDPOINT)
+        mockMvc.perform(get(ENDPOINT_V2)
                 .header(AUTH_HEADER_NAME, createToken(USER2_EMAIL))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.data", hasSize(1)));
     }
 
     @Transactional
@@ -793,14 +798,14 @@ public class AppSourceIntegrationTest {
         app1Main.setAppEndpoints(Set.of(endPoint));
         appSourceRepository.saveAndFlush(app1Main);
 
-        MvcResult clientApps = mockMvc.perform(get(ENDPOINT + "app-clients")
+        MvcResult clientApps = mockMvc.perform(get(ENDPOINT_V2 + "app-clients")
                 .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        AppClientSummaryDto[] availableClientApps = OBJECT_MAPPER
-                .readValue(clientApps.getResponse().getContentAsString(), AppClientSummaryDto[].class);
+        List<AppClientSummaryDto> availableClientApps = OBJECT_MAPPER
+                .readValue(clientApps.getResponse().getContentAsString(), AppClientSummaryDtoResponseWrapper.class).getData();
 
         UUID clientAppId = null;
         for (AppClientSummaryDto d : availableClientApps) {
@@ -915,7 +920,7 @@ public class AppSourceIntegrationTest {
         boolean foundAdminsPriv = false;
         for (DashboardUserDto d : users) {
             if (d.getEmail().equalsIgnoreCase("tester@test.com")) {
-                for (Privilege p : d.getPrivileges()) {
+                for (PrivilegeDto p : d.getPrivileges()) {
                     if (p.getName().equals("APP_SOURCE_ADMIN")) {
                         foundAdminsPriv = true;
                         break;

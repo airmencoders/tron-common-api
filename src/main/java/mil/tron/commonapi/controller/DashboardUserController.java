@@ -7,9 +7,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardUser;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.DashboardUserDtoResponseWrapper;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.springframework.http.HttpStatus;
@@ -22,7 +24,6 @@ import java.security.Principal;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/dashboard-users")
 public class DashboardUserController {
 
     DashboardUserService dashboardUserService;
@@ -31,15 +32,33 @@ public class DashboardUserController {
         this.dashboardUserService = dashboardUserService;
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getAllDashboardUsersWrapped()} for new usage.
+     * @return
+     */
     @Operation(summary = "Retrieves all Dashboard Users", description = "Retrieves all Dashboard Users")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
 						content = @Content(array = @ArraySchema(schema = @Schema(implementation = DashboardUserDto.class))))
 	})
+    @Deprecated(since = "v2")
     @PreAuthorizeDashboardUser
-    @GetMapping("")
+    @GetMapping({"${api-prefix.v1}/dashboard-users"})
     public ResponseEntity<Iterable<DashboardUserDto>> getAllDashboardUsers() {
+        return new ResponseEntity<>(dashboardUserService.getAllDashboardUsersDto(), HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Retrieves all Dashboard Users", description = "Retrieves all Dashboard Users")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+						content = @Content(schema = @Schema(implementation = DashboardUserDtoResponseWrapper.class)))
+	})
+    @WrappedEnvelopeResponse
+    @PreAuthorizeDashboardUser
+    @GetMapping({"${api-prefix.v2}/dashboard-users"})
+    public ResponseEntity<Iterable<DashboardUserDto>> getAllDashboardUsersWrapped() {
         return new ResponseEntity<>(dashboardUserService.getAllDashboardUsersDto(), HttpStatus.OK);
     }
 
@@ -56,7 +75,7 @@ public class DashboardUserController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PreAuthorizeDashboardUser
-    @GetMapping(value = "/{id}")
+    @GetMapping({"${api-prefix.v1}/dashboard-users/{id}", "${api-prefix.v2}/dashboard-users/{id}"})
     public ResponseEntity<DashboardUserDto> getDashboardUser(
             @Parameter(description = "Dashboard User ID to retrieve", required = true) @PathVariable("id") UUID id) {
 
@@ -78,7 +97,7 @@ public class DashboardUserController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @PreAuthorizeDashboardAdmin
-    @PostMapping("")
+    @PostMapping({"${api-prefix.v1}/dashboard-users", "${api-prefix.v2}/dashboard-users"})
     public ResponseEntity<DashboardUserDto> addDashboardUser(@Parameter(description = "Dashboard user to add", required = true) @Valid @RequestBody DashboardUserDto dashboardUser) {
         return new ResponseEntity<>(dashboardUserService.createDashboardUserDto(dashboardUser), HttpStatus.CREATED);
     }
@@ -93,7 +112,7 @@ public class DashboardUserController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PreAuthorizeDashboardAdmin
-    @PutMapping(value = "/{id}")
+    @PutMapping({"${api-prefix.v1}/dashboard-users/{id}", "${api-prefix.v2}/dashboard-users/{id}"})
     public ResponseEntity<DashboardUserDto> updateDashboardUser(
             @Parameter(description = "Dashboard User ID to update", required = true) @PathVariable("id") UUID id,
             @Parameter(description = "Updated person", required = true) @Valid @RequestBody DashboardUserDto dashboardUserDto) {
@@ -112,7 +131,7 @@ public class DashboardUserController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @PreAuthorizeDashboardAdmin
-    @DeleteMapping(value = "/{id}")
+    @DeleteMapping({"${api-prefix.v1}/dashboard-users/{id}", "${api-prefix.v2}/dashboard-users/{id}"})
     public ResponseEntity<Object> deleteDashboardUser(
             @Parameter(description = "Dashboard ID to delete", required = true) @PathVariable("id") UUID id) {
         dashboardUserService.deleteDashboardUser(id);
@@ -129,7 +148,7 @@ public class DashboardUserController {
                     description = "Forbidden (user does not exist)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
-    @GetMapping(value = "/self")
+    @GetMapping({"${api-prefix.v1}/dashboard-users/self", "${api-prefix.v2}/dashboard-users/self"})
     public ResponseEntity<DashboardUserDto> getSelfDashboardUser(Principal principal) {
         DashboardUserDto dashboardUser = dashboardUserService.getSelf(principal.getName());
         return new ResponseEntity<>(dashboardUser, HttpStatus.OK);

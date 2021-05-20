@@ -1,7 +1,5 @@
 package mil.tron.commonapi.controller.scratch;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,14 +8,9 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.PrivilegeDto;
-import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
-import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
-import mil.tron.commonapi.dto.ScratchValuePatchJsonDto;
-import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
-import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
-import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
+import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.exception.*;
 import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
@@ -26,7 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -35,7 +27,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/scratch")
 public class ScratchStorageController {
     private ScratchStorageService scratchStorageService;
     private PrivilegeService privilegeService;
@@ -97,21 +88,45 @@ public class ScratchStorageController {
         }
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getAllKeyValuePairsWrapped()} for new usage.
+     * @return
+     */
     @Operation(summary = "Retrieves all key-value pairs for all scratch space consuming apps",
             description = "Requires request to be under DASHBOARD_ADMIN privileges")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntry.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntryDto.class)))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges"),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
+    @Deprecated(since = "v2")
     @PreAuthorizeDashboardAdmin  // only admin can see everyone's key-value pairs
-    @GetMapping("")
+    @GetMapping({"${api-prefix.v1}/scratch"})
     public ResponseEntity<Object> getAllKeyValuePairs() {
+        return new ResponseEntity<>(scratchStorageService.getAllEntries(), HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Retrieves all key-value pairs for all scratch space consuming apps",
+            description = "Requires request to be under DASHBOARD_ADMIN privileges")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntryDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges"),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed request body",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @WrappedEnvelopeResponse
+    @PreAuthorizeDashboardAdmin  // only admin can see everyone's key-value pairs
+    @GetMapping({"${api-prefix.v2}/scratch"})
+    public ResponseEntity<Object> getAllKeyValuePairsWrapped() {
         return new ResponseEntity<>(scratchStorageService.getAllEntries(), HttpStatus.OK);
     }
 
@@ -120,14 +135,14 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntry.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntryDto.class)))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed Application UUID")
     })
-    @GetMapping("/{appId}")
+    @GetMapping({"${api-prefix.v1}/scratch/{appId}", "${api-prefix.v2}/scratch/{appId}"})
     public ResponseEntity<Object> getAllKeyValuePairsForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
@@ -135,19 +150,25 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getAllEntriesByApp(appId), HttpStatus.OK);
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getAllKeysForAppIdWrapped(UUID)} for new usage.
+     * @param appId
+     * @return
+     */
     @Operation(summary = "Retrieves all keys for for a single app",
             description = "App ID is the UUID of the owning application")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntry.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntryDto.class)))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed Application UUID")
     })
-    @GetMapping("/apps/{appId}/keys")
+    @Deprecated(since = "v2")
+    @GetMapping({"${api-prefix.v1}/scratch/apps/{appId}/keys"})
     public ResponseEntity<Object> getAllKeysForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
@@ -155,19 +176,40 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
 
+    @Operation(summary = "Retrieves all keys for for a single app",
+            description = "App ID is the UUID of the owning application")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntryDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID not valid or found",
+                    content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Application UUID")
+    })
+    @WrappedEnvelopeResponse
+    @GetMapping({"${api-prefix.v2}/scratch/apps/{appId}/keys"})
+    public ResponseEntity<Object> getAllKeysForAppIdWrapped(
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
+
+        validateScratchReadAccessForUser(appId);
+        return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
+    }
+    
     @Operation(summary = "Retrieves a single key-value pair for for a single app",
             description = "App ID is the UUID of the owning application")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntryDto.class))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID / Key name not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed Application UUID")
     })
-    @GetMapping("/{appId}/{keyName}")
+    @GetMapping({"${api-prefix.v1}/scratch/{appId}/{keyName}", "${api-prefix.v2}/scratch/{appId}/{keyName}"})
     public ResponseEntity<Object> getKeyValueByKeyName(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName) {
@@ -189,7 +231,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "400",
                     description = "Malformed Application UUID / Value cannot be jsonized / Unable to serialize response to JSON")
     })
-    @PostMapping(value = "/{appId}/{keyName}/jsonize", consumes = {"text/plain;charset=UTF-8"})
+    @PostMapping(value = {"${api-prefix.v1}/scratch/{appId}/{keyName}/jsonize", "${api-prefix.v2}/scratch/{appId}/{keyName}/jsonize"}, consumes = {"text/plain;charset=UTF-8"})
     public ResponseEntity<Object> getKeyValueByKeyNameAsJson(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName,
@@ -211,7 +253,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "400",
                     description = "Malformed Application UUID / Value cannot be jsonized / Bad JSON Path / Unable to serialize response to JSON")
     })
-    @PatchMapping("/{appId}/{keyName}/jsonize")
+    @PatchMapping({"${api-prefix.v1}/scratch/{appId}/{keyName}/jsonize", "${api-prefix.v2}/scratch/{appId}/{keyName}/jsonize"})
     public ResponseEntity<Object> patchKeyValuePairAsJson(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName,
@@ -228,7 +270,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntryDto.class))),
             @ApiResponse(responseCode = "403",
                     description = "Write / Update action forbidden - no WRITE privileges",
                     content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
@@ -238,9 +280,9 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "400",
                     description = "Malformed Request Body")
     })
-    @PostMapping("")
+    @PostMapping({"${api-prefix.v1}/scratch", "${api-prefix.v2}/scratch"})
     public ResponseEntity<Object> setKeyValuePair(
-            @Parameter(name = "entry", description = "Key-Value-AppId object", required = true) @Valid @RequestBody ScratchStorageEntry entry) {
+            @Parameter(name = "entry", description = "Key-Value-AppId object", required = true) @Valid @RequestBody ScratchStorageEntryDto entry) {
 
         validateScratchWriteAccessForUser(entry.getAppId());
 
@@ -253,7 +295,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntryDto.class))),
             @ApiResponse(responseCode = "403",
                     description = "Write / Update action forbidden - no WRITE privileges",
                     content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
@@ -264,7 +306,7 @@ public class ScratchStorageController {
                     description = "Malformed request body",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @DeleteMapping("/{appId}/key/{key}")
+    @DeleteMapping({"${api-prefix.v1}/scratch/{appId}/key/{key}", "${api-prefix.v2}/scratch/{appId}/key/{key}"})
     public ResponseEntity<Object> deleteKeyValuePair(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "key", description = "Key name of the key-value pair to delete", required = true) @PathVariable String key) {
@@ -278,7 +320,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntryDto.class))),
             @ApiResponse(responseCode = "403",
                     description = "Write / Update action forbidden - no WRITE privileges",
                     content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
@@ -288,7 +330,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "400",
                     description = "Malformed Request Body")
     })
-    @DeleteMapping("/{appId}")
+    @DeleteMapping({"${api-prefix.v1}/scratch/{appId}", "${api-prefix.v2}/scratch/{appId}"})
     public ResponseEntity<Object> deleteAllKeyValuePairsForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
         validateScratchWriteAccessForUser(appId);
@@ -298,6 +340,10 @@ public class ScratchStorageController {
 
     // scratch app registration/management endpoints... only admins can manage these
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getScratchSpaceAppsWrapped()} for new usage.
+     * @return
+     */
     @Operation(summary = "Gets the entire table of Scratch Storage apps that are registered with Common API",
             description = "Requester has to have DASHBOARD_ADMIN rights")
     @ApiResponses(value = {
@@ -307,9 +353,26 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
+    @Deprecated(since = "v2")
     @PreAuthorizeDashboardAdmin
-    @GetMapping("/apps")
+    @GetMapping({"${api-prefix.v1}/scratch/apps"})
     public ResponseEntity<Object> getScratchSpaceApps() {
+        return new ResponseEntity<>(scratchStorageService.getAllRegisteredScratchApps(), HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Gets the entire table of Scratch Storage apps that are registered with Common API",
+            description = "Requester has to have DASHBOARD_ADMIN rights")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges")
+    })
+    @PreAuthorizeDashboardAdmin
+    @WrappedEnvelopeResponse
+    @GetMapping({"${api-prefix.v2}/scratch/apps"})
+    public ResponseEntity<Object> getScratchSpaceAppsWrapped() {
         return new ResponseEntity<>(scratchStorageService.getAllRegisteredScratchApps(), HttpStatus.OK);
     }
     
@@ -322,7 +385,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "403",
             		description = "Not Authorized")
     })
-    @GetMapping("/apps/self")
+    @GetMapping({"${api-prefix.v1}/scratch/apps/self", "${api-prefix.v2}/scratch/apps/self"})
     public ResponseEntity<Object> getScratchSpaceAppsByAuthorizedUser() {
     	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getCredentials().toString();  // get the JWT email string
@@ -339,7 +402,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privilege for given app ID.")
     })
-    @GetMapping("/apps/{appId}")
+    @GetMapping({"${api-prefix.v1}/scratch/apps/{appId}", "${api-prefix.v2}/scratch/apps/{appId}"})
     public ResponseEntity<Object> getScratchAppById(@PathVariable UUID appId) {
 
         checkUserIsDashBoardAdminOrScratchAdmin(appId);
@@ -351,7 +414,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201",
                     description = "App Registered OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body or app name already exists",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -362,9 +425,9 @@ public class ScratchStorageController {
                     content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
-    @PostMapping("/apps")
+    @PostMapping({"${api-prefix.v1}/scratch/apps", "${api-prefix.v2}/scratch/apps"})
     public ResponseEntity<Object> postNewScratchSpaceApp(
-            @Parameter(name = "entry", description = "New Application Information", required = true) @Valid @RequestBody ScratchStorageAppRegistryEntry entry) {
+            @Parameter(name = "entry", description = "New Application Information", required = true) @Valid @RequestBody ScratchStorageAppRegistryDto entry) {
         return new ResponseEntity<>(scratchStorageService.addNewScratchAppName(entry), HttpStatus.CREATED);
     }
 
@@ -373,7 +436,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Info Changed OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body / app name already exists or appId is malformed",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -387,10 +450,10 @@ public class ScratchStorageController {
                     content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
-    @PutMapping("/apps/{id}")
+    @PutMapping({"${api-prefix.v1}/scratch/apps/{id}", "${api-prefix.v2}/scratch/apps/{id}"})
     public ResponseEntity<Object> editExistingAppEntry(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
-            @Parameter(name = "entry", description = "Application Information Object", required = true) @Valid @RequestBody ScratchStorageAppRegistryEntry entry) {
+            @Parameter(name = "entry", description = "Application Information Object", required = true) @Valid @RequestBody ScratchStorageAppRegistryDto entry) {
         return new ResponseEntity<>(scratchStorageService.editExistingScratchAppEntry(id, entry), HttpStatus.OK);
     }
 
@@ -399,7 +462,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Priv Added OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body / app name already exists or appId is malformed",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -412,13 +475,13 @@ public class ScratchStorageController {
                     description = "This app/user/priv combo already exists",
                     content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
-    @PatchMapping("/apps/{id}/user")
+    @PatchMapping({"${api-prefix.v1}/scratch/apps/{id}/user", "${api-prefix.v2}/scratch/apps/{id}/user"})
     public ResponseEntity<Object> addUserPriv(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
             @Parameter(name = "priv", description = "Application User-Priv Object", required = true) @Valid @RequestBody ScratchStorageAppUserPrivDto priv) {
 
         checkUserIsDashBoardAdminOrScratchAdmin(id);
-        ScratchStorageAppRegistryEntry p = scratchStorageService.addUserPrivToApp(id, priv);
+        ScratchStorageAppRegistryDto p = scratchStorageService.addUserPrivToApp(id, priv);
         return new ResponseEntity<>(p, HttpStatus.OK);
     }
 
@@ -427,7 +490,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Modified OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed appId or query parameter",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -437,14 +500,14 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privileges for given app id")
     })
-    @PatchMapping("/apps/{id}/implicitRead")
+    @PatchMapping({"${api-prefix.v1}/scratch/apps/{id}/implicitRead", "${api-prefix.v2}/scratch/apps/{id}/implicitRead"})
     public ResponseEntity<Object> setImplicitReadSetting(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
             @Parameter(name = "priv", description = "Application User-Priv Object", required = true)
                 @RequestParam(name = "value", required = false, defaultValue = "false") boolean implicitRead) {
 
         checkUserIsDashBoardAdminOrScratchAdmin(id);
-        ScratchStorageAppRegistryEntry p = scratchStorageService.setImplicitReadForApp(id, implicitRead);
+        ScratchStorageAppRegistryDto p = scratchStorageService.setImplicitReadForApp(id, implicitRead);
         return new ResponseEntity<>(p, HttpStatus.OK);
     }
 
@@ -453,7 +516,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Priv Removed OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed request body / app name already exists or appId is malformed",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -463,7 +526,7 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges, or no SCRATCH_ADMIN privileges for given app id")
     })
-    @DeleteMapping("/apps/{id}/user/{appPrivIdEntry}")
+    @DeleteMapping({"${api-prefix.v1}/scratch/apps/{id}/user/{appPrivIdEntry}", "${api-prefix.v2}/scratch/apps/{id}/user/{appPrivIdEntry}"})
     public ResponseEntity<Object> removeUserPriv(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
             @Parameter(name = "appPrivIdEntry", description = "UUID of the User-Priv set to remove", required = true) @PathVariable UUID appPrivIdEntry) {
@@ -477,7 +540,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "App Removed OK",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryEntry.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageAppRegistryDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "AppId is malformed",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -488,7 +551,7 @@ public class ScratchStorageController {
                     description = "No DASHBOARD_ADMIN privileges")
     })
     @PreAuthorizeDashboardAdmin
-    @DeleteMapping("/apps/{id}")
+    @DeleteMapping({"${api-prefix.v1}/scratch/apps/{id}", "${api-prefix.v2}/scratch/apps/{id}"})
     public ResponseEntity<Object> deleteExistingAppEntry(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id) {
 
@@ -498,18 +561,39 @@ public class ScratchStorageController {
 
     // scratch app user management endpoints - admins can only manage scratch space users
 
+    /**
+     * @deprecated No longer valid due to T166. See {@link #getAllUsersWrapped()} for new usage.
+     * @return
+     */
     @Operation(summary = "Gets the entire table of Scratch Space users (ID, email...)",
             description = "Requester has to have DASHBOARD_ADMIN rights")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageUser.class)))),
+                    		content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageUserDto.class)))),
+            @ApiResponse(responseCode = "403",
+                    description = "No DASHBOARD_ADMIN privileges")
+    })
+    @Deprecated(since = "v2")
+    @PreAuthorizeDashboardAdmin
+    @GetMapping({"${api-prefix.v1}/scratch/users"})
+    public ResponseEntity<Object> getAllUsers() {
+        return new ResponseEntity<>(scratchStorageService.getAllScratchUsers(), HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Gets the entire table of Scratch Space users (ID, email...)",
+            description = "Requester has to have DASHBOARD_ADMIN rights")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageUserDtoResponseWrapper.class))),
             @ApiResponse(responseCode = "403",
                     description = "No DASHBOARD_ADMIN privileges")
     })
     @PreAuthorizeDashboardAdmin
-    @GetMapping("/users")
-    public ResponseEntity<Object> getAllUsers() {
+    @WrappedEnvelopeResponse
+    @GetMapping({"${api-prefix.v2}/scratch/users"})
+    public ResponseEntity<Object> getAllUsersWrapped() {
         return new ResponseEntity<>(scratchStorageService.getAllScratchUsers(), HttpStatus.OK);
     }
 
@@ -518,7 +602,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201",
                     description = "New user added operation",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageUser.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageUserDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed Scratch Storage object",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -529,9 +613,9 @@ public class ScratchStorageController {
                     content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
-    @PostMapping("/users")
+    @PostMapping({"${api-prefix.v1}/scratch/users", "${api-prefix.v2}/scratch/users"})
     public ResponseEntity<Object> addNewScratchUser(
-            @Parameter(name = "user", description = "Scratch Storage User entity", required = true) @Valid @RequestBody ScratchStorageUser user) {
+            @Parameter(name = "user", description = "Scratch Storage User entity", required = true) @Valid @RequestBody ScratchStorageUserDto user) {
         return new ResponseEntity<>(scratchStorageService.addNewScratchUser(user), HttpStatus.CREATED);
     }
 
@@ -540,7 +624,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Operation Successful",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageUser.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageUserDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed Scratch Storage object or malformed user UUID",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -554,10 +638,10 @@ public class ScratchStorageController {
                     content = @Content(schema = @Schema(implementation = ResourceAlreadyExistsException.class)))
     })
     @PreAuthorizeDashboardAdmin
-    @PutMapping("/users/{id}")
+    @PutMapping({"${api-prefix.v1}/scratch/users/{id}", "${api-prefix.v2}/scratch/users/{id}"})
     public ResponseEntity<Object> editScratchUser(
             @Parameter(name = "id", description = "Scratch User Id", required = true) @PathVariable UUID id,
-            @Parameter(name = "user", description = "Scratch Storage User entity", required = true) @Valid @RequestBody ScratchStorageUser user) {
+            @Parameter(name = "user", description = "Scratch Storage User entity", required = true) @Valid @RequestBody ScratchStorageUserDto user) {
         return new ResponseEntity<>(scratchStorageService.editScratchUser(id, user), HttpStatus.OK);
     }
 
@@ -566,7 +650,7 @@ public class ScratchStorageController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Operation Successful",
-                    content = @Content(schema = @Schema(implementation = ScratchStorageUser.class))),
+                    content = @Content(schema = @Schema(implementation = ScratchStorageUserDto.class))),
             @ApiResponse(responseCode = "400",
                     description = "Malformed user UUID",
                     content = @Content(schema = @Schema(implementation = BadRequestException.class))),
@@ -577,12 +661,16 @@ public class ScratchStorageController {
                     description = "No DASHBOARD_ADMIN privileges")
     })
     @PreAuthorizeDashboardAdmin
-    @DeleteMapping("/users/{id}")
+    @DeleteMapping({"${api-prefix.v1}/scratch/users/{id}", "${api-prefix.v2}/scratch/users/{id}"})
     public ResponseEntity<Object> deleteScratchUser(
             @Parameter(name = "id", description = "Scratch User Id", required = true) @PathVariable UUID id) {
         return new ResponseEntity<>(scratchStorageService.deleteScratchUser(id), HttpStatus.OK);
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getScratchPrivsWrapped()} for new usage.
+     * @return
+     */
     @Operation(summary = "Gets all SCRATCH space privileges available",
             description = "Gets all the SCRATCH space privileges so that privilege names can be mapped to their IDs")
     @ApiResponses(value = {
@@ -590,8 +678,27 @@ public class ScratchStorageController {
                     description = "Operation Successful",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = PrivilegeDto.class))))
     })
-    @GetMapping("/users/privs")
+    @Deprecated(since = "v2")
+    @GetMapping({"${api-prefix.v1}/scratch/users/privs"})
     public ResponseEntity<Object> getScratchPrivs() {
+        List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
+                .stream()
+                .filter(item -> item.getName().startsWith("SCRATCH_"))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(scratchPrivs, HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Gets all SCRATCH space privileges available",
+            description = "Gets all the SCRATCH space privileges so that privilege names can be mapped to their IDs")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Operation Successful",
+                    content = @Content(schema = @Schema(implementation = PrivilegeDtoResponseWrapper.class)))
+    })
+    @WrappedEnvelopeResponse
+    @GetMapping({"${api-prefix.v2}/scratch/users/privs"})
+    public ResponseEntity<Object> getScratchPrivsWrapped() {
         List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
                 .stream()
                 .filter(item -> item.getName().startsWith("SCRATCH_"))

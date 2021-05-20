@@ -5,27 +5,22 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
-import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
-import mil.tron.commonapi.dto.ScratchValuePatchJsonDto;
+import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.entity.DashboardUser;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
-import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
-import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
-import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -63,6 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(properties = { "security.enabled=true" })
 @TestPropertySource(locations = "classpath:application-test.properties")
+@ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
 public class ScratchStorageIntegrationTest {
 
@@ -82,7 +78,9 @@ public class ScratchStorageIntegrationTest {
     private static final String COOL_APP_NAME = "CoolApp";
     private static final String TEST_APP_NAME = "TestApp";
     private static final String ENDPOINT = "/v1/scratch/";
+    private static final String ENDPOINT_V2 = "/v2/scratch/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private ModelMapper mapper = new ModelMapper();
 
     @Autowired
     private MockMvc mockMvc;
@@ -94,7 +92,7 @@ public class ScratchStorageIntegrationTest {
     private DashboardUserRepository dashRepo;
 
     // predefine a key value pair for COOL_APP_NAME
-    private ScratchStorageEntry entry1 = ScratchStorageEntry
+    private ScratchStorageEntryDto entry1 = ScratchStorageEntryDto
             .builder()
             .appId(UUID.randomUUID())
             .key("hello")
@@ -102,7 +100,7 @@ public class ScratchStorageIntegrationTest {
             .build();
 
     // predefine a key value pair for COOL_APP_NAME that is also valid JSON
-    private ScratchStorageEntry entry1Json = ScratchStorageEntry
+    private ScratchStorageEntryDto entry1Json = ScratchStorageEntryDto
             .builder()
             .appId(entry1.getAppId())
             .key("name")
@@ -110,7 +108,7 @@ public class ScratchStorageIntegrationTest {
             .build();
 
     // predefine a key value pair for TEST_APP_NAME
-    private ScratchStorageEntry entry2 = ScratchStorageEntry
+    private ScratchStorageEntryDto entry2 = ScratchStorageEntryDto
             .builder()
             .appId(UUID.randomUUID())
             .key("some key")
@@ -118,20 +116,20 @@ public class ScratchStorageIntegrationTest {
             .build();
 
     // predefine user1
-    private ScratchStorageUser user1 = ScratchStorageUser
+    private ScratchStorageUserDto user1 = ScratchStorageUserDto
             .builder()
             .email("user1@test.com")
             .build();
 
     // predefine user2
-    private ScratchStorageUser user2 = ScratchStorageUser
+    private ScratchStorageUserDto user2 = ScratchStorageUserDto
             .builder()
             .email("user2@test.com")
             .build();
 
 
     private DashboardUser admin;
-    private List<Privilege> privs;
+    private List<PrivilegeDto> privs;
     private Long writePrivId;
 
     /**
@@ -183,14 +181,19 @@ public class ScratchStorageIntegrationTest {
 
 
         // get the privs from the db
-        privs = Lists.newArrayList(privRepo.findAll());
+        privs = Lists.newArrayList(privRepo
+                .findAll())
+                .stream()
+                .map(item -> mapper.map(item, PrivilegeDto.class))
+                    .collect(Collectors.toList());
+        
         writePrivId = privs.stream()
                 .filter(item -> item.getName().equals("SCRATCH_WRITE"))
                 .collect(Collectors.toList()).get(0).getId();
 
 
         // predefine a key value pair for TEST_APP_NAME
-        ScratchStorageEntry entry3 = ScratchStorageEntry
+        ScratchStorageEntryDto entry3 = ScratchStorageEntryDto
                 .builder()
                 .appId(entry2.getAppId())
                 .key("some key2")
@@ -276,7 +279,7 @@ public class ScratchStorageIntegrationTest {
 
         // test null as the appid will never work
 
-        ScratchStorageEntry entry = ScratchStorageEntry
+        ScratchStorageEntryDto entry = ScratchStorageEntryDto
                 .builder()
                 .appId(null)
                 .key("some key2")
@@ -299,7 +302,7 @@ public class ScratchStorageIntegrationTest {
 
         // test notnull constraint on keys won't work
 
-        ScratchStorageEntry entry = ScratchStorageEntry
+        ScratchStorageEntryDto entry = ScratchStorageEntryDto
                 .builder()
                 .appId(UUID.randomUUID())
                 .key(null)
@@ -353,6 +356,14 @@ public class ScratchStorageIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
+        
+        // have to be a dashboard admin to do this
+        // V2
+        mockMvc.perform(get(ENDPOINT_V2)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
     }
 
     @Transactional
@@ -557,29 +568,26 @@ public class ScratchStorageIntegrationTest {
 
 
         // get the priv ID of SCRATCH_ADMIN from the REST interface
-        MvcResult privList = mockMvc.perform(get("/v1/scratch/users/privs")
+        MvcResult privList = mockMvc.perform(get(ENDPOINT_V2 + "users/privs")
                 .header(AUTH_HEADER_NAME, createToken(user1.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
                 .andReturn();
-        Privilege[] privArray = OBJECT_MAPPER
-                .readValue(privList.getResponse().getContentAsString(), Privilege[].class);
+        List<PrivilegeDto> privArray = OBJECT_MAPPER
+                .readValue(privList.getResponse().getContentAsString(), PrivilegeDtoResponseWrapper.class).getData();
 
         // yank out the SCRATCH_ADMIN from the JSON
-        Privilege adminPriv = Arrays
-                .stream(privArray)
+        PrivilegeDto adminPriv = privArray.stream()
                 .filter(item -> item.getName().equals("SCRATCH_ADMIN"))
                 .collect(Collectors.toList()).get(0);
 
         // yank out the SCRATCH_WRITE details from the JSON
-        Privilege writePriv = Arrays
-                .stream(privArray)
+        PrivilegeDto writePriv = privArray.stream()
                 .filter(item -> item.getName().equals("SCRATCH_WRITE"))
                 .collect(Collectors.toList()).get(0);
 
         // yank out the SCRATCH_READ details from the JSON
-        Privilege readPriv = Arrays
-                .stream(privArray)
+        PrivilegeDto readPriv = privArray.stream()
                 .filter(item -> item.getName().equals("SCRATCH_READ"))
                 .collect(Collectors.toList()).get(0);
 
@@ -601,7 +609,6 @@ public class ScratchStorageIntegrationTest {
                 result.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class);
 
         // get user1's priv entry in the returned Dto, get its ID
-        ScratchStorageAppUserPriv user1AdminPriv = null;
         for (ScratchStorageAppRegistryDto.UserWithPrivs user : appDto.getUserPrivs()) {
             if (user.getUserId().equals(user1.getId())) {
                 for (ScratchStorageAppRegistryDto.PrivilegeIdPair pair : user.getPrivs()) {
@@ -721,6 +728,13 @@ public class ScratchStorageIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(newUserDto.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk());
+        
+        // make sure the READ priv works - get the app's key names
+        // V2 wrapped response
+        mockMvc.perform(get(ENDPOINT_V2 + "/apps/{appId}/keys", entry1.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(newUserDto.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
 
         // finally revoke the new guys privs - but the system will not delete that user from the
         //   scratch space universe, since they may be referenced for other apps!
@@ -760,12 +774,12 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        ScratchStorageUser[] allUsersArray = OBJECT_MAPPER.readValue(allUsers.getResponse().getContentAsString(),
-                ScratchStorageUser[].class);
+        ScratchStorageUserDto[] allUsersArray = OBJECT_MAPPER.readValue(allUsers.getResponse().getContentAsString(),
+                ScratchStorageUserDto[].class);
 
         // make sure the new guy is still in scratch space universe
         boolean newGuyExists = false;
-        for (ScratchStorageUser u : allUsersArray) {
+        for (ScratchStorageUserDto u : allUsersArray) {
             if (u.getEmail().equals(newGuyEmail)) {
                 newGuyExists = true;
                 break;
@@ -833,14 +847,14 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(status().isOk());
 
         // verify that user2 is no longer listed in COOL_APP or TEST_APP's privs
-        MvcResult allAppRecords = mockMvc.perform(get(ENDPOINT + "/apps")
+        MvcResult allAppRecords = mockMvc.perform(get(ENDPOINT_V2 + "apps")
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        ScratchStorageAppRegistryDto[] appArray = OBJECT_MAPPER.readValue(allAppRecords.getResponse().getContentAsString(),
-                ScratchStorageAppRegistryDto[].class);
+        List<ScratchStorageAppRegistryDto> appArray = OBJECT_MAPPER.readValue(allAppRecords.getResponse().getContentAsString(),
+                ScratchStorageAppRegistryDtoResponseWrapper.class).getData();
 
         boolean foundUser2Id = false;
         for (ScratchStorageAppRegistryDto entry : appArray) {
@@ -897,7 +911,7 @@ public class ScratchStorageIntegrationTest {
 
 
         // make a new user - "user3"
-        ScratchStorageUser user3 = ScratchStorageUser
+        ScratchStorageUserDto user3 = ScratchStorageUserDto
                 .builder()
                 .email("")
                 .build();
@@ -948,7 +962,7 @@ public class ScratchStorageIntegrationTest {
                 .andReturn();
 
         UUID user3Id = OBJECT_MAPPER
-                .readValue(result.getResponse().getContentAsString(), ScratchStorageUser.class)
+                .readValue(result.getResponse().getContentAsString(), ScratchStorageUserDto.class)
                 .getId();
 
         // test edit fails when setting to duplicate email, even with varying case
@@ -1036,7 +1050,7 @@ public class ScratchStorageIntegrationTest {
                 .andReturn();
 
         UUID app3Id = OBJECT_MAPPER
-                .readValue(newApp.getResponse().getContentAsString(), ScratchStorageAppRegistryEntry.class)
+                .readValue(newApp.getResponse().getContentAsString(), ScratchStorageAppRegistryDto.class)
                 .getId();
 
         // test that edit app3 entry with existing app name fails
@@ -1052,7 +1066,12 @@ public class ScratchStorageIntegrationTest {
 
 
         // get the privs from the db
-        List<Privilege> privs = Lists.newArrayList(privRepo.findAll());
+        List<PrivilegeDto> privs = Lists.newArrayList(privRepo
+                .findAll())
+                .stream()
+                .map(item -> mapper.map(item, PrivilegeDto.class))
+                    .collect(Collectors.toList());
+
         Long writePrivId = privs.stream()
                 .filter(item -> item.getName().equals("SCRATCH_WRITE"))
                 .collect(Collectors.toList()).get(0).getId();
