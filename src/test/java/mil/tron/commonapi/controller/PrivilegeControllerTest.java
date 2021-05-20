@@ -16,17 +16,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import mil.tron.commonapi.dto.response.WrappedResponse;
+
 
 @SpringBootTest
 @AutoConfigureMockMvc
 class PrivilegeControllerTest {
 	private static final String ENDPOINT = "/v1/privilege/";
+	private static final String ENDPOINT_V2 = "/v2/privilege/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	
@@ -64,6 +68,17 @@ class PrivilegeControllerTest {
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(privileges)));
+		}	
+		
+		@Test
+		void getAllWrapped() throws Exception {
+			Mockito.when(service.getPrivileges()).thenReturn(privileges);
+			
+			WrappedResponse<List<PrivilegeDto>> personWrappedResponse = WrappedResponse.<List<PrivilegeDto>>builder().data(privileges).build();
+			
+			mockMvc.perform(get(ENDPOINT_V2))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(personWrappedResponse)));
 		}	
 	}
 }
