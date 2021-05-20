@@ -41,6 +41,9 @@ public class EventPublisher {
     @Value("${signature-header}")
     private String signatureHeader;
 
+    @Value("${webhook-delay-ms:500}")
+    private int webhookDelayMs;
+
     /**
      * Publisher REST bean that will timeout after 5secs to a subscriber so that
      * a subscriber can't block/hang the publisher thread
@@ -99,11 +102,14 @@ public class EventPublisher {
                     if (s.getSecret() != null) {
                         headers.set(signatureHeader, hmac(s.getSecret(), json));
                     }
-                    publisherSender.postForLocation(s.getSubscriberAddress(), new HttpEntity<String>(json, headers));
+                    publisherSender.postForLocation(s.getSubscriberAddress(), new HttpEntity<>(json, headers));
                     publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + s.getSubscriberAddress());
                 } catch (Exception e) {
                     publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + s.getSubscriberAddress() + " failed.  Exception: " + e.getMessage());
                 }
+
+                // throttle this loop to prevent resource starvation (even though its in its own thread)...
+                try { Thread.sleep(webhookDelayMs); } catch (InterruptedException e) { publisherLog.warn("Webhook delay failed"); }
             }
         }
 
