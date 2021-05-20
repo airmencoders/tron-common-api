@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.PrivilegeService;
@@ -27,6 +28,7 @@ import mil.tron.commonapi.service.PrivilegeService;
 @WebMvcTest(PrivilegeController.class)
 class PrivilegeControllerTest {
 	private static final String ENDPOINT = "/v1/privilege/";
+	private static final String ENDPOINT_V2 = "/v2/privilege/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	
@@ -64,6 +66,17 @@ class PrivilegeControllerTest {
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(privileges)));
+		}	
+		
+		@Test
+		void getAllWrapped() throws Exception {
+			Mockito.when(service.getPrivileges()).thenReturn(privileges);
+			
+			WrappedResponse<List<PrivilegeDto>> personWrappedResponse = WrappedResponse.<List<PrivilegeDto>>builder().data(privileges).build();
+			
+			mockMvc.perform(get(ENDPOINT_V2))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(personWrappedResponse)));
 		}	
 	}
 }
