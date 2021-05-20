@@ -1,5 +1,7 @@
 package mil.tron.commonapi.service.utility;
 
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 
 public class ResolvePathFromRequest {
@@ -8,20 +10,22 @@ public class ResolvePathFromRequest {
     /**
      * Get the spring-matched request mapping -- trim off the beginning prefix (e.g. /v1/app/)
      * @param request the request to parse
-     * @param contextPath the prefix used as the context path
-     * @param apiVersionPrefix the api version prefix to remove from the path (e.g. /v1)
-     * @param appSourcesPrefix the prefix used for all app sources
-     * @return String path, without the given prefix. Returns empty string if request is null.
+     * @param prefixes the list of prefixes to test against the path. Only one will be used!
+     * @return String path, without the first found prefix contained in the request. Returns empty string if request is null.
      */
-    public static String resolve(HttpServletRequest request, String prefix) {
+    public static String resolve(HttpServletRequest request, List<String> prefixes) {
         if(request == null) {
             return "";
         }
-        if(prefix == null) {
-            return request.getRequestURI();
+        String uri = request.getRequestURI();
+        if(prefixes == null || prefixes.isEmpty()) {
+            return uri;
         }
-        return request
-                .getRequestURI()
-                .replaceFirst("^(.*" + prefix + "/)", "");
+        String prefixToReplaceWith = prefixes.stream().filter(prefix -> uri.contains(prefix)).findFirst().orElse("");
+        if(prefixToReplaceWith.isEmpty()) {
+            return uri;
+        }
+        return uri.replaceFirst("^(.*" + prefixToReplaceWith + "/)", "");
     }
+
 }
