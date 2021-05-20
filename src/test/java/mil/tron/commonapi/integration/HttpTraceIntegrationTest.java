@@ -189,5 +189,16 @@ public class HttpTraceIntegrationTest {
         assertEquals(size+4, httpLogsRepository.findAll().size());
         HttpLogEntry entry4 = httpLogsRepository.findAll().get(size+3);
         assertEquals(400, entry4.getStatusCode());
+
+        mockMvc.perform(post(PERSON_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken("some@dude.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(joe)))
+                .andExpect(status().isForbidden());
+
+        assertEquals(size+5, httpLogsRepository.findAll().size());
+        HttpLogEntry entry5 = httpLogsRepository.findAll().get(size+4);
+        assertEquals(403, entry5.getStatusCode());
     }
 }

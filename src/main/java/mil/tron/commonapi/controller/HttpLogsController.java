@@ -2,14 +2,16 @@ package mil.tron.commonapi.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.HttpLogDtoPaginationResponseWrapper;
 import mil.tron.commonapi.dto.HttpLogEntryDetailsDto;
-import mil.tron.commonapi.dto.HttpLogEntryDto;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.service.trace.HttpTraceService;
 import org.springdoc.api.annotations.ParameterObject;
@@ -43,10 +45,17 @@ public class HttpLogsController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = HttpLogEntryDto.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = HttpLogDtoPaginationResponseWrapper.class))),
+                    headers = @Header(
+                            name="link",
+                            description = "Contains the appropriate pagination links if application. "
+                                    + "If no pagination query params given, then no pagination links will exist. "
+                                    + "Possible rel values include: first, last, prev, next",
+                            schema = @Schema(type = "string"))),
             @ApiResponse(responseCode = "403",
-                    description = "Insufficient privileges (requires DASHBOARD_ADMIN)")
+                    description = "Insufficient privileges (requires DASHBOARD_ADMIN)"),
     })
+    @WrappedEnvelopeResponse
     @GetMapping("")
     public ResponseEntity<Object> getHttpLogs(
             @Parameter(required = true, description = "The date/time from which to query from - format yyyy-MM-dd'T'HH:mm:ss - in UTC")

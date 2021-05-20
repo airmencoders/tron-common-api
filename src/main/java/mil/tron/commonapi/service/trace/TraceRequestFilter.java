@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletRequest;
  * or they are just reachable in a dev environment.
  */
 @Component
-@Profile("production | development")
+//@Profile("production | development")
 public class TraceRequestFilter extends HttpTraceFilter {
 
     public TraceRequestFilter(HttpTraceRepository repository, HttpExchangeTracer tracer) {

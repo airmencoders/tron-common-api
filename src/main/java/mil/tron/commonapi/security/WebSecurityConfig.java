@@ -2,7 +2,7 @@ package mil.tron.commonapi.security;
 
 import mil.tron.commonapi.exception.AuthManagerException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-import org.springframework.beans.factory.annotation.Value;
+import mil.tron.commonapi.service.trace.TraceRequestFilter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -10,19 +10,21 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.access.ExceptionTranslationFilter;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
 
 @Configuration
 @ConditionalOnProperty(name = "security.enabled", havingValue="true")
 @EnableWebSecurity
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
-	
-	@Value("${api-prefix.v1}")
-	private String apiPrefix;
-	
+
+	private TraceRequestFilter traceRequestFilter;
+
 	private AppClientUserPreAuthenticatedService appClientUserService;
-	public WebSecurityConfig(AppClientUserPreAuthenticatedService appClientUserService) {
+	public WebSecurityConfig(AppClientUserPreAuthenticatedService appClientUserService,
+							 TraceRequestFilter traceRequestFilter) {
 		this.appClientUserService = appClientUserService;
+		this.traceRequestFilter = traceRequestFilter;
 	}
 	
 	@Override
@@ -51,7 +53,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
             .csrf()
         		.disable()
         	.sessionManagement()
-	        	.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+	        	.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+			.and()
+				.addFilterBefore(traceRequestFilter, ExceptionTranslationFilter.class);
     }
     
 	public AppClientPreAuthFilter appClientPreAuthFilter() throws AuthManagerException {
