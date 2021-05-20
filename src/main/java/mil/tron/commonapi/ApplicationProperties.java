@@ -20,19 +20,6 @@ import lombok.Setter;
 @Validated
 public class ApplicationProperties {
     
-    @PostConstruct
-    private void createCombinedPrefixes() {
-        if(apiPrefix != null && !apiPrefix.isEmpty())  {
-            String appSourcePath = appSourcesPrefix == null ? "" : appSourcesPrefix;
-            this.combinedPrefixes.addAll(apiPrefix.values().stream().map(prefix -> {
-                if(prefix != null) {
-                    return prefix.concat(appSourcePath);
-                }
-                return appSourcePath;
-            }).collect(Collectors.toList()));
-        }
-    }
-
     @Getter
     @Setter
     private List<String> combinedPrefixes = new ArrayList<>();
@@ -46,4 +33,17 @@ public class ApplicationProperties {
     @Setter
     @NotEmpty
     private String appSourcesPrefix;
+    
+    @PostConstruct
+    private void createCombinedPrefixes() {
+        if(apiPrefix != null && !apiPrefix.isEmpty())  {
+            String appSourcePath = appSourcesPrefix == null ? "" : appSourcesPrefix;
+            this.combinedPrefixes.addAll(apiPrefix.values().stream().map(prefix -> {
+                if(prefix != null) {
+                    return prefix.concat(appSourcePath);
+                }
+                return appSourcePath;
+            }).collect(Collectors.toList()));
+        }
+    }
 }
