@@ -45,7 +45,7 @@ public class HttpLogsController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = HttpLogDtoPaginationResponseWrapper.class))),
+                    content = @Content(schema = @Schema(implementation = HttpLogDtoPaginationResponseWrapper.class)),
                     headers = @Header(
                             name="link",
                             description = "Contains the appropriate pagination links if application. "
@@ -98,7 +98,7 @@ public class HttpLogsController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = HttpLogEntryDetailsDto.class)))),
+                    content = @Content(schema = @Schema(implementation = HttpLogEntryDetailsDto.class))),
             @ApiResponse(responseCode = "403",
                     description = "Insufficient privileges (requires DASHBOARD_ADMIN)")
     })
