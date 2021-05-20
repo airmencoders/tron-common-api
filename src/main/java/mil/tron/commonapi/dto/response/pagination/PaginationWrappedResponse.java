@@ -1,5 +1,7 @@
 package mil.tron.commonapi.dto.response.pagination;
 
+import javax.validation.constraints.NotNull;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,9 +19,11 @@ import lombok.Setter;
 public class PaginationWrappedResponse<T> {
 	@Getter
 	@Setter
+	@NotNull
 	private T data;
 	
 	@Getter
 	@Setter
+	@NotNull
 	private Pagination pagination;
 }

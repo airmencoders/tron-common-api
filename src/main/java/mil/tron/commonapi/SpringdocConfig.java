@@ -72,11 +72,7 @@ public class SpringdocConfig {
     @Bean
     public GroupedOpenApi dashboardApiV2(@Value("${api-prefix.v2}") String apiPrefix) {
     	String[] paths = {
-			String.format("%s/app-client/**", apiPrefix),
-			String.format("%s/privilege/**", apiPrefix),
-			String.format("%s/logfile/**", apiPrefix),
-			String.format("%s/dashboard-users/**", apiPrefix),
-			String.format("%s/app-source/**", apiPrefix),
+			String.format("%s/**", apiPrefix)
 		};
     	return GroupedOpenApi.builder().group("dashboard-api-v2").pathsToMatch(paths).build();
     }
