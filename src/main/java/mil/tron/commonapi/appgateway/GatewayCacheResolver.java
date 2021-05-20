@@ -6,29 +6,30 @@ import java.util.Collection;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.interceptor.CacheOperationInvocationContext;
 import org.springframework.cache.interceptor.CacheResolver;
 
+import mil.tron.commonapi.ApplicationProperties;
 import mil.tron.commonapi.service.utility.ResolvePathFromRequest;
 
 public class GatewayCacheResolver implements CacheResolver {
 
-    @Value("${api-prefix.v1}")
-    private String apiVersion;
+    @Autowired
+    private CacheManager cacheManager;
 
-    @Value("${app-sources-prefix}")
-    private String appSourcesPrefix;
-
-    @Autowired()
-    CacheManager cacheManager;
+    @Autowired
+    private ApplicationProperties prefixProperties;
 
     public GatewayCacheResolver() {}
 
-    public GatewayCacheResolver(CacheManager cacheManager) {
+    public GatewayCacheResolver(
+        CacheManager cacheManager, 
+        ApplicationProperties prefixProperties
+    ) {
         this.cacheManager = cacheManager;
+        this.prefixProperties = prefixProperties;
     }
     
     @Override
@@ -37,7 +38,7 @@ public class GatewayCacheResolver implements CacheResolver {
 
         for(Object arg : context.getArgs()) {
             if(arg instanceof  HttpServletRequest) {
-                String path = ResolvePathFromRequest.resolve((HttpServletRequest) arg, apiVersion + appSourcesPrefix);
+                String path = ResolvePathFromRequest.resolve((HttpServletRequest) arg, prefixProperties.getCombinedPrefixes());
                 int appSourceAndEndpointSeparator = path.indexOf("/");
                 
                 // If the trimmed path starts with "/", something didn't parse correctly. 
