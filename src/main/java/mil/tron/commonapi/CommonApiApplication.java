@@ -24,6 +24,4 @@ public class CommonApiApplication {
         loggingFilter.setMaxPayloadLength(64000);
         return loggingFilter;
     }
-    
-    
 }

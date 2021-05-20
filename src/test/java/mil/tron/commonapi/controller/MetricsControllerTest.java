@@ -1,38 +1,32 @@
 package mil.tron.commonapi.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.UUID;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import mil.tron.commonapi.dto.metrics.*;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
+import mil.tron.commonapi.service.MetricService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import mil.tron.commonapi.dto.metrics.AppClientCountMetricDto;
-import mil.tron.commonapi.dto.metrics.AppSourceCountMetricDto;
-import mil.tron.commonapi.dto.metrics.AppSourceMetricDto;
-import mil.tron.commonapi.dto.metrics.CountMetricDto;
-import mil.tron.commonapi.dto.metrics.EndpointCountMetricDto;
-import mil.tron.commonapi.dto.metrics.AppEndpointCountMetricDto;
-import mil.tron.commonapi.dto.metrics.EndpointMetricDto;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-import mil.tron.commonapi.service.MetricService;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.UUID;
 
-@WebMvcTest(MetricsController.class)
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
 @WithMockUser(username = "DashboardAdminUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 public class MetricsControllerTest {
     private static final String ENDPOINT = "/v1/metrics/";

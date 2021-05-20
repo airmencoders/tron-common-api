@@ -1,13 +1,12 @@
 package mil.tron.commonapi;
 
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
 import org.springdoc.core.GroupedOpenApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Info;
 
 @Configuration
 public class SpringdocConfig {
@@ -45,6 +44,7 @@ public class SpringdocConfig {
 			String.format("%s/app-client/**", apiPrefix),
 			String.format("%s/privilege/**", apiPrefix),
 			String.format("%s/logfile/**", apiPrefix),
+			String.format("%s/logs/**", apiPrefix),
 			String.format("%s/dashboard-users/**", apiPrefix),
 			String.format("%s/app-source/**", apiPrefix),
 		};
@@ -77,6 +77,7 @@ public class SpringdocConfig {
 			String.format("%s/logfile/**", apiPrefix),
 			String.format("%s/dashboard-users/**", apiPrefix),
 			String.format("%s/app-source/**", apiPrefix),
+			String.format("%s/logs/**", apiPrefix),
 		};
     	return GroupedOpenApi.builder().group("dashboard-api-v2").pathsToMatch(paths).build();
     }
