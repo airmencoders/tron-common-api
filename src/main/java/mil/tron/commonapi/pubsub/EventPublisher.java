@@ -3,8 +3,8 @@ package mil.tron.commonapi.pubsub;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
-import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.logging.CommonApiLogger;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.apache.commons.logging.Log;
@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static mil.tron.commonapi.security.Utility.*;
+import static mil.tron.commonapi.security.Utility.hmac;
 
 /**
  * A Service that fires off messages to subscribers for various events.
@@ -109,9 +109,10 @@ public class EventPublisher {
                 }
 
                 // throttle this loop to prevent resource starvation (even though its in its own thread)...
-                try { Thread.sleep(webhookDelayMs); } catch (InterruptedException e) {
+                try { Thread.sleep(webhookDelayMs); }
+                catch (InterruptedException e) {
                     publisherLog.warn("Webhook delay failed");
-                    break;
+                    Thread.currentThread().interrupt();
                 }
             }
         }
