@@ -267,7 +267,6 @@ public class PersonController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeWrite
 	@PutMapping(value = {"${api-prefix.v1}/person/self/{id}", "${api-prefix.v2}/person/self/{id}"})
 	public ResponseEntity<Object> selfUpdatePerson(@RequestHeader Map<String, String> headers,
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
