@@ -8,16 +8,15 @@ import javax.servlet.http.HttpServletRequest;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import mil.tron.commonapi.ApplicationProperties;
 import mil.tron.commonapi.service.utility.ResolvePathFromRequest;
 
 public class AccessCheckImpl implements AccessCheck {
     
-    private String apiVersionPrefix;
-    private String appSourcesPrefix;
+    private ApplicationProperties prefixProperties;
 
-    public AccessCheckImpl(String apiVersionPrefix, String appSourcesPrefix) {
-        this.apiVersionPrefix = apiVersionPrefix;
-        this.appSourcesPrefix = appSourcesPrefix;
+    public AccessCheckImpl(ApplicationProperties prefixProperties) {
+        this.prefixProperties = prefixProperties;        
     }
 
     @Override
@@ -32,7 +31,7 @@ public class AccessCheckImpl implements AccessCheck {
                 .collect(Collectors.toList());
 
         // get the spring-matched request mapping -- trim off the beginning prefix (e.g. /v1/app/)
-        String patternMatched = ResolvePathFromRequest.resolve(requestObject, apiVersionPrefix + appSourcesPrefix);
+        String patternMatched = ResolvePathFromRequest.resolve(requestObject, this.prefixProperties.getCombinedPrefixes());
 
         // check if the requestor has this request mapping in their privs, if not reject the request
         return authPaths.contains(patternMatched + "_" + requestObject.getMethod().toString());

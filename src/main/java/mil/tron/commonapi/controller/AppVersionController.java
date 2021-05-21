@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/version")
+@RequestMapping({"${api-prefix.v1}/version", "${api-prefix.v2}/version"})
 public class AppVersionController {
 
     // get the version from the JAR Manifest (when application is running as a JAR)

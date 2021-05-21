@@ -1,5 +1,7 @@
 package mil.tron.commonapi.dto.response;
 
+import javax.validation.constraints.NotNull;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,6 +19,7 @@ import lombok.Setter;
 public class WrappedResponse<T> {
 	@Getter
 	@Setter
+	@NotNull
 	private T data;
 }
 

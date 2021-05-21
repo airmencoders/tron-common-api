@@ -1,14 +1,16 @@
 package mil.tron.commonapi.service.filter;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import mil.tron.commonapi.ApplicationProperties;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import mil.tron.commonapi.service.utility.ResolvePathFromRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -22,11 +24,8 @@ import java.io.IOException;
 @ConditionalOnProperty("metrics.gateway.count")
 public class EndpointMetricFilter implements Filter {
     
-    @Value("${api-prefix.v1}")
-    private String apiVersion;
-    
-    @Value("${app-sources-prefix}")
-    private String appSourcesPrefix;
+    @Autowired
+    private ApplicationProperties prefixProperties;
 
     @Autowired
     private AppEndpointRepository appEndpointRepo;
@@ -44,8 +43,8 @@ public class EndpointMetricFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
 
-        String uri = httpRequest.getRequestURI();
-        String patternMatched = uri.replaceFirst("/api" + apiVersion + appSourcesPrefix + "/", "");
+        // All versions of the app source endpoints will get logged against the same metric, for now
+        String patternMatched = ResolvePathFromRequest.resolve(httpRequest, this.prefixProperties.getCombinedPrefixes());
         
         int separator = patternMatched.indexOf("/");
         if (separator > -1) {
