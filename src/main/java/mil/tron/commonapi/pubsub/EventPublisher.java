@@ -128,7 +128,7 @@ public class EventPublisher {
      * The event queue consumer that operates on a fixed period, and pops a queued
      * event from the event queue and sends it out to the subscribers.
      */
-    @Scheduled(fixedDelayString = "${webhook-delay-ms:500}")
+    @Scheduled(fixedDelayString = "${webhook-delay-ms:50}")
     public void queueConsumer() {
 
         if (queuedEvents.isEmpty()) return;
