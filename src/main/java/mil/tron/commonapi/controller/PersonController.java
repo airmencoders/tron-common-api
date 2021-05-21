@@ -16,6 +16,7 @@ import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonFindDto;
 import mil.tron.commonapi.dto.PersonDtoPaginationResponseWrapper;
+import mil.tron.commonapi.dto.UserInfoDto;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
@@ -26,6 +27,7 @@ import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
+import mil.tron.commonapi.service.UserInfoService;
 
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
@@ -33,17 +35,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
 public class PersonController {
 	private PersonService personService;
+	private UserInfoService userInfoService;
 
-	public PersonController(PersonService personService) {
+	public PersonController(PersonService personService, UserInfoService userInfoService) {
 		this.personService = personService;
+		this.userInfoService = userInfoService;
 	}
 	
 	/**
@@ -250,6 +256,36 @@ public class PersonController {
 
 		PersonDto updatedPerson = personService.updatePerson(personId, person);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
+	}
+
+	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Resource not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PutMapping(value = {"${api-prefix.v1}/person/self/{id}", "${api-prefix.v2}/person/self/{id}"})
+	public ResponseEntity<Object> selfUpdatePerson(@RequestHeader Map<String, String> headers,
+			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
+			@Parameter(description = "Updated person", 
+				required = true, 
+				schema = @Schema(implementation = PersonDto.class))
+				@Valid @RequestBody PersonDto person) {
+		return selfUpdate(headers.get("authorization"), personId, person);
+	}
+
+	private ResponseEntity<Object> selfUpdate(String authHeader, UUID personId, PersonDto person) {
+		UserInfoDto userInfo = userInfoService.extractUserInfoFromHeader(authHeader);
+
+		if (userInfo.getEmail().equalsIgnoreCase(person.getEmail())) {
+		  PersonDto updatedPerson = personService.updatePerson(personId, person);
+		  return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
+		} else {
+		  throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authorized to perform this action.");
+		}
 	}
 
 	@Operation(summary = "Patches an existing person", description = "Patches an existing person")
