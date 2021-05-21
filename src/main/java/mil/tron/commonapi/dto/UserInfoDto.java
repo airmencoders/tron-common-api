@@ -8,6 +8,7 @@ import mil.tron.commonapi.annotation.security.PiiField;
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode
+@Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class UserInfoDto {
 
