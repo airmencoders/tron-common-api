@@ -12,12 +12,12 @@ public class AppSourceDto {
 
     @Getter
     @Setter
-    @Builder.Default
-    private UUID id = UUID.randomUUID();
+    private String name;
 
     @Getter
     @Setter
-    private String name;
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 
     @Getter
     @Setter
