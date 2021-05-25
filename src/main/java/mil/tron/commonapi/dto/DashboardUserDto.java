@@ -23,7 +23,7 @@ public class DashboardUserDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID id = UUID.randomUUID();
 
-    @Email(message="Malformed email address")
+    @Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
     @Getter
     @Setter
     private String email;
