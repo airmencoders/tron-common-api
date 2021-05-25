@@ -2,6 +2,8 @@ package mil.tron.commonapi.dto.appsource;
 
 import lombok.*;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -17,6 +19,8 @@ public class AppSourceDto {
 
     @Getter
     @Setter
+    @NotBlank
+    @NotNull
     private String name;
 
     @Getter
