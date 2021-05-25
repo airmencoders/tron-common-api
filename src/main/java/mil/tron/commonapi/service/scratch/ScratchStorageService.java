@@ -51,8 +51,6 @@ public interface ScratchStorageService {
     void addElement(UUID appId, String tableName, Object json);
     void removeElement(UUID appId, String tableName, String path);
     void updateElement(UUID appId, String tableName, Object json, String path);
-    void patchElement(UUID appId, String tableName, Object json, String path);
     Object queryJson(UUID appId, String tableName, String path);
-    Object getJson(UUID appId, String tableName);
 
 }

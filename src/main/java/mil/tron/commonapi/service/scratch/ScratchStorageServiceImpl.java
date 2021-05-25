@@ -21,14 +21,13 @@ import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.exception.scratch.InvalidDataTypeException;
 import mil.tron.commonapi.exception.scratch.InvalidJsonPathQueryException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageUserRepository;
-import org.apache.commons.validator.routines.EmailValidator;
+import mil.tron.commonapi.service.utility.JsonDbUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -68,6 +67,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     /**
      * Private helper to validate an app exists by Id
+     *
      * @param appId UUID of application
      */
     private void validateAppId(UUID appId) {
@@ -116,8 +116,9 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     /**
      * Mimics adding/setting values in a HashMap, if key/value doesn't exist then its added, otherwise updated
+     *
      * @param appId the UUID of the application which this key value pair is for
-     * @param key the String key of the key value pair
+     * @param key   the String key of the key value pair
      * @param value the String value
      * @return the persisted/updated ScratchStorageEntry entity
      */
@@ -188,28 +189,28 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 .map(item -> dtoMapper.map(item, ScratchStorageAppRegistryDto.class))
                 .collect(Collectors.toList());
     }
-    
+
     @Override
     public Iterable<ScratchStorageAppRegistryDto> getAllScratchAppsContainingUser(String userEmail) {
-    	return StreamSupport.stream(appRegistryRepo.findAllAppsWithUserEmail(userEmail).spliterator(), false)
-        		.map(item -> {
-        			// Strip out all other user privs that do not belong to the authorized user
-        			for (Iterator<ScratchStorageAppUserPriv> privsIter = item.getUserPrivs().iterator(); privsIter.hasNext();) {
-        				ScratchStorageAppUserPriv next = privsIter.next();
-        				if (!next.getUser().getEmail().equals(userEmail)) {
-        					privsIter.remove();
-        				}
-        			}
+        return StreamSupport.stream(appRegistryRepo.findAllAppsWithUserEmail(userEmail).spliterator(), false)
+                .map(item -> {
+                    // Strip out all other user privs that do not belong to the authorized user
+                    for (Iterator<ScratchStorageAppUserPriv> privsIter = item.getUserPrivs().iterator(); privsIter.hasNext(); ) {
+                        ScratchStorageAppUserPriv next = privsIter.next();
+                        if (!next.getUser().getEmail().equals(userEmail)) {
+                            privsIter.remove();
+                        }
+                    }
 
-        			return dtoMapper.map(item, ScratchStorageAppRegistryDto.class);
-        		})
+                    return dtoMapper.map(item, ScratchStorageAppRegistryDto.class);
+                })
                 .collect(Collectors.toList());
     }
 
     @Override
     public ScratchStorageAppRegistryDto getRegisteredScratchApp(UUID appId) {
         ScratchStorageAppRegistryEntry entry = appRegistryRepo.findById(appId).orElseThrow(() ->
-            new RecordNotFoundException("App with ID " + appId + " not found"));
+                new RecordNotFoundException("App with ID " + appId + " not found"));
 
         return dtoMapper.map(entry, ScratchStorageAppRegistryDto.class);
     }
@@ -240,7 +241,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 .orElseThrow(() -> new RecordNotFoundException("Scratch Space app by that UUID does not exist"));
 
         if (!dbAppRegistry.getAppName().equalsIgnoreCase(entry.getAppName()) &&
-            appRegistryRepo.existsByAppNameIgnoreCase(entry.getAppName().trim())) {
+                appRegistryRepo.existsByAppNameIgnoreCase(entry.getAppName().trim())) {
             throw new ResourceAlreadyExistsException("Scratch space application with that name already exists");
         }
 
@@ -292,7 +293,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             }
         }
 
-        ScratchStorageAppUserPriv entity =  this.mapUserPrivDtoToEntity(priv);
+        ScratchStorageAppUserPriv entity = this.mapUserPrivDtoToEntity(priv);
 
         // save the app user priv entity to db
         appPrivRepo.save(entity);
@@ -321,6 +322,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     /**
      * Private helper to unroll a ScratchStorageAppUserPrivDto into an entity.
      * In these DTO types, the user and priv come in as a UUID
+     *
      * @param dto
      * @return the full blown entity of type ScratchStorageAppUserPriv
      */
@@ -337,8 +339,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                     .email(dto.getEmail())
                     .build());
 
-        }
-        else {
+        } else {
             // user existed already, no worries, just use the return from the db
             appUser = dtoMapper.map(user.get(), ScratchStorageUserDto.class);
         }
@@ -429,6 +430,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     /**
      * Private helper to validate a given appId is real and registered as a scratch app
+     *
      * @param appId UUID of the app to check
      * @return the app's record or throws a RecordNotFoundException
      */
@@ -443,6 +445,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     /**
      * Utility function used by the controller to check if a given user email has
      * write access to the given appId's space
+     *
      * @param appId the appId to check against
      * @param email the email to check for write access
      * @return true if user has write access else false
@@ -455,9 +458,9 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
             if (priv.getUser().getEmail().equalsIgnoreCase(email)
                     // check for WRITE or ADMIN access...
-                && (priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV)
+                    && (priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV)
                     || priv.getPrivilege().getName().equals(SCRATCH_ADMIN_PRIV)))
-                        return true;
+                return true;
         }
 
         return false;
@@ -465,7 +468,8 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     /**
      * Utility function to set/un-set the implicit read property for a given app
-     * @param appId UUID of app to modify
+     *
+     * @param appId        UUID of app to modify
      * @param implicitRead value to set the implicit read field to
      * @return the modified App record or throws exception if appId wasn't valid
      */
@@ -479,6 +483,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     /**
      * Utility function used by the controller to check if a given user email has
      * read access to the given appId's space
+     *
      * @param appId the appId to check against
      * @param email the email to check for read access
      * @return true if user has read access else false
@@ -505,6 +510,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     /**
      * Utility function to check if given email is registered as a SCRATCH_ADMIN
      * to given appId's space
+     *
      * @param appId the appId to check against
      * @param email the email to check for ADMIN status
      * @return true if admin else false
@@ -526,8 +532,9 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     /**
      * Gets an existing key value-pair by appId and key name.  And then applies given JsonPath specification/query
      * to it and returns the result (if any) in Json format.
-     * @param appId scratch app UUID
-     * @param keyName key name
+     *
+     * @param appId        scratch app UUID
+     * @param keyName      key name
      * @param jsonPathSpec the JayWay JsonPath specification string
      * @return the result of the JsonPath query
      */
@@ -540,23 +547,21 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             return new ObjectMapper()
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(results);
-        }
-        catch (PathNotFoundException e) {
+        } catch (PathNotFoundException e) {
             throw new RecordNotFoundException("Json Path not found");
-        }
-        catch (JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             throw new InvalidFieldValueException("Return value Could not be serialized to Json");
-        }
-        catch (InvalidJsonException e) {
+        } catch (InvalidJsonException e) {
             throw new InvalidFieldValueException("Source value not valid Json");
         }
     }
 
     /**
      * Updates a portion of a Json structure given a JsonPath and value
-     * @param appId the UUID of the scratch app
-     * @param keyName the key name of the existing key-value pair
-     * @param value the value to set in the Json
+     *
+     * @param appId        the UUID of the scratch app
+     * @param keyName      the key name of the existing key-value pair
+     * @param value        the value to set in the Json
      * @param jsonPathSpec the Jayway JsonPath specification string
      */
     @Override
@@ -571,8 +576,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
             // write the modified json structure back to the db as a string
             this.setKeyValuePair(appId, keyName, results.jsonString());
-        }
-        catch (InvalidJsonException e) {
+        } catch (InvalidJsonException e) {
             throw new InvalidFieldValueException("Source Value Not Valid Json");
         }
     }
@@ -582,91 +586,22 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     // methods to treat scratch space like a json db
 
     /**
-     * Helper method to set a default field value for a field that was omitted in a Json Request, the default
-     * value is determined by the data type set in the users "schema"
-     * @param fieldName name of the field we're checking
-     * @param fieldValue value specifying the data type of this field, as specificied in the users "schema" they defined
-     * @return the default value for a given field and its type
-     */
-    private Object defaultValueForField(String fieldName, String fieldValue) {
-
-        // if a schema field has an exclamation in its data type - then its required field
-        if (fieldValue.endsWith("!")) {
-            throw new InvalidDataTypeException("Field - " + fieldName + " - was specified as required, but was not given");
-        }
-
-        if (fieldValue.contains("string")) { return ""; }
-        if (fieldValue.contains("email")) { return ""; }
-        if (fieldValue.contains("number")) { return 0; }
-        if (fieldValue.contains("boolean")) { return false; }
-        if (fieldValue.contains("uuid")) { return UUID.randomUUID(); }
-
-        throw new InvalidDataTypeException("Invalid type specified for schema field - " + fieldValue);
-    }
-
-    /**
-     * Helper method to check if a given field name in a json blob's value matches the data type of the
-     * schema provided - if not we throw an exception
-     * @param fieldName the field name of the field being checked
-     * @param schemaType the type of data this field is supposed to be (as defined in the table_schema key)
-     * @param fieldValue the value sent to the controller to check for proper type
-     * @param fieldValueIsUnique true if this field is marked as a unique column (its value should be unique)
-     * @param blob the json value (the entire table) of json data used for uniqueness checks if needed
-     */
-    private void validateField(String fieldName, String schemaType, JsonNode fieldValue, boolean fieldValueIsUnique, DocumentContext blob) {
-        if (schemaType.contains("string")) {
-            if (!fieldValue.isTextual()) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a string but wasnt");
-            }
-            if (fieldValueIsUnique) {
-                String[] elems = JsonPath.read(blob, "$[?(@." + fieldName + " == " + fieldValue.asText() + ")]");
-                if (fieldValue.asText() != null && !fieldValue.asText().isBlank() && elems.length != 0) {
-                    throw new ResourceAlreadyExistsException("Field " + fieldName + " violated uniqueness");
-                }
-            }
-        }
-        if (schemaType.contains("email")) {
-            if (!fieldValue.isTextual()
-                    && EmailValidator.getInstance().isValid(fieldValue.asText())) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be an email but wasnt");
-            }
-            if (fieldValueIsUnique) {
-                String jsonPath = "$[?(@." + fieldName + " == '" + fieldValue.asText() + "')]";
-                List<Map<String, Object>> elems = JsonPath.read(blob.jsonString(), jsonPath);
-                if (fieldValue.asText() != null && !fieldValue.asText().isBlank() && elems.size() != 0) {
-                    throw new ResourceAlreadyExistsException("Field " + fieldName + " violated uniqueness");
-                }
-            }
-        }
-        if (schemaType.contains("number")) {
-            if (!fieldValue.isNumber())
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a number but wasnt");
-        }
-        if (schemaType.contains("boolean")) {
-            if (!fieldValue.isBoolean())
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a boolean but wasnt");
-        }
-        if (schemaType.contains("uuid")) {
-            if (!fieldValue.isTextual()
-                    && !fieldValue
-                        .asText()
-                        .matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"))
-
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a uuid but wasnt");
-        }
-    }
-
-    /**
      * Helper function to reference a user-defined "schema" for a given key-value pair in order to help validate an incoming
      * json value being assigned to a "table" (key name) when treating scratch-storage space like a JSON db.  The whole
      * point of validating is so we can keep some real-database-like consistency when modifying it
-     * @param appId UUID of the scratch storage app
-     * @param tableName the "table" name - (the key name)
-     * @param json blob of json we're attempting to validate against the schema
-     * @param cxt the JsonPath DocumentContext that is the parsed json of the table
+     *
+     * @param appId           UUID of the scratch storage app
+     * @param tableName       the "table" name - (the key name)
+     * @param json            blob of json we're attempting to validate against the schema
+     * @param cxt             the JsonPath DocumentContext that is the parsed json of the table
+     * @param updateOperation boolean whether we're doing an update operation or not
      * @return the (possibly modified) blob of json (modified if it had missing fields when compared to the schema).
      */
-    private Object validateEntityValue(UUID appId, String tableName, Object json, DocumentContext cxt) {
+    private Object validateEntityValue(UUID appId,
+                                       String tableName,
+                                       Object json,
+                                       DocumentContext cxt,
+                                       boolean updateOperation) {
 
         ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName + "_schema")
                 .orElseThrow(() -> new RecordNotFoundException("Cant find table schema with name " + tableName + "_schema"));
@@ -677,16 +612,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         try {
             schemaNodes = MAPPER.readTree(entry.getValue());
             System.out.println(schemaNodes.toPrettyString());
-        }
-        catch (JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             throw new RuntimeException("Cannot parse the JSON schema specification for table " + tableName);
         }
 
         try {
             nodes = MAPPER.readTree(json.toString());
             System.out.println(nodes.toPrettyString());
-        }
-        catch (JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             throw new RuntimeException("Error parsing entity value");
         }
 
@@ -697,15 +630,15 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             if (!nodes.has(fieldName)) {
                 // field was missing, so we look to add it and then to initialize it with a default value
                 //  according to its supposed datatype
-                obj.put(fieldName, defaultValueForField(fieldName, schemaNodes.get(fieldName).asText()));
-            }
-            else {
+                obj.put(fieldName, JsonDbUtils.defaultValueForField(fieldName, schemaNodes.get(fieldName).asText()));
+            } else {
                 // field was there, now just validate it
-                validateField(fieldName,
+                JsonDbUtils.validateField(fieldName,
                         schemaNodes.get(fieldName).asText(),
                         nodes.get(fieldName),
                         schemaNodes.get(fieldName).asText().contains("*"),
-                        cxt);
+                        cxt,
+                        updateOperation);
                 obj.put(fieldName, nodes.get(fieldName));
             }
         }
@@ -717,9 +650,10 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      * Method to add an element (record) to a blob of Json when treating the scratch storage space like a json
      * db.  It validates the incoming 'json' blob against the schema specified in (tableName + _schema) key-value.  If
      * all succeeds, the json block stored in the key name 'tableName' is updated
-     * @param appId UUID of the scratch storage app
+     *
+     * @param appId     UUID of the scratch storage app
      * @param tableName the table (key name)
-     * @param json the blob of kson to insert
+     * @param json      the blob of kson to insert
      */
     @Override
     public void addElement(UUID appId, String tableName, Object json) {
@@ -731,23 +665,20 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         try {
             cxt = JsonPath.using(configuration).parse(entry.getValue());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
         }
 
         try {
-            cxt = cxt.add("$", validateEntityValue(appId, tableName, json, cxt));
-        }
-        catch (Exception e) {
+            cxt = cxt.add("$", validateEntityValue(appId, tableName, json, cxt, false));
+        } catch (Exception e) {
             throw new InvalidJsonPathQueryException(e.getMessage());
         }
 
         try {
             entry.setValue(cxt.jsonString());
             repository.save(entry);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException("Error serializing table contents");
         }
     }
@@ -755,9 +686,10 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     /**
      * Removes an element as defined in the jsonPath "path" from specified table name, resultant json is saved
      * back over to the db.
-     * @param appId UUID of the scratch storage app
+     *
+     * @param appId     UUID of the scratch storage app
      * @param tableName table name (key name)
-     * @param path jsonPath to match and remove
+     * @param path      jsonPath to match and remove
      */
     @Override
     public void removeElement(UUID appId, String tableName, String path) {
@@ -769,28 +701,25 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         try {
             cxt = JsonPath.using(configuration).parse(entry.getValue());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
         }
 
         if (cxt.read(path) != null) {
-            try {
-                cxt = cxt.delete(path);
-            }
-            catch (Exception e) {
-                throw new InvalidJsonPathQueryException(e.getMessage());
-            }
-        }
-        else {
+            // see if record even exists
+            if (cxt.read(path).toString().equals("[]"))
+                throw new RecordNotFoundException("Path does not exist");
+
+            // delete the existent record
+            cxt = cxt.delete(path);
+        } else {
             throw new RecordNotFoundException("Record Not Found");
         }
 
         try {
             entry.setValue(cxt.jsonString());
             repository.save(entry);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException("Error serializing table contents");
         }
     }
@@ -798,10 +727,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     /**
      * Updates a full record in the given table with the json block "json" after its been validated
      * against the user defined "schema".
-     * @param appId  UUID of the application
+     *
+     * @param appId     UUID of the application
      * @param tableName table name (key name)
-     * @param json the block of JSON to update
-     * @param path the json Path to match against to find the point at which to update
+     * @param json      the block of JSON to update
+     * @param path      the json Path to match against to find the point at which to update
      */
     @Override
     public void updateElement(UUID appId, String tableName, Object json, String path) {
@@ -813,71 +743,26 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         try {
             cxt = JsonPath.using(configuration).parse(entry.getValue());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
         }
 
         if (cxt.read(path) != null) {
-            try {
-                cxt = cxt.set(path, validateEntityValue(appId, tableName, json, cxt));
-            } catch (Exception e) {
-                throw new InvalidJsonPathQueryException(e.getMessage());
-            }
-        }
-        else {
+            // check path even exists
+            if (cxt.read(path).toString().equals("[]")) throw new RecordNotFoundException("Path Not Found");
+
+            // once path exists/succeeds, we update in-place
+            cxt = cxt.set(path, validateEntityValue(appId, tableName, json, cxt, true));
+        } else {
             throw new RecordNotFoundException("Record Not Found");
         }
 
         try {
+
+            // re-persist blob
             entry.setValue(cxt.jsonString());
             repository.save(entry);
-        }
-        catch (Exception e) {
-            throw new RuntimeException("Error serializing table contents");
-        }
-
-    }
-
-    /**
-     * Patches a portion of the table as matched by the json path "path".  No validation occurs since
-     * the patch can take many forms/types depending on the format of it.
-     * @param appId UUID of the scratch app
-     * @param tableName the table name (key name)
-     * @param json the block of json to update with
-     * @param path the json path to find the update point
-     */
-    @Override
-    public void patchElement(UUID appId, String tableName, Object json, String path) {
-
-        ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
-
-        DocumentContext cxt;
-
-        try {
-            cxt = JsonPath.using(configuration).parse(entry.getValue());
-        }
-        catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
-        }
-
-        if (cxt.read(path) != null) {
-            try {
-                cxt = cxt.set(path, json);
-            } catch (Exception e) {
-                throw new InvalidJsonPathQueryException(e.getMessage());
-            }
-        }
-        else {
-            throw new RecordNotFoundException("Record Not Found");
-        }
-
-        try {
-            entry.setValue(cxt.jsonString());
-            repository.save(entry);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException("Error serializing table contents");
         }
 
@@ -885,9 +770,10 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     /**
      * Allows to query the json with a jsonpath query
-     * @param appId UUID of the scratch app
+     *
+     * @param appId     UUID of the scratch app
      * @param tableName the table name (key name)
-     * @param path the json path query
+     * @param path      the json path query
      * @return the JSON of the matching json path query
      */
     @Override
@@ -900,40 +786,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         try {
             cxt = JsonPath.using(configuration).parse(entry.getValue());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
         }
 
-        try {
-            return cxt.read(path);
-        }
-        catch (Exception e) {
-            throw new InvalidJsonPathQueryException(e.getMessage());
-        }
-    }
-
-    /**
-     * Returns the entire block of json that is in the key-value (table) name "tableName"
-     * @param appId UUID of the scratch app
-     * @param tableName the table name (key value)
-     * @return the block of Json
-     */
-    @Override
-    public Object getJson(UUID appId, String tableName) {
-
-        ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
-
-        DocumentContext cxt;
-
-        try {
-            cxt = JsonPath.using(configuration).parse(entry.getValue());
-        }
-        catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
-        }
-
-        return cxt.json();
+        if (cxt.read(path).toString().equals("[]")) throw new RecordNotFoundException("Path Not Found");
+        return cxt.read(path);
     }
 }

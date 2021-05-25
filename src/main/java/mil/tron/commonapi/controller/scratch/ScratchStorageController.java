@@ -340,13 +340,6 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.deleteAllKeyValuePairsForAppId(appId), HttpStatus.OK);
     }
 
-
-    @GetMapping("/{appId}/jsondb/{table}")
-    public ResponseEntity<Object> getTableValueDump(@PathVariable UUID appId, @PathVariable String table) {
-        validateScratchReadAccessForUser(appId);
-        return new ResponseEntity<>(scratchStorageService.getJson(appId, table), HttpStatus.OK);
-    }
-
     @PostMapping("/{appId}/jsondb/{table}/query")
     public ResponseEntity<Object> queryJsonTable(@PathVariable UUID appId,
                                                  @PathVariable String table,
@@ -372,16 +365,6 @@ public class ScratchStorageController {
 
         validateScratchWriteAccessForUser(appId);
         scratchStorageService.updateElement(appId, table, dto.getJson(), dto.getPath());
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-    }
-
-    @PatchMapping("/{appId}/jsondb/{table}/patch")
-    public ResponseEntity<Object> patchElement(@PathVariable UUID appId,
-                                               @PathVariable String table,
-                                               @RequestBody @Valid ChangeElementDto dto) {
-
-        validateScratchWriteAccessForUser(appId);
-        scratchStorageService.patchElement(appId, table, dto.getJson(), dto.getPath());
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 

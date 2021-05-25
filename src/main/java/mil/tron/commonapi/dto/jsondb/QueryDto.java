@@ -10,10 +10,6 @@ public class QueryDto {
 
     @Getter
     @Setter
-    private String tableName;
-
-    @Getter
-    @Setter
     private String query;
 
 }

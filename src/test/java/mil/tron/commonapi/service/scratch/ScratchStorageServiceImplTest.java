@@ -1,6 +1,8 @@
 package mil.tron.commonapi.service.scratch;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jayway.jsonpath.JsonPath;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
@@ -797,5 +799,169 @@ public class ScratchStorageServiceImplTest {
         // make sure the uniqueness check works
         assertThrows(Exception.class,
                 () -> service.addElement(appId, "table", "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"name\": \"John\", \"email\": \"J@test.com\" }"));
+    }
+
+    @Test
+    void testUpdateElement() {
+
+        UUID appId = UUID.randomUUID();
+
+        String jsonValue = "[{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102d\", \"age\": 40, \"name\": \"Frank\", \"email\": \"f@test.com\" }]";
+        String schema = "{ \"id\": \"uuid\", \"age\": \"number\", \"name\": \"string\", \"email\": \"email!*\" }";
+
+
+        ScratchStorageEntry invalidJson = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table")
+                .value("{f}")
+                .build();
+
+        ScratchStorageEntry entry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table")
+                .value(jsonValue)
+                .build();
+
+        ScratchStorageEntry schemaEntry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table_schema")
+                .value(schema)
+                .build();
+
+        Mockito.when(repository.save(Mockito.any())).then(returnsFirstArg());
+
+        Mockito.when(repository.findByAppIdAndKey(appId, "table_schema"))
+                .thenReturn(Optional.ofNullable(schemaEntry));
+
+        Mockito.when(repository.findByAppIdAndKey(appId, "table"))
+                .thenThrow(new RecordNotFoundException("Not Found"))
+                .thenReturn(Optional.ofNullable(invalidJson))
+                .thenReturn(Optional.ofNullable(entry));
+
+        assertThrows(RecordNotFoundException.class, () -> service.updateElement(appId, "table", "{}", "$"));
+        assertThrows(InvalidJsonPathQueryException.class, ()-> service.updateElement(appId, "table", "{}", "$"));
+
+        // make sure we can update the existing record with given UUID, and we change the name from John to Juan
+        //  and verify
+        service.updateElement(appId,
+                "table",
+                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102d\", \"name\": \"Juan\", \"email\": \"f@test.com\" }",
+                "$[?(@.id == '97031086-58a2-4228-8fa6-6d6544c1102d')]");
+
+        List<Map<String, Object>> result = JsonPath.read(entry.getValue(), "$[?(@.id == '97031086-58a2-4228-8fa6-6d6544c1102d')]");
+        assertEquals("Juan", result.get(0).get("name"));
+
+        // make sure we throw error when update-able target does not exist
+        assertThrows(RecordNotFoundException.class, () -> service.updateElement(appId,
+                "table",
+                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102f\", \"name\": \"Juan\", \"email\": \"J@test.com\" }",
+                "$[?(@.id == '97031086-58a2-4228-8fa6-6d6544c1102e')]"));
+
+
+    }
+
+    @Test
+    void testRemoveElement() {
+
+        UUID appId = UUID.randomUUID();
+
+        String jsonValue = "[ " +
+                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102d\", \"age\": 40, \"name\": \"Frank\", \"email\": \"f@test.com\" }, " +
+                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"age\": 41, \"name\": \"Bill\", \"email\": \"b@test.com\" } " +
+                "]";
+        String schema = "{ \"id\": \"uuid\", \"age\": \"number\", \"name\": \"string\", \"email\": \"email!*\" }";
+
+
+        ScratchStorageEntry invalidJson = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table")
+                .value("{f}")
+                .build();
+
+        ScratchStorageEntry entry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table")
+                .value(jsonValue)
+                .build();
+
+        ScratchStorageEntry schemaEntry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table_schema")
+                .value(schema)
+                .build();
+
+        Mockito.when(repository.save(Mockito.any())).then(returnsFirstArg());
+
+        Mockito.when(repository.findByAppIdAndKey(appId, "table"))
+                .thenThrow(new RecordNotFoundException("Not Found"))
+                .thenReturn(Optional.ofNullable(invalidJson))
+                .thenReturn(Optional.ofNullable(entry));
+
+        assertThrows(RecordNotFoundException.class, () -> service.removeElement(appId, "table", "{}"));
+        assertThrows(InvalidJsonPathQueryException.class, ()-> service.removeElement(appId, "table", "{}"));
+
+        // make sure we can remove an existing record and verify
+        service.removeElement(appId,
+                "table",
+                "$[?(@.id == '97031086-58a2-4228-8fa6-6d6544c1102d')]");
+
+        List<Map<String, Object>> result = JsonPath.read(entry.getValue(), "$[?(@.id == '97031086-58a2-4228-8fa6-6d6544c1102d')]");
+        assertEquals(0, result.size());
+
+        // make sure we throw error when record doesn't exist
+        assertThrows(RecordNotFoundException.class, () -> service.removeElement(appId,
+                "table",
+                "$[?(@.id == '97031086-58a2-4228-8fa6-6d6544c1102d')]"));
+
+
+    }
+
+    @Test
+    void testQueryElement() throws JsonProcessingException {
+
+        UUID appId = UUID.randomUUID();
+
+        String jsonValue = "[ " +
+                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102d\", \"age\": 40, \"name\": \"Frank\", \"email\": \"f@test.com\" }, " +
+                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"age\": 41, \"name\": \"Bill\", \"email\": \"b@test.com\" } " +
+                "]";
+        String schema = "{ \"id\": \"uuid\", \"age\": \"number\", \"name\": \"string\", \"email\": \"email!*\" }";
+
+
+        ScratchStorageEntry invalidJson = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table")
+                .value("{f}")
+                .build();
+
+        ScratchStorageEntry entry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("table")
+                .value(jsonValue)
+                .build();
+
+        Mockito.when(repository.findByAppIdAndKey(appId, "table"))
+                .thenThrow(new RecordNotFoundException("Not Found"))
+                .thenReturn(Optional.ofNullable(invalidJson))
+                .thenReturn(Optional.ofNullable(entry));
+
+        assertThrows(RecordNotFoundException.class, () -> service.queryJson(appId, "table", "{}"));
+        assertThrows(InvalidJsonPathQueryException.class, ()-> service.queryJson(appId, "table", "{}"));
+
+        // make sure we can query records
+        Object result = service.queryJson(appId,
+                "table",
+                "$[?(@.id == '97031086-58a2-4228-8fa6-6d6544c1102d')]");
+        assertEquals(1,  (new ObjectMapper().readValue(result.toString(), Object[].class)).length);
+
+        // make sure we can query records by getting fancy with regex
+        result = service.queryJson(appId,
+                "table",
+                "$[?(@.email =~ /.*test.com/i)]");
+        assertEquals(2, (new ObjectMapper().readValue(result.toString(), Object[].class)).length);
+
+        assertThrows(RecordNotFoundException.class, () -> service.queryJson(appId, "table",
+                "$[?(@.email =~ /.*test.mil/i)]"));
+
     }
 }
