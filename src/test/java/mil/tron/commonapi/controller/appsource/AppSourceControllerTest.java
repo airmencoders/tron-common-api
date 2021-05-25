@@ -1,55 +1,53 @@
 package mil.tron.commonapi.controller.appsource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
+import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDto;
+import mil.tron.commonapi.dto.response.WrappedResponse;
+import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.appsource.AppEndpoint;
+import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.AppClientUserService;
+import mil.tron.commonapi.service.AppSourceService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
 
-import lombok.val;
-import mil.tron.commonapi.dto.AppClientUserPrivDto;
-import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
-import mil.tron.commonapi.dto.appsource.AppSourceDto;
-import mil.tron.commonapi.entity.AppClientUser;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.entity.appsource.AppEndpoint;
-import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-import mil.tron.commonapi.service.AppSourceService;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
-@WebMvcTest(AppSourceController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 public class AppSourceControllerTest {
 	private static final String ENDPOINT = "/v1/app-source/";
+	private static final String ENDPOINT_V2 = "/v2/app-source/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	@Autowired
@@ -153,6 +151,12 @@ public class AppSourceControllerTest {
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(appSourceDtos)));
+			
+			// V2
+			WrappedResponse<List<AppSourceDto>> wrappedResponse = WrappedResponse.<List<AppSourceDto>>builder().data(appSourceDtos).build();
+			mockMvc.perform(get(ENDPOINT_V2))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(wrappedResponse)));
 		}	
 		
 		@Test
@@ -180,6 +184,10 @@ public class AppSourceControllerTest {
 
 			mockMvc.perform(get(ENDPOINT + "app-clients"))
 					.andExpect(status().isOk());
+			
+			// V2
+			mockMvc.perform(get(ENDPOINT_V2 + "app-clients"))
+				.andExpect(status().isOk());
 		}
 
 		@Test

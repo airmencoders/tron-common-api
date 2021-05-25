@@ -9,10 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +31,7 @@ import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import mil.tron.commonapi.ApplicationProperties;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.service.AppGatewayService;
 
@@ -45,6 +50,19 @@ public class GatewayCacheResolverTest {
 
     @MockBean
     private AppGatewayService appGatewayService;
+
+    ApplicationProperties prefixProperties;
+
+    @BeforeEach
+    public void setup() {
+        prefixProperties = new ApplicationProperties();
+        Map<String, String> apiVersionPrefixes = new HashMap<String, String>();
+        apiVersionPrefixes.put("v1", "/v1");
+        apiVersionPrefixes.put("v2", "/v2");
+        prefixProperties.setApiPrefix(apiVersionPrefixes);
+        prefixProperties.setAppSourcesPrefix("/app");
+        prefixProperties.setCombinedPrefixes(apiVersionPrefixes.values().stream().map(prefix -> prefix.concat(prefixProperties.getAppSourcesPrefix())).collect(Collectors.toList()));
+    }
 
     @Transactional
     @Rollback
@@ -76,7 +94,7 @@ public class GatewayCacheResolverTest {
 
     @Test
     public void cacheOnControllerCreatesAndSelectsCorrectCacheWithNoArgs() throws Exception {
-        GatewayCacheResolver gcr = new GatewayCacheResolver(cacheManager);
+        GatewayCacheResolver gcr = new GatewayCacheResolver(cacheManager, prefixProperties);
         
         CacheOperationInvocationContext<BasicOperation> coip = new CacheOperationInvocationContext<BasicOperation>() {
             @Override
@@ -106,7 +124,7 @@ public class GatewayCacheResolverTest {
 
     @Test
     public void handleCacheResolverOnRootOfAppSourceRequest() {
-        GatewayCacheResolver gcr = new GatewayCacheResolver(cacheManager);
+        GatewayCacheResolver gcr = new GatewayCacheResolver(cacheManager, prefixProperties);
         
         CacheOperationInvocationContext<BasicOperation> coip = new CacheOperationInvocationContext<BasicOperation>() {
             @Override

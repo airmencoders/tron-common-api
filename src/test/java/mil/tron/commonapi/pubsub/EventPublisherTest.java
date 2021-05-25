@@ -30,7 +30,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
-@SpringBootTest(classes=EventPublisher.class)
+@SpringBootTest(classes=EventPublisher.class, properties = { "webhook-queue-max-size=5" })  // set limit to reasonable value
 @TestPropertySource(locations = "classpath:application-test.properties")
 public class EventPublisherTest {
 
@@ -92,12 +92,12 @@ public class EventPublisherTest {
         message.addPersonId(new Person().getId());
 
         publisher.publishEvent(message, uri);
+        publisher.queueConsumer();  // manually tick the consumer
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting captured
         try { Thread.sleep(1000); } catch (InterruptedException e) {}
 
-        String out = outputStreamCaptor.toString();
         assertTrue(outputStreamCaptor.toString().contains("[PUBLISH BROADCAST]"));
         assertFalse(outputStreamCaptor.toString().contains("[PUBLISH ERROR]"));
 
@@ -118,12 +118,12 @@ public class EventPublisherTest {
         message.addPersonId(new Person().getId());
 
         publisher.publishEvent(message, "");
+        publisher.queueConsumer();  // manually tick the consumer
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting captured
         try { Thread.sleep(1000); } catch (InterruptedException e) {}
 
-        String out = outputStreamCaptor.toString();
         assertTrue(outputStreamCaptor.toString().contains("[PUBLISH BROADCAST]"));
         assertFalse(outputStreamCaptor.toString().contains("[PUBLISH ERROR]"));
 
@@ -145,12 +145,36 @@ public class EventPublisherTest {
         message.addPersonId(new Person().getId());
 
         publisher.publishEvent(message, uri);
+        publisher.queueConsumer();  // manually tick the consumer
 
         // wait for publishEvent Async function, its a mocked function, so 1sec it more than enough but needed to avoid
         // a race condition on the logging output getting capture
         try { Thread.sleep(1000); } catch (InterruptedException e) {}
 
         assertTrue(outputStreamCaptor.toString().contains("[PUBLISH ERROR]"));
+    }
+
+    @Test
+    void testQueueMaxedOut() {
+        PersonChangedMessage message = new PersonChangedMessage();
+        message.addPersonId(new Person().getId());
+
+        // queue up 6 messages which exceeds our 5 limit setup for testing
+        publisher.publishEvent(message, uri);
+        publisher.publishEvent(message, uri);
+        publisher.publishEvent(message, uri);
+        publisher.publishEvent(message, uri);
+        publisher.publishEvent(message, uri);
+        publisher.publishEvent(message, uri);
+
+        assertTrue(outputStreamCaptor.toString().contains("MAX QUEUE SIZE reached"));
+
+        // dequeue everything
+        publisher.queueConsumer();
+        publisher.queueConsumer();
+        publisher.queueConsumer();
+        publisher.queueConsumer();
+        publisher.queueConsumer();
     }
 
     @Test

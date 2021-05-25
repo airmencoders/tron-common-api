@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -23,6 +22,7 @@ import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.ApplicationProperties;
 import mil.tron.commonapi.controller.AppGatewayController;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
@@ -43,10 +43,7 @@ public class AppSourceEndpointsBuilder {
 
     private AppEndpointRepository appEndpointRepository;
 
-    private String apiVersionPrefix;
-
-    private String appSourcesPathPrefix;
-    
+    private ApplicationProperties versionProperties;
 
     @Autowired
     AppSourceEndpointsBuilder(RequestMappingHandlerMapping requestMappingHandlerMapping,
@@ -54,15 +51,13 @@ public class AppSourceEndpointsBuilder {
                               AppGatewayService appGatewayService,
                               AppSourceConfig appSourceConfig,
                               AppEndpointRepository appEndpointRepository,
-                              @Value("${api-prefix.v1}") String apiVersionPrefix,
-                              @Value("${app-sources-prefix}") String appSourcesPathPrefix
+                              ApplicationProperties versionProperties
 
     ) {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
         this.queryController = queryController;
         this.appSourceConfig = appSourceConfig;
-        this.apiVersionPrefix = apiVersionPrefix;
-        this.appSourcesPathPrefix = appSourcesPathPrefix;
+        this.versionProperties = versionProperties;
         this.appGatewayService = appGatewayService;
         this.appEndpointRepository = appEndpointRepository;
         this.createAppSourceEndpoints(this.appSourceConfig);
@@ -86,7 +81,9 @@ public class AppSourceEndpointsBuilder {
                     appDef);
             if (newMapping) {
                 for (AppSourceEndpoint appEndpoint: appSourceEndpoints) {
-                    this.addMapping(appDef.getAppSourcePath(), appEndpoint);
+                    for(String prefix : this.versionProperties.getCombinedPrefixes()) {
+                        this.addMapping(appDef.getAppSourcePath(), appEndpoint, prefix);
+                    }
                     this.addEndpointToSource(appEndpoint, appSource);
                 }
             }
@@ -158,12 +155,11 @@ public class AppSourceEndpointsBuilder {
         return converted;
     }
 
-    private void addMapping(String appSourcePath, AppSourceEndpoint endpoint) throws NoSuchMethodException {
+    private void addMapping(String appSourcePath, AppSourceEndpoint endpoint, String prefix) throws NoSuchMethodException {
 
         RequestMappingInfo requestMappingInfo = RequestMappingInfo
-            .paths(String.format("%s%s/%s%s",
-                this.apiVersionPrefix,
-                this.appSourcesPathPrefix,
+            .paths(String.format("%s/%s%s",
+                prefix,
                 appSourcePath,
                 endpoint.getPath()))
             .methods(endpoint.getMethod())

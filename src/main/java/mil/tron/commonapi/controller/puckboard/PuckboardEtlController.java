@@ -19,7 +19,7 @@ import org.springframework.web.client.RestTemplate;
 import javax.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/puckboard")
+@RequestMapping({"${api-prefix.v1}/puckboard", "${api-prefix.v2}/puckboard"})
 public class PuckboardEtlController {
 
     @Autowired

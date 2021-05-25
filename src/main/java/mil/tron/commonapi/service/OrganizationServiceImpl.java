@@ -34,7 +34,9 @@ import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -951,5 +953,67 @@ public class OrganizationServiceImpl implements OrganizationService {
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.setOrgIds(Sets.newHashSet(modifiedIds));
 		eventManagerService.recordEventAndPublish(message);
+	}
+
+	@Override
+	public Page<OrganizationDto> getOrganizationsPage(String searchQuery, Pageable page) {
+		Page<Organization> pageResponse = repository.findAllByNameContainsIgnoreCase(searchQuery, page);
+		
+		return pageResponse.map(this::convertToDto);
+	}
+
+	@Override
+	public Slice<OrganizationDto> getOrganizationsSlice(String searchQuery, Pageable page) {
+		Slice<Organization> sliceResponse = repository.findByNameContainsIgnoreCase(searchQuery, page);
+		
+		return sliceResponse.map(this::convertToDto);
+	}
+
+	@Override
+	public Page<Organization> findOrganizationsByTypeAndServicePage(String searchQuery, Unit type, Branch branch,
+			Pageable page) {
+		if (type == null && branch == null) {
+			return repository.findAllByNameContainsIgnoreCase(searchQuery, page);
+		}
+		
+		if (type != null && branch != null) {
+			return repository.findAllByNameContainsIgnoreCaseAndOrgTypeAndBranchType(searchQuery, type, branch, page);
+		}
+		
+		if (type != null) {
+			return repository.findAllByNameContainsIgnoreCaseAndOrgType(searchQuery, type, page);
+		} else {
+			return repository.findAllByNameContainsIgnoreCaseAndBranchType(searchQuery, branch, page);
+		}
+	}
+
+	@Override
+	public Page<OrganizationDto> getOrganizationsByTypeAndServicePage(String searchQuery, Unit type, Branch branch,
+			Pageable page) {
+		return findOrganizationsByTypeAndServicePage(searchQuery, type, branch, page).map(this::convertToDto);
+	}
+
+	@Override
+	public Slice<Organization> findOrganizationsByTypeAndServiceSlice(String searchQuery, Unit type, Branch branch,
+			Pageable page) {
+		if (type == null && branch == null) {
+			return repository.findByNameContainsIgnoreCase(searchQuery, page);
+		}
+		
+		if (type != null && branch != null) {
+			return repository.findByNameContainsIgnoreCaseAndOrgTypeAndBranchType(searchQuery, type, branch, page);
+		}
+		
+		if (type != null) {
+			return repository.findByNameContainsIgnoreCaseAndOrgType(searchQuery, type, page);
+		} else {
+			return repository.findByNameContainsIgnoreCaseAndBranchType(searchQuery, branch, page);
+		}
+	}
+
+	@Override
+	public Slice<OrganizationDto> getOrganizationsByTypeAndServiceSlice(String searchQuery, Unit type, Branch branch,
+			Pageable page) {
+		return findOrganizationsByTypeAndServiceSlice(searchQuery, type, branch, page).map(this::convertToDto);
 	}
 }

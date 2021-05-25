@@ -26,7 +26,9 @@ import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.modelmapper.Conditions;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -255,6 +257,20 @@ public class PersonServiceImpl implements PersonService {
 	public Iterable<PersonDto> getPersons(PersonConversionOptions options, Pageable page) {
 		return repository.findBy(page).stream().map(person -> convertToDto(person, options)).collect(Collectors.toList());
 	}
+	
+	@Override
+	public Slice<PersonDto> getPersonsSlice(PersonConversionOptions options, Pageable page) {
+		Slice<Person> slice = repository.findBy(page);
+		
+		return slice.map((Person entity) -> convertToDto(entity, options));
+	}
+	
+	@Override
+	public Page<PersonDto> getPersonsPage(PersonConversionOptions options, Pageable page) {
+		Page<Person> pagedResponse = repository.findAll(page);
+		
+		return pagedResponse.map((Person entity) -> convertToDto(entity, options));
+	}
 
 	@Override
 	public Person getPerson(UUID id) {
@@ -267,7 +283,7 @@ public class PersonServiceImpl implements PersonService {
 	}
 	
 	@Override
-	public Person getPersonFilter(PersonFilterType type, String value) {
+	public Person getPersonFilter(PersonFindType type, String value) {
 		if (type == null || value == null) {
 			throw new BadRequestException("Filter Type and Value cannot be null");
 		}

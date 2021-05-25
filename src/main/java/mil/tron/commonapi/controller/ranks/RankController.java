@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Locale;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/rank")
+@RequestMapping({"${api-prefix.v1}/rank", "${api-prefix.v2}/rank"})
 public class RankController {
     private RankService rankService;
 

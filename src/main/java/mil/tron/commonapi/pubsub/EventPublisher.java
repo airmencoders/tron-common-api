@@ -2,9 +2,12 @@ package mil.tron.commonapi.pubsub;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
-import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.logging.CommonApiLogger;
+import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.apache.commons.logging.Log;
@@ -18,15 +21,17 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static mil.tron.commonapi.security.Utility.*;
+import static mil.tron.commonapi.security.Utility.hmac;
 
 /**
  * A Service that fires off messages to subscribers for various events.
@@ -41,6 +46,12 @@ public class EventPublisher {
     @Value("${signature-header}")
     private String signatureHeader;
 
+    @Value("${webhook-queue-max-size:1000000}")
+    private long webhookQueueSize;
+
+    @Value("${webhook-send-timeout-secs:5}")
+    private long webhookSendTimeoutSecs;
+
     /**
      * Publisher REST bean that will timeout after 5secs to a subscriber so that
      * a subscriber can't block/hang the publisher thread
@@ -50,8 +61,8 @@ public class EventPublisher {
     @Bean("eventSender")
     public RestTemplate publisherSender(RestTemplateBuilder builder) {
         return builder
-                .setConnectTimeout(Duration.ofSeconds(5L))
-                .setReadTimeout(Duration.ofSeconds(5L))
+                .setConnectTimeout(Duration.ofSeconds(webhookSendTimeoutSecs))
+                .setReadTimeout(Duration.ofSeconds(webhookSendTimeoutSecs))
                 .build();
     }
 
@@ -66,20 +77,67 @@ public class EventPublisher {
                     "|http://localhost:([0-9]+)";  // alternatively match localhost for dev/test
 
     private static final Pattern NAMESPACE_PATTERN = Pattern.compile(NAMESPACE_REGEX);
-
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private ConcurrentLinkedQueue<EnqueuedEvent> queuedEvents = new ConcurrentLinkedQueue<>();
+
+    /**
+     * Inner class to holds a pub sub message and the x-forwarded-client-cert header
+     * of the requester/initiator
+     */
+    @AllArgsConstructor
+    @Builder
+    public static class EnqueuedEvent {
+        @Getter
+        private PubSubMessage message;
+
+        @Getter
+        private String xfccHeader;
+    }
 
     public EventPublisher(SubscriberService subService) {
         this.subService = subService;
     }
 
     /**
-     * Called by the publishEvent async method.
-     * @param message
-     * @param xfccHeader
+     * Called by the publishEvent async method.  This enqueues the message into the
+     * publisher queue.
+     * @param message the PubSub message to send
+     * @param xfccHeader the xfccHeader of where the request came from (the initiating app/entity)
      */
     @Async
     public void publishEvent(PubSubMessage message, String xfccHeader) {
+
+        // a concurrent linked queue will grow until out of system memory
+        //  we cap it ourselves to 'webhookQueueSize'
+        if (queuedEvents.size() >= webhookQueueSize) {
+            publisherLog.error("MAX QUEUE SIZE reached - dropping pubsub message");
+            return;
+        }
+
+        // queue this message to be picked up by the queue consumer
+        //  enqueue is guaranteed not to block
+        queuedEvents.offer(EnqueuedEvent
+                .builder()
+                .message(message)
+                .xfccHeader(xfccHeader)
+                .build());
+
+    }
+
+    /**
+     * The event queue consumer that operates on a fixed period, and pops a queued
+     * event from the event queue and sends it out to the subscribers.
+     */
+    @Scheduled(fixedDelayString = "${webhook-delay-ms}")
+    public void queueConsumer() {
+
+        if (queuedEvents.isEmpty()) return;
+
+        EnqueuedEvent event = queuedEvents.poll();
+        if (event == null) return;
+
+        PubSubMessage message = event.getMessage();
+        String xfccHeader = event.getXfccHeader();
 
         // get the cluster-namespace of the requester from headers who is driving this change, so we don't
         //  send them the change - which wouldn't make any sense
@@ -87,6 +145,8 @@ public class EventPublisher {
 
         // get the list of subscribers for this type of eventType
         List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(message.getEventType()));
+
+        publisherLog.info("[QUEUE SIZE] - " + queuedEvents.size());
 
         // start publish loop - only push to everyone but the requester (...if the requester is a subscriber)
         for (Subscriber s : subscribers) {
@@ -99,7 +159,7 @@ public class EventPublisher {
                     if (s.getSecret() != null) {
                         headers.set(signatureHeader, hmac(s.getSecret(), json));
                     }
-                    publisherSender.postForLocation(s.getSubscriberAddress(), new HttpEntity<String>(json, headers));
+                    publisherSender.postForLocation(s.getSubscriberAddress(), new HttpEntity<>(json, headers));
                     publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + s.getSubscriberAddress());
                 } catch (Exception e) {
                     publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + s.getSubscriberAddress() + " failed.  Exception: " + e.getMessage());
