@@ -119,6 +119,20 @@ public class PubSubIntegrationTest {
     }
 
     @Test
+    void disallowsCommonApi() throws Exception {
+        Subscriber commonApiSub = Subscriber
+                .builder()
+                .subscribedEvent(EventType.PERSON_DELETE)
+                .subscriberAddress("tron-common-api.tron-common-api.svc.cluster.local")
+                .build();
+
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(commonApiSub)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void testSubscriberContacted() throws Exception {
 
         // test that the subscriber gets their message
