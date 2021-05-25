@@ -13,9 +13,10 @@ public class SubscriberAddressValidator implements ConstraintValidator<ValidSubs
 
     /**
      * Only allow cluster local addresses or localhost
+     * Disallow setting Common API itself as a subscriber (cannot have tron-common-api anywhere in the URL)
      */
     public boolean isValid(String address, ConstraintValidatorContext context) {//NOSONAR
-        String regex = "^http://.+?\\..+?\\.svc.cluster.local/|^http://localhost:\\d+/";
+        String regex = "^http://(?!tron-common-api).+?\\.(?!tron-common-api).+?\\.svc.cluster.local/|^http://localhost:\\d+/";
         Pattern p = Pattern.compile(regex);
         return p.matcher(address).find();
     }

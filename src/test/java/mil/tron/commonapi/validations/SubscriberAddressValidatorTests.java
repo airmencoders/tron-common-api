@@ -18,5 +18,11 @@ public class SubscriberAddressValidatorTests {
     @Test
     void shouldReturnFalseOnInvalidUrls() {
         assertFalse(validator.isValid("http://www.some-outside-url.com/", null));
+
+        // disallow common api's own address
+        assertFalse(validator.isValid("http://tron-common-api.tron-common-api.svc.cluster.local/", null));
+
+        // disallow https since we're exclusively in-cluster addresses only - which are http
+        assertFalse(validator.isValid("https://tempest.tempest.svc.cluster.local/", null));
     }
 }
