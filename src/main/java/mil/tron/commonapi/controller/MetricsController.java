@@ -34,7 +34,7 @@ import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.MetricService;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/metrics")
+@RequestMapping({"${api-prefix.v1}/metrics", "${api-prefix.v2}/metrics"})
 @PreAuthorize("hasAuthority('DASHBOARD_ADMIN') or @appSourceService.userIsAdminForAppSource(#id, principal.username)")
 public class MetricsController {
     private MetricService metricService;

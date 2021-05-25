@@ -3,7 +3,7 @@ FROM centos:7 as wgetsrc
 RUN yum install wget -y
 
 # Load the hardened jdk image we use to run puckboard
-FROM registry.il2.dso.mil/platform-one/devops/pipeline-templates/base-image/harden-openjdk11-jre:11.0.10
+FROM registry.il2.dso.mil/platform-one/devops/pipeline-templates/base-image/harden-openjdk11-jre:11.0.11
 
 ENV CONTEXTS DEV
 
@@ -12,7 +12,7 @@ USER appuser
 
 # Copy the puckboard binaries
 VOLUME /tmp
-COPY target/*.jar /app/commonapi.jar
+COPY target/common-api.jar /app/commonapi.jar
 
 # Copy the wget binaries build in stage 1
 COPY --from=wgetsrc /usr/bin/wget /usr/bin

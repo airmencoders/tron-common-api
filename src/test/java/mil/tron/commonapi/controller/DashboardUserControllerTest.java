@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
@@ -11,11 +12,11 @@ import mil.tron.commonapi.service.DashboardUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
 import org.mockito.Mockito;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -24,17 +25,21 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(DashboardUserController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 @WithMockUser(username = "DashboardUser", authorities = { "DASHBOARD_ADMIN", "DASHBOARD_USER" })
 public class DashboardUserControllerTest {
     private static final String ENDPOINT = "/v1/dashboard-users/";
+    private static final String ENDPOINT_V2 = "/v2/dashboard-users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -75,6 +80,12 @@ public class DashboardUserControllerTest {
             mockMvc.perform(get(ENDPOINT))
                     .andExpect(status().isOk())
                     .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(dashboardUsers)));
+            
+            // V2
+            WrappedResponse<List<DashboardUserDto>> wrappedResponse = WrappedResponse.<List<DashboardUserDto>>builder().data(dashboardUsers).build();
+            mockMvc.perform(get(ENDPOINT_V2))
+	            .andExpect(status().isOk())
+	            .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(wrappedResponse)));
         }
 
         @Test

@@ -3,6 +3,7 @@ package mil.tron.commonapi.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -46,6 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class OrganizationControllerTest {
 	private static final String ENDPOINT = "/v1/organization/";
+	private static final String ENDPOINT_V2 = "/v2/organization/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	@Autowired
@@ -247,6 +249,14 @@ public class OrganizationControllerTest {
 					.andExpect(status().isCreated())
 					.andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(newOrgs), result.getResponse().getContentAsString()));
 
+			// V2
+			WrappedResponse<List<OrganizationDto>> organizationsWrappedResponse = WrappedResponse.<List<OrganizationDto>>builder().data(newOrgs).build();
+			mockMvc.perform(post(ENDPOINT_V2 + "/organizations")
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(newOrgs)))
+					.andExpect(status().isCreated())
+					.andExpect(result -> assertEquals(OBJECT_MAPPER.writeValueAsString(organizationsWrappedResponse), result.getResponse().getContentAsString()));
 		}
 	}
 	

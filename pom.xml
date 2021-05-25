@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>mil.tron</groupId>
-    <artifactId>commonapi</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <artifactId>common-api</artifactId>
+    <version>${CI_COMMIT_SHORT_SHA}</version>
     <name>commonapi</name>
-    <description>Demo project for Spring Boot</description>
+    <description>Common API Backend Application</description>
 
     <properties>
         <java.version>11</java.version>
@@ -136,6 +136,12 @@
 			<scope>test</scope>
 		</dependency>
         <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>3.9.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.github.java-json-tools</groupId>
             <artifactId>json-patch</artifactId>
             <version>1.12</version>
@@ -195,6 +201,7 @@
 		</dependency>
     </dependencies>
     <build>
+        <finalName>common-api</finalName>
     	<resources>
 	        <resource>
 	            <directory>src/main/resources</directory>

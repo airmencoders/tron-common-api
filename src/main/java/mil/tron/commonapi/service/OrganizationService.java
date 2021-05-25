@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
 public interface OrganizationService {
 
@@ -50,4 +52,13 @@ public interface OrganizationService {
 	JsonNode customizeEntity(Map<String, String> fields, OrganizationDto dto);
 
 	OrganizationDto applyPatchToOrganization(JsonPatch patch, OrganizationDto organizationDto);
+	
+	Page<OrganizationDto> getOrganizationsPage(String searchQuery, Pageable page);
+	Slice<OrganizationDto> getOrganizationsSlice(String searchQuery, Pageable page);
+	
+	Page<Organization> findOrganizationsByTypeAndServicePage(String searchQuery, Unit type, Branch branch, Pageable page);
+	Page<OrganizationDto> getOrganizationsByTypeAndServicePage(String searchQuery, Unit type, Branch branch, Pageable page);
+	
+	Slice<Organization> findOrganizationsByTypeAndServiceSlice(String searchQuery, Unit type, Branch branch, Pageable page);
+	Slice<OrganizationDto> getOrganizationsByTypeAndServiceSlice(String searchQuery, Unit type, Branch branch, Pageable page);
 }

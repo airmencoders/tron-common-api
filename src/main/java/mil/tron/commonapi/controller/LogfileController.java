@@ -25,7 +25,7 @@ import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.LogfileService;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/logfile")
+@RequestMapping({"${api-prefix.v1}/logfile", "${api-prefix.v2}/logfile"})
 public class LogfileController {
 	private LogfileService service;
 	

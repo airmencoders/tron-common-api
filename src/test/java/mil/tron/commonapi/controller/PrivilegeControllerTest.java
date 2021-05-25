@@ -1,5 +1,21 @@
 package mil.tron.commonapi.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
+import mil.tron.commonapi.service.PrivilegeService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -7,26 +23,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.web.servlet.MockMvc;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 
-import mil.tron.commonapi.dto.PrivilegeDto;
-import mil.tron.commonapi.dto.mapper.DtoMapper;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
-import mil.tron.commonapi.service.PrivilegeService;
-
-@WebMvcTest(PrivilegeController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 class PrivilegeControllerTest {
 	private static final String ENDPOINT = "/v1/privilege/";
+	private static final String ENDPOINT_V2 = "/v2/privilege/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	
@@ -64,6 +68,17 @@ class PrivilegeControllerTest {
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(privileges)));
+		}	
+		
+		@Test
+		void getAllWrapped() throws Exception {
+			Mockito.when(service.getPrivileges()).thenReturn(privileges);
+			
+			WrappedResponse<List<PrivilegeDto>> personWrappedResponse = WrappedResponse.<List<PrivilegeDto>>builder().data(privileges).build();
+			
+			mockMvc.perform(get(ENDPOINT_V2))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(personWrappedResponse)));
 		}	
 	}
 }

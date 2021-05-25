@@ -16,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.http.client.MockClientHttpRequest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -27,9 +28,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.UUID;
 
-import static mil.tron.commonapi.security.Utility.*;
+import static mil.tron.commonapi.security.Utility.hmac;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.client.ExpectedCount.once;
@@ -47,10 +49,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-@TestPropertySource(locations = "classpath:application-test.properties")
+@TestPropertySource(locations = "classpath:application-test.properties", properties = { "webhook-delay-ms=50" })
+@ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
 public class PubSubIntegrationTest {
     private static final String ENDPOINT = "/v1/subscriptions/";
+    private static final String ENDPOINT_V2 = "/v2/subscriptions/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -202,6 +206,8 @@ public class PubSubIntegrationTest {
         // make subscriber go silent
         Date downTime = new Date();
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        df.setTimeZone(TimeZone.getTimeZone("UTC"));
+
         mockServer.reset();
 
         // make a new person
@@ -221,11 +227,11 @@ public class PubSubIntegrationTest {
 
         // go down for 3 secs
         try { Thread.sleep(3000); } catch (InterruptedException e) {}
-
+        
         // come back up online, we should only get one change since our last communication time
-        mockMvc.perform(get(ENDPOINT + "/events/replay?sinceDateTime={stamp}", df.format(downTime)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$", hasSize(1)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].eventType", equalTo("PERSON_CHANGE")))
+        mockMvc.perform(get(ENDPOINT_V2 + "/events/replay?sinceDateTime={stamp}", df.format(downTime)))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data", hasSize(1)))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data[0].eventType", equalTo("PERSON_CHANGE")))
                 .andExpect(status().isOk());
 
     }

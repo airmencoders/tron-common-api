@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDetailsDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
+import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
@@ -15,7 +16,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -36,10 +38,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AppClientController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 class AppClientControllerTest {
 
 	private static final String ENDPOINT = "/v1/app-client/";
+	private static final String ENDPOINT_V2 = "/v2/app-client/";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	
 	@Autowired
@@ -82,6 +86,12 @@ class AppClientControllerTest {
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
 				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(users)));
+			
+			// V2
+			WrappedResponse<List<AppClientUserDto>> wrappedResponse = WrappedResponse.<List<AppClientUserDto>>builder().data(users).build();
+			mockMvc.perform(get(ENDPOINT_V2))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(wrappedResponse)));
 		}
 
 		@Test
@@ -138,6 +148,11 @@ class AppClientControllerTest {
 			mockMvc.perform(get(ENDPOINT + "privs"))
 					.andExpect(status().isOk())
 					.andExpect(MockMvcResultMatchers.jsonPath("$", hasSize(3)));
+			
+			// V2
+			mockMvc.perform(get(ENDPOINT_V2 + "privs"))
+				.andExpect(status().isOk())
+				.andExpect(MockMvcResultMatchers.jsonPath("$.data", hasSize(3)));
 		}
 	}
 	

@@ -39,4 +39,4 @@ COPY --from=wgetsrc /usr/lib64/libssl.so.10 /usr/lib64/
 COPY --from=wgetsrc /usr/lib64/libidn.so.11 /usr/lib64/
 COPY --from=wgetsrc /usr/lib64/libcrypto.so.10 /usr/lib64/
 
-ENTRYPOINT ["java","-Xms512m","-Xmx1024m","-XX:+HeapDumpOnOutOfMemoryError","-XX:HeapDumpPath=/tmp/heap-dump.core","-jar","/home/maven/target/commonapi-0.0.1-SNAPSHOT.jar"]
+ENTRYPOINT ["java","-Xms512m","-Xmx1024m","-XX:+HeapDumpOnOutOfMemoryError","-XX:HeapDumpPath=/tmp/heap-dump.core","-jar","/home/maven/target/common-api.jar"]

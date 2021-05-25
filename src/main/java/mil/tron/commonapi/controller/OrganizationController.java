@@ -4,14 +4,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jsonpatch.JsonPatch;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
+import mil.tron.commonapi.dto.OrganizationDtoPaginationResponseWrapper;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
@@ -23,6 +27,8 @@ import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.OrganizationService;
 
 import org.springdoc.api.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +38,6 @@ import javax.validation.Valid;
 import java.util.*;
 
 @RestController
-@RequestMapping("${api-prefix.v1}/organization")
 public class OrganizationController {
 	private OrganizationService organizationService;
 
@@ -44,6 +49,16 @@ public class OrganizationController {
 		this.organizationService = organizationService;
 	}
 	
+	/**
+	 * @deprecated No longer acceptable as it returns array json data as top most parent.
+	 * @param unitType
+	 * @param branchType
+	 * @param searchQuery
+	 * @param peopleFields
+	 * @param orgFields
+	 * @param page
+	 * @return
+	 */
 	@Operation(summary = "Retrieves all organizations",
 			description = "Retrieves all organizations.  Optionally can provide 'type' parameter (e.g. 'WING') to filter by Organization type " +
 						"and/or 'branch' parameter to filter by branch of service (e.g 'USAF'). If neither parameter is given, then no filters " +
@@ -58,7 +73,8 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class)))
 	})
 	@PreAuthorizeRead
-	@GetMapping
+	@Deprecated(since = "${api-prefix.v2}")
+	@GetMapping("${api-prefix.v1}/organization")
 	public ResponseEntity<Object> getOrganizations(
 			@Parameter(description = "Unit type to filter on", required = false, content= @Content(schema =  @Schema(implementation = Unit.class)))
 				@RequestParam(name = "type", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String unitType,
@@ -119,6 +135,92 @@ public class OrganizationController {
 		}
 	}
 	
+	@Operation(summary = "Retrieves all organizations",
+			description = "Retrieves all organizations.  Optionally can provide 'type' parameter (e.g. 'WING') to filter by Organization type " +
+						"and/or 'branch' parameter to filter by branch of service (e.g 'USAF'). If neither parameter is given, then no filters " +
+						"are applied and request returns all Organizations.  Optionally can also provide 'search' parameter to search on organization " +
+						"names within the result set (case in-sensitive).")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = OrganizationDtoPaginationResponseWrapper.class)),
+					headers = @Header(
+							name="link",
+							description = "Contains the appropriate pagination links if application. "
+									+ "If no pagination query params given, then no pagination links will exist. "
+									+ "Possible rel values include: first, last, prev, next",
+							schema = @Schema(type = "string"))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad Request - likely due to invalid unit type or branch of service specified",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeRead
+	@WrappedEnvelopeResponse
+	@GetMapping("${api-prefix.v2}/organization")
+	public ResponseEntity<Object> getOrganizationsWrapped(
+			@Parameter(description = "Unit type to filter on", required = false, content= @Content(schema =  @Schema(implementation = Unit.class)))
+				@RequestParam(name = "type", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String unitType,
+			@Parameter(description = "Branch type to filter on", required = false, content= @Content(schema =  @Schema(implementation = Branch.class)))
+				@RequestParam(name = "branch", required = false, defaultValue = OrganizationController.UNKNOWN_TYPE) String branchType,
+			@Parameter(description = "Case insensitive search string for org name", required = false)
+				@RequestParam(name = "search", required = false, defaultValue = "") String searchQuery,
+			@Parameter(description = "Comma-separated string list to include in Person type sub-fields. Example: people=id,firstName,lastName", required = false)
+				@RequestParam(name = OrganizationController.PEOPLE_PARAMS_FIELD, required = false, defaultValue = "") String peopleFields,
+			@Parameter(description = "Comma-separated string list to include in Organization type sub-fields. Example: organizations=id,name", required = false)
+				@RequestParam(name = OrganizationController.ORGS_PARAMS_FIELD, required = false, defaultValue = "") String orgFields,
+				@ParameterObject Pageable page) {
+
+			// return all types by default (if no query params given)
+		if (unitType.equals(OrganizationController.UNKNOWN_TYPE) && branchType.equals(OrganizationController.UNKNOWN_TYPE)) {
+			Page<OrganizationDto> allOrgs = organizationService.getOrganizationsPage(searchQuery, page);
+
+			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
+				// for each item, customize the entity
+				List<JsonNode> customizedList = new ArrayList<>();
+				allOrgs.forEach(item -> customizedList.add(
+						organizationService.customizeEntity(
+								initCustomizationOptions(peopleFields, orgFields), item)));
+				
+				Page<JsonNode> customPage = new PageImpl<>(customizedList, page, allOrgs.getTotalElements());
+				return new ResponseEntity<>(customPage, HttpStatus.OK);
+			}
+
+			// otherwise return list of DTOs
+			return new ResponseEntity<>(allOrgs, HttpStatus.OK);
+		}
+		// otherwise try to return the types specified
+		else {
+			Unit unit;
+			Branch branch;
+
+			// coerce types to enumerated value
+			try {
+				unit = unitType.equals(OrganizationController.UNKNOWN_TYPE) ? null : Unit.valueOf(unitType.toUpperCase());
+				branch = branchType.equals(OrganizationController.UNKNOWN_TYPE) ? null : Branch.valueOf(branchType.toUpperCase());
+			}
+			catch (IllegalArgumentException e) {
+				throw new BadRequestException("Invalid branch or service type given");
+			}
+
+			Page<OrganizationDto> allFilteredOrgs = organizationService.getOrganizationsByTypeAndServicePage(searchQuery, unit, branch, page);
+
+			if (!peopleFields.isEmpty() || !orgFields.isEmpty()) {
+				// for each dto, customize it
+				List<JsonNode> customizedList = new ArrayList<>();
+				allFilteredOrgs.forEach(
+						item -> customizedList.add(
+								organizationService.customizeEntity(
+										initCustomizationOptions(peopleFields, orgFields), item)));
+				
+				Page<JsonNode> customPage = new PageImpl<>(customizedList, page, allFilteredOrgs.getTotalElements());
+				return new ResponseEntity<>(customPage, HttpStatus.OK);
+			}
+
+			// otherwise return the list of filtered DTOs
+			return new ResponseEntity<>(allFilteredOrgs, HttpStatus.OK);
+		}
+	}
+	
 	@Operation(summary = "Retrieves an organization by ID", description = "Retrieves an organization by ID")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
@@ -132,7 +234,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeRead
-	@GetMapping(value = "/{id}")
+	@GetMapping({"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"})
 	public ResponseEntity<Object> getOrganization(
 			@Parameter(description = "Organization ID to retrieve", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Whether to flatten out all attached members and organizations contained therein", required = false)
@@ -178,7 +280,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PostMapping
+	@PostMapping({"${api-prefix.v1}/organization", "${api-prefix.v2}/organization"})
 	public ResponseEntity<OrganizationDto> createOrganization(
 			@Parameter(description = "Organization to create",
 			required = true,
@@ -201,7 +303,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PutMapping(value = "/{id}")
+	@PutMapping({"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"})
 	public ResponseEntity<OrganizationDto> updateOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Updated organization",
@@ -227,7 +329,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@DeleteMapping(value = "/{id}")
+	@DeleteMapping({"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"})
 	public ResponseEntity<Object> deleteOrganization(
 			@Parameter(description = "Organization ID to delete", required = true) @PathVariable("id") UUID organizationId) {
 		organizationService.deleteOrganization(organizationId);
@@ -244,7 +346,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@DeleteMapping(value = "/{id}/leader")
+	@DeleteMapping({"${api-prefix.v1}/organization/{id}/leader", "${api-prefix.v2}/organization/{id}/leader"})
 	public ResponseEntity<Object> deleteOrgLeader(
 			@Parameter(description = "Organization ID to delete the leader from", required = true) @PathVariable("id") UUID organizationId) {
 		Map<String, String> noLeaderMap = new HashMap<>();
@@ -262,7 +364,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@DeleteMapping(value = "/{id}/parent")
+	@DeleteMapping({"${api-prefix.v1}/organization/{id}/parent", "${api-prefix.v2}/organization/{id}/parent"})
 	public ResponseEntity<Object> deleteOrgParent(
 			@Parameter(description = "Organization ID to delete the parent from", required = true) @PathVariable("id") UUID organizationId) {
 		Map<String, String> noParentMap = new HashMap<>();
@@ -283,7 +385,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@DeleteMapping("/{id}/members")
+	@DeleteMapping({"${api-prefix.v1}/organization/{id}/members", "${api-prefix.v2}/organization/{id}/members"})
 	public ResponseEntity<Object> deleteOrganizationMember(@Parameter(description = "UUID of the organization to modify", required = true) @PathVariable UUID id,
 													   @Parameter(description = "UUID(s) of the member(s) to remove", required = true) @RequestBody List<UUID> personId) {
 
@@ -303,7 +405,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PatchMapping("/{id}/members")
+	@PatchMapping({"${api-prefix.v1}/organization/{id}/members", "${api-prefix.v2}/organization/{id}/members"})
 	public ResponseEntity<Object> addOrganizationMember(
         @Parameter(description = "UUID of the organization record", required = true) @PathVariable UUID id,
         @Parameter(description = "UUID(s) of the member(s) to add", required = true) @RequestBody List<UUID> personId,
@@ -325,7 +427,7 @@ public class OrganizationController {
 					description = "Provided org UUID(s) was/were invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PatchMapping("/{id}/subordinates")
+	@PatchMapping({"${api-prefix.v1}/organization/{id}/subordinates", "${api-prefix.v2}/organization/{id}/subordinates"})
 	public ResponseEntity<Object> addSubordinateOrganization(@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
 															 @Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
 
@@ -344,7 +446,7 @@ public class OrganizationController {
 					description = "Provided org UUID(s) was/were invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@DeleteMapping("/{id}/subordinates")
+	@DeleteMapping({"${api-prefix.v1}/organization/{id}/subordinates", "${api-prefix.v2}/organization/{id}/subordinates"})
 	public ResponseEntity<Object> removeSubordinateOrganization(@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
 																@Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
 
@@ -364,7 +466,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PatchMapping(value = "/{id}")
+	@PatchMapping({"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"})
 	public ResponseEntity<OrganizationDto> patchOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
@@ -372,6 +474,11 @@ public class OrganizationController {
 			return new ResponseEntity<>(organizationService.modify(organizationId, attribs), HttpStatus.OK);
 	}
 
+	/**
+	 * @deprecated No longer valid T166. See {@link #addNewOrganizationsWrapped(List)} for new usage.
+	 * @param orgs
+	 * @return
+	 */
 	@Operation(summary = "Adds one or more organization entities",
 			description = "Adds one or more organization entities - returns that same array of input organizations with their assigned UUIDs. " +
 					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
@@ -389,8 +496,32 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PostMapping(value = "/organizations")
+	@Deprecated(since = "v2")
+	@PostMapping({"${api-prefix.v1}/organization/organizations"})
 	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
+		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
+	}
+	
+	@Operation(summary = "Adds one or more organization entities",
+			description = "Adds one or more organization entities - returns that same array of input organizations with their assigned UUIDs. " +
+					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
+					"any new organizations up to that organization that caused the failure will have been committed (but none thereafter)" +
+					"The return error message will list the offending UUID or other data that caused the error.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = OrganizationDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad data or validation error",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Bad Request / One of the supplied organizations contained a UUID that already exists or other duplicate data",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorizeWrite
+	@PostMapping({"${api-prefix.v2}/organization/organizations"})
+	public ResponseEntity<Object> addNewOrganizationsWrapped(@RequestBody List<OrganizationDto> orgs) {
 		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
 	}
 
@@ -407,7 +538,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PatchMapping(path = "/{id}", consumes = "application/json-patch+json")
+	@PatchMapping(value = {"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<OrganizationDto> patchPerson(
 			@Parameter(description = "Organization ID to patch", required = true) @PathVariable("id") UUID orgId,
 			@Parameter(description = "Patched organization",
