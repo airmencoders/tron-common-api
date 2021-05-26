@@ -142,7 +142,7 @@ public class ScratchStorageControllerTest {
         // test we can get all entries belonging to an App ID UUID
 
         UUID appId = entries.get(0).getAppId();
-        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString()))
+        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true); // let user have the privs to read
         Mockito.when(service.getAllEntriesByApp(appId)).thenReturn(Lists.newArrayList(entries.get(0)));
         mockMvc.perform(get(ENDPOINT  +"{appId}", appId))
@@ -169,7 +169,7 @@ public class ScratchStorageControllerTest {
     void testGetAllAppKeys() throws Exception {
         // test getting just the keys for a given app
         UUID appId = entries.get(0).getAppId();
-        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString()))
+        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true); // let user have the privs to read
         Mockito.when(service.getAllKeysForAppId(appId)).thenReturn(Lists.newArrayList(entries.get(0).getKey()));
         mockMvc.perform(get(ENDPOINT  +"apps/{appId}/keys", appId))
@@ -191,7 +191,7 @@ public class ScratchStorageControllerTest {
 
         UUID appId = entries.get(0).getAppId();
         String keyValue = "hello";
-        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString()))
+        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true); // let user have the privs to read
         Mockito.when(service.getKeyValueEntryByAppId(appId, keyValue)).thenReturn(entries.get(0));
         mockMvc.perform(get(ENDPOINT  + "{appId}/{keyValue}", appId, keyValue))
@@ -220,7 +220,7 @@ public class ScratchStorageControllerTest {
                 .value("Chris")
                 .build();
 
-        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString()))
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true); // let user have the privs to mutate
 
         Mockito.when(service.setKeyValuePair(entry.getAppId(), entry.getKey(), entry.getValue())).thenReturn(entry);
@@ -238,7 +238,7 @@ public class ScratchStorageControllerTest {
     void testDeleteAllByAppId() throws Exception {
         // test we can delete all key value pairs for an app given its ID
 
-        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString()))
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true); // let user have the privs to mutate
 
         Mockito.when(service.deleteAllKeyValuePairsForAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0)));
@@ -253,7 +253,7 @@ public class ScratchStorageControllerTest {
         // test we can delete a specific key value pair for an app given its ID
 
 
-        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString()))
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true) // let user have the privs to mutate
                 .thenReturn(false);   // deny on second call
 
@@ -549,7 +549,7 @@ public class ScratchStorageControllerTest {
         // test a post request to get a scratch key-value as Json (request body is text/plain with the Json Patch Spec)
         UUID appId = entries.get(0).getAppId();
         String keyValue = "hello";
-        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString()))
+        Mockito.when(service.userCanReadFromAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true); // let user have the privs to read
         Mockito.when(service.getKeyValueEntryByAppId(appId, keyValue)).thenReturn(entries.get(0));
         Mockito.when(service.getKeyValueJson(appId, keyValue, "$.name")).thenReturn("Dude");
@@ -574,7 +574,7 @@ public class ScratchStorageControllerTest {
                 .value("Chris")
                 .build();
 
-        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString()))
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true); // let user have the privs to mutate
 
         Mockito.when(service.setKeyValuePair(entry.getAppId(), entry.getKey(), entry.getValue())).thenReturn(entry);

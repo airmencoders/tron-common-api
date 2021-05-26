@@ -514,11 +514,11 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privAdmin)
                 .build());
 
-        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
-        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), user1.getEmail()));
-        assertFalse(service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), adminUser.getEmail(), false, null));
+        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), user1.getEmail(), false, null));
+        assertFalse(service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+                () -> service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
     }
 
     @Test
@@ -564,12 +564,12 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privWrite)
                 .build());
 
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail()));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail()));
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail(), false, null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail(), false, null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail(), false, null));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
     }
 
     @Test
@@ -616,20 +616,20 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privWrite)
                 .build());
 
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail()));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail()));
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail(), false, null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail(), false, null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail(), false, null));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
 
         // turn on implicit read
         registeredApps.get(0).setAppHasImplicitRead(true);
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
 
         // turn off implicit read
         registeredApps.get(0).setAppHasImplicitRead(false);
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
     }
 
     @Test

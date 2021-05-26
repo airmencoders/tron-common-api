@@ -157,7 +157,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeyValuePairsForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId, false, null);
+        validateScratchReadAccessForUser(appId, false, "");
         return new ResponseEntity<>(scratchStorageService.getAllEntriesByApp(appId), HttpStatus.OK);
     }
 
@@ -188,7 +188,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeysForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId, false, null);
+        validateScratchReadAccessForUser(appId, false, "");
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
 
@@ -214,7 +214,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeysForAppIdWrapped(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId, false, null);
+        validateScratchReadAccessForUser(appId, false, "");
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
     
@@ -287,7 +287,7 @@ public class ScratchStorageController {
             @Parameter(name = "updateSpec", description = "Object specifying the json path to execute and the new value", required = true)
                 @Valid @RequestBody ScratchValuePatchJsonDto valueSpec) {
 
-        validateScratchWriteAccessForUser(appId);
+        validateScratchWriteAccessForUser(appId, true, keyName);
         scratchStorageService.patchKeyValueJson(appId, keyName, valueSpec.getValue(), valueSpec.getJsonPath());
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -311,7 +311,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> setKeyValuePair(
             @Parameter(name = "entry", description = "Key-Value-AppId object", required = true) @Valid @RequestBody ScratchStorageEntryDto entry) {
 
-        validateScratchWriteAccessForUser(entry.getAppId());
+        validateScratchWriteAccessForUser(entry.getAppId(), false, "");
 
         return new ResponseEntity<>(
                 scratchStorageService.setKeyValuePair(entry.getAppId(), entry.getKey(), entry.getValue()), HttpStatus.OK);
@@ -337,7 +337,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> deleteKeyValuePair(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "key", description = "Key name of the key-value pair to delete", required = true) @PathVariable String key) {
-        validateScratchWriteAccessForUser(appId);
+        validateScratchWriteAccessForUser(appId, true, key);
 
         return new ResponseEntity<>(scratchStorageService.deleteKeyValuePair(appId, key), HttpStatus.OK);
     }
@@ -360,7 +360,7 @@ public class ScratchStorageController {
     @DeleteMapping({"${api-prefix.v1}/scratch/{appId}", "${api-prefix.v2}/scratch/{appId}"})
     public ResponseEntity<Object> deleteAllKeyValuePairsForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
-        validateScratchWriteAccessForUser(appId);
+        validateScratchWriteAccessForUser(appId, false, "");
 
         return new ResponseEntity<>(scratchStorageService.deleteAllKeyValuePairsForAppId(appId), HttpStatus.OK);
     }
@@ -379,7 +379,7 @@ public class ScratchStorageController {
                                                   @PathVariable String table,
                                                   @RequestBody @Valid ChangeElementDto dto) {
 
-        validateScratchWriteAccessForUser(appId);
+        validateScratchWriteAccessForUser(appId, true, table);
         scratchStorageService.addElement(appId, table, dto.getJson());
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -389,7 +389,7 @@ public class ScratchStorageController {
                                                   @PathVariable String table,
                                                   @RequestBody @Valid ChangeElementDto dto) {
 
-        validateScratchWriteAccessForUser(appId);
+        validateScratchWriteAccessForUser(appId, true, table);
         scratchStorageService.updateElement(appId, table, dto.getJson(), dto.getPath());
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
