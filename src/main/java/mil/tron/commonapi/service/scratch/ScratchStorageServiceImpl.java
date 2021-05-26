@@ -22,6 +22,7 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.exception.scratch.InvalidJsonPathQueryException;
+import mil.tron.commonapi.exception.scratch.JsonDbProcessingException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
@@ -39,6 +40,9 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     private static final String SCRATCH_WRITE_PRIV = "SCRATCH_WRITE";
     private static final String SCRATCH_READ_PRIV = "SCRATCH_READ";
     private static final String SCRATCH_ADMIN_PRIV = "SCRATCH_ADMIN";
+    private static final String JSON_DB_KEY_TABLE_ERROR = "Cant find key/table with that name";
+    private static final String JSON_TABLE_PARSE_ERROR = "Can't parse JSON in the table - %s";
+    private static final String JSON_DB_SERIALIZATION_ERROR = "Error serializing table contents";
     private ScratchStorageRepository repository;
     private ScratchStorageAppRegistryEntryRepository appRegistryRepo;
     private ScratchStorageUserRepository scratchUserRepo;
@@ -493,9 +497,15 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
 
+        // respect aclMode first if its enabled
+        if (appEntry.isAclMode()) {
+            return false;
+        }
+
         // if this app has implicit read set to True, then we're done here...
         if (appEntry.isAppHasImplicitRead()) return true;
 
+        // if we get here, not in aclMode and app doesn't have implicitRead so analyze user's perms for adjudication
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
             if (priv.getUser().getEmail().equalsIgnoreCase(email)
                     && (priv.getPrivilege().getName().equals(SCRATCH_READ_PRIV)
@@ -611,16 +621,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         try {
             schemaNodes = MAPPER.readTree(entry.getValue());
-            System.out.println(schemaNodes.toPrettyString());
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Cannot parse the JSON schema specification for table " + tableName);
+            throw new JsonDbProcessingException("Cannot parse the JSON schema specification for table " + tableName);
         }
 
         try {
             nodes = MAPPER.readTree(json.toString());
-            System.out.println(nodes.toPrettyString());
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error parsing entity value");
+            throw new JsonDbProcessingException("Error parsing entity value");
         }
 
         Map<String, Object> obj = new HashMap<>();
@@ -659,14 +667,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     public void addElement(UUID appId, String tableName, Object json) {
 
         ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+                .orElseThrow(() -> new RecordNotFoundException(JSON_DB_KEY_TABLE_ERROR));
 
         DocumentContext cxt;
 
         try {
             cxt = JsonPath.using(configuration).parse(entry.getValue());
         } catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            throw new InvalidJsonPathQueryException(String.format(JSON_TABLE_PARSE_ERROR, tableName));
         }
 
         try {
@@ -679,7 +687,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             entry.setValue(cxt.jsonString());
             repository.save(entry);
         } catch (Exception e) {
-            throw new RuntimeException("Error serializing table contents");
+            throw new JsonDbProcessingException(JSON_DB_SERIALIZATION_ERROR);
         }
     }
 
@@ -695,14 +703,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     public void removeElement(UUID appId, String tableName, String path) {
 
         ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+                .orElseThrow(() -> new RecordNotFoundException(JSON_DB_KEY_TABLE_ERROR));
 
         DocumentContext cxt;
 
         try {
             cxt = JsonPath.using(configuration).parse(entry.getValue());
         } catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            throw new InvalidJsonPathQueryException(String.format(JSON_TABLE_PARSE_ERROR, tableName));
         }
 
         if (cxt.read(path) != null) {
@@ -720,7 +728,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             entry.setValue(cxt.jsonString());
             repository.save(entry);
         } catch (Exception e) {
-            throw new RuntimeException("Error serializing table contents");
+            throw new JsonDbProcessingException(JSON_DB_SERIALIZATION_ERROR);
         }
     }
 
@@ -737,14 +745,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     public void updateElement(UUID appId, String tableName, Object json, String path) {
 
         ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+                .orElseThrow(() -> new RecordNotFoundException(JSON_DB_KEY_TABLE_ERROR));
 
         DocumentContext cxt;
 
         try {
             cxt = JsonPath.using(configuration).parse(entry.getValue());
         } catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            throw new InvalidJsonPathQueryException(String.format(JSON_TABLE_PARSE_ERROR, tableName));
         }
 
         if (cxt.read(path) != null) {
@@ -763,7 +771,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             entry.setValue(cxt.jsonString());
             repository.save(entry);
         } catch (Exception e) {
-            throw new RuntimeException("Error serializing table contents");
+            throw new JsonDbProcessingException(JSON_DB_SERIALIZATION_ERROR);
         }
 
     }
@@ -780,14 +788,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     public Object queryJson(UUID appId, String tableName, String path) {
 
         ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+                .orElseThrow(() -> new RecordNotFoundException(JSON_DB_KEY_TABLE_ERROR));
 
         DocumentContext cxt;
 
         try {
             cxt = JsonPath.using(configuration).parse(entry.getValue());
         } catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            throw new InvalidJsonPathQueryException(String.format(JSON_TABLE_PARSE_ERROR, tableName));
         }
 
         if (cxt.read(path).toString().equals("[]")) throw new RecordNotFoundException("Path Not Found");

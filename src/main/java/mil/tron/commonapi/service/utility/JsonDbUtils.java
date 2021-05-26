@@ -3,6 +3,7 @@ package mil.tron.commonapi.service.utility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import lombok.NoArgsConstructor;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.exception.scratch.InvalidDataTypeException;
 import org.apache.commons.validator.routines.EmailValidator;
@@ -15,7 +16,10 @@ import java.util.UUID;
  * Static class with helpers for the Json DB methods in the Scratch Storage service
  */
 
+@NoArgsConstructor
 public class JsonDbUtils {
+
+    private static final String FIELD_VALIDATION_ERROR = "Field - %s - was supposed to be a %s but wasnt";
 
     /**
      * Helper method to set a default field value for a field that was omitted in a Json Request, the default
@@ -69,39 +73,27 @@ public class JsonDbUtils {
                                DocumentContext blob,
                                boolean updateOperation) {
 
-        if (schemaType.contains("string")) {
-            if (!fieldValue.isTextual()) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a string but wasnt");
-            }
+        if (schemaType.contains("string") && !fieldValue.isTextual()) {
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "string"));
         }
-        if (schemaType.contains("email")) {
-            if (!fieldValue.isTextual()
-                    && EmailValidator.getInstance().isValid(fieldValue.asText())) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be an email but wasnt");
-            }
+        if (schemaType.contains("email") && !fieldValue.isTextual()
+                && EmailValidator.getInstance().isValid(fieldValue.asText())) {
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "email"));
         }
-        if (schemaType.contains("number")) {
-            if (!fieldValue.isNumber()) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a number but wasnt");
-            }
+        if (schemaType.contains("number") && !fieldValue.isNumber()) {
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "number"));
         }
-        if (schemaType.contains("boolean")) {
-            if (!fieldValue.isBoolean()) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a boolean but wasnt");
-            }
+        if (schemaType.contains("boolean") && !fieldValue.isBoolean()) {
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "boolean"));
         }
-        if (schemaType.contains("uuid")) {
-            if (!fieldValue.isTextual()
-                    // make sure we have a valid UUID format
-                    && !fieldValue
-                    .asText()
-                    .matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")) {
-
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a uuid but wasnt");
-            }
+        if (schemaType.contains("uuid") && !fieldValue.isTextual()
+                && !fieldValue
+                .asText()
+                .matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")) {
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "UUID"));
         }
 
-        // do the unique checks
+        // do the unique checks (if applicable)
         if (fieldIsUnique && !updateOperation) {
             String jsonPath = "$[?(@." + fieldName + " == '" + fieldValue.asText() + "')]";
             List<Map<String, Object>> elems = JsonPath.read(blob.jsonString(), jsonPath);
