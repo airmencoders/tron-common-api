@@ -14,14 +14,14 @@ public class AppSourceDto {
 
     @Getter
     @Setter
-    @Builder.Default
-    private UUID id = UUID.randomUUID();
-
-    @Getter
-    @Setter
     @NotBlank
     @NotNull
     private String name;
+
+    @Getter
+    @Setter
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 
     @Getter
     @Setter
