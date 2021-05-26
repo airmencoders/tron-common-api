@@ -57,11 +57,13 @@ public class ScratchStorageController {
     /**
      * Private helper to authorize a user to a scratch space identified by the app UUID for read access
      * @param appId the appid of the app's data user/request is trying to access
+     * @param includeKey whether were doing determination on a singular key vs the whole app itself
+     * @param keyName the key name (if applicable)
      */
-    private void validateScratchReadAccessForUser(UUID appId) {
+    private void validateScratchReadAccessForUser(UUID appId, boolean includeKey, String keyName) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getCredentials().toString();  // get the JWT email string
-        if (!scratchStorageService.userCanReadFromAppId(appId, userEmail)) {
+        if (!scratchStorageService.userCanReadFromAppId(appId, userEmail, includeKey, keyName)) {
             throw new InvalidScratchSpacePermissions(INVALID_PERMS);
         }
     }
@@ -69,11 +71,13 @@ public class ScratchStorageController {
     /**
      * Private helper to authorize a user to a scratch space identified by the app UUID for write access
      * @param appId the appid of the app's data user/request is trying to access
+     * @param includeKey whether were doing determination on a singular key vs the whole app itself
+     * @param keyName the key name (if applicable)
      */
-	private void validateScratchWriteAccessForUser(UUID appId) {
+	private void validateScratchWriteAccessForUser(UUID appId, boolean includeKey, String keyName) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getCredentials().toString();  // get the JWT email string
-        if (!scratchStorageService.userCanWriteToAppId(appId, userEmail)) {
+        if (!scratchStorageService.userCanWriteToAppId(appId, userEmail, includeKey, keyName)) {
             throw new InvalidScratchSpacePermissions(INVALID_PERMS);
         }
     }
@@ -133,11 +137,16 @@ public class ScratchStorageController {
     }
 
     @Operation(summary = "Retrieves all key-value pairs for for a single app",
-            description = "App ID is the UUID of the owning application")
+            description = "App ID is the UUID of the owning application. Note if app is in ACL mode, then this endpoint" +
+                    "will not work unless requester is a SCRATCH_ADMIN - since ACL mode restricts read/write on a key by" +
+                    "key basis")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntryDto.class)))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
@@ -148,7 +157,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeyValuePairsForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId);
+        validateScratchReadAccessForUser(appId, false, null);
         return new ResponseEntity<>(scratchStorageService.getAllEntriesByApp(appId), HttpStatus.OK);
     }
 
@@ -158,11 +167,16 @@ public class ScratchStorageController {
      * @return
      */
     @Operation(summary = "Retrieves all keys for for a single app",
-            description = "App ID is the UUID of the owning application")
+            description = "App ID is the UUID of the owning application. Note if app is in ACL mode, then this endpoint" +
+                    "will not work unless requester is a SCRATCH_ADMIN - since ACL mode restricts read/write on a key by" +
+                    "key basis")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntryDto.class)))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
@@ -174,16 +188,21 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeysForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId);
+        validateScratchReadAccessForUser(appId, false, null);
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
 
     @Operation(summary = "Retrieves all keys for for a single app",
-            description = "App ID is the UUID of the owning application")
+            description = "App ID is the UUID of the owning application. Note if app is in ACL mode, then this endpoint" +
+                    "will not work unless requester is a SCRATCH_ADMIN - since ACL mode restricts read/write on a key by" +
+                    "key basis")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = ScratchStorageEntryDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
@@ -195,7 +214,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeysForAppIdWrapped(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId);
+        validateScratchReadAccessForUser(appId, false, null);
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
     
@@ -205,6 +224,9 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = ScratchStorageEntryDto.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID / Key name not valid or found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
@@ -216,7 +238,7 @@ public class ScratchStorageController {
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName) {
 
-        validateScratchReadAccessForUser(appId);
+        validateScratchReadAccessForUser(appId, true, keyName);
         return new ResponseEntity<>(scratchStorageService.getKeyValueEntryByAppId(appId, keyName), HttpStatus.OK);
     }
 
@@ -227,6 +249,9 @@ public class ScratchStorageController {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = String.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(schema = @Schema(implementation = InvalidScratchSpacePermissions.class))),
             @ApiResponse(responseCode = "404",
                     description = "Application ID / Key name not valid or found / JSON path spec not found",
                     content = @Content(schema = @Schema(implementation = RecordNotFoundException.class))),
@@ -239,7 +264,7 @@ public class ScratchStorageController {
             @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName,
             @Parameter(name = "jsonPath", description = "Jayway JsonPath spec string", required = true) @RequestBody String jsonPath) {
 
-        validateScratchReadAccessForUser(appId);
+        validateScratchReadAccessForUser(appId, true, keyName);
         return new ResponseEntity<>(scratchStorageService.getKeyValueJson(appId, keyName, jsonPath), HttpStatus.OK);
     }
 
@@ -344,7 +369,8 @@ public class ScratchStorageController {
     public ResponseEntity<Object> queryJsonTable(@PathVariable UUID appId,
                                                  @PathVariable String table,
                                                  @RequestBody @Valid QueryDto dto) {
-        validateScratchReadAccessForUser(appId);
+
+        validateScratchReadAccessForUser(appId, true, table);  // "table" is the "key" name here
         return new ResponseEntity<>(scratchStorageService.queryJson(appId, table, dto.getQuery()), HttpStatus.OK);
     }
 

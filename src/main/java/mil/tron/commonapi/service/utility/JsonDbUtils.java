@@ -3,7 +3,6 @@ package mil.tron.commonapi.service.utility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import lombok.NoArgsConstructor;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.exception.scratch.InvalidDataTypeException;
 import org.apache.commons.validator.routines.EmailValidator;
@@ -16,10 +15,18 @@ import java.util.UUID;
  * Static class with helpers for the Json DB methods in the Scratch Storage service
  */
 
-@NoArgsConstructor
 public class JsonDbUtils {
 
-    private static final String FIELD_VALIDATION_ERROR = "Field - %s - was supposed to be a %s but wasnt";
+    private static final String FIELD_VALIDATION_ERROR = "Field - %s - was supposed to be a %s but wasn't";
+    private static final String TYPE_NUMBER = "number";
+    private static final String TYPE_STRING = "string";
+    private static final String TYPE_EMAIL = "email";
+    private static final String TYPE_UUID = "uuid";
+    private static final String TYPE_BOOLEAN = "boolean";
+
+    private JsonDbUtils() {
+        throw new IllegalStateException("Private Constructor cannot be called");
+    }
 
     /**
      * Helper method to set a default field value for a field that was omitted in a Json Request, the default
@@ -36,19 +43,19 @@ public class JsonDbUtils {
             throw new InvalidDataTypeException("Field - " + fieldName + " - was specified as required, but was not given");
         }
 
-        if (fieldValue.contains("string")) {
+        if (fieldValue.contains(TYPE_STRING)) {
             return "";
         }
-        if (fieldValue.contains("email")) {
+        if (fieldValue.contains(TYPE_EMAIL)) {
             return "";
         }
-        if (fieldValue.contains("number")) {
+        if (fieldValue.contains(TYPE_NUMBER)) {
             return 0;
         }
-        if (fieldValue.contains("boolean")) {
+        if (fieldValue.contains(TYPE_BOOLEAN)) {
             return false;
         }
-        if (fieldValue.contains("uuid")) {
+        if (fieldValue.contains(TYPE_UUID)) {
             return UUID.randomUUID();
         }
 
@@ -73,24 +80,24 @@ public class JsonDbUtils {
                                DocumentContext blob,
                                boolean updateOperation) {
 
-        if (schemaType.contains("string") && !fieldValue.isTextual()) {
-            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "string"));
+        if (schemaType.contains(TYPE_STRING) && !fieldValue.isTextual()) {
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, TYPE_STRING));
         }
-        if (schemaType.contains("email") && !fieldValue.isTextual()
+        if (schemaType.contains(TYPE_EMAIL) && !fieldValue.isTextual()
                 && EmailValidator.getInstance().isValid(fieldValue.asText())) {
-            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "email"));
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, TYPE_EMAIL));
         }
-        if (schemaType.contains("number") && !fieldValue.isNumber()) {
-            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "number"));
+        if (schemaType.contains(TYPE_NUMBER) && !fieldValue.isNumber()) {
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, TYPE_NUMBER));
         }
-        if (schemaType.contains("boolean") && !fieldValue.isBoolean()) {
-            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "boolean"));
+        if (schemaType.contains(TYPE_BOOLEAN) && !fieldValue.isBoolean()) {
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, TYPE_BOOLEAN));
         }
-        if (schemaType.contains("uuid") && !fieldValue.isTextual()
+        if (schemaType.contains(TYPE_UUID) && !fieldValue.isTextual()
                 && !fieldValue
                 .asText()
                 .matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")) {
-            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, "UUID"));
+            throw new InvalidDataTypeException(String.format(FIELD_VALIDATION_ERROR, fieldName, TYPE_UUID));
         }
 
         // do the unique checks (if applicable)

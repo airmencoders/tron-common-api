@@ -40,8 +40,8 @@ public interface ScratchStorageService {
     ScratchStorageUserDto addNewScratchUser(ScratchStorageUserDto newUser);
     ScratchStorageUserDto deleteScratchUser(UUID id);
 
-    boolean userCanReadFromAppId(UUID appId, String email);
-    boolean userCanWriteToAppId(UUID appId, String email);
+    boolean userCanReadFromAppId(UUID appId, String email, boolean includeKey, String keyName);
+    boolean userCanWriteToAppId(UUID appId, String email, boolean includeKey, String keyName);
     boolean userHasAdminWithAppId(UUID appId, String email);
 
     // JSON methods to treating values of specified keys like JSON

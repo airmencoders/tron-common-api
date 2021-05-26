@@ -40,6 +40,9 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     private static final String SCRATCH_WRITE_PRIV = "SCRATCH_WRITE";
     private static final String SCRATCH_READ_PRIV = "SCRATCH_READ";
     private static final String SCRATCH_ADMIN_PRIV = "SCRATCH_ADMIN";
+    private static final String WRITE = "WRITE"; //write role for acl-controlled keys
+    private static final String READ = "READ"; // read role for acl-controlled keys
+    private static final String ADMIN = "ADMIN";  // admin role for acl-controlled keys
     private static final String JSON_DB_KEY_TABLE_ERROR = "Cant find key/table with that name";
     private static final String JSON_TABLE_PARSE_ERROR = "Can't parse JSON in the table - %s";
     private static final String JSON_DB_SERIALIZATION_ERROR = "Error serializing table contents";
@@ -452,12 +455,20 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      *
      * @param appId the appId to check against
      * @param email the email to check for write access
+     * @param includeKey boolean to say whether to include 'keyName' in the determination (for acl mode)
+     * @param keyName key name to adjudicate for acl based access (should be null when 'includeKey' is false)
      * @return true if user has write access else false
      */
     @Override
-    public boolean userCanWriteToAppId(UUID appId, String email) {
+    public boolean userCanWriteToAppId(UUID appId, String email, boolean includeKey, String keyName) {
 
         ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+
+        // respect aclMode first if its enabled
+        if (appEntry.isAclMode() && includeKey) {
+
+            // reference the acl for WRITE disposition...
+        }
 
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
             if (priv.getUser().getEmail().equalsIgnoreCase(email)
@@ -490,16 +501,19 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      *
      * @param appId the appId to check against
      * @param email the email to check for read access
+     * @param includeKey boolean to say whether to include 'keyName' in the determination (for acl mode)
+     * @param keyName key name to adjudicate for acl based access (should be null when 'includeKey' is false)
      * @return true if user has read access else false
      */
     @Override
-    public boolean userCanReadFromAppId(UUID appId, String email) {
+    public boolean userCanReadFromAppId(UUID appId, String email, boolean includeKey, String keyName) {
 
         ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
 
         // respect aclMode first if its enabled
-        if (appEntry.isAclMode()) {
-            return false;
+        if (appEntry.isAclMode() && includeKey) {
+
+            // reference the acl for READ disposition...
         }
 
         // if this app has implicit read set to True, then we're done here...
@@ -529,6 +543,8 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     public boolean userHasAdminWithAppId(UUID appId, String email) {
 
         ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+
+        // we dont care about aclMode here, if they're a SCRATCH_ADMIN they can bypass acls.
 
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
             if (priv.getUser().getEmail().equalsIgnoreCase(email)
