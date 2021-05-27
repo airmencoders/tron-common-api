@@ -21,6 +21,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -55,13 +56,12 @@ public class ScratchStorageController {
     /**
      * Private helper to authorize a user to a scratch space identified by the app UUID for read access
      * @param appId the appid of the app's data user/request is trying to access
-     * @param includeKey whether were doing determination on a singular key vs the whole app itself
      * @param keyName the key name (if applicable)
      */
-    private void validateScratchReadAccessForUser(UUID appId, boolean includeKey, String keyName) {
+    private void validateScratchReadAccessForUser(UUID appId, String keyName) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getCredentials().toString();  // get the JWT email string
-        if (!scratchStorageService.userCanReadFromAppId(appId, userEmail, includeKey, keyName)) {
+        if (!scratchStorageService.userCanReadFromAppId(appId, userEmail, keyName)) {
             throw new InvalidScratchSpacePermissions(INVALID_PERMS);
         }
     }
@@ -69,13 +69,12 @@ public class ScratchStorageController {
     /**
      * Private helper to authorize a user to a scratch space identified by the app UUID for write access
      * @param appId the appid of the app's data user/request is trying to access
-     * @param includeKey whether were doing determination on a singular key vs the whole app itself
      * @param keyName the key name (if applicable)
      */
-	private void validateScratchWriteAccessForUser(UUID appId, boolean includeKey, String keyName) {
+	private void validateScratchWriteAccessForUser(UUID appId, String keyName) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getCredentials().toString();  // get the JWT email string
-        if (!scratchStorageService.userCanWriteToAppId(appId, userEmail, includeKey, keyName)) {
+        if (!scratchStorageService.userCanWriteToAppId(appId, userEmail, keyName)) {
             throw new InvalidScratchSpacePermissions(INVALID_PERMS);
         }
     }
@@ -83,13 +82,12 @@ public class ScratchStorageController {
     /**
      * Private helper to authorize a user to a scratch space identified by the app UUID for deleting key access
      * @param appId the appid of the app's data user/request is trying to access
-     * @param includeKey whether were doing determination on a singular key vs the whole app itself
      * @param keyName the key name (if applicable)
      */
-    private void validateScratchDeleteRightsForUser(UUID appId, boolean includeKey, String keyName) {
+    private void validateScratchDeleteRightsForUser(UUID appId, String keyName) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getCredentials().toString();  // get the JWT email string
-        if (!scratchStorageService.userCanDeleteKeyForAppId(appId, userEmail, includeKey, keyName)) {
+        if (!scratchStorageService.userCanDeleteKeyForAppId(appId, userEmail, keyName)) {
             throw new InvalidScratchSpacePermissions(INVALID_PERMS);
         }
     }
@@ -169,7 +167,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeyValuePairsForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId, false, "");
+        validateScratchReadAccessForUser(appId,  "");
         return new ResponseEntity<>(scratchStorageService.getAllEntriesByApp(appId), HttpStatus.OK);
     }
 
@@ -200,7 +198,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeysForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId, false, "");
+        validateScratchReadAccessForUser(appId, "");
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
 
@@ -226,7 +224,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeysForAppIdWrapped(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId, false, "");
+        validateScratchReadAccessForUser(appId,  "");
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
     
@@ -250,7 +248,7 @@ public class ScratchStorageController {
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName) {
 
-        validateScratchReadAccessForUser(appId, true, keyName);
+        validateScratchReadAccessForUser(appId, keyName);
         return new ResponseEntity<>(scratchStorageService.getKeyValueEntryByAppId(appId, keyName), HttpStatus.OK);
     }
 
@@ -276,7 +274,7 @@ public class ScratchStorageController {
             @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName,
             @Parameter(name = "jsonPath", description = "Jayway JsonPath spec string", required = true) @RequestBody String jsonPath) {
 
-        validateScratchReadAccessForUser(appId, true, keyName);
+        validateScratchReadAccessForUser(appId, keyName);
         return new ResponseEntity<>(scratchStorageService.getKeyValueJson(appId, keyName, jsonPath), HttpStatus.OK);
     }
 
@@ -299,7 +297,7 @@ public class ScratchStorageController {
             @Parameter(name = "updateSpec", description = "Object specifying the json path to execute and the new value", required = true)
                 @Valid @RequestBody ScratchValuePatchJsonDto valueSpec) {
 
-        validateScratchWriteAccessForUser(appId, true, keyName);
+        validateScratchWriteAccessForUser(appId, keyName);
         scratchStorageService.patchKeyValueJson(appId, keyName, valueSpec.getValue(), valueSpec.getJsonPath());
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -323,7 +321,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> setKeyValuePair(
             @Parameter(name = "entry", description = "Key-Value-AppId object", required = true) @Valid @RequestBody ScratchStorageEntryDto entry) {
 
-        validateScratchWriteAccessForUser(entry.getAppId(), false, "");
+        validateScratchWriteAccessForUser(entry.getAppId(), entry.getKey());
 
         return new ResponseEntity<>(
                 scratchStorageService.setKeyValuePair(entry.getAppId(), entry.getKey(), entry.getValue()), HttpStatus.OK);
@@ -350,7 +348,7 @@ public class ScratchStorageController {
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
             @Parameter(name = "key", description = "Key name of the key-value pair to delete", required = true) @PathVariable String key) {
 
-        validateScratchDeleteRightsForUser(appId, true, key);
+        validateScratchDeleteRightsForUser(appId, key);
         return new ResponseEntity<>(scratchStorageService.deleteKeyValuePair(appId, key), HttpStatus.OK);
     }
 
@@ -373,7 +371,7 @@ public class ScratchStorageController {
     public ResponseEntity<Object> deleteAllKeyValuePairsForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchDeleteRightsForUser(appId, false, "");
+        validateScratchDeleteRightsForUser(appId, "");
         return new ResponseEntity<>(scratchStorageService.deleteAllKeyValuePairsForAppId(appId), HttpStatus.OK);
     }
 

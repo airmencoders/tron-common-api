@@ -512,11 +512,11 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privAdmin)
                 .build());
 
-        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), adminUser.getEmail(), false, null));
-        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), user1.getEmail(), false, null));
-        assertFalse(service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
+        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), adminUser.getEmail(), null));
+        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), user1.getEmail(), null));
+        assertFalse(service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
+                () -> service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
     }
 
     @Test
@@ -562,12 +562,12 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privWrite)
                 .build());
 
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail(), false, null));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail(), false, null));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail(), false, null));
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail(), null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail(), null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail(), null));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
+                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
     }
 
     @Test
@@ -614,20 +614,20 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privWrite)
                 .build());
 
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail(), false, null));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail(), false, null));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail(), false, null));
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail(), null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail(), null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail(), null));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
+                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
 
         // turn on implicit read
         registeredApps.get(0).setAppHasImplicitRead(true);
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
 
         // turn off implicit read
         registeredApps.get(0).setAppHasImplicitRead(false);
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), false, null));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
     }
 
     @Test
@@ -813,13 +813,13 @@ public class ScratchStorageServiceImplTest {
                         .value("{ \"implicitRead\" : false, \"access\" : { \"test@test.com\": \"KEY_READ\" } }")
                         .build()));
 
-        assertThrows(RecordNotFoundException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", true, "users"));
-        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", true, "users"));
-        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", true, "users"));
-        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", true, "users"));
-        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", true, "users"));
-        assertFalse(service.userCanWriteToAppId(testApp.getId(), "test@test.com", true, "users"));
-        assertTrue(service.userCanReadFromAppId(testApp.getId(), "test@test.com", true, "users"));
+        assertThrows(RecordNotFoundException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com",  "users"));
+        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+        assertFalse(service.userCanWriteToAppId(testApp.getId(), "test@test.com", "users"));
+        assertTrue(service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
     }
 
     @Test
@@ -836,10 +836,10 @@ public class ScratchStorageServiceImplTest {
                         .value("{ \"implicitRead\" : false, \"access\" : { \"test@test.com\": \"KEY_WRITE\" } }")
                         .build()));
 
-        assertTrue(service.userCanWriteToAppId(testApp.getId(), "test@test.com", true, "users"));
-        assertFalse(service.userCanWriteToAppId(testApp.getId(), "test@test.com", true, "users_acl"));
-        assertFalse(service.userCanWriteToAppId(testApp.getId(), "dude@test.com", true, "users"));
-        assertTrue(service.userCanReadFromAppId(testApp.getId(), "test@test.com", true, "users"));
+        assertTrue(service.userCanWriteToAppId(testApp.getId(), "test@test.com", "users"));
+        assertFalse(service.userCanWriteToAppId(testApp.getId(), "test@test.com", "users_acl"));
+        assertFalse(service.userCanWriteToAppId(testApp.getId(), "dude@test.com", "users"));
+        assertTrue(service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
     }
 
 

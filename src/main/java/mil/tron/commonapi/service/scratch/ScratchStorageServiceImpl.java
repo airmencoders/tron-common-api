@@ -457,17 +457,16 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      *
      * @param appId the appId to check against
      * @param email the email to check for write access
-     * @param includeKey boolean to say whether to include 'keyName' in the determination (for acl mode)
-     * @param keyName key name to adjudicate for acl based access (should be null when 'includeKey' is false)
+     * @param keyName key name to adjudicate for acl based access
      * @return true if user has write access else false
      */
     @Override
-    public boolean userCanWriteToAppId(UUID appId, String email, boolean includeKey, String keyName) {
+    public boolean userCanWriteToAppId(UUID appId, String email, String keyName) {
 
         ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
 
         // respect aclMode first if its enabled
-        if (appEntry.isAclMode() && includeKey) {
+        if (appEntry.isAclMode()) {
 
             // if we're in ACL mode and were going to mutate an ACL itself, we have to be a KEY_ADMIN to do it
             if (keyName.endsWith(ACL_LIST_NAME_APPENDIX)) {
@@ -557,26 +556,33 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 throw new InvalidFieldValueException(String.format("ACL for keyName %s missing access field or is not an object", keyName));
             }
 
+            // if accessing an ACL and requester is not a KEY_ADMIN for it, then deny even reading it
+            if (keyName.endsWith(ACL_LIST_NAME_APPENDIX)
+                    && !aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals("ADMIN")) {
+
+                return false;
+            }
+
             switch (desiredRole) {
                 case READ:
                     if (aclNodes.get(ACL_IMPLICIT_READ_FIELD).booleanValue()) return true;  // implicit read for this key for all
                     if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
-                            && (aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(READ)
-                                || aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(WRITE)
-                                || aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(ADMIN))) {
+                            && (aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(READ)
+                                || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(WRITE)
+                                || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN))) {
                             return true;
                      }
                     break;
                 case WRITE:
                     if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
-                            && (aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(WRITE)
-                                || aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(ADMIN))) {
+                            && (aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(WRITE)
+                                || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN))) {
                         return true;
                     }
                     break;
                 case ADMIN:
                     if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
-                            && aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(ADMIN)) {
+                            && aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN)) {
                         return true;
                     }
                     break;
@@ -597,17 +603,16 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      *
      * @param appId the appId to check against
      * @param email the email to check for read access
-     * @param includeKey boolean to say whether to include 'keyName' in the determination (for acl mode)
-     * @param keyName key name to adjudicate for acl based access (should be null when 'includeKey' is false)
+     * @param keyName key name to adjudicate for acl based access
      * @return true if user has read access else false
      */
     @Override
-    public boolean userCanDeleteKeyForAppId(UUID appId, String email, boolean includeKey, String keyName) {
+    public boolean userCanDeleteKeyForAppId(UUID appId, String email, String keyName) {
 
         ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
 
         // respect aclMode first if its enabled
-        if (appEntry.isAclMode() && includeKey) {
+        if (appEntry.isAclMode()) {
             return aclLookup(appEntry, email, keyName, ADMIN);
         }
 
@@ -628,18 +633,24 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      *
      * @param appId the appId to check against
      * @param email the email to check for read access
-     * @param includeKey boolean to say whether to include 'keyName' in the determination (for acl mode)
-     * @param keyName key name to adjudicate for acl based access (should be null when 'includeKey' is false)
+     * @param keyName key name to adjudicate for acl based access
      * @return true if user has read access else false
      */
     @Override
-    public boolean userCanReadFromAppId(UUID appId, String email, boolean includeKey, String keyName) {
+    public boolean userCanReadFromAppId(UUID appId, String email, String keyName) {
 
         ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
 
         // respect aclMode first if its enabled
-        if (appEntry.isAclMode() && includeKey) {
-            return aclLookup(appEntry, email, keyName, READ);
+        if (appEntry.isAclMode()) {
+
+            // restrict ADMINs of the KEYs to be able to read ACLs
+            if (keyName.endsWith(ACL_LIST_NAME_APPENDIX)) {
+                return aclLookup(appEntry, email, keyName.split("_")[0], ADMIN);
+            }
+            else {
+                return aclLookup(appEntry, email, keyName, READ);
+            }
         }
 
         // if this app has implicit read set to True, then we're done here...
@@ -652,28 +663,6 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                     || priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV)
                     || priv.getPrivilege().getName().equals(SCRATCH_ADMIN_PRIV)))
                 return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Utility function used to tell if a requester is an ADMIN for an app that is in ACL Mode, so we can
-     * know whether to let them modify the respective key in the ACL.
-     * This method is called when we detect a write/mutation about to occur on this app's ACL key/value.
-     *
-     * This is not to be confused with SCRATCH_ADMIN...
-     *
-     * @param appId the appId to check against
-     * @param email the email to check for read access
-     * @param keyName key name to adjudicate ADMIN access for
-     * @return true if user has read access else false
-     */
-    @Override
-    public boolean userIsKeyAdminForAcl(UUID appId, String email, String keyName) {
-        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
-        if (appEntry.isAclMode()) {
-            return aclLookup(appEntry, email, keyName, ADMIN);
         }
 
         return false;

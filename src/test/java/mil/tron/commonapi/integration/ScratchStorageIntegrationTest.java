@@ -5,6 +5,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.jayway.jsonpath.JsonPath;
 import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -1192,5 +1193,398 @@ public class ScratchStorageIntegrationTest {
                 assertThat(priv.getEmailAddress()).isEqualToIgnoringCase(user1.getEmail());
             }
         }
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testACLModeOperations() throws Exception {
+
+        /*
+         * Our setup is as follows:
+         *      + One Traditional Scratch App - App1
+         *          - Scratch Admin - jon@test.com
+         *      + One ACL Mode App - App2
+         *          - Scratch Admin - bill@test.com
+         *          - Two Keys - Key1 and Key2
+         *              o Key1_acl
+         *                - sara@test.com => KEY_ADMIN
+         *                - frank@test.com => KEY_WRITE
+         *                - greg@test.com => KEY_READ
+         *                - Key has implicitRead disabled
+         *              o Key2_acl
+         *                - jim@test.com => KEY_ADMIN
+         *                - Key has implicitRead enabled
+         *
+         * The test actions are as follows:
+                + Test that the KEY_WRITE priv cannot create keys (because an ACL does not exist)
+                + Test that the KEY_ADMIN priv cannot create keys (because an ACL does not exist)
+                + Test that the KEY_READ priv cannot create keys (because an ACL does not exist)
+                + Test that the KEY_ADMIN on App2/Key1 can write to Key1 (KEY_READ user verifies)
+                + Test that the KEY_WRITE on App2/Key1 can write to Key1 (KEY_READ and SCRATCH_ADMIN user verifies can read, random email can't read it)
+                + Test that the KEY_ADMIN can modify the Key1_acl (verify no one else can read the ACL except assigned KEY_ADMIN and SCRATCH_ADMIN)
+                + Test that the KEY_WRITE cannot modify the Key1_acl
+                + Test that the KEY_WRITE cannot read the Key1_acl
+                + Test that the KEY_READ cannot read the Key1_acl
+                + Test that the KEY_READ on App2/Key1 is denied a write access
+                + Test that KEY_ADMIN on App2/Key1 cannot write to App2/Key2
+                + Test that anyone can read from App2/Key2 since implicitRead is on
+                + Key2 admin turns off implicit read and tests that random person is now forbidden on reads
+         */
+
+        ScratchStorageUserDto jon = ScratchStorageUserDto
+                .builder()
+                .email("jon@test.com")
+                .build();
+
+        ScratchStorageUserDto bill = ScratchStorageUserDto
+                .builder()
+                .email("bill@test.com")
+                .build();
+
+        ScratchStorageUserDto sara = ScratchStorageUserDto
+                .builder()
+                .email("sara@test.com")
+                .build();
+
+        ScratchStorageUserDto frank = ScratchStorageUserDto
+                .builder()
+                .email("frank@test.com")
+                .build();
+
+        ScratchStorageUserDto greg = ScratchStorageUserDto
+                .builder()
+                .email("greg@test.com")
+                .build();
+
+        ScratchStorageUserDto jim = ScratchStorageUserDto
+                .builder()
+                .email("jim@test.com")
+                .build();
+
+        // make the two apps
+        UUID app1Id;
+        UUID app2Id;
+        MvcResult app1Result = mockMvc.perform(post(ENDPOINT_V2 + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(ScratchStorageAppRegistryDto.builder()
+                        .appName("App1")
+                        .aclMode(false)
+                        .appHasImplicitRead(false)
+                        .userPrivs(new ArrayList<>())
+                        .build())))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        app1Id = UUID.fromString(JsonPath.read(app1Result.getResponse().getContentAsString(), "$.id"));
+
+        MvcResult app2Result = mockMvc.perform(post(ENDPOINT_V2 + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(ScratchStorageAppRegistryDto.builder()
+                                .appName("App2")
+                                .aclMode(true)
+                                .appHasImplicitRead(false)
+                                .userPrivs(new ArrayList<>())
+                                .build())))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        app2Id = UUID.fromString(JsonPath.read(app2Result.getResponse().getContentAsString(), "$.id"));
+
+        // set up scratch admins
+        mockMvc.perform(patch(ENDPOINT_V2 + "apps/{appId}/user", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageAppUserPrivDto.builder()
+                        .email(jon.getEmail())
+                        .privilegeId(scratchAdminPrivId)
+                        .build())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch(ENDPOINT_V2 + "apps/{appId}/user", app2Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageAppUserPrivDto.builder()
+                        .email(bill.getEmail())
+                        .privilegeId(scratchAdminPrivId)
+                        .build())))
+                .andExpect(status().isOk());
+
+        // make Key1 and Key2 on App2 (and their acls)
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key1")
+                        .value("")
+                        .build())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key2")
+                        .value("")
+                        .build())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key1_acl")
+                        .value("{ \"implicitRead\": false, " +
+                                "\"access\": { \"sara@test.com\" : \"KEY_ADMIN\" ," +
+                                "\"frank@test.com\" : \"KEY_WRITE\" ," +
+                                "\"greg@test.com\": \"KEY_READ\" } }")
+                        .build())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key2_acl")
+                        .value("{ \"implicitRead\": true, " +
+                                "\"access\": { \"jim@test.com\" : \"KEY_ADMIN\" } }")
+                        .build())))
+                .andExpect(status().isOk());
+
+        // Test that the KEY_WRITE priv cannot create keys (because an ACL does not exist)
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(frank.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("newKey")
+                        .value("{}")
+                        .build())))
+                .andExpect(status().isNotFound());
+
+        // Test that the KEY_READ priv cannot create keys (because an ACL does not exist) - key is not found
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(greg.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("newKey")
+                        .value("{}")
+                        .build())))
+                .andExpect(status().isNotFound());
+
+        // Test that the KEY_ADMIN priv cannot create keys (because an ACL does not exist) - key is not found
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(sara.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("newKey")
+                        .value("{}")
+                        .build())))
+                .andExpect(status().isNotFound());
+
+
+        // Test that the KEY_ADMIN on App2/Key1 can write to Key1 (KEY_READ user verifies)
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(sara.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key1")
+                        .value("key1 value on app2")
+                        .build())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key1")
+                .header(AUTH_HEADER_NAME, createToken(greg.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.value", equalTo("key1 value on app2")));
+
+        // Test that the KEY_WRITE on App2/Key1 can write to Key1
+        //      (KEY_READ and SCRATCH_ADMIN user verifies can read, random email can't read it)
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(frank.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key1")
+                        .value("key1 value on app2 again")
+                        .build())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key1")
+                .header(AUTH_HEADER_NAME, createToken(greg.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.value", equalTo("key1 value on app2 again")));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key1")
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.value", equalTo("key1 value on app2 again")));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key1")
+                .header(AUTH_HEADER_NAME, createToken("stranger@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
+
+        // Test that the KEY_ADMIN can modify the Key1_acl
+        //   (verify no one else can read the ACL except assigned KEY_ADMIN and SCRATCH_ADMIN)
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(sara.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key1_acl")
+                        .value("{ \"implicitRead\": false, " +
+                                "\"access\": { \"sara@test.com\" : \"KEY_ADMIN\" ," +
+                                "\"frank@test.com\" : \"KEY_WRITE\" ," +
+                                "\"greg@test.com\": \"KEY_READ\", \"newguy@test.com\" : \"KEY_READ\" } }")
+                        .build())))
+                .andExpect(status().isOk());
+
+        // writer can't mutate an acl
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(frank.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key1_acl")
+                        .value("{ \"implicitRead\": false, " +
+                                "\"access\": { \"sara@test.com\" : \"KEY_ADMIN\" ," +
+                                "\"frank@test.com\" : \"KEY_WRITE\" ," +
+                                "\"greg@test.com\": \"KEY_READ\", \"newguy@test.com\" : \"KEY_READ\" } }")
+                        .build())))
+                .andExpect(status().isForbidden());
+
+        // reader cant mutate an acl
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(greg.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key1_acl")
+                        .value("{ \"implicitRead\": false, " +
+                                "\"access\": { \"sara@test.com\" : \"KEY_ADMIN\" ," +
+                                "\"frank@test.com\" : \"KEY_WRITE\" ," +
+                                "\"greg@test.com\": \"KEY_READ\", \"newguy@test.com\" : \"KEY_READ\" } }")
+                        .build())))
+                .andExpect(status().isForbidden());
+
+        // scratch admin can read an acl
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key1_acl")
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // admin of the acl can read the acl
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key1_acl")
+                .header(AUTH_HEADER_NAME, createToken(sara.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // a writer can't read an acl
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key1_acl")
+                .header(AUTH_HEADER_NAME, createToken(frank.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
+
+        // a reader can't read an acl
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key1_acl")
+                .header(AUTH_HEADER_NAME, createToken(greg.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
+
+        // App2/Key1 KEY_ADMIN can't access App2/Key2
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(sara.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key2")
+                        .value("some value")
+                        .build())))
+                .andExpect(status().isForbidden());
+
+        // App2's KEY_ADMIN can write to his key
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(jim.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key2")
+                        .value("some value")
+                        .build())))
+                .andExpect(status().isOk());
+
+        // test implicit read - for anyone on App2/Key2
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.value", equalTo("some value")));
+
+        // KEY_ADMIN on key2 turns off implicit read
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(jim.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key2_acl")
+                        .value("{ \"implicitRead\": false, " +
+                                "\"access\": { \"jim@test.com\" : \"KEY_ADMIN\" } }")
+                        .build())))
+                .andExpect(status().isOk());
+
+        // test implicit read - now denied
+        mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
     }
 }

@@ -42,12 +42,10 @@ public interface ScratchStorageService {
     ScratchStorageUserDto addNewScratchUser(ScratchStorageUserDto newUser);
     ScratchStorageUserDto deleteScratchUser(UUID id);
 
-    boolean userCanReadFromAppId(UUID appId, String email, boolean includeKey, String keyName);
-    boolean userCanWriteToAppId(UUID appId, String email, boolean includeKey, String keyName);
+    boolean userCanReadFromAppId(UUID appId, String email, String keyName);
+    boolean userCanWriteToAppId(UUID appId, String email, String keyName);
     boolean userHasAdminWithAppId(UUID appId, String email);
-    boolean userCanDeleteKeyForAppId(UUID appId, String email, boolean includeKey, String keyName);
-    boolean userIsKeyAdminForAcl(UUID appId, String email, String keyName);
-
+    boolean userCanDeleteKeyForAppId(UUID appId, String email, String keyName);
     boolean aclLookup(ScratchStorageAppRegistryEntry appEntry, String email, String keyName, String desiredRole);
 
     // JSON methods to treating values of specified keys like JSON
