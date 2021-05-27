@@ -11,8 +11,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.*;
-import mil.tron.commonapi.dto.jsondb.ChangeElementDto;
-import mil.tron.commonapi.dto.jsondb.QueryDto;
 import mil.tron.commonapi.exception.*;
 import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
@@ -377,45 +375,6 @@ public class ScratchStorageController {
 
         validateScratchDeleteRightsForUser(appId, false, "");
         return new ResponseEntity<>(scratchStorageService.deleteAllKeyValuePairsForAppId(appId), HttpStatus.OK);
-    }
-
-    @PostMapping("/{appId}/jsondb/{table}/query")
-    public ResponseEntity<Object> queryJsonTable(@PathVariable UUID appId,
-                                                 @PathVariable String table,
-                                                 @RequestBody @Valid QueryDto dto) {
-
-        validateScratchReadAccessForUser(appId, true, table);  // "table" is the "key" name here
-        return new ResponseEntity<>(scratchStorageService.queryJson(appId, table, dto.getQuery()), HttpStatus.OK);
-    }
-
-    @PostMapping("/{appId}/jsondb/{table}/insert")
-    public ResponseEntity<Object> insertIntoTable(@PathVariable UUID appId,
-                                                  @PathVariable String table,
-                                                  @RequestBody @Valid ChangeElementDto dto) {
-
-        validateScratchWriteAccessForUser(appId, true, table);
-        scratchStorageService.addElement(appId, table, dto.getJson());
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-    }
-
-    @PostMapping("/{appId}/jsondb/{table}/update")
-    public ResponseEntity<Object> updateJsonTable(@PathVariable UUID appId,
-                                                  @PathVariable String table,
-                                                  @RequestBody @Valid ChangeElementDto dto) {
-
-        validateScratchWriteAccessForUser(appId, true, table);
-        scratchStorageService.updateElement(appId, table, dto.getJson(), dto.getPath());
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-    }
-
-    @DeleteMapping("/{appId}/jsondb/{table}/delete")
-    public ResponseEntity<Object> deleteElement(@PathVariable UUID appId,
-                                                @PathVariable String table,
-                                                @RequestBody @Valid QueryDto dto) {
-
-        validateScratchDeleteRightsForUser(appId, true, table);
-        scratchStorageService.removeElement(appId, table, dto.getQuery());
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     // scratch app registration/management endpoints... only admins can manage these
