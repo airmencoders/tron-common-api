@@ -17,10 +17,7 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
-import mil.tron.commonapi.exception.InvalidFieldValueException;
-import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.*;
 import mil.tron.commonapi.exception.scratch.InvalidJsonPathQueryException;
 import mil.tron.commonapi.exception.scratch.JsonDbProcessingException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
@@ -40,9 +37,12 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     private static final String SCRATCH_WRITE_PRIV = "SCRATCH_WRITE";
     private static final String SCRATCH_READ_PRIV = "SCRATCH_READ";
     private static final String SCRATCH_ADMIN_PRIV = "SCRATCH_ADMIN";
-    private static final String WRITE = "WRITE"; //write role for acl-controlled keys
-    private static final String READ = "READ"; // read role for acl-controlled keys
-    private static final String ADMIN = "ADMIN";  // admin role for acl-controlled keys
+    private static final String ACL_LIST_NAME_APPENDIX = "_acl";
+    private static final String ACL_ACCESS_FIELD = "access";
+    private static final String ACL_IMPLICIT_READ_FIELD = "implicitRead";
+    private static final String WRITE = "KEY_WRITE"; //write role for acl-controlled keys
+    private static final String READ = "KEY_READ"; // read role for acl-controlled keys
+    private static final String ADMIN = "KEY_ADMIN";  // admin role for acl-controlled keys
     private static final String JSON_DB_KEY_TABLE_ERROR = "Cant find key/table with that name";
     private static final String JSON_TABLE_PARSE_ERROR = "Can't parse JSON in the table - %s";
     private static final String JSON_DB_SERIALIZATION_ERROR = "Error serializing table contents";
@@ -76,11 +76,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
      * Private helper to validate an app exists by Id
      *
      * @param appId UUID of application
+     * @returns the scratch storage app record
      */
-    private void validateAppId(UUID appId) {
-        if (!appRegistryRepo.existsById(appId)) {
-            throw new RecordNotFoundException("No application with ID: " + appId + " was found");
-        }
+    private ScratchStorageAppRegistryEntry validateAppId(UUID appId) {
+        return appRegistryRepo.findById(appId).orElseThrow(() ->
+            new RecordNotFoundException("No application with ID: " + appId + " was found"));
     }
 
     @Override
@@ -158,7 +158,12 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     @Override
     public ScratchStorageEntryDto deleteKeyValuePair(UUID appId, String key) {
 
-        validateAppId(appId);
+        ScratchStorageAppRegistryEntry appEntry = validateAppId(appId);
+
+        if (appEntry.isAclMode()) {
+            // look for _acl appended key to delete too
+            repository.deleteByAppIdAndKey(appId, key + ACL_LIST_NAME_APPENDIX);
+        }
 
         ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, key).orElseThrow(() ->
                 new RecordNotFoundException("Cannot delete specified record, record not found"));
@@ -467,7 +472,14 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         // respect aclMode first if its enabled
         if (appEntry.isAclMode() && includeKey) {
 
-            // reference the acl for WRITE disposition...
+            // if we're in ACL mode and were going to mutate an ACL itself, we have to be a KEY_ADMIN to do it
+            if (keyName.endsWith(ACL_LIST_NAME_APPENDIX)) {
+                return aclLookup(appEntry, email, keyName.split("_")[0], ADMIN);
+            }
+            else {
+                // otherwise we just need write permissions on the key to mutate it
+                return aclLookup(appEntry, email, keyName, WRITE);
+            }
         }
 
         for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
@@ -496,6 +508,124 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     }
 
     /**
+     * Utility function to set/un-set the ACL mode for the given app.
+     *
+     * @param appId         UUID of app to modify
+     * @param aclMode       value to set the aclMode field to
+     * @return the modified App record or throws exception if appId wasn't valid
+     */
+    @Override
+    public ScratchStorageAppRegistryDto setAclModeForApp(UUID appId, boolean aclMode) {
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+        appEntry.setAclMode(aclMode);
+        return dtoMapper.map(appRegistryRepo.save(appEntry), ScratchStorageAppRegistryDto.class);
+    }
+
+    /**
+     * For an appId that's in Acl Mode, this method looks up the ACL ("acl") and makes sure
+     * that the given email has desiredRole (or higher) for given keyName.  If the acl does not exist
+     * or its json structure is not valid, we throw appropriate error.
+     * @param appEntry the app were on
+     * @param email the email we're validating for
+     * @param keyName the key name
+     * @param desiredRole the role that the email should at least have
+     * @return true if access criteria is met otherwise false
+     */
+    @Override
+    public boolean aclLookup(ScratchStorageAppRegistryEntry appEntry,
+                             String email,
+                             String keyName,
+                             String desiredRole) {
+
+        if (!appEntry.isAclMode()) throw new InvalidScratchSpacePermissions("Given app expected ACL Mode");
+
+        // skip all checks if the requester is a SCRATCH_ADMIN, they can do anything within the app data
+        //  that way an admin can fix json problems/corruption that may occur
+        if (userHasAdminWithAppId(appEntry.getId(), email)) return true;
+
+        // the lookup function will throw if the associated "acl" key does not exist
+        String aclValue = this.getKeyValueEntryByAppId(appEntry.getId(), keyName + ACL_LIST_NAME_APPENDIX).getValue();
+
+        JsonNode aclNodes;
+        try {
+            aclNodes = MAPPER.readTree(aclValue);
+
+            // must have an implicitRead member - that is boolean
+            if (!aclNodes.has(ACL_IMPLICIT_READ_FIELD) || !aclNodes.get(ACL_IMPLICIT_READ_FIELD).isBoolean()) {
+                throw new InvalidFieldValueException(String.format("ACL for keyName %s missing implicitRead field or is not boolean", keyName));
+            }
+
+            // acl must have access field that is an array
+            if (!aclNodes.has(ACL_ACCESS_FIELD) || !aclNodes.get(ACL_ACCESS_FIELD).isObject()) {
+                throw new InvalidFieldValueException(String.format("ACL for keyName %s missing access field or is not an object", keyName));
+            }
+
+            switch (desiredRole) {
+                case READ:
+                    if (aclNodes.get(ACL_IMPLICIT_READ_FIELD).booleanValue()) return true;  // implicit read for this key for all
+                    if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
+                            && (aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(READ)
+                                || aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(WRITE)
+                                || aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(ADMIN))) {
+                            return true;
+                     }
+                    break;
+                case WRITE:
+                    if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
+                            && (aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(WRITE)
+                                || aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(ADMIN))) {
+                        return true;
+                    }
+                    break;
+                case ADMIN:
+                    if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
+                            && aclNodes.get(ACL_ACCESS_FIELD).get(email.toLowerCase()).textValue().equalsIgnoreCase(ADMIN)) {
+                        return true;
+                    }
+                    break;
+                default:
+                    throw new InvalidFieldValueException(String.format("ACL %s_acl has unknown permission in it", keyName));
+            }
+        }
+        catch (JsonProcessingException e) {
+            throw new InvalidFieldValueException(String.format("Could not parse the ACL json for keyName - %s", keyName));
+        }
+
+        return false;
+    }
+
+    /**
+     * Utility function used by the controller to check if a given user email has
+     * delete (destructive) rights on a particular key(s) in the given appId's space
+     *
+     * @param appId the appId to check against
+     * @param email the email to check for read access
+     * @param includeKey boolean to say whether to include 'keyName' in the determination (for acl mode)
+     * @param keyName key name to adjudicate for acl based access (should be null when 'includeKey' is false)
+     * @return true if user has read access else false
+     */
+    @Override
+    public boolean userCanDeleteKeyForAppId(UUID appId, String email, boolean includeKey, String keyName) {
+
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+
+        // respect aclMode first if its enabled
+        if (appEntry.isAclMode() && includeKey) {
+            return aclLookup(appEntry, email, keyName, ADMIN);
+        }
+
+        // if we get here, not in aclMode must be a SCRATCH_ADMIN to delete
+        for (ScratchStorageAppUserPriv priv : appEntry.getUserPrivs()) {
+            if (priv.getUser().getEmail().equalsIgnoreCase(email)
+                    && (priv.getPrivilege().getName().equals(SCRATCH_ADMIN_PRIV)))
+                return true;
+        }
+
+        return false;
+    }
+
+
+    /**
      * Utility function used by the controller to check if a given user email has
      * read access to the given appId's space
      *
@@ -512,8 +642,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
         // respect aclMode first if its enabled
         if (appEntry.isAclMode() && includeKey) {
-
-            // reference the acl for READ disposition...
+            return aclLookup(appEntry, email, keyName, READ);
         }
 
         // if this app has implicit read set to True, then we're done here...
@@ -526,6 +655,28 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                     || priv.getPrivilege().getName().equals(SCRATCH_WRITE_PRIV)
                     || priv.getPrivilege().getName().equals(SCRATCH_ADMIN_PRIV)))
                 return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Utility function used to tell if a requester is an ADMIN for an app that is in ACL Mode, so we can
+     * know whether to let them modify the respective key in the ACL.
+     * This method is called when we detect a write/mutation about to occur on this app's ACL key/value.
+     *
+     * This is not to be confused with SCRATCH_ADMIN...
+     *
+     * @param appId the appId to check against
+     * @param email the email to check for read access
+     * @param keyName key name to adjudicate ADMIN access for
+     * @return true if user has read access else false
+     */
+    @Override
+    public boolean userIsKeyAdminForAcl(UUID appId, String email, String keyName) {
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+        if (appEntry.isAclMode()) {
+            return aclLookup(appEntry, email, keyName, ADMIN);
         }
 
         return false;

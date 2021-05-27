@@ -4,6 +4,7 @@ import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.ScratchStorageEntryDto;
 import mil.tron.commonapi.dto.ScratchStorageUserDto;
+import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 
 import java.util.UUID;
 
@@ -33,6 +34,7 @@ public interface ScratchStorageService {
     ScratchStorageAppRegistryDto addUserPrivToApp(UUID appId, ScratchStorageAppUserPrivDto priv);
     ScratchStorageAppRegistryDto removeUserPrivFromApp(UUID appId, UUID appPrivIdEntry);
     ScratchStorageAppRegistryDto setImplicitReadForApp(UUID appId, boolean implicitRead);
+    ScratchStorageAppRegistryDto setAclModeForApp(UUID appId, boolean aclMode);
 
     // scratch storage users management
     Iterable<ScratchStorageUserDto> getAllScratchUsers();
@@ -43,6 +45,10 @@ public interface ScratchStorageService {
     boolean userCanReadFromAppId(UUID appId, String email, boolean includeKey, String keyName);
     boolean userCanWriteToAppId(UUID appId, String email, boolean includeKey, String keyName);
     boolean userHasAdminWithAppId(UUID appId, String email);
+    boolean userCanDeleteKeyForAppId(UUID appId, String email, boolean includeKey, String keyName);
+    boolean userIsKeyAdminForAcl(UUID appId, String email, String keyName);
+
+    boolean aclLookup(ScratchStorageAppRegistryEntry appEntry, String email, String keyName, String desiredRole);
 
     // JSON methods to treating values of specified keys like JSON
     String getKeyValueJson(UUID appId, String keyName, String jsonPathSpec);

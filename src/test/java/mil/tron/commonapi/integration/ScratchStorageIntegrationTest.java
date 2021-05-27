@@ -130,7 +130,7 @@ public class ScratchStorageIntegrationTest {
 
     private DashboardUser admin;
     private List<PrivilegeDto> privs;
-    private Long writePrivId;
+    private Long writePrivId, scratchAdminPrivId;
 
     /**
      * Private helper to create a JWT on the fly
@@ -189,6 +189,10 @@ public class ScratchStorageIntegrationTest {
         
         writePrivId = privs.stream()
                 .filter(item -> item.getName().equals("SCRATCH_WRITE"))
+                .collect(Collectors.toList()).get(0).getId();
+
+        scratchAdminPrivId = privs.stream()
+                .filter(item -> item.getName().equals("SCRATCH_ADMIN"))
                 .collect(Collectors.toList()).get(0).getId();
 
 
@@ -253,6 +257,17 @@ public class ScratchStorageIntegrationTest {
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(user2PrivDto)))
+                .andExpect(status().isOk());
+
+        // make the admin dude a SCRATCH_ADMIN in the TEST_APP
+        mockMvc.perform(patch(ENDPOINT + "apps/{appId}/user", entry2.getAppId())
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageAppUserPrivDto.builder()
+                        .email(admin.getEmail())
+                        .privilegeId(scratchAdminPrivId)
+                        .build())))
                 .andExpect(status().isOk());
 
         // go ahead and attach/persist the key-value entries for TEST_APP_NAME
@@ -465,26 +480,25 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appId", equalTo(entry1.getAppId().toString())));
 
-        // delete all of TEST_APPs key value pairs
+        // delete all of TEST_APPs key value pairs - FAILS because user2 isn't an admin
         mockMvc.perform(delete(ENDPOINT + "{appId}", entry2.getAppId())
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(status().isForbidden());
 
         // should be no key value pairs for TEST_APP
         mockMvc.perform(get(ENDPOINT + "{appId}", entry2.getAppId())
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$", hasSize(2)));
 
         // test that the get all keys return is empty array
         mockMvc.perform(get(ENDPOINT + "apps/{appId}/keys", entry2.getAppId())
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$", hasSize(2)));
     }
 
     @Transactional
@@ -502,12 +516,16 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appId", equalTo(entry1.getAppId().toString())));
 
-        // delete just one key value pairs from TEST_APP
+        // delete just one key value pairs from TEST_APP - fails as a not SCRATCH_ADMIN
         mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry2.getAppId(), entry2.getKey())
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.value", equalTo(entry2.getValue())));
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry2.getAppId(), entry2.getKey())
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail())))
+                .andExpect(status().isOk());
 
         // TEST_APP should have only 1 key value pair left
         mockMvc.perform(get(ENDPOINT + "{appId}", entry2.getAppId())
@@ -526,6 +544,11 @@ public class ScratchStorageIntegrationTest {
         mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry2.getAppId(), "bogus key")
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete(ENDPOINT + "{appId}/key/{keyValue}", entry2.getAppId(), "bogus key")
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail())))
                 .andExpect(status().isNotFound());
     }
 

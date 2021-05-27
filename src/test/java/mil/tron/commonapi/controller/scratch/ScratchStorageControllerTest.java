@@ -238,7 +238,7 @@ public class ScratchStorageControllerTest {
     void testDeleteAllByAppId() throws Exception {
         // test we can delete all key value pairs for an app given its ID
 
-        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
+        Mockito.when(service.userCanDeleteKeyForAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true); // let user have the privs to mutate
 
         Mockito.when(service.deleteAllKeyValuePairsForAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0)));
@@ -253,7 +253,7 @@ public class ScratchStorageControllerTest {
         // test we can delete a specific key value pair for an app given its ID
 
 
-        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
+        Mockito.when(service.userCanDeleteKeyForAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(true) // let user have the privs to mutate
                 .thenReturn(false);   // deny on second call
 
