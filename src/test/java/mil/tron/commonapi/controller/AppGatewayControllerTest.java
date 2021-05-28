@@ -17,7 +17,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import javax.servlet.http.HttpServletRequest;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -58,6 +61,78 @@ public class AppGatewayControllerTest {
 
         mockMvc.perform(get("/v1/app/mock/test3"))
                 .andExpect(status().isNotFound());
+    }
+    
+    @Test
+    @WithMockUser(username = "guardianangel", authorities = "mock/test-post")
+    void testHandlePostRequests() throws Exception {
+        AppSourceInterfaceDefinition appDef = new AppSourceInterfaceDefinition("Name", "mock.yml",
+                "http:////localhost", "mock");
+        AppSource appSource = AppSource.builder()
+                .name(appDef.getName())
+                .openApiSpecFilename(appDef.getOpenApiSpecFilename())
+                .appSourcePath(appDef.getAppSourcePath())
+                .build();
+
+        byte[] mockResult = "result".getBytes();
+        
+        Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
+                .thenReturn(mockResult);
+        Mockito.when(appGatewayService.addSourceDefMapping("mock-post", appDef))
+                .thenReturn(true);
+
+        this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);
+
+        mockMvc.perform(post("/v1/app/mock/test-post"))
+                .andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(username = "guardianangel", authorities = "mock/test-delete")
+    void testHandleDeleteRequests() throws Exception {
+        AppSourceInterfaceDefinition appDef = new AppSourceInterfaceDefinition("Name", "mock.yml",
+                "http:////localhost", "mock");
+        AppSource appSource = AppSource.builder()
+                .name(appDef.getName())
+                .openApiSpecFilename(appDef.getOpenApiSpecFilename())
+                .appSourcePath(appDef.getAppSourcePath())
+                .build();
+
+        byte[] mockResult = "result".getBytes();
+        
+        Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
+                .thenReturn(mockResult);
+        Mockito.when(appGatewayService.addSourceDefMapping("mock-delete", appDef))
+                .thenReturn(true);
+
+        this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);
+
+        mockMvc.perform(delete("/v1/app/mock/test-delete"))
+                .andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(username = "guardianangel", authorities = "mock/test-put")
+    void testHandlePutRequests() throws Exception {
+        AppSourceInterfaceDefinition appDef = new AppSourceInterfaceDefinition("Name", "mock.yml",
+                "http:////localhost", "mock");
+        AppSource appSource = AppSource.builder()
+                .name(appDef.getName())
+                .openApiSpecFilename(appDef.getOpenApiSpecFilename())
+                .appSourcePath(appDef.getAppSourcePath())
+                .build();
+
+        byte[] mockResult = "result".getBytes();
+        
+        Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
+                .thenReturn(mockResult);
+        Mockito.when(appGatewayService.addSourceDefMapping("mock-put", appDef))
+                .thenReturn(true);
+
+        this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);
+
+        mockMvc.perform(put("/v1/app/mock/test-put"))
+                .andExpect(status().isOk());
     }
 
     @Test

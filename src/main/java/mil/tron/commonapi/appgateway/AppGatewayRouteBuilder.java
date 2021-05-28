@@ -11,8 +11,8 @@ public class AppGatewayRouteBuilder extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         from (AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT)
-                .id(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT_ID)
-                .streamCaching()
-                .toD("${body}");
+	        .id(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT_ID)
+	        .streamCaching()
+	        .toD("${header.request-url}");
     }
 }

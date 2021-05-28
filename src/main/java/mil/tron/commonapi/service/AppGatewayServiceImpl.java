@@ -3,6 +3,7 @@ package mil.tron.commonapi.service;
 import mil.tron.commonapi.appgateway.AppGatewayRouteBuilder;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import org.apache.camel.CamelExecutionException;
+import org.apache.camel.Exchange;
 import org.apache.camel.FluentProducerTemplate;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AppGatewayServiceImpl implements AppGatewayService {
@@ -49,10 +51,22 @@ public class AppGatewayServiceImpl implements AppGatewayService {
         String endpointString = appSourceDef.getSourceUrl() + sendToPath + "?" + request.getQueryString() +
                 "&bridgeEndpoint=true";
         byte[] response = null;
+        
+        String body = "";
+        try {
+        	body = request.getReader().lines().collect(Collectors.joining());
+        } catch (Exception ex) {
+        	throw new ResponseStatusException(HttpStatus.valueOf(400), ex.getMessage());
+        }
+
         try {
             InputStream streamResponse = (InputStream) producer.to(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT)
-                    .withBody(endpointString)
-                    .request();
+				.withHeader("request-url", endpointString)
+				.withHeader(Exchange.HTTP_METHOD, request.getMethod())
+				.withHeader(Exchange.CONTENT_TYPE, request.getContentType())
+				.withBody(body)
+	            .request();
+            
             response = streamResponse.readAllBytes();
             streamResponse.close();
         }
