@@ -31,7 +31,23 @@ public class AppGatewayController {
 
     @Cacheable(keyGenerator = "gatewayKeyGenerator", cacheResolver = "gatewayCacheResolver")
     @PreAuthorizeGateway
-    public ResponseEntity<byte[]> handleGetRequests(HttpServletRequest requestObject, HttpServletResponse responseObject, @PathVariable Map<String, String> vars) //NOSONAR
+    public ResponseEntity<byte[]> handleCachedRequests(HttpServletRequest requestObject, HttpServletResponse responseObject, @PathVariable Map<String, String> vars) //NOSONAR
+            throws ResponseStatusException,
+                    IOException,
+                    InvalidAppSourcePermissions {
+
+        HttpHeaders headers = new HttpHeaders();
+        byte[] response = this.appGatewayService.sendRequestToAppSource(requestObject);
+        if (response != null ) {
+            headers.setContentLength(response.length);
+            return new ResponseEntity<>(response, headers, HttpStatus.OK);
+        }
+        byte[] emptyArray = new byte[0];
+        return new ResponseEntity<>(emptyArray, headers, HttpStatus.NO_CONTENT);
+    }
+
+    @PreAuthorizeGateway
+    public ResponseEntity<byte[]> handleRequests(HttpServletRequest requestObject, HttpServletResponse responseObject, @PathVariable Map<String, String> vars) //NOSONAR
             throws ResponseStatusException,
                     IOException,
                     InvalidAppSourcePermissions {

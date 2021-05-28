@@ -20,7 +20,9 @@ import org.apache.camel.builder.RouteBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.StringReader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -91,8 +93,15 @@ class AppGatewayServiceImplTest {
                 new AppSourceInterfaceDefinition("Mock", "mock.yml",
                         "localhost", "mock"));
         HttpServletRequest mockRequest = Mockito.mock(HttpServletRequest.class);
+        Mockito.when(mockRequest.getMethod()).thenReturn("GET");
+        Mockito.when(mockRequest.getReader()).thenReturn(new BufferedReader(new StringReader("Test Body")));
         Mockito.when(mockRequest.getRequestURI()).thenReturn("/api/v1/app/mock/mock-request");
         byte[] result = this.appGatewayService.sendRequestToAppSource(mockRequest);
+        assertThat(result).isNotNull();
+        
+        
+        Mockito.when(mockRequest.getMethod()).thenReturn("POST");
+        result = this.appGatewayService.sendRequestToAppSource(mockRequest);
         assertThat(result).isNotNull();
     }
 

@@ -17,3 +17,19 @@ paths:
       responses:
         '200':
           description: OK
+  /test-post:
+    post:
+      responses:
+        "200":
+          description: OK
+  /test-put:
+    put:
+      responses:
+        "200":
+          description: OK
+  /test-delete:
+    delete:
+      responses:
+        "200":
+          description: OK
+          
