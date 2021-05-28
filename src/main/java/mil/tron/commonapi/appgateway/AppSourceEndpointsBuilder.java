@@ -167,12 +167,13 @@ public class AppSourceEndpointsBuilder {
             .build();
 
         if (endpoint.getMethod().equals(RequestMethod.GET)) {
-            requestMappingHandlerMapping.
-                    registerMapping(requestMappingInfo, queryController,
-                            AppGatewayController.class.getDeclaredMethod("handleGetRequests",
-                                    HttpServletRequest.class, HttpServletResponse.class, Map.class)
-                    );
+        	requestMappingHandlerMapping.registerMapping(requestMappingInfo, queryController,
+        			AppGatewayController.class.getDeclaredMethod("handleCachedRequests", HttpServletRequest.class, HttpServletResponse.class, Map.class));
+        } else {
+            requestMappingHandlerMapping.registerMapping(requestMappingInfo, queryController,
+                    AppGatewayController.class.getDeclaredMethod("handleRequests", HttpServletRequest.class, HttpServletResponse.class, Map.class));
         }
+	      
     }
 
     private void addEndpointToSource(AppSourceEndpoint endpoint, AppSource appSource) {
