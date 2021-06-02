@@ -39,9 +39,6 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
-	
-	private final String apiPrefix;
-	private final String appSourcePrefix;
 
 	private AppClientUserRespository appClientRepository;
 	private DashboardUserService dashboardUserService;
@@ -51,14 +48,18 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private SubscriberService subscriberService;
 	private ModelMapper mapper = new ModelMapper();
 
+	@Value("${api-prefix.v1}")
+	private String apiPrefix;
+
+	@Value("${app-sources-prefix}")
+	private String appSourcePrefix;
+
 	public AppClientUserServiceImpl(AppClientUserRespository appClientRepository,
 									DashboardUserService dashboardUserService,
 									DashboardUserRepository dashboardUserRepository,
 									PrivilegeRepository privilegeRepository,
 									AppEndpointPrivRepository appEndpointPrivRepository,
-									SubscriberService subscriberService,
-									@Value("${api-prefix.v1}") String apiPrefix,
-									@Value("${app-sources-prefix}") String appSourcePrefix) {
+									SubscriberService subscriberService) {
 
 		this.appClientRepository = appClientRepository;
 		this.dashboardUserService = dashboardUserService;
@@ -75,9 +76,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		
 		MODEL_MAPPER.addConverter(convertPrivilegesToSet);
 		MODEL_MAPPER.addConverter(convertPrivilegesToArr);
-		
-		this.apiPrefix = apiPrefix;
-		this.appSourcePrefix = appSourcePrefix;
+
 	}
 	
 	@Override
