@@ -17,6 +17,7 @@ import mil.tron.commonapi.pubsub.EventManagerServiceImpl;
 import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
@@ -36,8 +37,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -438,6 +441,15 @@ class PersonServiceImplTest {
 			
 			Slice<PersonDto> personsSlice = personService.getPersonsSlice(null, PageRequest.of(0, 1));
 	    	assertThat(personsSlice.getContent()).hasSize(1);
+		}
+		
+		@Test
+		void getPersonsPageSpec() {
+			Mockito.when(repository.findAll(Mockito.any(Specification.class), Mockito.any(PageRequest.class)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testPerson)));
+			
+			Page<PersonDto> personsPage = personService.getPersonsPageSpec(null, new ArrayList<FilterCriteria>(), PageRequest.of(0, 1000));
+			assertThat(personsPage.getContent()).hasSize(1);
 		}
     }
 

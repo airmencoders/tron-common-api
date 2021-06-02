@@ -30,6 +30,8 @@ import mil.tron.commonapi.pubsub.messages.*;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
@@ -37,6 +39,7 @@ import org.modelmapper.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -1015,5 +1018,49 @@ public class OrganizationServiceImpl implements OrganizationService {
 	public Slice<OrganizationDto> getOrganizationsByTypeAndServiceSlice(String searchQuery, Unit type, Branch branch,
 			Pageable page) {
 		return findOrganizationsByTypeAndServiceSlice(searchQuery, type, branch, page).map(this::convertToDto);
+	}
+
+	@Override
+	public Page<OrganizationDto> getOrganizationsPageSpec(List<FilterCriteria> filterCriteria, Pageable page) {
+		/**
+		 * Transforms fields that need to join a table to get values.
+		 * Sets the field to the same field that a consumer would see
+		 * from the DTO.
+		 * 
+		 * EX: rank on PersonDto corresponds to the string abbreviation field of Rank
+		 */
+		filterCriteria = filterCriteria.stream().map(criteria -> {
+			switch (criteria.getField()) {
+				case "parentOrganization":
+					criteria.setField("id");
+					criteria.setJoinAttribute("parentOrganization");
+					break;
+					
+				case "subordinateOrganizations":
+					criteria.setField("id");
+					criteria.setJoinAttribute("subordinateOrganizations");
+					break;
+					
+				case "members":
+					criteria.setField("id");
+					criteria.setJoinAttribute("members");
+					break;
+					
+				case "leader":
+					criteria.setField("id");
+					criteria.setJoinAttribute("leader");
+					break;
+					
+				default:
+					break;
+			}
+				
+			return criteria;
+		}).collect(Collectors.toList());
+		
+		Specification<Organization> spec = SpecificationBuilder.getSpecificationFromFilters(filterCriteria);
+		Page<Organization> pagedResponse = repository.findAll(spec, page);
+		
+		return pagedResponse.map(this::convertToDto);
 	}
 }

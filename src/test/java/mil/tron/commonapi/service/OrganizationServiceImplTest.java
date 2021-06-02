@@ -15,6 +15,7 @@ import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
@@ -35,6 +36,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.jpa.domain.Specification;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -355,6 +358,15 @@ class OrganizationServiceImplTest {
 
 			organizationSlice = organizationService.getOrganizationsByTypeAndServiceSlice("", testOrg.getOrgType(), testOrg.getBranchType(), PageRequest.of(0, 1));
 			assertThat(organizationSlice.getContent()).hasSize(1);
+		}
+		
+		@Test
+		void getOrganizationsPageSpec() {
+			Mockito.when(repository.findAll(Mockito.any(Specification.class), Mockito.any(PageRequest.class)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrg)));
+			
+			Page<OrganizationDto> organizationsPage = organizationService.getOrganizationsPageSpec(new ArrayList<FilterCriteria>(), PageRequest.of(0, 1000));
+			assertThat(organizationsPage.getContent()).hasSize(1);
 		}
 	}
 

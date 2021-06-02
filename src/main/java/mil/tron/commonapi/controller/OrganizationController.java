@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
+import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
 import mil.tron.commonapi.dto.OrganizationDtoPaginationResponseWrapper;
@@ -31,6 +32,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -558,5 +560,37 @@ public class OrganizationController {
 		fields.put(OrganizationController.PEOPLE_PARAMS_FIELD, peopleFields);
 		fields.put(OrganizationController.ORGS_PARAMS_FIELD, orgFields);
 		return fields;
+	}
+	
+	@Operation(summary = "Retrieves organizations filtered", description = "Retrieves filtered list of organizations")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+					content = @Content(schema = @Schema(implementation = OrganizationDtoPaginationResponseWrapper.class)),
+					headers = @Header(
+							name="link",
+							description = "Contains the appropriate pagination links if application. "
+									+ "If no pagination query params given, then no pagination links will exist. "
+									+ "Possible rel values include: first, last, prev, next",
+							schema = @Schema(type = "string"))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request - most likely bad field or value given",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorizeRead
+	@PostMapping(
+			value = {"${api-prefix.v2}/organization/filter"},
+			consumes = MediaType.APPLICATION_JSON_VALUE,
+			produces = MediaType.APPLICATION_JSON_VALUE
+	)
+	public ResponseEntity<Page<OrganizationDto>> filterOrganizations(
+            @Parameter(description = "The conditions used to filter", required = true, content = @Content(schema = @Schema(implementation = FilterDto.class)))
+				@Valid @RequestBody FilterDto filter,
+                @ParameterObject Pageable page) {
+		
+		Page<OrganizationDto> results = organizationService.getOrganizationsPageSpec(filter.getFilterCriteria(), page);
+		
+		return new ResponseEntity<>(results, HttpStatus.OK);
 	}
 }

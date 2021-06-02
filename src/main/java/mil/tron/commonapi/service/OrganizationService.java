@@ -6,6 +6,7 @@ import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
 
 import java.util.List;
 import java.util.Map;
@@ -61,4 +62,6 @@ public interface OrganizationService {
 	
 	Slice<Organization> findOrganizationsByTypeAndServiceSlice(String searchQuery, Unit type, Branch branch, Pageable page);
 	Slice<OrganizationDto> getOrganizationsByTypeAndServiceSlice(String searchQuery, Unit type, Branch branch, Pageable page);
+	
+	Page<OrganizationDto> getOrganizationsPageSpec(List<FilterCriteria> filterCriteria, Pageable page);
 }

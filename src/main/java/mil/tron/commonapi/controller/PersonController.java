@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
+import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonFindDto;
@@ -30,6 +31,7 @@ import mil.tron.commonapi.service.PersonService;
 import mil.tron.commonapi.service.UserInfoService;
 
 import org.springdoc.api.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -385,5 +387,40 @@ public class PersonController {
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
 		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
+	}
+	
+	@Operation(summary = "Retrieves persons filtered", description = "Retrieves filtered list of persons")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+					content = @Content(schema = @Schema(implementation = PersonDtoPaginationResponseWrapper.class)),
+					headers = @Header(
+							name="link",
+							description = "Contains the appropriate pagination links if application. "
+									+ "If no pagination query params given, then no pagination links will exist. "
+									+ "Possible rel values include: first, last, prev, next",
+							schema = @Schema(type = "string"))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request - most likely bad field or value given",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorizeRead
+	@PostMapping(
+			value = {"${api-prefix.v2}/person/filter"},
+			consumes = MediaType.APPLICATION_JSON_VALUE,
+			produces = MediaType.APPLICATION_JSON_VALUE
+	)
+	public ResponseEntity<Page<PersonDto>> filterPerson(
+			@Parameter(name = "memberships", description = "Whether to include this person's organization memberships in the response", required = false)
+				@RequestParam(name = "memberships", required = false) boolean memberships,
+			@Parameter(name = "leaderships", description = "Whether to include the organization ids this person is the leader of in the response", required = false)
+                @RequestParam(name = "leaderships", required = false) boolean leaderships,
+            @Parameter(description = "The conditions used to filter", required = true, content = @Content(schema = @Schema(implementation = FilterDto.class)))
+				@Valid @RequestBody FilterDto filter,
+                @ParameterObject Pageable page) {
+		Page<PersonDto> results = personService.getPersonsPageSpec(PersonConversionOptions.builder().membershipsIncluded(memberships).leadershipsIncluded(leaderships).build(), filter.getFilterCriteria(), page);
+		
+		return new ResponseEntity<>(results, HttpStatus.OK);
 	}
 }
