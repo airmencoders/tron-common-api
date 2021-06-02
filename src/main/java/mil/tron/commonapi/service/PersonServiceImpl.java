@@ -396,35 +396,69 @@ public class PersonServiceImpl implements PersonService {
 		 * EX: rank on PersonDto corresponds to the string abbreviation field of Rank
 		 */
 		filterCriteria = filterCriteria.stream().map(criteria -> {
-			String fieldName = "";
-			String joinAttribute = "";
 			switch (criteria.getField()) {
 				case "rank":
-					fieldName = "abbreviation";
-					joinAttribute = "rank";
+					criteria.setField("abbreviation");
+					criteria.setJoinAttribute("rank");
 					break;
 					
 				case "organizationMemberships":
-					fieldName = "id";
-					joinAttribute = "organizationMemberships";
+					criteria.setField("id");
+					criteria.setJoinAttribute("organizationMemberships");
 					break;
 					
 				case "organizationLeaderships":
-					fieldName = "id";
-					joinAttribute = "organizationLeaderships";
+					criteria.setField("id");
+					criteria.setJoinAttribute("organizationLeaderships");
 					break;
 					
 				case "branch":
-					fieldName = "id";
-					joinAttribute = "rank";
+					criteria.setField("branchType");
+					criteria.setJoinAttribute("rank");
 					break;
 					
 				default:
 					break;
 			}
 				
-			criteria.setField(fieldName);
-			criteria.setJoinAttribute(joinAttribute);
+			return criteria;
+		}).collect(Collectors.toList());
+		
+		Specification<Person> spec = SpecificationBuilder.getSpecificationFromFilters(filterCriteria);
+		Page<Person> pagedResponse = repository.findAll(spec, page);
+		
+		return pagedResponse.map((Person entity) -> convertToDto(entity, options));
+	}
+	
+	public Page<PersonDto> test(PersonConversionOptions options, List<FilterCriteria> filterCriteria,
+			Pageable page) {
+		
+		filterCriteria = filterCriteria.stream().map(criteria -> {
+			switch (criteria.getField()) {
+				case "rank":
+					criteria.setField("abbreviation");
+					criteria.setJoinAttribute("rank");
+					break;
+					
+				case "organizationMemberships":
+					criteria.setField("id");
+					criteria.setJoinAttribute("organizationMemberships");
+					break;
+					
+				case "organizationLeaderships":
+					criteria.setField("id");
+					criteria.setJoinAttribute("organizationLeaderships");
+					break;
+					
+				case "branch":
+					criteria.setField("branchType");
+					criteria.setJoinAttribute("rank");
+					break;
+					
+				default:
+					break;
+			}
+				
 			return criteria;
 		}).collect(Collectors.toList());
 		

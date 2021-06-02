@@ -1033,27 +1033,25 @@ public class OrganizationServiceImpl implements OrganizationService {
 		 * EX: rank on PersonDto corresponds to the string abbreviation field of Rank
 		 */
 		filterCriteria = filterCriteria.stream().map(criteria -> {
-			String fieldName = "";
-			String joinAttribute = "";
 			switch (criteria.getField()) {
 				case PARENT_ORGANIZATION_FIELD:
-					fieldName = "id";
-					joinAttribute = PARENT_ORGANIZATION_FIELD;
+					criteria.setField("id");
+					criteria.setJoinAttribute(PARENT_ORGANIZATION_FIELD);
 					break;
 					
 				case "subordinateOrganizations":
-					fieldName = "id";
-					joinAttribute = "subordinateOrganizations";
+					criteria.setField("id");
+					criteria.setJoinAttribute("subordinateOrganizations");
 					break;
 					
 				case "members":
-					fieldName = "id";
-					joinAttribute = "members";
+					criteria.setField("id");
+					criteria.setJoinAttribute("members");
 					break;
 					
 				case "leader":
-					fieldName = "id";
-					joinAttribute = "leader";
+					criteria.setField("id");
+					criteria.setJoinAttribute("leader");
 					break;
 					
 				default:
