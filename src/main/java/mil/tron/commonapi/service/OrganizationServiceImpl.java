@@ -1022,6 +1022,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	@Override
 	public Page<OrganizationDto> getOrganizationsPageSpec(List<FilterCriteria> filterCriteria, Pageable page) {
+		String parentOrgField = "parentOrganization";
 		/**
 		 * Transforms fields that need to join a table to get values.
 		 * Sets the field to the same field that a consumer would see
@@ -1033,7 +1034,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			switch (criteria.getField()) {
 				case "parentOrganization":
 					criteria.setField("id");
-					criteria.setJoinAttribute("parentOrganization");
+					criteria.setJoinAttribute(parentOrgField);
 					break;
 					
 				case "subordinateOrganizations":

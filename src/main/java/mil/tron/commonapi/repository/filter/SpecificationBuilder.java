@@ -209,14 +209,15 @@ public class SpecificationBuilder {
 	 *         
 	 * @throws BadRequestException could not parse value into its associated database type
 	 */
-	private static Object castToRequiredType(Class fieldType, String fieldName, String value) {
+	@SuppressWarnings("unchecked")
+	private static Object castToRequiredType(Class<?> fieldType, String fieldName, String value) {
 		try {
 			if (fieldType.isAssignableFrom(Double.class)) {
 				return Double.valueOf(value);
 			} else if (fieldType.isAssignableFrom(Integer.class)) {
 				return Integer.valueOf(value);
 			} else if (Enum.class.isAssignableFrom(fieldType)) {
-				return Enum.valueOf(fieldType, value);
+				return Enum.valueOf(fieldType.asSubclass(Enum.class), value); //NOSONAR
 			} else if (UUID.class.isAssignableFrom(fieldType)) {
 				return UUID.fromString(value);
 			}
@@ -235,7 +236,7 @@ public class SpecificationBuilder {
 	 * @return list containing objects casted to {@code fieldType} if possible, else
 	 *         just returns back the list of strings {@code value}
 	 */
-	private static Object castToRequiredType(Class fieldType, String fieldName, List<String> values) {
+	private static Object castToRequiredType(Class<?> fieldType, String fieldName, List<String> values) {
 		List<Object> lists = new ArrayList<>();
 		for (String value : values) {
 			lists.add(castToRequiredType(fieldType, fieldName, value));

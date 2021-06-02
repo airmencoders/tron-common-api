@@ -566,13 +566,7 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-					content = @Content(schema = @Schema(implementation = OrganizationDtoPaginationResponseWrapper.class)),
-					headers = @Header(
-							name="link",
-							description = "Contains the appropriate pagination links if application. "
-									+ "If no pagination query params given, then no pagination links will exist. "
-									+ "Possible rel values include: first, last, prev, next",
-							schema = @Schema(type = "string"))),
+					content = @Content(schema = @Schema(implementation = OrganizationDtoPaginationResponseWrapper.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Bad request - most likely bad field or value given",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
