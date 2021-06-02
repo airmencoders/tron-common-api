@@ -7,6 +7,7 @@ import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
 import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
+import mil.tron.commonapi.service.utility.IstioHeaderUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -179,11 +180,11 @@ public class EventPublisherTest {
 
     @Test
     void testExtractNameSpaceFromURI() {
-        assertEquals("tron-puckboard", publisher.extractSubscriberNamespace("http://puckboard-api-service.tron-puckboard.svc.cluster.local/puckboard-api/v1"));
-        assertEquals("", publisher.extractSubscriberNamespace("http://cvc.cluster.local/puckboard-api/v1"));
-        assertEquals("", publisher.extractSubscriberNamespace("http://svc.cluster.local/puckboard-api/v1"));
-        assertEquals("3000", publisher.extractSubscriberNamespace("http://localhost:3000"));
-        assertEquals("", publisher.extractSubscriberNamespace(null));
+        assertEquals("tron-puckboard", IstioHeaderUtils.extractSubscriberNamespace("http://puckboard-api-service.tron-puckboard.svc.cluster.local/puckboard-api/v1"));
+        assertEquals("", IstioHeaderUtils.extractSubscriberNamespace("http://cvc.cluster.local/puckboard-api/v1"));
+        assertEquals("", IstioHeaderUtils.extractSubscriberNamespace("http://svc.cluster.local/puckboard-api/v1"));
+        assertEquals("3000", IstioHeaderUtils.extractSubscriberNamespace("http://localhost:3000"));
+        assertEquals("", IstioHeaderUtils.extractSubscriberNamespace(null));
 
         assertEquals("tron-puckboard", publisher.extractNamespace("By=spiffe://cluster.local/ns/tron-common-api/sa/default;Hash=blah;Subject=\"\";URI=spiffe://cluster.local/ns/tron-puckboard/sa/default"));
         assertEquals("3000", publisher.extractNamespace("By=spiffe://cluster.local/ns/tron-common-api/sa/default;Hash=blah;Subject=\"\";URI=spiffe://localhost:3000"));

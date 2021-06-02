@@ -10,6 +10,7 @@ public interface SubscriberService {
 
     Iterable<SubscriberDto> getAllSubscriptions();
     SubscriberDto getSubscriberById(UUID id);
+    boolean subscriptionExists(UUID id);
     SubscriberDto upsertSubscription(SubscriberDto subscriber);
     void cancelSubscription(UUID id);
 

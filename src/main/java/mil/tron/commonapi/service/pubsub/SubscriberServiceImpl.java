@@ -42,6 +42,11 @@ public class SubscriberServiceImpl implements SubscriberService {
     }
 
     @Override
+    public boolean subscriptionExists(UUID id) {
+        return subscriberRepository.existsById(id);
+    }
+
+    @Override
     public SubscriberDto upsertSubscription(SubscriberDto subscriber) {
         if (subscriber.getId() == null) {
             subscriber.setId(UUID.randomUUID());

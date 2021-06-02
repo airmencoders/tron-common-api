@@ -7,6 +7,7 @@ import mil.tron.commonapi.dto.appclient.AppClientUserDetailsDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.appclient.AppEndpointClientInfoDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
@@ -18,6 +19,8 @@ import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+import mil.tron.commonapi.service.pubsub.SubscriberService;
+import mil.tron.commonapi.service.utility.IstioHeaderUtils;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.modelmapper.Converter;
@@ -45,6 +48,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private PrivilegeRepository privilegeRepository;
 	private DashboardUserRepository dashboardUserRepository;
 	private AppEndpointPrivRepository appEndpointPrivRepository;
+	private SubscriberService subscriberService;
 	private ModelMapper mapper = new ModelMapper();
 
 	public AppClientUserServiceImpl(AppClientUserRespository appClientRepository,
@@ -52,6 +56,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 									DashboardUserRepository dashboardUserRepository,
 									PrivilegeRepository privilegeRepository,
 									AppEndpointPrivRepository appEndpointPrivRepository,
+									SubscriberService subscriberService,
 									@Value("${api-prefix.v1}") String apiPrefix,
 									@Value("${app-sources-prefix}") String appSourcePrefix) {
 
@@ -60,7 +65,8 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		this.dashboardUserRepository = dashboardUserRepository;
 		this.privilegeRepository = privilegeRepository;
 		this.appEndpointPrivRepository = appEndpointPrivRepository;
-		
+		this.subscriberService = subscriberService;
+
 		Converter<List<Privilege>, Set<Privilege>> convertPrivilegesToSet = 
 				((MappingContext<List<Privilege>, Set<Privilege>> context) -> new HashSet<>(context.getSource()));
 		
@@ -333,6 +339,31 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Checks if "user" is the app itself associated with given subscription ID or if the "user"
+	 * is a developer for the app-client associated with given subscription ID
+	 * @param subscriptionId the subscription ID
+	 * @param user the user name from request (could be the app client or a user's email)
+	 * @return true if above criteria is met
+	 */
+	@Override
+	public boolean userIsAppClientDeveloperForAppSubscription(UUID subscriptionId, String user) {
+		SubscriberDto sub = subscriberService.getSubscriberById(subscriptionId);
+
+		// use a helper from the event publisher to get the app client name from the subscriber address
+		String appName = IstioHeaderUtils.extractSubscriberNamespace(sub.getSubscriberAddress());
+
+		// if the user from request is the app itself that owns this id then return true,
+		if (user.equalsIgnoreCase(appName)) return true;
+
+		// otherwise see if this user is an email associated with a developer for this app client
+		AppClientUser app = appClientRepository.findByNameIgnoreCase(appName)
+				.orElseThrow(() -> new RecordNotFoundException(String.format("No app with name %s found", appName)));
+
+		return userIsAppClientDeveloperForApp(app.getId(), user);
+
 	}
 
 	/**
