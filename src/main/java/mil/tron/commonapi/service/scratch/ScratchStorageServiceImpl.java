@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jayway.jsonpath.*;
-import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
-import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.ScratchStorageEntryDto;
@@ -40,9 +38,6 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     private static final String WRITE = "KEY_WRITE"; //write role for acl-controlled keys
     private static final String READ = "KEY_READ"; // read role for acl-controlled keys
     private static final String ADMIN = "KEY_ADMIN";  // admin role for acl-controlled keys
-    private static final String JSON_DB_KEY_TABLE_ERROR = "Cant find key/table with that name";
-    private static final String JSON_TABLE_PARSE_ERROR = "Can't parse JSON in the table - %s";
-    private static final String JSON_DB_SERIALIZATION_ERROR = "Error serializing table contents";
     private ScratchStorageRepository repository;
     private ScratchStorageAppRegistryEntryRepository appRegistryRepo;
     private ScratchStorageUserRepository scratchUserRepo;
@@ -51,10 +46,6 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     private DtoMapper dtoMapper;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final Configuration configuration = Configuration.builder()
-            .jsonProvider(new JacksonJsonNodeJsonProvider())
-            .mappingProvider(new JacksonMappingProvider())
-            .build();
 
     public ScratchStorageServiceImpl(ScratchStorageRepository repository,
                                      ScratchStorageAppRegistryEntryRepository appRegistryRepo,
@@ -533,8 +524,6 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                              String keyName,
                              String desiredRole) {
 
-        if (!appEntry.isAclMode()) throw new InvalidScratchSpacePermissions("Given app expected ACL Mode");
-
         // skip all checks if the requester is a SCRATCH_ADMIN, they can do anything within the app data
         //  that way an admin can fix json problems/corruption that may occur
         if (userHasAdminWithAppId(appEntry.getId(), email)) return true;
@@ -563,37 +552,41 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 return false;
             }
 
-            switch (desiredRole) {
-                case READ:
-                    if (aclNodes.get(ACL_IMPLICIT_READ_FIELD).booleanValue()) return true;  // implicit read for this key for all
-                    if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
-                            && (aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(READ)
-                                || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(WRITE)
-                                || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN))) {
-                            return true;
-                     }
-                    break;
-                case WRITE:
-                    if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
-                            && (aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(WRITE)
-                                || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN))) {
-                        return true;
-                    }
-                    break;
-                case ADMIN:
-                    if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
-                            && aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN)) {
-                        return true;
-                    }
-                    break;
-                default:
-                    throw new InvalidFieldValueException(String.format("ACL %s_acl has unknown permission in it", keyName));
-            }
+            return validateAclAccessLevel(email, keyName, desiredRole, aclNodes);
         }
         catch (JsonProcessingException e) {
             throw new InvalidFieldValueException(String.format("Could not parse the ACL json for keyName - %s", keyName));
         }
 
+    }
+
+    private boolean validateAclAccessLevel(String email, String keyName, String desiredRole, JsonNode aclNodes) {
+        switch (desiredRole) {
+            case READ:
+                if (aclNodes.get(ACL_IMPLICIT_READ_FIELD).booleanValue()) return true;
+                if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
+                        && (aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(READ)
+                            || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(WRITE)
+                            || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN))) {
+                    return true;
+                 }
+                break;
+            case WRITE:
+                if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
+                        && (aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(WRITE)
+                            || aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN))) {
+                    return true;
+                }
+                break;
+            case ADMIN:
+                if (aclNodes.get(ACL_ACCESS_FIELD).has(email.toLowerCase())
+                        && aclNodes.get(ACL_ACCESS_FIELD).get(email).textValue().equals(ADMIN)) {
+                    return true;
+                }
+                break;
+            default:
+                throw new InvalidFieldValueException(String.format("ACL %s_acl has unknown permission in it", keyName));
+        }
         return false;
     }
 
