@@ -442,6 +442,12 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
     }
 
+    /* Helper to get a keyname minus the ACL portion (_acl) */
+    private String keyNameFromAclKey(String key) {
+        return key.split("_acl$")[0];
+    }
+
+
     /**
      * Utility function used by the controller to check if a given user email has
      * write access to the given appId's space
@@ -461,7 +467,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
             // if we're in ACL mode and were going to mutate an ACL itself, we have to be a KEY_ADMIN to do it
             if (keyName.endsWith(ACL_LIST_NAME_APPENDIX)) {
-                return aclLookup(appEntry, email, keyName.split("_")[0], ADMIN);
+                return aclLookup(appEntry, email, keyNameFromAclKey(keyName), ADMIN);
             }
             else {
                 // otherwise we just need write permissions on the key to mutate it
@@ -540,7 +546,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 throw new InvalidFieldValueException(String.format("ACL for keyName %s missing implicitRead field or is not boolean", keyName));
             }
 
-            // acl must have access field that is an array
+            // acl must have access field that is an object
             if (!aclNodes.has(ACL_ACCESS_FIELD) || !aclNodes.get(ACL_ACCESS_FIELD).isObject()) {
                 throw new InvalidFieldValueException(String.format("ACL for keyName %s missing access field or is not an object", keyName));
             }
@@ -639,7 +645,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
 
             // restrict ADMINs of the KEYs to be able to read ACLs
             if (keyName.endsWith(ACL_LIST_NAME_APPENDIX)) {
-                return aclLookup(appEntry, email, keyName.split("_")[0], ADMIN);
+                return aclLookup(appEntry, email, keyNameFromAclKey(keyName), ADMIN);
             }
             else {
                 return aclLookup(appEntry, email, keyName, READ);
