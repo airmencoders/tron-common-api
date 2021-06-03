@@ -20,6 +20,8 @@ public interface ScratchStorageRepository extends CrudRepository<ScratchStorageE
     @Query(value = "select key from scratch_storage where app_id = :appId", nativeQuery = true)
     Iterable<String> findAllKeysForAppId(UUID appId);
 
+    boolean existsByAppIdAndKey(UUID appId, String key);
+
     @Transactional
     void deleteByAppIdAndKey(UUID appId, String key);
 }

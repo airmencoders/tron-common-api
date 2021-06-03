@@ -48,6 +48,14 @@ public class ScratchStorageAppRegistryEntry {
     private boolean appHasImplicitRead = false;
 
     /**
+     * Whether we use ACLs to control access to this app's key-values
+     */
+    @Getter
+    @Setter
+    @Column(name = "acl_mode")
+    private boolean aclMode = false;
+
+    /**
      * Collection of user privs for this registered app name
      */
     @Getter
