@@ -1,7 +1,10 @@
 package mil.tron.commonapi.service.scratch;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.jayway.jsonpath.JsonPath;
 import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
 import mil.tron.commonapi.dto.ScratchStorageEntryDto;
@@ -16,18 +19,18 @@ import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.scratch.InvalidJsonPathQueryException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageUserRepository;
+import mil.tron.commonapi.service.PersonConversionOptions;
 import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
@@ -37,6 +40,8 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 public class ScratchStorageServiceImplTest {
@@ -150,14 +155,14 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testGetAllEntriesByApp() {
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
         Mockito.when(repository.findAllByAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0)));
         assertEquals(Lists.newArrayList(mapper.map(entries.get(0), ScratchStorageEntryDto.class)), service.getAllEntriesByApp(entries.get(0).getAppId()));
     }
 
     @Test
     void testGetAllKeysForApp() {
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
         Mockito.when(repository.findAllKeysForAppId(entries.get(0).getAppId())).thenReturn(Lists.newArrayList(entries.get(0).getKey()));
         assertEquals(Lists.newArrayList(entries.get(0).getKey()), service.getAllKeysForAppId(entries.get(0).getAppId()));
     }
@@ -187,7 +192,7 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testGetKeyValueByAppId() {
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
         Mockito.when(repository.findByAppIdAndKey(entries.get(0).getId(), "hello"))
                 .thenReturn(Optional.of(entries.get(0)))
                 .thenReturn(Optional.empty());
@@ -217,7 +222,7 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testSetKeyValuePair() {
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
         Mockito.when(repository.findByAppIdAndKey(entries.get(0).getAppId(), entries.get(0).getKey()))
                 .thenReturn(Optional.of(entries.get(0)))  // first time record exists
                 .thenReturn(Optional.empty()); // next time it doesn't
@@ -233,12 +238,12 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testDeleteKeyValuePairByAppId() {
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
         Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
                 .thenReturn(Optional.of(entries.get(0))) // return an item first call
                 .thenReturn(Optional.empty());  // return not found second call
 
-        Mockito.doNothing().when(repository).deleteByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString());
+        doNothing().when(repository).deleteByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString());
 
         assertEquals(mapper.map(entries.get(0), ScratchStorageEntryDto.class), service.deleteKeyValuePair(entries.get(0).getId(), entries.get(0).getKey()));
         assertThrows(RecordNotFoundException.class, () -> service.deleteKeyValuePair(entries.get(0).getId(), entries.get(0).getKey()));
@@ -246,9 +251,9 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testDeleteAllPairsByAppId() {
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
         Mockito.when(repository.findAllByAppId(Mockito.any(UUID.class))).thenReturn(entries);
-        Mockito.doNothing().when(repository).deleteById(Mockito.any(UUID.class));
+        doNothing().when(repository).deleteById(Mockito.any(UUID.class));
 
         assertEquals(entries
                 .stream()
@@ -311,11 +316,7 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testDeleteRegisteredAppEntry() {
-        Mockito.doNothing().when(appRegistryRepo).deleteById(Mockito.any(UUID.class));
-
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class)))
-                .thenReturn(true);
-
+        doNothing().when(appRegistryRepo).deleteById(Mockito.any(UUID.class));
         ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
                 .builder()
                 .id(UUID.randomUUID())
@@ -325,6 +326,7 @@ public class ScratchStorageServiceImplTest {
         ScratchStorageAppRegistryDto newDto = mapper.map(newEntry, ScratchStorageAppRegistryDto.class);
 
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
+                .thenReturn(Optional.of(newEntry))
                 .thenReturn(Optional.of(newEntry))
                 .thenReturn(Optional.empty());
 
@@ -411,7 +413,7 @@ public class ScratchStorageServiceImplTest {
                 .build();
 
         Mockito.when(appPrivRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(priv));
-        Mockito.doNothing().when(appPrivRepo).deleteById(Mockito.any(UUID.class));
+        doNothing().when(appPrivRepo).deleteById(Mockito.any(UUID.class));
 
         Mockito.when(appRegistryRepo.save(Mockito.any(ScratchStorageAppRegistryEntry.class))).then(returnsFirstArg());
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
@@ -475,7 +477,7 @@ public class ScratchStorageServiceImplTest {
                 .thenReturn(Optional.of(user1))
                 .thenReturn(Optional.empty());
 
-        Mockito.doNothing().when(scratchUserRepo).deleteById(Mockito.any(UUID.class));
+        doNothing().when(scratchUserRepo).deleteById(Mockito.any(UUID.class));
 
         assertEquals(user1.getId(), service.deleteScratchUser(user1.getId()).getId());
         assertThrows(RecordNotFoundException.class, () -> service.deleteScratchUser(user1.getId()));
@@ -510,11 +512,11 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privAdmin)
                 .build());
 
-        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
-        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), user1.getEmail()));
-        assertFalse(service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), adminUser.getEmail(), null));
+        assertTrue(service.userCanWriteToAppId(registeredApps.get(0).getId(), user1.getEmail(), null));
+        assertFalse(service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+                () -> service.userCanWriteToAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
     }
 
     @Test
@@ -560,12 +562,12 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privWrite)
                 .build());
 
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail()));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail()));
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail(), null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail(), null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail(), null));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
     }
 
     @Test
@@ -612,20 +614,20 @@ public class ScratchStorageServiceImplTest {
                 .privilege(privWrite)
                 .build());
 
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail()));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail()));
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail()));
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), adminUser.getEmail(), null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), writeUser.getEmail(), null));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), user1.getEmail(), null));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
         assertThrows(RecordNotFoundException.class,
-                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+                () -> service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
 
         // turn on implicit read
         registeredApps.get(0).setAppHasImplicitRead(true);
-        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertTrue(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
 
         // turn off implicit read
         registeredApps.get(0).setAppHasImplicitRead(false);
-        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail()));
+        assertFalse(service.userCanReadFromAppId(registeredApps.get(0).getId(), someOtherNonRegisteredUser.getEmail(), null));
     }
 
     @Test
@@ -680,7 +682,7 @@ public class ScratchStorageServiceImplTest {
                 .value("{ \"name: \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
                 .build();
 
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
         Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
                 .thenReturn(Optional.of(entry))
                 .thenReturn(Optional.of(entry))
@@ -721,7 +723,7 @@ public class ScratchStorageServiceImplTest {
 
         final ScratchStorageEntry[] updatedValue = {null};
 
-        Mockito.when(appRegistryRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
         Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
                 .thenReturn(Optional.of(entry))
                 .thenReturn(Optional.of(entry))
@@ -739,4 +741,106 @@ public class ScratchStorageServiceImplTest {
         assertThrows(InvalidFieldValueException.class, () -> service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.age"));
         assertThrows(InvalidFieldValueException.class, () -> service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.name"));
     }
+
+    @Test
+    void testAclModeSettingToggle() {
+
+        // test that placing a scratch app into and out of ACL Mode
+        ScratchStorageAppRegistryEntry testApp = registeredApps.get(0);
+        assertFalse(testApp.isAclMode());
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any())).thenReturn(Optional.of(testApp));
+
+        Mockito.when(appRegistryRepo.save(Mockito.any())).then(returnsFirstArg());
+
+        ScratchStorageAppRegistryDto app = service.setAclModeForApp(testApp.getId(), true);
+        assertTrue(app.isAclMode());
+
+        app = service.setAclModeForApp(testApp.getId(), false);
+        assertFalse(app.isAclMode());
+    }
+
+    @Test
+    void testUserCanReadFromAppInAclMode() {
+
+        ScratchStorageAppRegistryEntry testApp = registeredApps.get(0);
+        testApp.setAclMode(true);
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any())).thenReturn(Optional.of(testApp));
+        Mockito.when(repository.findByAppIdAndKey(testApp.getId(), "users_acl"))
+                // no ACL found
+                .thenReturn(Optional.empty())
+
+                // invalid json
+                .thenReturn(Optional.of(ScratchStorageEntry
+                        .builder()
+                        .key("users_acl")
+                        .value("{ ")
+                        .build()))
+
+                // valid json but missing fields
+                .thenReturn(Optional.of(ScratchStorageEntry
+                        .builder()
+                        .key("users_acl")
+                        .value("{ \"users\" : { \"access\" : { \"test@test.com\": \"KEY_READ\" } }}")
+                        .build()))
+
+                // valid json but missing fields
+                .thenReturn(Optional.of(ScratchStorageEntry
+                        .builder()
+                        .key("users_acl")
+                        .value("{ \"implicitRead\" : false, \"access\" : [ \"test@test.com\" ] }")
+                        .build()))
+
+                // valid json but missing fields
+                .thenReturn(Optional.of(ScratchStorageEntry
+                        .builder()
+                        .key("users_acl")
+                        .value("{ \"implicitRead\" : false, \"roles\" : { \"test@test.com\": \"KEY_READ\" } }")
+                        .build()))
+
+                // valid json but unknown permissions
+                .thenReturn(Optional.of(ScratchStorageEntry
+                        .builder()
+                        .key("users_acl")
+                        .value("{ \"implicitRead\" : false, \"access\" : { \"test@test.com\": \"SUPERADMIN\" } }")
+                        .build()))
+
+                // valid json
+                .thenReturn(Optional.of(ScratchStorageEntry
+                        .builder()
+                        .key("users_acl")
+                        .value("{ \"implicitRead\" : false, \"access\" : { \"test@test.com\": \"KEY_READ\" } }")
+                        .build()));
+
+        assertThrows(RecordNotFoundException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com",  "users"));
+        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+        assertThrows(InvalidFieldValueException.class, () -> service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+        assertFalse(service.userCanWriteToAppId(testApp.getId(), "test@test.com", "users"));
+        assertTrue(service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+    }
+
+    @Test
+    void testUserCanWriteToAppInAclMode() {
+
+        ScratchStorageAppRegistryEntry testApp = registeredApps.get(0);
+        testApp.setAclMode(true);
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any())).thenReturn(Optional.of(testApp));
+        Mockito.when(repository.findByAppIdAndKey(testApp.getId(), "users_acl"))
+                .thenReturn(Optional.of(ScratchStorageEntry
+                        .builder()
+                        .key("users_acl")
+                        .value("{ \"implicitRead\" : false, \"access\" : { \"test@test.com\": \"KEY_WRITE\" } }")
+                        .build()));
+
+        assertTrue(service.userCanWriteToAppId(testApp.getId(), "test@test.com", "users"));
+        assertFalse(service.userCanWriteToAppId(testApp.getId(), "test@test.com", "users_acl"));
+        assertFalse(service.userCanWriteToAppId(testApp.getId(), "dude@test.com", "users"));
+        assertTrue(service.userCanReadFromAppId(testApp.getId(), "test@test.com", "users"));
+    }
+
+
 }

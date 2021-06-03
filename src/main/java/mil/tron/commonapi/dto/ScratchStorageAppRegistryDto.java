@@ -105,6 +105,10 @@ public class ScratchStorageAppRegistryDto {
     private boolean appHasImplicitRead = false;
 
     @Getter
+    @Setter
+    private boolean aclMode = false;
+
+    @Getter
     private List<UserWithPrivs> userPrivs;
 
     @JsonSetter("userPrivs")
