@@ -63,8 +63,6 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
 	
-	private static final String PARENT_ORGANIZATION_FIELD = "parentOrganization";
-	
 	private static final Map<Unit, Set<String>> validProperties = Map.of(
 			Unit.FLIGHT, fields(Flight.class),
 			Unit.GROUP, fields(Group.class),
@@ -266,7 +264,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 					Method setterMethod = organization.getClass().getMethod(setterName, field.getType());
 					if (k.equals("id")) {
 						throw new InvalidRecordUpdateRequest("Cannot set/modify this record ID field");
-					} else if (k.equals(PARENT_ORGANIZATION_FIELD)) {
+					} else if (k.equals("parentOrganization")) {
 						setOrgParentConditionally(organization, v);
 					} else if (v == null) {
 						ReflectionUtils.invokeMethod(setterMethod, organization, (Object) null);
@@ -1026,32 +1024,28 @@ public class OrganizationServiceImpl implements OrganizationService {
 	@Override
 	public Page<OrganizationDto> getOrganizationsPageSpec(List<FilterCriteria> filterCriteria, Pageable page) {
 		/**
-		 * Transforms fields that need to join a table to get values.
-		 * Sets the field to the same field that a consumer would see
-		 * from the DTO.
+		 * Transforms criteria for fields to account for join attributes.
+		 * Takes the name of the field from the DTO and transforms
+		 * the criteria to use the field name from the entity.
 		 * 
-		 * EX: rank on PersonDto corresponds to the string abbreviation field of Rank
+		 * EX: rank field on PersonDto corresponds to the string Abbreviation field of Rank
 		 */
 		filterCriteria = filterCriteria.stream().map(criteria -> {
 			switch (criteria.getField()) {
-				case PARENT_ORGANIZATION_FIELD:
-					criteria.setField("id");
-					criteria.setJoinAttribute(PARENT_ORGANIZATION_FIELD);
+				case OrganizationDto.PARENT_ORG_FIELD:
+					criteria.transformToJoinAttribute(Organization.ID_FIELD, Organization.PARENT_ORG_FIELD);
 					break;
 					
-				case "subordinateOrganizations":
-					criteria.setField("id");
-					criteria.setJoinAttribute("subordinateOrganizations");
+				case OrganizationDto.SUB_ORGS_FIELD:
+					criteria.transformToJoinAttribute(Organization.ID_FIELD, Organization.SUB_ORGS_FIELD);
 					break;
 					
-				case "members":
-					criteria.setField("id");
-					criteria.setJoinAttribute("members");
+				case OrganizationDto.MEMBERS_FIELD:
+					criteria.transformToJoinAttribute(Person.ID_FIELD, Organization.MEMBERS_FIELD);
 					break;
 					
-				case "leader":
-					criteria.setField("id");
-					criteria.setJoinAttribute("leader");
+				case OrganizationDto.LEADER_FIELD:
+					criteria.transformToJoinAttribute(Person.ID_FIELD, Organization.LEADER_FIELD);
 					break;
 					
 				default:

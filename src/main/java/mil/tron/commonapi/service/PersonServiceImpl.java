@@ -10,6 +10,7 @@ import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.persons.*;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
@@ -389,70 +390,28 @@ public class PersonServiceImpl implements PersonService {
 			Pageable page) {
 		
 		/**
-		 * Transforms fields that need to join a table to get values.
-		 * Sets the field to the same field that a consumer would see
-		 * from the DTO.
+		 * Transforms criteria for fields to account for join attributes.
+		 * Takes the name of the field from the DTO and transforms
+		 * the criteria to use the field name from the entity.
 		 * 
-		 * EX: rank on PersonDto corresponds to the string abbreviation field of Rank
+		 * EX: rank field on PersonDto corresponds to the string Abbreviation field of Rank
 		 */
 		filterCriteria = filterCriteria.stream().map(criteria -> {
 			switch (criteria.getField()) {
-				case "rank":
-					criteria.setField("abbreviation");
-					criteria.setJoinAttribute("rank");
+				case PersonDto.RANK_FIELD:
+					criteria.transformToJoinAttribute(Rank.ABBREVIATION_FIELD, Person.RANK_FIELD);
 					break;
 					
-				case "organizationMemberships":
-					criteria.setField("id");
-					criteria.setJoinAttribute("organizationMemberships");
+				case PersonDto.ORG_MEMBERSHIPS_FIELD:
+					criteria.transformToJoinAttribute(Organization.ID_FIELD, Person.ORG_MEMBERSHIPS_FIELD);
 					break;
 					
-				case "organizationLeaderships":
-					criteria.setField("id");
-					criteria.setJoinAttribute("organizationLeaderships");
+				case PersonDto.ORG_LEADERSHIPS_FIELD:
+					criteria.transformToJoinAttribute(Organization.ID_FIELD, Person.ORG_LEADERSHIPS_FIELD);
 					break;
 					
-				case "branch":
-					criteria.setField("branchType");
-					criteria.setJoinAttribute("rank");
-					break;
-					
-				default:
-					break;
-			}
-				
-			return criteria;
-		}).collect(Collectors.toList());
-		
-		Specification<Person> spec = SpecificationBuilder.getSpecificationFromFilters(filterCriteria);
-		Page<Person> pagedResponse = repository.findAll(spec, page);
-		
-		return pagedResponse.map((Person entity) -> convertToDto(entity, options));
-	}
-	
-	public Page<PersonDto> test(PersonConversionOptions options, List<FilterCriteria> filterCriteria,
-			Pageable page) {
-		
-		filterCriteria = filterCriteria.stream().map(criteria -> {
-			switch (criteria.getField()) {
-				case "rank":
-					criteria.setField("abbreviation");
-					criteria.setJoinAttribute("rank");
-					break;
-					
-				case "organizationMemberships":
-					criteria.setField("id");
-					criteria.setJoinAttribute("organizationMemberships");
-					break;
-					
-				case "organizationLeaderships":
-					criteria.setField("id");
-					criteria.setJoinAttribute("organizationLeaderships");
-					break;
-					
-				case "branch":
-					criteria.setField("branchType");
-					criteria.setJoinAttribute("rank");
+				case PersonDto.BRANCH_FIELD:
+					criteria.transformToJoinAttribute(Rank.BRANCH_TYPE_FIELD, Person.RANK_FIELD);
 					break;
 					
 				default:

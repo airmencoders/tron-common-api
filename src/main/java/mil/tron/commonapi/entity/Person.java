@@ -23,6 +23,14 @@ import java.util.UUID;
 @Inheritance(strategy = InheritanceType.JOINED)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = "emailAsLower"), @UniqueConstraint(columnNames = "dodid") })
 public class Person {
+	@JsonIgnore
+	public static final String ID_FIELD = "id";
+	@JsonIgnore
+	public static final String RANK_FIELD = "rank";
+	@JsonIgnore
+	public static final String ORG_MEMBERSHIPS_FIELD = "organizationMemberships";
+	@JsonIgnore
+	public static final String ORG_LEADERSHIPS_FIELD = "organizationLeaderships";
 
     @Id
     @Getter

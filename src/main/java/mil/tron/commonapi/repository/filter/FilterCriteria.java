@@ -37,4 +37,9 @@ public class FilterCriteria {
 	@Valid
 	@Schema(description = "The list of conditions that must be fulfilled")
 	private List<FilterCondition> conditions;
+	
+	public void transformToJoinAttribute(String newField, String joinAttribute) {
+		this.field = newField;
+		this.joinAttribute = joinAttribute;
+	}
 }

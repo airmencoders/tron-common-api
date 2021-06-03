@@ -25,7 +25,21 @@ import java.util.UUID;
 @JsonIdentityInfo(generator= ObjectIdGenerators.PropertyGenerator.class, property="id")
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = "nameAsLower") })
 public class Organization {
-
+	@JsonIgnore
+	public static final String ID_FIELD = "id";
+	@JsonIgnore
+	public static final String ORG_MEMBERSHIPS_FIELD = "organizationMemberships";
+	@JsonIgnore
+	public static final String ORG_LEADERSHIPS_FIELD = "organizationLeaderships";
+	@JsonIgnore
+	public static final String PARENT_ORG_FIELD = "parentOrganization";
+	@JsonIgnore
+    public static final String SUB_ORGS_FIELD = "subordinateOrganizations";
+	@JsonIgnore
+    public static final String MEMBERS_FIELD = "members";
+	@JsonIgnore
+    public static final String LEADER_FIELD = "leader";
+	
     @Id
     @Getter
     @Setter
