@@ -184,5 +184,7 @@ public class CommonApiLoggerTest {
 
         };
         logger.exceptionThrown(jp, new Exception());
+        assertEquals(true, outputStreamCaptor.toString().contains("Exception thrown"));
+
     }
 }
