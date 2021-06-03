@@ -466,7 +466,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PatchMapping({"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"})
+	@PatchMapping({"${api-prefix.v1}/organization/{id}"})
 	public ResponseEntity<OrganizationDto> patchOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
