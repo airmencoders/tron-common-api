@@ -151,8 +151,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(UUID.randomUUID())
+                        .appClientUser("guardianangel")
                         .subscribedEvent(EventType.PERSON_CHANGE)
-                        .subscriberAddress(generateUrl("guardianangel"))
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isOk());
@@ -163,8 +164,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                     .id(UUID.randomUUID())
+                    .appClientUser("NewApp")
                     .subscribedEvent(EventType.PERSON_CHANGE)
-                    .subscriberAddress(generateUrl("NewApp"))
+                    .subscriberAddress("/")
                     .secret("blah")
                     .build())))
                 .andExpect(status().isForbidden());
@@ -182,8 +184,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(UUID.randomUUID())
+                        .appClientUser("NewApp")
                         .subscribedEvent(EventType.PERSON_CHANGE)
-                        .subscriberAddress(generateUrl("NewApp"))
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isOk())
@@ -197,8 +200,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(id)
+                        .appClientUser("NewApp")
                         .subscribedEvent(EventType.PERSON_DELETE)
-                        .subscriberAddress(generateUrl("NewApp"))
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isOk());
@@ -209,8 +213,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(id)
+                        .appClientUser("NewApp")
                         .subscribedEvent(EventType.PERSON_DELETE)
-                        .subscriberAddress(generateUrl("NewApp"))
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isNoContent());
@@ -230,8 +235,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(UUID.randomUUID())
+                        .appClientUser("guardianangel")
                         .subscribedEvent(EventType.PERSON_CHANGE)
-                        .subscriberAddress(generateUrl("guardianangel"))
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isOk())
@@ -247,7 +253,8 @@ public class PubSubPrivsTest {
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(id)
                         .subscribedEvent(EventType.PERSON_CHANGE)
-                        .subscriberAddress(generateUrl("guardianangel"))
+                        .appClientUser("guardianangel")
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isForbidden());
@@ -279,8 +286,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(UUID.randomUUID())
+                        .appClientUser("NewApp")
                         .subscribedEvent(EventType.PERSON_CHANGE)
-                        .subscriberAddress(generateUrl("NewApp"))
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isOk());
@@ -292,8 +300,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(UUID.randomUUID())
+                        .appClientUser("guardianangel")
                         .subscribedEvent(EventType.PERSON_CHANGE)
-                        .subscriberAddress(generateUrl("guardianangel"))
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isOk());
@@ -341,8 +350,9 @@ public class PubSubPrivsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto.builder()
                         .id(UUID.randomUUID())
+                        .appClientUser("NewApp")
                         .subscribedEvent(EventType.PERSON_CHANGE)
-                        .subscriberAddress(generateUrl("NewApp"))
+                        .subscriberAddress("/")
                         .secret("blah")
                         .build())))
                 .andExpect(status().isOk())
@@ -490,11 +500,6 @@ public class PubSubPrivsTest {
                         .eventType(EventType.PERSON_CHANGE)
                         .build()))))
                 .andExpect(status().isForbidden());
-    }
-
-
-    String generateUrl(String namespace) {
-        return String.format("http://%s.%s.svc.cluster.local/", namespace, namespace);
     }
 
     String generateXfccHeader(String namespace) {

@@ -1,12 +1,8 @@
 package mil.tron.commonapi.dto.pubsub;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.*;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
-import mil.tron.commonapi.validations.ValidSubscriberAddress;
 
 import javax.validation.constraints.NotNull;
 import java.util.UUID;
@@ -25,20 +21,15 @@ public class SubscriberDto {
     @Getter
     @Setter
     private UUID id = UUID.randomUUID();
+
+    @Getter
+    @Setter
+    @NotNull
+    private String appClientUser;
+
+    @Getter
+    @Setter
     private String secret;
-
-    @JsonSetter
-    public void setSecret(String secret) {
-        this.secret = secret;
-    }
-
-    /**
-     * Don't ever return/show the secret
-     */
-    @JsonIgnore
-    public String getSecret() {
-        return this.secret;
-    }
 
     @Getter
     @Setter
@@ -47,8 +38,6 @@ public class SubscriberDto {
 
     @Getter
     @Setter
-    @NotNull
-    @ValidSubscriberAddress
-    private String subscriberAddress;
+    private String subscriberAddress = "";
 
 }

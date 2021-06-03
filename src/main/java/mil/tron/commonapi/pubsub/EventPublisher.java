@@ -146,8 +146,29 @@ public class EventPublisher {
 
         // start publish loop - only push to everyone but the requester (...if the requester is a subscriber)
         for (Subscriber s : subscribers) {
-            if (!IstioHeaderUtils.extractSubscriberNamespace(s.getSubscriberAddress()).equals(requesterNamespace)) {
-                publisherLog.info("[PUBLISH BROADCAST] - Event: " + message.getEventType().toString() + " to Subscriber: " + s.getSubscriberAddress());
+
+            // if subscriber's app-client is null or somehow doesn't have an url assigned - then skip to next subscriber
+            if (s.getAppClientUser() == null
+                    || s.getAppClientUser().getClusterUrl() == null
+                    || s.getAppClientUser().getClusterUrl().isBlank()) {
+
+                publisherLog.info(String.format("[PUBLISH WARNING] - Subscription ID %s does not have an app-client or cluster url, skipping", s.getId()));
+                continue;
+            }
+
+            // construct full URL from the app client's URL + the path the app developer listed in the subscription
+            // gid rid of leading slash in subscriber's path if present (since app clients URL is required to have /)
+            String subscriberUrl;
+            if (s.getSubscriberAddress().startsWith("/")) {
+                subscriberUrl = s.getAppClientUser().getClusterUrl() + s.getSubscriberAddress().substring(1);
+            }
+            else {
+                subscriberUrl = s.getAppClientUser().getClusterUrl() + s.getSubscriberAddress();
+            }
+
+
+            if (!IstioHeaderUtils.extractSubscriberNamespace(subscriberUrl).equals(requesterNamespace)) {
+                publisherLog.info("[PUBLISH BROADCAST] - Event: " + message.getEventType().toString() + " to Subscriber: " + subscriberUrl);
                 try {
                     String json = OBJECT_MAPPER.writeValueAsString(message);
                     HttpHeaders headers = new HttpHeaders();
@@ -155,10 +176,10 @@ public class EventPublisher {
                     if (s.getSecret() != null) {
                         headers.set(signatureHeader, hmac(s.getSecret(), json));
                     }
-                    publisherSender.postForLocation(s.getSubscriberAddress(), new HttpEntity<>(json, headers));
-                    publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + s.getSubscriberAddress());
+                    publisherSender.postForLocation(subscriberUrl, new HttpEntity<>(json, headers));
+                    publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + subscriberUrl);
                 } catch (Exception e) {
-                    publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + s.getSubscriberAddress() + " failed.  Exception: " + e.getMessage());
+                    publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + subscriberUrl + " failed.  Exception: " + e.getMessage());
                 }
             }
         }

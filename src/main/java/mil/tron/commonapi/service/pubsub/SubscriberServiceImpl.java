@@ -1,15 +1,18 @@
 package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
+import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.assertj.core.util.Lists;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -19,31 +22,45 @@ import java.util.stream.Collectors;
 @Service
 public class SubscriberServiceImpl implements SubscriberService {
 
-    @Autowired
-    SubscriberRepository subscriberRepository;
+    private SubscriberRepository subscriberRepository;
+    private AppClientUserRespository appClientUserRespository;
+
+    public SubscriberServiceImpl(SubscriberRepository subscriberRepository,
+                                 AppClientUserRespository appClientUserRespository) {
+        this.subscriberRepository = subscriberRepository;
+        this.appClientUserRespository = appClientUserRespository;
+    }
 
     private ModelMapper mapper = new ModelMapper();
+    private final static String APP_CLIENT_NOT_FOUND_ERR = "App Client %s not found";
 
     @Override
     public Iterable<SubscriberDto> getAllSubscriptions() {
         return Lists.newArrayList(subscriberRepository.findAll())
                 .stream()
-                .map(item -> mapper.map(item, SubscriberDto.class))
+                .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public SubscriberDto getSubscriberById(UUID id) {
-        return mapper.map(subscriberRepository
+        return mapToDto(subscriberRepository
                 .findById(id)
                 .orElseThrow(() ->
-                    new RecordNotFoundException("Subscription with resource ID: " + id.toString() + " does not exist."))
-                , SubscriberDto.class);
+                    new RecordNotFoundException("Subscription with resource ID: " + id.toString() + " does not exist.")));
     }
 
     @Override
     public boolean subscriptionExists(UUID id) {
         return subscriberRepository.existsById(id);
+    }
+
+    private SubscriberDto mapToDto(Subscriber subscriber) {
+        SubscriberDto dto = mapper.map(subscriber, SubscriberDto.class);
+        if (subscriber.getAppClientUser() != null) {
+            dto.setAppClientUser(subscriber.getAppClientUser().getName());
+        }
+        return dto;
     }
 
     @Override
@@ -52,14 +69,34 @@ public class SubscriberServiceImpl implements SubscriberService {
             subscriber.setId(UUID.randomUUID());
         }
 
-        Subscriber existing = subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(subscriber.getSubscriberAddress(),
-                        subscriber.getSubscribedEvent())
-                .orElseGet(() -> mapper.map(subscriber, Subscriber.class));
+        if (subscriber.getAppClientUser() == null)
+            throw new BadRequestException("App Client cannot be null");
 
-        existing.setSecret(subscriber.getSecret());
+        // get the requested app client for this subscription, so as to validate
+        AppClientUser appClientUser = appClientUserRespository
+                .findByNameIgnoreCase(subscriber.getAppClientUser())
+                .orElseThrow(() -> new RecordNotFoundException(String.format(APP_CLIENT_NOT_FOUND_ERR, subscriber.getAppClientUser())));
 
-        return mapper.map(subscriberRepository.save(existing), SubscriberDto.class);
+        // try to get existing...
+        Optional<Subscriber> existing = subscriberRepository
+                .findByAppClientUserAndSubscribedEvent(appClientUser, subscriber.getSubscribedEvent());
+
+        if (existing.isPresent()) {
+            Subscriber sub = existing.get();
+            sub.setSecret(sub.getSecret());  // can't change the secret on an update, would have to recreate a subscription
+            return mapToDto(subscriberRepository.save(sub));
+
+        } else {
+            // make new subscription
+            Subscriber sub = subscriberRepository.save(Subscriber.builder()
+                    .secret(subscriber.getSecret())
+                    .subscribedEvent(subscriber.getSubscribedEvent())
+                    .subscriberAddress(subscriber.getSubscriberAddress())
+                    .appClientUser(appClientUser)
+                    .build());
+
+            return mapToDto(sub);
+        }
     }
 
     @Override

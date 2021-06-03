@@ -86,8 +86,7 @@ public class SubscriberController {
                 .stream()
                 .filter(item -> authentication  // user is the owning app client itself
                                 .getName()
-                                .equalsIgnoreCase(IstioHeaderUtils
-                                    .extractSubscriberNamespace(item.getSubscriberAddress()))
+                                .equalsIgnoreCase(IstioHeaderUtils.extractSubscriberNamespace(item.getSubscriberAddress()))
                             || authentication  // or user is a DASHBOARD_ADMIN
                                 .getAuthorities()
                                 .stream()
@@ -96,6 +95,7 @@ public class SubscriberController {
                                     .contains("DASHBOARD_ADMIN")
                             || appClientUserService  // or user is the developer for said application subscription
                                         .userIsAppClientDeveloperForAppSubscription(item.getId(), authentication.getName()))
+                .peek(item -> item.setSecret(""))  // sanitize the secret from going outbound
                 .collect(Collectors.toList()), HttpStatus.OK);
     }
 
@@ -125,6 +125,8 @@ public class SubscriberController {
     @PreAuthorizeSubscriptionOwner
     @GetMapping({"${api-prefix.v1}/subscriptions/{id}", "${api-prefix.v2}/subscriptions/{id}"})
     public ResponseEntity<SubscriberDto> getSubscription(@PathVariable UUID id) {
+        SubscriberDto item = subService.getSubscriberById(id);
+        item.setSecret("");  // sanitize secret from going outbound
         return new ResponseEntity<>(subService.getSubscriberById(id), HttpStatus.OK);
     }
 

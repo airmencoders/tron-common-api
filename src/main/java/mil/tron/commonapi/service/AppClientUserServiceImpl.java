@@ -12,6 +12,7 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -20,7 +21,6 @@ import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
-import mil.tron.commonapi.service.utility.IstioHeaderUtils;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.modelmapper.Converter;
@@ -115,6 +115,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 							.basePath(generateAppSourceBasePath(item.getAppSource().getAppSourcePath()))
 							.build())
 						.collect(Collectors.toList()))
+				.clusterUrl(client.getClusterUrl())
 				.build();
 	}
 	
@@ -149,6 +150,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		AppClientUser newUser = AppClientUser.builder()
 				.id(appClient.getId())
 				.name(appClient.getName())
+				.clusterUrl(appClient.getClusterUrl())
 				.privileges(new HashSet<>(appClient
 						.getPrivileges()
 						.stream()
@@ -187,6 +189,8 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 				.stream()
 				.map(item -> mapper.map(item, Privilege.class))
 				.collect(Collectors.toList())));
+
+		dbUser.setClusterUrl(appClient.getClusterUrl());
 
 		// save/update and return
 		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(dbUser, appClient)));
@@ -351,15 +355,13 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	public boolean userIsAppClientDeveloperForAppSubscription(UUID subscriptionId, String user) {
 		SubscriberDto sub = subscriberService.getSubscriberById(subscriptionId);
 
-		// use a helper from the event publisher to get the app client name from the subscriber address
-		String appName = IstioHeaderUtils.extractSubscriberNamespace(sub.getSubscriberAddress());
-
 		// if the user from request is the app itself that owns this id then return true,
-		if (user.equalsIgnoreCase(appName)) return true;
+		if (user.equalsIgnoreCase(sub.getAppClientUser())) return true;
 
 		// otherwise see if this user is an email associated with a developer for this app client
-		AppClientUser app = appClientRepository.findByNameIgnoreCase(appName)
-				.orElseThrow(() -> new RecordNotFoundException(String.format("No app with name %s found", appName)));
+		AppClientUser app = appClientRepository
+				.findByNameIgnoreCase(sub.getAppClientUser())
+				.orElseThrow(() -> new RecordNotFoundException(String.format("No app with name %s found", sub.getAppClientUser())));
 
 		return userIsAppClientDeveloperForApp(app.getId(), user);
 

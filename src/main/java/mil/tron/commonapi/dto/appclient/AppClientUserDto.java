@@ -37,4 +37,8 @@ public class AppClientUserDto {
 	@NotBlank
 	private String name;
 
+	@Getter
+	@Setter
+	private String clusterUrl;
+
 }

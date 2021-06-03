@@ -714,6 +714,7 @@ public class InputFuzzer {
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
                     .contentType(MediaType.TEXT_PLAIN)
                     .content("{\n" +
+                            "    \"appClientUser\": \"guardianangel\"," +
                             "    \"subscriberAddress\": \"\"," +
                             "    \"subscribedEvent\": \"\"" +
                             "}"))
@@ -725,21 +726,12 @@ public class InputFuzzer {
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\n" +
-                            "    \"subscriberAddress\": \"http://localhost:8080/\"," +
+                            "    \"appClientUser\": \"guardianangel\"," +
+                            "    \"subscriberAddress\": \"/endpoint\"," +
                             "    \"subscribedEvent\": \"blah\"" +
                             "}"))
                     .andExpect(status().isBadRequest());
 
-            // pub sub POST rejects outside web address
-            mockMvc.perform(post(ENDPOINT)
-                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\n" +
-                            "    \"subscriberAddress\": \"http://www.google.com/\"," +
-                            "    \"subscribedEvent\": \"PERSON_CHANGE\"" +
-                            "}"))
-                    .andExpect(status().isBadRequest());
         }
     }
 }

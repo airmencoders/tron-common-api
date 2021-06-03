@@ -1,6 +1,7 @@
 package mil.tron.commonapi.pubsub;
 
 import com.google.common.collect.Lists;
+import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
@@ -59,17 +60,29 @@ public class EventPublisherTest {
     @BeforeEach
     void setupMockSubscriber() {
 
+        AppClientUser user1 = AppClientUser.builder()
+                .name("Test")
+                .clusterUrl("http://some.svc.cluster.local")
+                .build();
+
+        AppClientUser user2 = AppClientUser.builder()
+                .name("Test")
+                .clusterUrl("http://puckboard-api-service.tron-puckboard.svc.cluster.local")
+                .build();
+
         subscriber = Subscriber.builder()
                 .id(UUID.randomUUID())
+                .appClientUser(user1)
                 .subscribedEvent(EventType.PERSON_CHANGE)
-                .subscriberAddress("http://some.svc.cluster.local/api/changed")
+                .subscriberAddress("/api/changed")
                 .build();
 
         subscriber2 = Subscriber.builder()
                 .id(UUID.randomUUID())
+                .appClientUser(user2)
                 .subscribedEvent(EventType.PERSON_CHANGE)
                 // mimic real-formatted puckboard cluster URI as a subscriber
-                .subscriberAddress("http://puckboard-api-service.tron-puckboard.svc.cluster.local/puckboard-api/v1")
+                .subscriberAddress("/puckboard-api/v1")
                 .build();
 
         originalSystemOut = System.out;

@@ -1,8 +1,8 @@
 package mil.tron.commonapi.entity.pubsub;
 
 import lombok.*;
+import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
-import mil.tron.commonapi.validations.ValidSubscriberAddress;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -25,10 +25,11 @@ public class Subscriber {
     @Setter
     private UUID id = UUID.randomUUID();
 
+    /**
+     * The endpoint that gets added onto the app clients cluster local address
+     */
     @Getter
     @Setter
-    @NotNull
-    @ValidSubscriberAddress
     private String subscriberAddress;
 
     @Getter
@@ -40,6 +41,15 @@ public class Subscriber {
     @Getter
     @Setter
     private String secret;
+
+    /**
+     * The AppClient associated with this subscription
+     */
+    @Getter
+    @Setter
+    @NotNull
+    @ManyToOne(fetch = FetchType.EAGER)
+    private AppClientUser appClientUser;
 
     @Override
     public String toString() {

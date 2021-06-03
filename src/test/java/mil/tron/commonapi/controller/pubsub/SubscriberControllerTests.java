@@ -59,6 +59,7 @@ public class SubscriberControllerTests {
         subscriber = SubscriberDto
                 .builder()
                 .id(UUID.randomUUID())
+                .appClientUser("guardianangel")
                 .subscriberAddress("http://localhost:8080/changed")
                 .subscribedEvent(EventType.PERSON_CHANGE)
                 .build();
