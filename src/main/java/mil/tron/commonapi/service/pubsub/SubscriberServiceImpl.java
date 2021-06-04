@@ -69,21 +69,31 @@ public class SubscriberServiceImpl implements SubscriberService {
             subscriber.setId(UUID.randomUUID());
         }
 
+        System.out.println("EVENT: " + subscriber.getSubscribedEvent().toString());
+
         if (subscriber.getAppClientUser() == null)
             throw new BadRequestException("App Client cannot be null");
 
-        // get the requested app client for this subscription, so as to validate
+        // get the requested app client for this subscription, so as to validate it exists
         AppClientUser appClientUser = appClientUserRespository
                 .findByNameIgnoreCase(subscriber.getAppClientUser())
                 .orElseThrow(() -> new RecordNotFoundException(String.format(APP_CLIENT_NOT_FOUND_ERR, subscriber.getAppClientUser())));
 
+        System.out.println(subscriber.getAppClientUser() + " " + subscriber.getSubscribedEvent());
+        System.out.println(appClientUser.getName());
         // try to get existing...
         Optional<Subscriber> existing = subscriberRepository
                 .findByAppClientUserAndSubscribedEvent(appClientUser, subscriber.getSubscribedEvent());
 
         if (existing.isPresent()) {
+            // edit an existing
+            System.out.println("HERE!");
             Subscriber sub = existing.get();
-            sub.setSecret(sub.getSecret());  // can't change the secret on an update, would have to recreate a subscription
+            sub.setSecret(sub.getSecret());  // dont allow change secret on an update,
+                                                // need to recreate a subscription if needed changed
+            sub.setSubscribedEvent(subscriber.getSubscribedEvent());
+            sub.setSubscriberAddress(subscriber.getSubscriberAddress());
+            sub.setAppClientUser(appClientUser);
             return mapToDto(subscriberRepository.save(sub));
 
         } else {
