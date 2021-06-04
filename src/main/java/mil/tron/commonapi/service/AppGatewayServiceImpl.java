@@ -71,11 +71,15 @@ public class AppGatewayServiceImpl implements AppGatewayService {
             streamResponse.close();
         }
         catch (CamelExecutionException e) {
-            HttpOperationFailedException exception = (HttpOperationFailedException) e.getCause();
+        	if (e.getCause() instanceof HttpOperationFailedException) {
+        		HttpOperationFailedException exception = (HttpOperationFailedException) e.getCause();
 
-            throw new ResponseStatusException(
-                    HttpStatus.valueOf(exception.getStatusCode()),
-                    exception.getResponseBody());
+                throw new ResponseStatusException(
+                        HttpStatus.valueOf(exception.getStatusCode()),
+                        exception.getResponseBody());
+        	}
+            
+        	throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Error communicating with " + appSourceDef.getName());
         }
         return response;
     }
