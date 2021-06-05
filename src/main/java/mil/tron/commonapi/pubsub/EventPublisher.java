@@ -120,6 +120,24 @@ public class EventPublisher {
 
     }
 
+    // if subscriber's app-client is null or somehow doesn't have an url assigned - then return false
+    private boolean subscriberUrlValid(Subscriber s) {
+        return (s.getAppClientUser() != null
+                && s.getAppClientUser().getClusterUrl() != null
+                && !s.getAppClientUser().getClusterUrl().isBlank());
+    }
+
+    // construct full URL from the app client's URL + the path the app developer listed in the subscription
+    // gid rid of leading slash in subscriber's path if present (since app clients URL is required to have /)
+    private String buildSubscriberFullUrl(Subscriber s) {
+        if (s.getSubscriberAddress().startsWith("/")) {
+            return s.getAppClientUser().getClusterUrl() + s.getSubscriberAddress().substring(1);
+        }
+        else {
+            return s.getAppClientUser().getClusterUrl() + s.getSubscriberAddress();
+        }
+    }
+
     /**
      * The event queue consumer that operates on a fixed period, and pops a queued
      * event from the event queue and sends it out to the subscribers.
@@ -147,25 +165,12 @@ public class EventPublisher {
         // start publish loop - only push to everyone but the requester (...if the requester is a subscriber)
         for (Subscriber s : subscribers) {
 
-            // if subscriber's app-client is null or somehow doesn't have an url assigned - then skip to next subscriber
-            if (s.getAppClientUser() == null
-                    || s.getAppClientUser().getClusterUrl() == null
-                    || s.getAppClientUser().getClusterUrl().isBlank()) {
-
+            if (!subscriberUrlValid(s)) {
                 publisherLog.info(String.format("[PUBLISH WARNING] - Subscription ID %s does not have an app-client or cluster url, skipping", s.getId()));
                 continue;
             }
 
-            // construct full URL from the app client's URL + the path the app developer listed in the subscription
-            // gid rid of leading slash in subscriber's path if present (since app clients URL is required to have /)
-            String subscriberUrl;
-            if (s.getSubscriberAddress().startsWith("/")) {
-                subscriberUrl = s.getAppClientUser().getClusterUrl() + s.getSubscriberAddress().substring(1);
-            }
-            else {
-                subscriberUrl = s.getAppClientUser().getClusterUrl() + s.getSubscriberAddress();
-            }
-
+            String subscriberUrl = buildSubscriberFullUrl(s);
 
             if (!IstioHeaderUtils.extractSubscriberNamespace(subscriberUrl).equals(requesterNamespace)) {
                 publisherLog.info("[PUBLISH BROADCAST] - Event: " + message.getEventType().toString() + " to Subscriber: " + subscriberUrl);

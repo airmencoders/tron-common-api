@@ -12,6 +12,7 @@ import org.assertj.core.util.Lists;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -111,6 +112,19 @@ public class SubscriberServiceImpl implements SubscriberService {
         }
         else {
             throw new RecordNotFoundException("Subscription with UUID: " + id.toString() + " does not exist");
+        }
+    }
+
+    /**
+     * Deletes all subscriptions for a given app client (if there were any)
+     * @param appClientUser the app client from which to delete all subscriptions
+     */
+    @Override
+    public void cancelSubscriptionsByAppClient(AppClientUser appClientUser) {
+        List<Subscriber> subs = Lists.newArrayList(subscriberRepository.findByAppClientUser(appClientUser));
+
+        for (Subscriber s : subs) {
+            subscriberRepository.delete(s);
         }
     }
 

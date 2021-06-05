@@ -12,7 +12,6 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
-import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -251,7 +250,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 
 	@Override
     public AppClientUserDto deleteAppClientUser(UUID id) {
-		AppClientUser dbUser = appClientRepository.findById(id).orElseThrow(() -> new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
+		AppClientUser dbUser = appClientRepository
+				.findById(id)
+				.orElseThrow(() -> new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
 
 		// remove developers attached to this app
 		this.deleteDevelopersFromAppClient(dbUser, "", true);
@@ -260,6 +261,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		for (AppEndpointPriv priv : new HashSet<>(dbUser.getAppEndpointPrivs())) {
 			appEndpointPrivRepository.delete(priv);
 		}
+
+		// delete any pub-sub subscriptions
+		subscriberService.cancelSubscriptionsByAppClient(dbUser);
 
 		AppClientUserDto dto = convertToDto(dbUser);
     	appClientRepository.deleteById(id);

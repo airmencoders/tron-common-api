@@ -2,12 +2,9 @@ package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.AppClientUser;
-import mil.tron.commonapi.entity.appsource.App;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
-import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.assertj.core.util.Lists;
@@ -125,6 +122,19 @@ public class SubscriberServiceImplTest {
 
         assertDoesNotThrow(() -> subscriberService.cancelSubscription(subscriber.getId()));
         assertThrows(RecordNotFoundException.class, () -> subscriberService.cancelSubscription(subscriber.getId()));
+    }
+
+    @Test
+    void testCancelSubscriptionsByAppClient() {
+
+        AppClientUser user = AppClientUser.builder()
+                .name("test")
+                .build();
+
+        Mockito.when(subscriberRepository.findByAppClientUser(Mockito.any(AppClientUser.class)))
+                .thenReturn(Lists.newArrayList(subscriber));
+
+        assertDoesNotThrow(() -> subscriberService.cancelSubscriptionsByAppClient(user));
     }
 
     @Test
