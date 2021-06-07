@@ -10,6 +10,7 @@ import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.persons.*;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
@@ -22,6 +23,8 @@ import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
 import mil.tron.commonapi.pubsub.messages.PersonDeleteMessage;
 import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.modelmapper.Conditions;
@@ -29,6 +32,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -379,5 +383,47 @@ public class PersonServiceImpl implements PersonService {
 
 	private RecordNotFoundException buildRecordNotFoundForPerson(UUID personId) {
 		return new RecordNotFoundException("Person resource with ID: " + personId + " does not exist.");
+	}
+
+	@Override
+	public Page<PersonDto> getPersonsPageSpec(PersonConversionOptions options, List<FilterCriteria> filterCriteria,
+			Pageable page) {
+		
+		/**
+		 * Transforms criteria for fields to account for join attributes.
+		 * Takes the name of the field from the DTO and transforms
+		 * the criteria to use the field name from the entity.
+		 * 
+		 * EX: rank field on PersonDto corresponds to the string Abbreviation field of Rank
+		 */
+		filterCriteria = filterCriteria.stream().map(criteria -> {
+			switch (criteria.getField()) {
+				case PersonDto.RANK_FIELD:
+					criteria.transformToJoinAttribute(Rank.ABBREVIATION_FIELD, Person.RANK_FIELD);
+					break;
+					
+				case PersonDto.ORG_MEMBERSHIPS_FIELD:
+					criteria.transformToJoinAttribute(Organization.ID_FIELD, Person.ORG_MEMBERSHIPS_FIELD);
+					break;
+					
+				case PersonDto.ORG_LEADERSHIPS_FIELD:
+					criteria.transformToJoinAttribute(Organization.ID_FIELD, Person.ORG_LEADERSHIPS_FIELD);
+					break;
+					
+				case PersonDto.BRANCH_FIELD:
+					criteria.transformToJoinAttribute(Rank.BRANCH_TYPE_FIELD, Person.RANK_FIELD);
+					break;
+					
+				default:
+					break;
+			}
+				
+			return criteria;
+		}).collect(Collectors.toList());
+		
+		Specification<Person> spec = SpecificationBuilder.getSpecificationFromFilters(filterCriteria);
+		Page<Person> pagedResponse = repository.findAll(spec, page);
+		
+		return pagedResponse.map((Person entity) -> convertToDto(entity, options));
 	}
 }

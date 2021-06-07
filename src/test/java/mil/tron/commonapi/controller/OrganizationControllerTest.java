@@ -2,6 +2,8 @@ package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Organization;
@@ -10,6 +12,10 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.filter.FilterCondition;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.repository.filter.QueryOperator;
+import mil.tron.commonapi.repository.filter.RelationType;
 import mil.tron.commonapi.service.AppClientUserPreAuthenticatedService;
 import mil.tron.commonapi.service.OrganizationService;
 import org.assertj.core.util.Lists;
@@ -23,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.test.context.TestPropertySource;
@@ -195,6 +202,31 @@ public class OrganizationControllerTest {
 			mockMvc.perform(get(ENDPOINT + "/{id}?onlyIds=true", testOrgDto.getId()))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertEquals(dtoStr, result.getResponse().getContentAsString()));
+		}
+		
+		@Test
+		void testFilterOrganizations() throws JsonProcessingException, Exception {
+			FilterDto filterDto = new FilterDto();
+			FilterCriteria criteria = FilterCriteria.builder()
+					.field("name")
+					.relationType(RelationType.AND)
+					.conditions(List.of(FilterCondition.builder()
+											.operator(QueryOperator.EQUALS)
+											.value(testOrg.getName())
+											.build())
+							)
+					.build();
+			
+			filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+			
+			Mockito.when(organizationService.getOrganizationsPageSpec(Mockito.anyList(), Mockito.eq(null)))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testOrgDto)));
+			
+			mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+					.andExpect(status().isOk());
 		}
 	}
 	

@@ -3,6 +3,7 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 
+import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
@@ -12,6 +13,10 @@ import mil.tron.commonapi.dto.response.pagination.PaginationLink;
 import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.repository.filter.FilterCondition;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.repository.filter.QueryOperator;
+import mil.tron.commonapi.repository.filter.RelationType;
 import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
 
@@ -176,7 +181,7 @@ public class PersonIntegrationTest {
     @Transactional
     @Rollback
     @Test
-    void testPersonFilter() throws Exception {
+    void testPersonFind() throws Exception {
     	PersonDto person = PersonDto.builder()
                 .firstName("test")
                 .lastName("member")
@@ -424,7 +429,7 @@ public class PersonIntegrationTest {
     @Transactional
     @Rollback
     @Test
-    void testPersonPostFilter() throws Exception {
+    void testPersonPostFind() throws Exception {
     	PersonDto person = PersonDto.builder()
                 .firstName("test")
                 .lastName("member")
@@ -481,6 +486,345 @@ public class PersonIntegrationTest {
 		
 		mockMvc.perform(delete(ENDPOINT_V2 + "{id}", person.getId()));
 		mockMvc.perform(delete(ENDPOINT_V2 + "{id}", person1.getId()));
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testPersonPostFilter() throws Exception {
+    	/**
+    	 * Post everything to the database
+    	 */
+    	PersonDto person = PersonDto.builder()
+                .firstName("test")
+                .lastName("member")
+                .email("test@member.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("12345")
+                .build();
+    	
+    	PersonDto person1 = PersonDto.builder()
+                .firstName("1")
+                .lastName("2")
+                .email("1@2.com")
+                .rank("CIV")
+                .branch(Branch.OTHER)
+                .dodid("34567")
+                .build();
+    	
+    	mockMvc.perform(post(ENDPOINT_V2).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person)))
+    		.andExpect(status().isCreated());
+		mockMvc.perform(post(ENDPOINT_V2).contentType(MediaType.APPLICATION_JSON).content(OBJECT_MAPPER.writeValueAsString(person1)))
+			.andExpect(status().isCreated());
+		
+		OrganizationDto orgWithPersonAsMember = OrganizationDto.builder()
+				.id(UUID.randomUUID())
+	            .name("TestOrg1")
+	            .members(List.of(person.getId()))
+	            .build();
+
+        mockMvc.perform(post(ORGANIZATION)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgWithPersonAsMember)))
+                .andExpect(status().isCreated());
+        
+        OrganizationDto orgWithPerson1AsLeader = OrganizationDto.builder()
+        		.id(UUID.randomUUID())
+	            .name("TestOrg2")
+	            .leader(person1.getId())
+	            .build();
+
+        mockMvc.perform(post(ORGANIZATION)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgWithPerson1AsLeader)))
+                .andExpect(status().isCreated());
+		
+        /**
+         * Tests below here are for specific Person fields that will get transformed to join attributes
+         * rank, organizationMemberships, organizationLeaderships, branch
+         */
+        
+        // rank
+        FilterDto filterDto = new FilterDto();
+        FilterCriteria criteria = FilterCriteria.builder()
+				.field("rank")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value("CIV")
+										.build()))
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(2)));
+		
+		// organizationMemberships
+		criteria = FilterCriteria.builder()
+				.field("organizationMemberships")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(orgWithPersonAsMember.getId().toString())
+										.build()))
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(person.getId().toString())));
+		
+		// organizationLeaderships
+		criteria = FilterCriteria.builder()
+				.field("organizationLeaderships")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(orgWithPerson1AsLeader.getId().toString())
+										.build()))
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(person1.getId().toString())));
+		
+		// branch
+		criteria = FilterCriteria.builder()
+				.field("branch")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(person.getBranch().toString())
+										.build()))
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(person.getId().toString())));
+        
+        /**
+         * Tests below here are for testing the SpecificationBuilder
+         */
+	
+		// try IN operator
+		criteria = FilterCriteria.builder()
+				.field("firstName")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.IN)
+										.values(List.of("test", "1"))
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(2)));
+		
+		// try LIKE
+		criteria = FilterCriteria.builder()
+				.field("firstName")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.LIKE)
+										.value(person.getFirstName().substring(1))
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(person.getId().toString())));
+		
+		// try NOT_LIKE
+		criteria = FilterCriteria.builder()
+				.field("firstName")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.NOT_LIKE)
+										.value(person.getFirstName().substring(1))
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(person1.getId().toString())));
+		
+		// try NOT_EQUALS
+		criteria = FilterCriteria.builder()
+				.field("firstName")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.NOT_EQUALS)
+										.value(person.getFirstName())
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(person1.getId().toString())));
+		
+		// try EQUALS
+		criteria = FilterCriteria.builder()
+				.field("firstName")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(person.getFirstName())
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(person.getId().toString())));
+		
+		// try ENDS_WITH & STARTS_WITH
+		criteria = FilterCriteria.builder()
+				.field("firstName")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.STARTS_WITH)
+										.value("t")
+										.build(),
+									FilterCondition.builder()
+										.operator(QueryOperator.ENDS_WITH)
+										.value("t")
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].firstName", is(person.getFirstName())));
+		
+		// try multiple nested conditions
+		criteria = FilterCriteria.builder()
+				.field("firstName")
+				.relationType(RelationType.OR)
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(person.getFirstName())
+										.build(),
+									FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(person1.getFirstName())
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(2)));
+
+		// Try multiple filter criteria
+		criteria = FilterCriteria.builder()
+				.field("email")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.NOT_LIKE)
+										.value(person1.getDodid())
+										.build())
+						)
+				.build();
+		
+		FilterCriteria criteria1 = FilterCriteria.builder()
+				.field("lastName")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(person.getLastName())
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria, criteria1));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(person.getId().toString())));
+		
+		// try with bad field
+		criteria = FilterCriteria.builder()
+				.field("doesNotExist")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.STARTS_WITH)
+										.value("t")
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isBadRequest());
+		
+		// try operator that does not support input type
+		criteria = FilterCriteria.builder()
+				.field("branch")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.LIKE)
+										.value("CIV")
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isBadRequest());
+		
+		// try failing cast to required type
+		criteria = FilterCriteria.builder()
+				.field("branch")
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value("does not exist")
+										.build())
+						)
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isBadRequest());
+		
     }
 
     private static String resource(String name) throws IOException {

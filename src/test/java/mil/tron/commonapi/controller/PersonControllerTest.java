@@ -5,12 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 
 import mil.tron.commonapi.MockToken;
+import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PersonFindDto;
 import mil.tron.commonapi.dto.UserInfoDto;
 import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.filter.FilterCondition;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.repository.filter.QueryOperator;
+import mil.tron.commonapi.repository.filter.RelationType;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
@@ -30,7 +35,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.test.context.TestPropertySource;
@@ -155,6 +161,33 @@ public class PersonControllerTest {
             assertEquals(true, optionsCaptor.getValue().isMembershipsIncluded());
             assertEquals(true, optionsCaptor.getValue().isLeadershipsIncluded());
         }
+        
+        @Test
+		void testFilterPerson() throws JsonProcessingException, Exception {
+			FilterDto filterDto = new FilterDto();
+			FilterCriteria criteria = FilterCriteria.builder()
+					.field("firstName")
+					.relationType(RelationType.AND)
+					.conditions(List.of(FilterCondition.builder()
+											.operator(QueryOperator.EQUALS)
+											.value(testPerson.getFirstName())
+											.build())
+							)
+					.build();
+			
+			filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+			
+			Mockito.when(personService.getPersonsPageSpec(Mockito.eq(null), Mockito.any(), Mockito.eq(PageRequest.of(0, 1000))))
+				.thenReturn(new PageImpl<>(Lists.newArrayList(testPerson)));
+			
+			mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+					.accept(MediaType.APPLICATION_JSON)
+					.contentType(MediaType.APPLICATION_JSON)
+					.param("page", "0")
+					.param("size", "1000")
+					.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+					.andExpect(status().isOk());
+		}
 	}
 	
 	@Nested

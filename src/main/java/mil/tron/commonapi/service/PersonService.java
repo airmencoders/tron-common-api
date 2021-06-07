@@ -10,6 +10,7 @@ import org.springframework.data.domain.Slice;
 import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
 
 public interface PersonService {
 	PersonDto createPerson(PersonDto dto);
@@ -30,4 +31,6 @@ public interface PersonService {
 	PersonDto convertToDto(Person entity, PersonConversionOptions options);
 	Person convertToEntity(PersonDto dto);
 	PersonDto applyPatchToPerson(JsonPatch patch, PersonDto person);
+	
+	Page<PersonDto> getPersonsPageSpec(PersonConversionOptions options, List<FilterCriteria> filterCriteria, Pageable page);
 }

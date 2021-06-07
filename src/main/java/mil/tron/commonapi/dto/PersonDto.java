@@ -39,6 +39,14 @@ import java.util.UUID;
         }
 )
 public class PersonDto {
+	@JsonIgnore
+	public static final String RANK_FIELD = "rank"; 
+	@JsonIgnore
+	public static final String ORG_MEMBERSHIPS_FIELD = "organizationMemberships";
+	@JsonIgnore
+	public static final String ORG_LEADERSHIPS_FIELD = "organizationLeaderships";
+	@JsonIgnore
+	public static final String BRANCH_FIELD = "branch";
 
     @Getter
     @Setter
