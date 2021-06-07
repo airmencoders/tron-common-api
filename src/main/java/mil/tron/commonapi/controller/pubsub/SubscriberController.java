@@ -7,8 +7,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.pubsub.PreAuthorizeAnyAppClientOrDeveloper;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.annotation.pubsub.PreAuthorizeSubscriptionCreation;
+import mil.tron.commonapi.annotation.pubsub.PreAuthorizeSubscriptionOwner;
 import mil.tron.commonapi.dto.EventInfoDto;
 import mil.tron.commonapi.dto.EventInfoDtoResponseWrapper;
 import mil.tron.commonapi.dto.pubsub.PubSubLedgerEntryDto;
@@ -18,10 +21,15 @@ import mil.tron.commonapi.dto.pubsub.SubscriberDtoResponseWrapper;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.pubsub.EventManagerService;
+import mil.tron.commonapi.service.AppClientUserService;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
+import mil.tron.commonapi.service.utility.IstioHeaderUtils;
+import org.assertj.core.util.Lists;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -31,6 +39,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Allows RESTful creation and management of event subscriptions
@@ -42,10 +51,13 @@ public class SubscriberController {
     private SubscriberService subService;
 
     @Autowired
+    private AppClientUserService appClientUserService;
+
+    @Autowired
     private EventManagerService eventManagerService;
 
     /**
-     * @deprecated No longer valid T166. See {@link #getAllSubscriptionsWrapped()} for new usage.
+     * @deprecated No longer valid T166. See {@link #getAllSubscriptionsWrapped(Authentication authentication)} for new usage.
      * @return
      */
     @Operation(summary = "Retrieves all registered subscriptions", description = "Retrieves all subscriptions")
@@ -68,10 +80,23 @@ public class SubscriberController {
                     content = @Content(schema = @Schema(implementation = SubscriberDtoResponseWrapper.class)))
     })
     @WrappedEnvelopeResponse
-    @PreAuthorizeDashboardAdmin
     @GetMapping({"${api-prefix.v2}/subscriptions"})
-    public ResponseEntity<Object> getAllSubscriptionsWrapped() {
-        return new ResponseEntity<>(subService.getAllSubscriptions(), HttpStatus.OK);
+    public ResponseEntity<Object> getAllSubscriptionsWrapped(Authentication authentication) {
+        return new ResponseEntity<>(Lists.newArrayList(subService.getAllSubscriptions())
+                .stream()
+                .filter(item -> authentication  // user is the owning app client itself
+                                .getName()
+                                .equalsIgnoreCase(IstioHeaderUtils.extractSubscriberNamespace(item.getSubscriberAddress()))
+                            || authentication  // or user is a DASHBOARD_ADMIN
+                                .getAuthorities()
+                                .stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .collect(Collectors.toList())
+                                    .contains("DASHBOARD_ADMIN")
+                            || appClientUserService  // or user is the developer for said application subscription
+                                        .userIsAppClientDeveloperForAppSubscription(item.getId(), authentication.getName()))
+                .peek(item -> item.setSecret(""))  // sanitize the secret from going outbound
+                .collect(Collectors.toList()), HttpStatus.OK);
     }
 
     //
@@ -81,6 +106,7 @@ public class SubscriberController {
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = SubscriberDto.class)))
     })
+    @PreAuthorizeSubscriptionCreation
     @PostMapping({"${api-prefix.v1}/subscriptions", "${api-prefix.v2}/subscriptions"})
     public ResponseEntity<SubscriberDto> createSubscription(@Valid @RequestBody SubscriberDto subscriber) {
         return new ResponseEntity<>(subService.upsertSubscription(subscriber), HttpStatus.OK);
@@ -96,8 +122,11 @@ public class SubscriberController {
                     description = "Record not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
+    @PreAuthorizeSubscriptionOwner
     @GetMapping({"${api-prefix.v1}/subscriptions/{id}", "${api-prefix.v2}/subscriptions/{id}"})
     public ResponseEntity<SubscriberDto> getSubscription(@PathVariable UUID id) {
+        SubscriberDto item = subService.getSubscriberById(id);
+        item.setSecret("");  // sanitize secret from going outbound
         return new ResponseEntity<>(subService.getSubscriberById(id), HttpStatus.OK);
     }
 
@@ -111,6 +140,7 @@ public class SubscriberController {
                     description = "Record not found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
     })
+    @PreAuthorizeSubscriptionOwner
     @DeleteMapping({"${api-prefix.v1}/subscriptions/{id}", "${api-prefix.v2}/subscriptions/{id}"})
     public ResponseEntity<Object> cancelSubscription(@PathVariable UUID id) {
         subService.cancelSubscription(id);
@@ -161,6 +191,7 @@ public class SubscriberController {
                     content = @Content(schema = @Schema(implementation = BadRequestException.class)))
     })
     @WrappedEnvelopeResponse
+    @PreAuthorizeAnyAppClientOrDeveloper
     @GetMapping({"${api-prefix.v2}/subscriptions/events/replay"})
     public ResponseEntity<Object> getEventSinceDateWrapped(
             @RequestParam(name="sinceDateTime", required = false) String sinceDate) {
@@ -217,6 +248,7 @@ public class SubscriberController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = BadRequestException.class))))
     })
     @WrappedEnvelopeResponse
+    @PreAuthorizeAnyAppClientOrDeveloper
     @PostMapping({"${api-prefix.v2}/subscriptions/events/replay-events"})
     public ResponseEntity<Object> getEventsSinceCountAndTypeWrapped(
             @Parameter(description = "List of events and counts to rewind to and playback", required = true) @Valid @RequestBody List<EventInfoDto> events) {
@@ -244,6 +276,7 @@ public class SubscriberController {
                     description = "Successful operation",
                     content = @Content(schema = @Schema(implementation = EventInfoDtoResponseWrapper.class)))})
     @WrappedEnvelopeResponse
+    @PreAuthorizeAnyAppClientOrDeveloper
     @GetMapping({"${api-prefix.v2}/subscriptions/events/latest"})
     public ResponseEntity<Object> getLatestCountsWrapped() {
         return new ResponseEntity<>(eventManagerService.getEventTypeCounts(), HttpStatus.OK);

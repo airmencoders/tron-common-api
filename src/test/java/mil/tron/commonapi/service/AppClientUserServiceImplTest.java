@@ -13,6 +13,7 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -29,6 +30,7 @@ import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.doNothing;
 
 @ExtendWith(MockitoExtension.class)
 class AppClientUserServiceImplTest {
@@ -46,6 +48,9 @@ class AppClientUserServiceImplTest {
 
 	@Mock
 	private DashboardUserRepository dashboardUserRepository;
+
+	@Mock
+	private SubscriberService subscriberService;
 	
 	@InjectMocks
 	private AppClientUserServiceImpl userService;
@@ -196,6 +201,7 @@ class AppClientUserServiceImplTest {
 		@Test
 		void deleteAppClient() {
 			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(user));
+			doNothing().when(subscriberService).cancelSubscriptionsByAppClient(Mockito.any(AppClientUser.class));
 			AppClientUserDto deletedDto = userService.deleteAppClientUser(userDto.getId());
 			assertThat(deletedDto).isEqualTo(userDto);
 		}

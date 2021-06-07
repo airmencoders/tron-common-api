@@ -2,10 +2,13 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.pubsub.SubscriberDto;
+import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.branches.Branch;
-import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,23 +25,23 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-import java.util.UUID;
 
 import static mil.tron.commonapi.security.Utility.hmac;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
@@ -53,7 +56,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
 public class PubSubIntegrationTest {
-    private static final String ENDPOINT = "/v1/subscriptions/";
     private static final String ENDPOINT_V2 = "/v2/subscriptions/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -64,72 +66,66 @@ public class PubSubIntegrationTest {
     private RestTemplate eventSender;
 
     @Autowired
+    private AppClientUserRespository appClientUserRespository;
+
+    @Autowired
     private PersonRepository personRepo;
+
+    @Autowired
+    private SubscriberRepository subscriberRepository;
 
     private MockRestServiceServer mockServer;
 
-    private final static String SUB1_ADDRESS = "http://localhost:5005/changed";
+    private final static String SUB1_ADDRESS = "/changed";
 
     private final static String secret = "secret";
 
-    private UUID sub1Id;
-    private UUID sub2Id;
+    AppClientUser user = AppClientUser.builder()
+            .name("test")
+            .clusterUrl("http://localhost:5005/")
+            .build();
 
     @BeforeEach
     void setup() throws Exception {
 
+        if (!appClientUserRespository.existsById(user.getId()))
+            appClientUserRespository.save(user);
+
         mockServer = MockRestServiceServer.bindTo(eventSender).ignoreExpectOrder(true).build();
-        Subscriber personChangeSub = Subscriber
+        SubscriberDto personChangeSub = SubscriberDto
                 .builder()
+                .appClientUser(user.getName())
                 .subscribedEvent(EventType.PERSON_CHANGE)
                 .subscriberAddress(SUB1_ADDRESS)
                 .secret(secret)
                 .build();
 
-        Subscriber personDeleteSub = Subscriber
+        SubscriberDto personDeleteSub = SubscriberDto
                 .builder()
+                .appClientUser(user.getName())
                 .subscribedEvent(EventType.PERSON_DELETE)
                 .subscriberAddress(SUB1_ADDRESS)
                 .build();
 
         // setup some bogus subscriber
         //   that subscribes to PERSON messages
-        MvcResult res1 = mockMvc.perform(post(ENDPOINT)
+        mockMvc.perform(post(ENDPOINT_V2)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personChangeSub)))
-                .andExpect(status().isOk())
-                .andReturn();
-        MvcResult res2 = mockMvc.perform(post(ENDPOINT)
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post(ENDPOINT_V2)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDeleteSub)))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        sub1Id = OBJECT_MAPPER.readValue(res1.getResponse().getContentAsString(), Subscriber.class).getId();
-        sub2Id = OBJECT_MAPPER.readValue(res2.getResponse().getContentAsString(), Subscriber.class).getId();
+                .andExpect(status().isOk());
 
     }
 
     @AfterEach
-    void tearDown() throws Exception {
-
-        mockMvc.perform(delete(ENDPOINT + "{id}", sub1Id)).andExpect(status().isNoContent());
-        mockMvc.perform(delete(ENDPOINT + "{id}", sub2Id)).andExpect(status().isNoContent());
+    void tearDown() {
+        subscriberRepository.deleteAll();
+        appClientUserRespository.delete(user);
         personRepo.deleteAllInBatch();
-    }
-
-    @Test
-    void disallowsCommonApi() throws Exception {
-        Subscriber commonApiSub = Subscriber
-                .builder()
-                .subscribedEvent(EventType.PERSON_DELETE)
-                .subscriberAddress("tron-common-api.tron-common-api.svc.cluster.local")
-                .build();
-
-        mockMvc.perform(post(ENDPOINT)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(commonApiSub)))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -139,6 +135,9 @@ public class PubSubIntegrationTest {
 
         mockServer.expect(once(), requestTo(endsWith("/changed")))
                 .andExpect(method(HttpMethod.POST))
+                .andExpect(request -> {
+                    assertFalse(request.getURI().toString().endsWith("//changed")); // make sure slash was stripped
+                })
                 .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", containsString("PERSON_CHANGE")))
                 .andExpect(MockRestRequestMatchers.jsonPath("$.eventType", not(containsString("ORGANIZATION_CHANGE"))))
                 .andExpect(request -> {
@@ -160,7 +159,7 @@ public class PubSubIntegrationTest {
                 .branch(Branch.USAF)
                 .build();
 
-        mockMvc.perform(post("/v1/person")
+        mockMvc.perform(post("/v2/person")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(p)))
                 .andExpect(status().isCreated());
@@ -193,7 +192,7 @@ public class PubSubIntegrationTest {
                 .branch(Branch.USAF)
                 .build();
 
-        mockMvc.perform(post("/v1/person")
+        mockMvc.perform(post("/v2/person")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(p)))
                 .andExpect(status().isCreated());
@@ -220,7 +219,7 @@ public class PubSubIntegrationTest {
                 .branch(Branch.USAF)
                 .build();
 
-        mockMvc.perform(post("/v1/person")
+        mockMvc.perform(post("/v2/person")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(p2)))
                 .andExpect(status().isCreated());
@@ -269,7 +268,7 @@ public class PubSubIntegrationTest {
                 .branch(Branch.USAF)
                 .build();
 
-        mockMvc.perform(post("/v1/person/persons")
+        mockMvc.perform(post("/v2/person/persons")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(new PersonDto[] { p1, p2 })))
                 .andExpect(status().isCreated());

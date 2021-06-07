@@ -41,4 +41,8 @@ public class AppClientUserDetailsDto {
     @Getter
     @Setter
     private String name;
+
+    @Getter
+    @Setter
+    private String clusterUrl;
 }

@@ -7,6 +7,7 @@ import mil.tron.commonapi.dto.appclient.AppClientUserDetailsDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.appclient.AppEndpointClientInfoDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
@@ -18,6 +19,7 @@ import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.modelmapper.Converter;
@@ -36,31 +38,35 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
-	
-	private final String apiPrefix;
-	private final String appSourcePrefix;
 
 	private AppClientUserRespository appClientRepository;
 	private DashboardUserService dashboardUserService;
 	private PrivilegeRepository privilegeRepository;
 	private DashboardUserRepository dashboardUserRepository;
 	private AppEndpointPrivRepository appEndpointPrivRepository;
+	private SubscriberService subscriberService;
 	private ModelMapper mapper = new ModelMapper();
+
+	@Value("${api-prefix.v1}")
+	private String apiPrefix;
+
+	@Value("${app-sources-prefix}")
+	private String appSourcePrefix;
 
 	public AppClientUserServiceImpl(AppClientUserRespository appClientRepository,
 									DashboardUserService dashboardUserService,
 									DashboardUserRepository dashboardUserRepository,
 									PrivilegeRepository privilegeRepository,
 									AppEndpointPrivRepository appEndpointPrivRepository,
-									@Value("${api-prefix.v1}") String apiPrefix,
-									@Value("${app-sources-prefix}") String appSourcePrefix) {
+									SubscriberService subscriberService) {
 
 		this.appClientRepository = appClientRepository;
 		this.dashboardUserService = dashboardUserService;
 		this.dashboardUserRepository = dashboardUserRepository;
 		this.privilegeRepository = privilegeRepository;
 		this.appEndpointPrivRepository = appEndpointPrivRepository;
-		
+		this.subscriberService = subscriberService;
+
 		Converter<List<Privilege>, Set<Privilege>> convertPrivilegesToSet = 
 				((MappingContext<List<Privilege>, Set<Privilege>> context) -> new HashSet<>(context.getSource()));
 		
@@ -69,9 +75,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		
 		MODEL_MAPPER.addConverter(convertPrivilegesToSet);
 		MODEL_MAPPER.addConverter(convertPrivilegesToArr);
-		
-		this.apiPrefix = apiPrefix;
-		this.appSourcePrefix = appSourcePrefix;
+
 	}
 	
 	@Override
@@ -110,6 +114,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 							.basePath(generateAppSourceBasePath(item.getAppSource().getAppSourcePath()))
 							.build())
 						.collect(Collectors.toList()))
+				.clusterUrl(client.getClusterUrl())
 				.build();
 	}
 	
@@ -144,6 +149,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		AppClientUser newUser = AppClientUser.builder()
 				.id(appClient.getId())
 				.name(appClient.getName())
+				.clusterUrl(appClient.getClusterUrl())
 				.privileges(new HashSet<>(appClient
 						.getPrivileges()
 						.stream()
@@ -182,6 +188,8 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 				.stream()
 				.map(item -> mapper.map(item, Privilege.class))
 				.collect(Collectors.toList())));
+
+		dbUser.setClusterUrl(appClient.getClusterUrl());
 
 		// save/update and return
 		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(dbUser, appClient)));
@@ -242,7 +250,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 
 	@Override
     public AppClientUserDto deleteAppClientUser(UUID id) {
-		AppClientUser dbUser = appClientRepository.findById(id).orElseThrow(() -> new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
+		AppClientUser dbUser = appClientRepository
+				.findById(id)
+				.orElseThrow(() -> new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
 
 		// remove developers attached to this app
 		this.deleteDevelopersFromAppClient(dbUser, "", true);
@@ -251,6 +261,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		for (AppEndpointPriv priv : new HashSet<>(dbUser.getAppEndpointPrivs())) {
 			appEndpointPrivRepository.delete(priv);
 		}
+
+		// delete any pub-sub subscriptions
+		subscriberService.cancelSubscriptionsByAppClient(dbUser);
 
 		AppClientUserDto dto = convertToDto(dbUser);
     	appClientRepository.deleteById(id);
@@ -333,6 +346,29 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Checks if "user" is the app itself associated with given subscription ID or if the "user"
+	 * is a developer for the app-client associated with given subscription ID
+	 * @param subscriptionId the subscription ID
+	 * @param user the user name from request (could be the app client or a user's email)
+	 * @return true if above criteria is met
+	 */
+	@Override
+	public boolean userIsAppClientDeveloperForAppSubscription(UUID subscriptionId, String user) {
+		SubscriberDto sub = subscriberService.getSubscriberById(subscriptionId);
+
+		// if the user from request is the app itself that owns this id then return true,
+		if (user.equalsIgnoreCase(sub.getAppClientUser())) return true;
+
+		// otherwise see if this user is an email associated with a developer for this app client
+		AppClientUser app = appClientRepository
+				.findByNameIgnoreCase(sub.getAppClientUser())
+				.orElseThrow(() -> new RecordNotFoundException(String.format("No app with name %s found", sub.getAppClientUser())));
+
+		return userIsAppClientDeveloperForApp(app.getId(), user);
+
 	}
 
 	/**

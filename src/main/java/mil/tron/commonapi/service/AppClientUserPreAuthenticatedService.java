@@ -63,7 +63,7 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 		AppClientUser user = appClientUserRespository.findByNameIgnoreCase(token.getName()).orElseThrow(() -> new UsernameNotFoundException("App Client name not found: " + token.getName()));
 		List<GrantedAuthority> privileges = createPrivileges(user.getPrivileges());
 		privileges.addAll(createGatewayAuthorities(user.getAppEndpointPrivs()));
-
+		privileges.add(new SimpleGrantedAuthority("APP_CLIENT"));  // every app client gets this
 		return new User(user.getName(), NO_CREDS, privileges);
 	}
 	
