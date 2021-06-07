@@ -71,6 +71,9 @@ public class AppGatewayServiceImpl implements AppGatewayService {
             streamResponse.close();
         }
         catch (CamelExecutionException e) {
+        	/**
+        	 * Handles error responses received from the App Source.
+        	 */
         	if (e.getCause() instanceof HttpOperationFailedException) {
         		HttpOperationFailedException exception = (HttpOperationFailedException) e.getCause();
 
@@ -79,6 +82,11 @@ public class AppGatewayServiceImpl implements AppGatewayService {
                         exception.getResponseBody());
         	}
             
+        	/**
+        	 * Handles all other exceptions. This may occur under conditions in which the
+        	 * request could not be sent out. For example, if the App Source Url is bad
+        	 * or the App Source is down and cannot respond to the request.
+        	 */
         	throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Error communicating with " + appSourceDef.getName());
         }
         return response;
