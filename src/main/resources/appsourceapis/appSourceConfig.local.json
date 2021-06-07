@@ -4,5 +4,11 @@
     "openApiSpecFilename": "arms-gateway.yml",
     "sourceUrl": "http://localhost:8080",
     "appSourcePath": "arms-gateway-local"
+  },
+  {
+    "name": "Mock Service",
+    "openApiSpecFilename": "mock.yml",
+    "sourceUrl": "http://localhost:3002",
+    "appSourcePath": "mockoon"
   }
 ]

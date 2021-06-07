@@ -7,7 +7,7 @@ servers:
   -
     url: 'http://test.com/v1'
 paths:
-  /test:
+  /users:
     get:
       responses:
         '200':
