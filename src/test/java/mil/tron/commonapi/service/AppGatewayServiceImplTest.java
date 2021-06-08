@@ -7,6 +7,7 @@ import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.spring.CamelSpringBootRunner;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,7 +16,9 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.server.ResponseStatusException;
 import org.apache.camel.builder.RouteBuilder;
 
 import javax.servlet.http.HttpServletRequest;
@@ -25,6 +28,7 @@ import java.io.ByteArrayInputStream;
 import java.io.StringReader;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @RunWith(CamelSpringBootRunner.class)
 @ExtendWith(MockitoExtension.class)
@@ -99,10 +103,24 @@ class AppGatewayServiceImplTest {
         byte[] result = this.appGatewayService.sendRequestToAppSource(mockRequest);
         assertThat(result).isNotNull();
         
-        
         Mockito.when(mockRequest.getMethod()).thenReturn("POST");
         result = this.appGatewayService.sendRequestToAppSource(mockRequest);
         assertThat(result).isNotNull();
+        
+        // Test that communication errors to app source throws 503
+        mockEndpoint.whenAnyExchangeReceived(new Processor() {
+			@Override
+			public void process(Exchange exchange) throws Exception {
+				throw new Exception("fail");
+			}
+		});
+        Mockito.when(mockRequest.getRequestURI()).thenReturn("/api/v1/app/mock/mock-request");
+        try {
+        	this.appGatewayService.sendRequestToAppSource(mockRequest);
+        	Assertions.fail("Request should have thrown exception");
+        } catch (ResponseStatusException ex) {
+        	assertThat(ex.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        }
     }
 
     @Test
