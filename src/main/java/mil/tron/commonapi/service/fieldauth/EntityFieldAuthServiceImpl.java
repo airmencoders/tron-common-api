@@ -17,6 +17,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import javax.transaction.Transactional;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
@@ -49,63 +50,6 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
      * Builds out the entity field authorization privileges for the fields
      * in the Person/Organization entity that are marked @ProtectedField
      */
-    @PostConstruct
-    public void buildEntityPrivileges() {
-
-        for (Field f : personFields) {
-            String privName = PERSON_PREFIX + f.getName();
-            Optional<Privilege> p = privilegeRepository.findByName(privName);
-            if (p.isEmpty()) {
-                privilegeRepository.createPrivilege(PERSON_PREFIX + f.getName());
-            }
-        }
-
-        List<Privilege> personPrivs = privilegeRepository.findAll()
-                .stream()
-                .filter(item -> item.getName().startsWith(PERSON_PREFIX))
-                .collect(Collectors.toList());
-
-        for (Privilege priv : personPrivs) {
-            if (!personFields
-                    .stream()
-                    .map(Field::getName)
-                    .collect(Collectors.toList())
-                    .contains(priv.getName().replaceFirst(PERSON_PREFIX, ""))) {
-
-                purgePrivilege(priv);
-            }
-        }
-
-        for (Field f : orgFields) {
-            String privName = ORG_PREFIX + f.getName();
-            Optional<Privilege> p = privilegeRepository.findByName(privName);
-            if (p.isEmpty()) {
-                privilegeRepository.createPrivilege(ORG_PREFIX + f.getName());
-            }
-        }
-
-        List<Privilege> orgPrivs = privilegeRepository.findAll()
-                .stream()
-                .filter(item -> item.getName().startsWith(ORG_PREFIX))
-                .collect(Collectors.toList());
-
-        for (Privilege priv : orgPrivs) {
-            if (!orgFields
-                    .stream()
-                    .map(Field::getName)
-                    .collect(Collectors.toList())
-                    .contains(priv.getName().replaceFirst(ORG_PREFIX, ""))) {
-
-                purgePrivilege(priv);
-            }
-        }
-    }
-
-    private void purgePrivilege(Privilege privilege) {
-        privilegeRepository.deletePrivilegeFromAppClients(privilege.getId());
-        privilegeRepository.deletePrivilegeFromDashboardUsers(privilege.getId());
-        privilegeRepository.deletePrivilegeById(privilege.getId());
-    }
 
     /**
      * Determines which data "gets let through" on a person update/patch
