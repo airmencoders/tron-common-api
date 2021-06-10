@@ -2,11 +2,11 @@ package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
+import mil.tron.commonapi.annotation.efa.ProtectedField;
 import mil.tron.commonapi.annotation.security.PiiField;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -40,27 +40,33 @@ public class Person {
 
     @Getter
     @Setter
+    @ProtectedField
     private String firstName;
     
     @Getter
     @Setter
+    @ProtectedField
     private String middleName;
     
     @Getter
     @Setter
+    @ProtectedField
     private String lastName;
 
     @Getter
     @Setter
+    @ProtectedField
     private String title;
 
     @Getter
     @Setter
+    @ProtectedField
     private String dutyTitle;
 
     @PiiField
     @Getter
     @Setter
+    @ProtectedField
     private String email;
 
     /**
@@ -72,37 +78,44 @@ public class Person {
     @Getter
     @Setter
     @ValidDodId
+    @ProtectedField
     private String dodid;
 
     @PiiField
     @Getter
     @Setter
     @ValidPhoneNumber
+    @ProtectedField
     private String phone;
 
     @Getter
     @Setter
     @ValidPhoneNumber
+    @ProtectedField
     private String dutyPhone;
 
     @PiiField
     @Getter
     @Setter
+    @ProtectedField
     private String address;
 
     @Getter
     @Setter
     @ManyToOne
+    @ProtectedField
     private Rank rank;
 
     @Getter
     @Setter
     @ManyToOne
+    @ProtectedField
     private Organization primaryOrganization;
 
     @Getter
     @Builder.Default
     @ManyToMany
+    @ProtectedField
     @JoinTable(name = "organization_members", 
         joinColumns = @JoinColumn(name = "members_id"),
         inverseJoinColumns = @JoinColumn(name = "organization_id"))
@@ -110,11 +123,13 @@ public class Person {
 
     @Getter
     @Builder.Default
+    @ProtectedField
     @OneToMany(mappedBy = "leader")
     private Set<Organization> organizationLeaderships = new HashSet<>();
 
     @Getter
     @Builder.Default
+    @ProtectedField
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name="personId")
     private Set<PersonMetadata> metadata = new HashSet<>();

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
+import mil.tron.commonapi.annotation.efa.ProtectedField;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -48,6 +49,7 @@ public class Organization {
     @Getter
     @Setter
     @NotBlank
+    @ProtectedField
     private String name;
     
     /**
@@ -64,6 +66,7 @@ public class Organization {
     @JoinTable(name = "organization_members", 
         joinColumns = @JoinColumn(name = "organization_id"),
         inverseJoinColumns = @JoinColumn(name = "members_id"))
+    @ProtectedField
     private Set<Person> members = new HashSet<>();
 
     public void setMembers(Set<Person> members) {
@@ -73,38 +76,45 @@ public class Organization {
     @Getter
     @Builder.Default
     @OneToMany(mappedBy = "primaryOrganization")
+    @ProtectedField
     private Set<Person> primaryMembers = new HashSet<>();
 
     @Getter
     @ManyToOne
+    @ProtectedField
     private Person leader;
 
     @Getter
     @ManyToOne
+    @ProtectedField
     private Organization parentOrganization;
 
     @Getter
     @Builder.Default
     @OneToMany
     @JsonIgnore
+    @ProtectedField
     private Set<Organization> subordinateOrganizations = new HashSet<>();
 
     @Getter
     @Setter
     @Builder.Default
     @Enumerated(value = EnumType.STRING)
+    @ProtectedField
     private Unit orgType = Unit.ORGANIZATION;
 
     @Getter
     @Setter
     @Builder.Default
     @Enumerated(value = EnumType.STRING)
+    @ProtectedField
     protected Branch branchType = Branch.OTHER;
 
     @Getter
     @Builder.Default
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name="organizationId")
+    @ProtectedField
     private Set<OrganizationMetadata> metadata = new HashSet<>();
 
     /**

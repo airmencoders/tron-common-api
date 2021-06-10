@@ -10,17 +10,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
-import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
-import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
-import mil.tron.commonapi.dto.FilterDto;
-import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
-import mil.tron.commonapi.dto.PersonFindDto;
-import mil.tron.commonapi.dto.PersonDtoPaginationResponseWrapper;
-import mil.tron.commonapi.dto.UserInfoDto;
+import mil.tron.commonapi.annotation.security.PreAuthorizePersonCreate;
+import mil.tron.commonapi.annotation.security.PreAuthorizePersonDelete;
+import mil.tron.commonapi.annotation.security.PreAuthorizePersonEdit;
+import mil.tron.commonapi.annotation.security.PreAuthorizePersonRead;
+import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
-import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -29,7 +26,6 @@ import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
 import mil.tron.commonapi.service.UserInfoService;
-
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -67,7 +63,7 @@ public class PersonController {
 					description = "Successful operation", 
 						content = @Content(array = @ArraySchema(schema = @Schema(implementation = PersonDto.class))))
 	})
-	@PreAuthorizeRead
+	@PreAuthorizePersonRead
 	@Deprecated(since="${api-prefix.v2}")
 	@GetMapping({"${api-prefix.v1}/person"})
 	public ResponseEntity<Object> getPersons(
@@ -92,7 +88,7 @@ public class PersonController {
 									+ "Possible rel values include: first, last, prev, next",
 							schema = @Schema(type = "string")))
 	})
-	@PreAuthorizeRead
+	@PreAuthorizePersonRead
 	@WrappedEnvelopeResponse
 	@GetMapping({"${api-prefix.v2}/person"})
 	public ResponseEntity<Object> getPersonsWrapped(
@@ -120,7 +116,7 @@ public class PersonController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeRead
+	@PreAuthorizePersonRead
 	@GetMapping(value = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"})
 	public ResponseEntity<PersonDto> getPerson(
 			@Parameter(description = "Person ID to retrieve", required = true) @PathVariable("id") UUID personId,
@@ -163,7 +159,7 @@ public class PersonController {
 				content= @Content(schema = @Schema(implementation = PersonFindType.class)))
 	@Parameter(name = "value", description = "The value to search against", required = true)
 	@Deprecated(since = "v2")
-	@PreAuthorizeRead
+	@PreAuthorizePersonRead
 	@GetMapping(value = {"${api-prefix.v1}/person/find"})
 	public ResponseEntity<PersonDto> findPersonBy(
 				@RequestParam(name = "memberships", required = false) boolean memberships,
@@ -196,7 +192,7 @@ public class PersonController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeRead
+	@PreAuthorizePersonRead
 	@PostMapping(
 			value = {"${api-prefix.v2}/person/find"},
 			consumes = MediaType.APPLICATION_JSON_VALUE,
@@ -229,7 +225,7 @@ public class PersonController {
 					description = "Bad request",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeWrite
+	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v1}/person", "${api-prefix.v2}/person"})
 	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create",
 		required = true,
@@ -247,7 +243,7 @@ public class PersonController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeWrite
+	@PreAuthorizePersonEdit
 	@PutMapping(value = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"})
 	public ResponseEntity<Object> updatePerson(
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
@@ -302,7 +298,7 @@ public class PersonController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeWrite
+	@PreAuthorizePersonEdit
 	@PatchMapping(path = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<PersonDto> patchPerson(
 			@Parameter(description = "Person ID to patch", required = true) @PathVariable("id") UUID personId,
@@ -326,7 +322,7 @@ public class PersonController {
 				description = "Resource not found",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeWrite
+	@PreAuthorizePersonDelete
 	@DeleteMapping(value = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"})
 	public ResponseEntity<Object> deletePerson(
 			@Parameter(description = "Person ID to delete", required = true) @PathVariable("id") UUID personId) {
@@ -356,7 +352,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@Deprecated(since = "v2")
-	@PreAuthorizeWrite
+	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v1}/person/persons"})
 	public ResponseEntity<Object> addPersons(
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
@@ -381,7 +377,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@WrappedEnvelopeResponse
-	@PreAuthorizeWrite
+	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v2}/person/persons"})
 	public ResponseEntity<Object> addPersonsWrapped(
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
@@ -405,7 +401,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@WrappedEnvelopeResponse
-	@PreAuthorizeRead
+	@PreAuthorizePersonRead
 	@PostMapping(
 			value = {"${api-prefix.v2}/person/filter"},
 			consumes = MediaType.APPLICATION_JSON_VALUE,

@@ -1,0 +1,91 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="christopherzell (generated)" id="1622732838116-1">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='PERSON_CREATE';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="PERSON_CREATE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1622732838116-2">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='ORGANIZATION_CREATE';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="ORGANIZATION_CREATE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1622732838116-3">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='PERSON_DELETE';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="PERSON_DELETE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1622732838116-4">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='ORGANIZATION_DELETE';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="ORGANIZATION_DELETE" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1622732838116-5">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='PERSON_READ';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="PERSON_READ" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1622732838116-6">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='ORGANIZATION_READ';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="ORGANIZATION_READ" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1622732838116-7">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='PERSON_EDIT';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="PERSON_EDIT" />
+        </insert>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1622732838116-8">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM privilege WHERE name='ORGANIZATION_EDIT';
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="privilege">
+            <column name="name" value="ORGANIZATION_EDIT" />
+        </insert>
+    </changeSet>
+</databaseChangeLog>
