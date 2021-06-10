@@ -20,6 +20,7 @@ import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
@@ -55,33 +56,55 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             String privName = PERSON_PREFIX + f.getName();
             Optional<Privilege> p = privilegeRepository.findByName(privName);
             if (p.isEmpty()) {
-                privilegeRepository.createPrivilege(privName);
+                privilegeRepository.createPrivilege(PERSON_PREFIX + f.getName());
             }
         }
 
-//        List<Privilege> personPrivs = privilegeRepository.findAll()
-//                .stream()
-//                .filter(item -> item.getName().startsWith(PERSON_PREFIX))
-//                .collect(Collectors.toList());
-//
-//        for (Privilege priv : personPrivs) {
-//            if (!personFields
-//                    .stream()
-//                    .map(Field::getName)
-//                    .collect(Collectors.toList())
-//                    .contains(priv.getName().replaceFirst(PERSON_PREFIX, ""))) {
-//
-//                privilegeRepository.delete(priv);
-//            }
-//        }
+        List<Privilege> personPrivs = privilegeRepository.findAll()
+                .stream()
+                .filter(item -> item.getName().startsWith(PERSON_PREFIX))
+                .collect(Collectors.toList());
+
+        for (Privilege priv : personPrivs) {
+            if (!personFields
+                    .stream()
+                    .map(Field::getName)
+                    .collect(Collectors.toList())
+                    .contains(priv.getName().replaceFirst(PERSON_PREFIX, ""))) {
+
+                purgePrivilege(priv);
+            }
+        }
 
         for (Field f : orgFields) {
             String privName = ORG_PREFIX + f.getName();
             Optional<Privilege> p = privilegeRepository.findByName(privName);
             if (p.isEmpty()) {
-                privilegeRepository.createPrivilege(privName);
+                privilegeRepository.createPrivilege(ORG_PREFIX + f.getName());
             }
         }
+
+        List<Privilege> orgPrivs = privilegeRepository.findAll()
+                .stream()
+                .filter(item -> item.getName().startsWith(ORG_PREFIX))
+                .collect(Collectors.toList());
+
+        for (Privilege priv : orgPrivs) {
+            if (!orgFields
+                    .stream()
+                    .map(Field::getName)
+                    .collect(Collectors.toList())
+                    .contains(priv.getName().replaceFirst(ORG_PREFIX, ""))) {
+
+                purgePrivilege(priv);
+            }
+        }
+    }
+
+    private void purgePrivilege(Privilege privilege) {
+        privilegeRepository.deletePrivilegeFromAppClients(privilege.getId());
+        privilegeRepository.deletePrivilegeFromDashboardUsers(privilege.getId());
+        privilegeRepository.deletePrivilegeById(privilege.getId());
     }
 
     /**
