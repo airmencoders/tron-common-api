@@ -5,7 +5,7 @@ info:
   description: Mock API definitions.
 servers:
   -
-    url: 'http://test.com/v1'
+    url: '/'
 paths:
   /users:
     get:
