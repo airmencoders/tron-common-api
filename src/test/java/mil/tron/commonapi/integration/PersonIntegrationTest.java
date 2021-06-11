@@ -839,7 +839,7 @@ public class PersonIntegrationTest {
                 .build();
 
         // GO path
-        mockMvc.perform(post("/v2/person-jwt")
+        mockMvc.perform(post("/v2/person/person-jwt")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
@@ -851,7 +851,7 @@ public class PersonIntegrationTest {
         dto.setDodId("123455555");
         dto.setRank(null);
         dto.setAffiliation(null);
-        mockMvc.perform(post("/v2/person-jwt")
+        mockMvc.perform(post("/v2/person/person-jwt")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
