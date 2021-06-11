@@ -234,6 +234,28 @@ public class PersonController {
 		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
 
+	@Operation(summary = "Adds a person using info from P1 JWT")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Resource already exists with the id provided",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizePersonCreate
+	@PostMapping({"${api-prefix.v1}/person-jwt", "${api-prefix.v2}/person-jwt"})
+	public ResponseEntity<PersonDto> createPersonFromJwt(@Parameter(description = "Person to create",
+			required = true,
+			schema = @Schema(implementation = PlatformJwtDto.class))
+												  @Valid @RequestBody PlatformJwtDto person) {
+		return new ResponseEntity<>(personService.createPersonFromJwt(person), HttpStatus.CREATED);
+	}
+
+
 	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
