@@ -12,15 +12,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeRead;
 import mil.tron.commonapi.annotation.security.PreAuthorizeWrite;
-import mil.tron.commonapi.dto.FilterDto;
-import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
-import mil.tron.commonapi.dto.PersonFindDto;
-import mil.tron.commonapi.dto.PersonDtoPaginationResponseWrapper;
-import mil.tron.commonapi.dto.UserInfoDto;
+import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
-import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -29,7 +24,6 @@ import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
 import mil.tron.commonapi.service.UserInfoService;
-
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -237,6 +231,28 @@ public class PersonController {
 		@Valid @RequestBody PersonDto person) {
 		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
+
+	@Operation(summary = "Adds a person using info from P1 JWT")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Resource already exists with the id provided",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad request",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeWrite
+	@PostMapping({"${api-prefix.v1}/person-jwt", "${api-prefix.v2}/person-jwt"})
+	public ResponseEntity<PersonDto> createPersonFromJwt(@Parameter(description = "Person to create",
+			required = true,
+			schema = @Schema(implementation = PlatformJwtDto.class))
+												  @Valid @RequestBody PlatformJwtDto person) {
+		return new ResponseEntity<>(personService.createPersonFromJwt(person), HttpStatus.CREATED);
+	}
+
 
 	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
 	@ApiResponses(value = {

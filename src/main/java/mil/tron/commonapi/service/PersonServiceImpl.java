@@ -7,10 +7,11 @@ import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import com.google.common.collect.Sets;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PlatformJwtDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.dto.persons.*;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Organization;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
@@ -27,6 +28,7 @@ import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
+import org.assertj.core.util.Lists;
 import org.modelmapper.Conditions;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -130,6 +132,40 @@ public class PersonServiceImpl implements PersonService {
 		eventManagerService.recordEventAndPublish(message);
 
 		return result;
+	}
+
+	/**
+	 * Creates a new Person in the database from using a P1 JWT's information
+	 * @param dto the P1 Jwt Dto
+	 * @return the created person entity (if all went well)
+	 */
+	@Override
+	public PersonDto createPersonFromJwt(PlatformJwtDto dto) {
+
+		// map the PlatformJwtDto to a PersonDto
+		PersonDto personDto = new PersonDto();
+		personDto.setFirstName(dto.getGivenName());
+		personDto.setLastName(dto.getFamilyName());
+		personDto.setEmail(dto.getEmail());
+		personDto.setDodid(dto.getDodId());
+
+		// now convert branch
+		if ("US Air Force".equals(dto.getAffiliation())) {
+			personDto.setBranch(Branch.USAF);
+		} else {
+			personDto.setBranch(Branch.OTHER);
+		}
+
+		// now convert rank, P1 uses Pay Grade for "rank"
+		personDto.setRank(Lists.newArrayList(rankRepository.findAll())
+				.stream()
+				.filter(item -> item.getPayGrade().equals(dto.getRank()))
+				.findFirst()
+					.orElse(rankRepository.findByAbbreviationAndBranchType("Unk", Branch.OTHER)
+					.orElseThrow(() -> new RecordNotFoundException("Unable to find rank match")))
+				.getAbbreviation());
+
+		return createPerson(personDto);
 	}
 
 	@Override

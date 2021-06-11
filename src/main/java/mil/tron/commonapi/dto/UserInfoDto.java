@@ -1,7 +1,6 @@
 package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import lombok.*;
 import mil.tron.commonapi.annotation.security.PiiField;
 
@@ -44,4 +43,12 @@ public class UserInfoDto {
 	@Getter
 	@Setter
 	private String organization;
+
+	@Getter
+	@Setter
+	private String rank;
+
+	@Getter
+	@Setter
+	private String affiliation;
 }
