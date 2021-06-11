@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -16,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
@@ -64,7 +65,7 @@ class AppClientUserPreAuthenticatedServiceTest {
 		UserDetails resultUser = service.loadUserDetails(token);
 		
 		assertThat(resultUser.getUsername()).isEqualTo(user.getName());
-		assertThat(resultUser.getAuthorities()).hasSize(1);
+		assertTrue(resultUser.getAuthorities().contains(new SimpleGrantedAuthority("READ")));
 	}
 
 	@Test
@@ -95,7 +96,6 @@ class AppClientUserPreAuthenticatedServiceTest {
 		UserDetails resultUser = service.loadUserDetails(token);
 		
 		assertThat(resultUser.getUsername()).isEqualTo(user.getName());
-		assertThat(resultUser.getAuthorities()).hasSize(2);
 		assertThat(resultUser.getAuthorities().stream().anyMatch(auth -> auth.getAuthority().equals("test-gatewayREAD")));
 	}
 
@@ -144,8 +144,7 @@ class AppClientUserPreAuthenticatedServiceTest {
 		UserDetails resultUser = service.loadUserDetails(token);
 		
 		assertThat(resultUser.getUsername()).isEqualTo(user.getName());
-		assertThat(resultUser.getAuthorities()).hasSize(1);
-		assertThat(resultUser.getAuthorities().stream().allMatch(auth -> auth.getAuthority().equals("READ")));
+		assertTrue(resultUser.getAuthorities().contains(new SimpleGrantedAuthority("READ")));
 	}
 
 	@Test
@@ -164,8 +163,7 @@ class AppClientUserPreAuthenticatedServiceTest {
 		UserDetails resultUser = service.loadUserDetails(token);
 		
 		assertThat(resultUser.getUsername()).isEqualTo(user.getName());
-		assertThat(resultUser.getAuthorities()).hasSize(1);
-		assertThat(resultUser.getAuthorities().stream().allMatch(auth -> auth.getAuthority().equals("READ")));
+		assertTrue(resultUser.getAuthorities().contains(new SimpleGrantedAuthority("READ")));
 	}
 	
 	@Test
@@ -176,8 +174,8 @@ class AppClientUserPreAuthenticatedServiceTest {
 		user.setPrivileges(null);
 		
 		UserDetails resultUser = service.loadUserDetails(token);
-		
-		assertThat(resultUser.getAuthorities()).isEmpty();
+
+		assertFalse(resultUser.getAuthorities().contains(new SimpleGrantedAuthority("READ")));
 	}
 	
 	@Test

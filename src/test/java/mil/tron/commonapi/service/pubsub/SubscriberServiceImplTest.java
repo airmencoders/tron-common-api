@@ -1,11 +1,11 @@
 package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
+import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
-import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,13 +31,21 @@ public class SubscriberServiceImplTest {
     @Mock
     SubscriberRepository subscriberRepository;
 
+    @Mock
+    AppClientUserRespository appClientUserRespository;
+
     private Subscriber subscriber;
     private ModelMapper mapper = new ModelMapper();
+    private AppClientUser user = AppClientUser.builder()
+            .name("Test")
+            .clusterUrl("http://a.a.svc.cluster.local/")
+            .build();
 
     @BeforeEach
     void setup() {
         subscriber = Subscriber.builder()
                 .id(UUID.randomUUID())
+                .appClientUser(user)
                 .subscriberAddress("some.address")
                 .subscribedEvent(EventType.PERSON_CHANGE)
                 .secret("secret")
@@ -64,14 +72,18 @@ public class SubscriberServiceImplTest {
 
     @Test
     void testUpsertSubscriptionNew() {
-        Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
+        Mockito.when(appClientUserRespository.findByNameIgnoreCase(Mockito.anyString()))
+                .thenReturn(Optional.of(user));
+
+        Mockito.when(subscriberRepository.findByAppClientUserAndSubscribedEvent(Mockito.any(), Mockito.any()))
                 .thenReturn(Optional.empty());
 
         Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class)))
             .thenAnswer(s -> s.getArgument(0));
 
-        var result = subscriberService.upsertSubscription(mapper.map(subscriber, SubscriberDto.class));
+        SubscriberDto result = subscriberService.upsertSubscription(mapper.map(subscriber, SubscriberDto.class));
+        result.setAppClientUser(subscriber.getAppClientUser().getName());
+
         assertEquals(subscriber.getSecret(), result.getSecret());
         assertEquals(subscriber.getSubscribedEvent(), result.getSubscribedEvent());
         assertEquals(subscriber.getSubscriberAddress(), result.getSubscriberAddress());
@@ -79,21 +91,25 @@ public class SubscriberServiceImplTest {
 
     @Test
     void testUpsertSubscriptionExisting() {
-        Mockito.when(subscriberRepository
-                .findBySubscriberAddressAndSubscribedEvent(Mockito.any(String.class), Mockito.any(EventType.class)))
-                .thenReturn(Optional.of(subscriber));
+        Mockito.when(appClientUserRespository.findByNameIgnoreCase(Mockito.anyString()))
+                .thenReturn(Optional.of(user));
+
+        Mockito.when(subscriberRepository.findByAppClientUserAndSubscribedEvent(Mockito.any(), Mockito.any()))
+                .thenReturn(Optional.ofNullable(subscriber));
 
         Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class)))
             .thenAnswer(s -> s.getArgument(0));
 
-        var result = subscriberService.upsertSubscription(SubscriberDto.builder()
+        SubscriberDto result = subscriberService.upsertSubscription(SubscriberDto.builder()
+            .id(subscriber.getId())
+            .appClientUser(subscriber.getAppClientUser().getName())
             .subscribedEvent(subscriber.getSubscribedEvent())
             .subscriberAddress(subscriber.getSubscriberAddress())
             .secret("new secret")
             .build());
         
         assertEquals(subscriber.getId(), result.getId());
-        assertEquals("new secret", result.getSecret());
+        assertEquals(subscriber.getSecret(), result.getSecret()); // can't change secret in an update
         assertEquals(subscriber.getSubscribedEvent(), result.getSubscribedEvent());
         assertEquals(subscriber.getSubscriberAddress(), result.getSubscriberAddress());
     }
@@ -106,6 +122,19 @@ public class SubscriberServiceImplTest {
 
         assertDoesNotThrow(() -> subscriberService.cancelSubscription(subscriber.getId()));
         assertThrows(RecordNotFoundException.class, () -> subscriberService.cancelSubscription(subscriber.getId()));
+    }
+
+    @Test
+    void testCancelSubscriptionsByAppClient() {
+
+        AppClientUser user = AppClientUser.builder()
+                .name("test")
+                .build();
+
+        Mockito.when(subscriberRepository.findByAppClientUser(Mockito.any(AppClientUser.class)))
+                .thenReturn(Lists.newArrayList(subscriber));
+
+        assertDoesNotThrow(() -> subscriberService.cancelSubscriptionsByAppClient(user));
     }
 
     @Test

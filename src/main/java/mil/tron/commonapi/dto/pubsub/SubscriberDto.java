@@ -3,7 +3,6 @@ package mil.tron.commonapi.dto.pubsub;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
-import mil.tron.commonapi.validations.ValidSubscriberAddress;
 
 import javax.validation.constraints.NotNull;
 import java.util.UUID;
@@ -25,6 +24,11 @@ public class SubscriberDto {
 
     @Getter
     @Setter
+    @NotNull
+    private String appClientUser;
+
+    @Getter
+    @Setter
     private String secret;
 
     @Getter
@@ -34,8 +38,6 @@ public class SubscriberDto {
 
     @Getter
     @Setter
-    @NotNull
-    @ValidSubscriberAddress
-    private String subscriberAddress;
+    private String subscriberAddress = "";
 
 }

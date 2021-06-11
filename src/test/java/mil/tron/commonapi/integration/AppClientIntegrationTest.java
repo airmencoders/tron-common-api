@@ -7,7 +7,9 @@ import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
+import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
@@ -365,6 +367,59 @@ public class AppClientIntegrationTest {
                 .andExpect(jsonPath("$.appClientDeveloperEmails[?(@ == '" + USER1_EMAIL + "')]", hasSize(0)));
     }
 
+    @Transactional
+    @Rollback
+    @Test
+    void testSubscriptionPurgeOnAppClientDelete() throws Exception {
 
+        // test that subscriptions for a given app client are purged when
+        //  that app client is deleted
+
+        AppClientUserDto app1 = AppClientUserDto.builder()
+                .id(UUID.randomUUID())
+                .name("App1")
+                .appClientDeveloperEmails(Lists.newArrayList(admin.getEmail()))
+                .build();
+
+        MvcResult result = mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID id = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+
+        mockMvc.perform(post("/v2/subscriptions")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto
+                    .builder()
+                    .secret("blah")
+                    .appClientUser("App1")
+                    .subscriberAddress("/user")
+                    .subscribedEvent(EventType.PERSON_CHANGE)
+                    .build())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/v2/subscriptions")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+
+        mockMvc.perform(delete(ENDPOINT + "{id}",id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/v2/subscriptions")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
 
 }

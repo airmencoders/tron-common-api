@@ -1,12 +1,10 @@
 package mil.tron.commonapi.service;
 
-import org.springframework.stereotype.Service;
-
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
-
 import mil.tron.commonapi.dto.UserInfoDto;
 import mil.tron.commonapi.exception.BadRequestException;
+import org.springframework.stereotype.Service;
 
 @Service
 public class UserInfoServiceImpl implements UserInfoService {
@@ -33,6 +31,8 @@ public class UserInfoServiceImpl implements UserInfoService {
 		userInfo.setPreferredUsername(jwt.getClaim("preferred_username").asString());
 		userInfo.setEmail(jwt.getClaim("email").asString());
 		userInfo.setOrganization(jwt.getClaim("organization").asString());
+		userInfo.setRank(jwt.getClaim("rank").asString());
+		userInfo.setAffiliation(jwt.getClaim("affiliation").asString());
 		
 		// usercertificate may not always exist
 		String userCert = jwt.getClaim("usercertificate").asString();

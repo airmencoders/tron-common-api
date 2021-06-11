@@ -3,6 +3,7 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 
+import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
 import mil.tron.commonapi.dto.PersonDto;
@@ -17,6 +18,9 @@ import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.filter.FilterCondition;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.repository.filter.QueryOperator;
 import mil.tron.commonapi.service.OrganizationService;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
@@ -46,11 +50,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -567,6 +573,129 @@ public class OrganizationIntegrationTest {
 	        .andExpect(jsonPath("$.pagination.totalElements").value(response.getPagination().getTotalElements()))
 	        .andExpect(jsonPath("$.pagination.totalPages").value(response.getPagination().getTotalPages()));
 
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testOrganizationPostFilter() throws Exception {
+    	/**
+    	 * Save everything to database
+    	 */
+    	PersonDto person = PersonDto.builder()
+                .firstName("test")
+                .lastName("member")
+                .email("test@member.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("12345")
+                .build();
+    	
+    	PersonDto person1 = PersonDto.builder()
+                .firstName("1")
+                .lastName("2")
+                .email("1@2.com")
+                .rank("CIV")
+                .branch(Branch.OTHER)
+                .dodid("34567")
+                .build();
+    	
+    	personService.createPerson(person);
+    	personService.createPerson(person1);
+		
+		OrganizationDto parentOrgPersonMember = OrganizationDto.builder()
+				.id(UUID.randomUUID())
+	            .name("TestOrg1")
+	            .members(List.of(person.getId()))
+	            .build();
+		
+        organizationService.createOrganization(parentOrgPersonMember);
+        
+        OrganizationDto subOrgPerson1Leader = OrganizationDto.builder()
+        		.id(UUID.randomUUID())
+	            .name("TestOrg2")
+	            .leader(person1.getId())
+	            .parentOrganization(parentOrgPersonMember.getId())
+	            .build();
+        
+        organizationService.createOrganization(subOrgPerson1Leader);
+        parentOrgPersonMember.setSubOrgsUUID(Set.of(subOrgPerson1Leader.getId()));
+        organizationService.updateOrganization(parentOrgPersonMember.getId(), parentOrgPersonMember);
+        
+        /**
+         * Tests below here are for specific Organization fields that will get transformed to join attributes
+         * parentOrganization, subordinateOrganizations, members, leader
+         */
+        
+        // parentOrganization
+        FilterDto filterDto = new FilterDto();
+        FilterCriteria criteria = FilterCriteria.builder()
+				.field(OrganizationDto.PARENT_ORG_FIELD)
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(parentOrgPersonMember.getId().toString())
+										.build()))
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(subOrgPerson1Leader.getId().toString())));
+		
+		// subordinateOrganizations
+        criteria = FilterCriteria.builder()
+				.field(OrganizationDto.SUB_ORGS_FIELD)
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(subOrgPerson1Leader.getId().toString())
+										.build()))
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(parentOrgPersonMember.getId().toString())));
+		
+		// members
+		criteria = FilterCriteria.builder()
+				.field(OrganizationDto.MEMBERS_FIELD)
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(person.getId().toString())
+										.build()))
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(parentOrgPersonMember.getId().toString())));
+		
+		// leader
+		criteria = FilterCriteria.builder()
+				.field(OrganizationDto.LEADER_FIELD)
+				.conditions(List.of(FilterCondition.builder()
+										.operator(QueryOperator.EQUALS)
+										.value(person1.getId().toString())
+										.build()))
+				.build();
+		filterDto.setFilterCriteria(Lists.newArrayList(criteria));
+		
+		mockMvc.perform(post(ENDPOINT_V2 + "/filter")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
+		.andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].id", is(subOrgPerson1Leader.getId().toString())));
+		
     }
 
     private static String resource(String name) throws IOException {

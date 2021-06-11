@@ -17,6 +17,10 @@ import java.util.UUID;
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Rank {
+	@JsonIgnore
+	public static final String ABBREVIATION_FIELD = "abbreviation";
+	@JsonIgnore
+	public static final String BRANCH_TYPE_FIELD = "branchType";
 
     @Id
     @Getter

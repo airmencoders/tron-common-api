@@ -8,7 +8,9 @@ import mil.tron.commonapi.entity.orgtypes.Unit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,7 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface OrganizationRepository extends JpaRepository<Organization, UUID> {
+public interface OrganizationRepository extends JpaRepository<Organization, UUID>, JpaSpecificationExecutor<Organization> {
 	Optional<Organization> findByNameIgnoreCase(String name);
 
 	List<Organization> findOrganizationsByParentOrganization(Organization org);
@@ -35,4 +37,5 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
 	Page<Organization> findAllByNameContainsIgnoreCaseAndOrgTypeAndBranchType(String name, Unit unit, Branch branch, Pageable pageable);
 	Page<Organization> findAllByNameContainsIgnoreCaseAndOrgType(String name, Unit unit, Pageable pageable);
 	Page<Organization> findAllByNameContainsIgnoreCaseAndBranchType(String name, Branch branch, Pageable pageable);
+	Page<Organization> findAll(Specification<Organization> spec, Pageable pageable);
 }

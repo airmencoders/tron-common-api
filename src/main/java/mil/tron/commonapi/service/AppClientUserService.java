@@ -16,5 +16,6 @@ public interface AppClientUserService {
 	AppClientUserDto deleteAppClientUser(UUID id);
 	AppClientUserDto updateAppClientDeveloperItems(UUID id, AppClientUserDto appClient);
 	boolean userIsAppClientDeveloperForApp(UUID id, String email);
+	boolean userIsAppClientDeveloperForAppSubscription(UUID subscriptionId, String user);
 	void deleteDeveloperFromAllAppClient(DashboardUser user);
 }

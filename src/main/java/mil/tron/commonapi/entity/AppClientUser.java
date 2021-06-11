@@ -1,22 +1,14 @@
 package mil.tron.commonapi.entity;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.persistence.Entity;
-import javax.persistence.ManyToMany;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import mil.tron.commonapi.entity.appsource.App;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.validations.ValidSubscriberAddress;
+
+import javax.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Class that represents a Client User entity that is an Application
@@ -58,7 +50,16 @@ public class AppClientUser extends App {
 	@Getter
 	@Setter
 	@Builder.Default
-	@OneToMany(mappedBy = "appClientUser")
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "appClientUser")
 	private Set<AppEndpointPriv> appEndpointPrivs = new HashSet<>();
+
+	/**
+	 * The P1 cluster (internal) URL of this application.
+	 * Initialize it to its likely value.
+	 */
+	@Getter
+	@Setter
+	@ValidSubscriberAddress
+	private String clusterUrl = String.format("http://%s.%s.svc.cluster.local/", super.getName(), super.getName());
 
 }

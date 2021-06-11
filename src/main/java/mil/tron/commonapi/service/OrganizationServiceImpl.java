@@ -30,6 +30,8 @@ import mil.tron.commonapi.pubsub.messages.*;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
@@ -37,6 +39,7 @@ import org.modelmapper.Converter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -59,6 +62,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final DtoMapper modelMapper;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
+	
 	private static final Map<Unit, Set<String>> validProperties = Map.of(
 			Unit.FLIGHT, fields(Flight.class),
 			Unit.GROUP, fields(Group.class),
@@ -1015,5 +1019,45 @@ public class OrganizationServiceImpl implements OrganizationService {
 	public Slice<OrganizationDto> getOrganizationsByTypeAndServiceSlice(String searchQuery, Unit type, Branch branch,
 			Pageable page) {
 		return findOrganizationsByTypeAndServiceSlice(searchQuery, type, branch, page).map(this::convertToDto);
+	}
+
+	@Override
+	public Page<OrganizationDto> getOrganizationsPageSpec(List<FilterCriteria> filterCriteria, Pageable page) {
+		/**
+		 * Transforms criteria for fields to account for join attributes.
+		 * Takes the name of the field from the DTO and transforms
+		 * the criteria to use the field name from the entity.
+		 * 
+		 * EX: rank field on PersonDto corresponds to the string Abbreviation field of Rank
+		 */
+		filterCriteria = filterCriteria.stream().map(criteria -> {
+			switch (criteria.getField()) {
+				case OrganizationDto.PARENT_ORG_FIELD:
+					criteria.transformToJoinAttribute(Organization.ID_FIELD, Organization.PARENT_ORG_FIELD);
+					break;
+					
+				case OrganizationDto.SUB_ORGS_FIELD:
+					criteria.transformToJoinAttribute(Organization.ID_FIELD, Organization.SUB_ORGS_FIELD);
+					break;
+					
+				case OrganizationDto.MEMBERS_FIELD:
+					criteria.transformToJoinAttribute(Person.ID_FIELD, Organization.MEMBERS_FIELD);
+					break;
+					
+				case OrganizationDto.LEADER_FIELD:
+					criteria.transformToJoinAttribute(Person.ID_FIELD, Organization.LEADER_FIELD);
+					break;
+					
+				default:
+					break;
+			}
+				
+			return criteria;
+		}).collect(Collectors.toList());
+		
+		Specification<Organization> spec = SpecificationBuilder.getSpecificationFromFilters(filterCriteria);
+		Page<Organization> pagedResponse = repository.findAll(spec, page);
+		
+		return pagedResponse.map(this::convertToDto);
 	}
 }
