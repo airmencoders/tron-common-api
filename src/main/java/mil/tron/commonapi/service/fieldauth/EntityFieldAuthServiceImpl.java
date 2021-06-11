@@ -9,8 +9,8 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.service.PrivilegeService;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,27 +29,95 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
     private final PrivilegeRepository privilegeRepository;
     private final OrganizationRepository organizationRepository;
     private final PersonRepository personRepository;
+    private final PrivilegeService privilegeService;
     private static final String PERSON_PREFIX = "Person-";
     private static final String ORG_PREFIX = "Organization-";
     private final List<Field> personFields = FieldUtils.getFieldsListWithAnnotation(Person.class, ProtectedField.class);
     private final List<Field> orgFields = FieldUtils.getFieldsListWithAnnotation(Organization.class, ProtectedField.class);
-    private static final ModelMapper MAPPER = new ModelMapper();
 
     @Value("${efa-enabled}")
     private boolean efaEnabled;
 
     public EntityFieldAuthServiceImpl(PrivilegeRepository privilegeRepository,
                                       OrganizationRepository organizationRepository,
-                                      PersonRepository personRepository) {
+                                      PersonRepository personRepository,
+                                      PrivilegeService privilegeService) {
         this.privilegeRepository = privilegeRepository;
         this.organizationRepository = organizationRepository;
         this.personRepository = personRepository;
+        this.privilegeService = privilegeService;
+    }
+
+    @PostConstruct
+    public void init() {
+        buildEntityPrivileges();
     }
 
     /**
      * Builds out the entity field authorization privileges for the fields
-     * in the Person/Organization entity that are marked @ProtectedField
+     * in the Person/Organization entity that are marked @ProtectedField.  It also
+     * prunes out any fields that have privileges in the db now, but for some reason
+     * aren't marked as @ProtectedField anymore...
      */
+    @Transactional
+    public void buildEntityPrivileges() {
+
+        for (Field f : personFields) {
+            String privName = PERSON_PREFIX + f.getName();
+            Optional<Privilege> p = privilegeRepository.findByName(privName);
+            if (p.isEmpty()) {
+                Privilege r = new Privilege();
+                r.setName(PERSON_PREFIX + f.getName());
+                privilegeRepository.save(r);
+            }
+        }
+
+        // get list of all the Person- field privileges we have now
+        List<Privilege> personPrivs = privilegeRepository.findAll()
+                .stream()
+                .filter(item -> item.getName().startsWith(PERSON_PREFIX))
+                .collect(Collectors.toList());
+
+        // see if we have any orphaned ones we dont need anymore, and delete them
+        for (Privilege priv : personPrivs) {
+            if (!personFields
+                    .stream()
+                    .map(Field::getName)
+                    .collect(Collectors.toList())
+                    .contains(priv.getName().replaceFirst(PERSON_PREFIX, ""))) {
+
+                privilegeService.deletePrivilege(priv);
+            }
+        }
+
+        for (Field f : orgFields) {
+            String privName = ORG_PREFIX + f.getName();
+            Optional<Privilege> p = privilegeRepository.findByName(privName);
+            if (p.isEmpty()) {
+                Privilege r = new Privilege();
+                r.setName(ORG_PREFIX + f.getName());
+                privilegeRepository.save(r);
+            }
+        }
+
+        // get list of all the Organization- field privileges we have now
+        List<Privilege> orgPrivs = privilegeRepository.findAll()
+                .stream()
+                .filter(item -> item.getName().startsWith(ORG_PREFIX))
+                .collect(Collectors.toList());
+
+        // see if we have any orphaned ones we dont need anymore, and delete them
+        for (Privilege priv : orgPrivs) {
+            if (!orgFields
+                    .stream()
+                    .map(Field::getName)
+                    .collect(Collectors.toList())
+                    .contains(priv.getName().replaceFirst(ORG_PREFIX, ""))) {
+
+                privilegeService.deletePrivilege(priv);
+            }
+        }
+    }
 
     /**
      * Determines which data "gets let through" on a person update/patch

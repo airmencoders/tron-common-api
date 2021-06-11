@@ -14,7 +14,7 @@ import javax.persistence.Id;
 @NoArgsConstructor
 public class Privilege {
 	@Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Getter
 	@Setter
     private Long id;

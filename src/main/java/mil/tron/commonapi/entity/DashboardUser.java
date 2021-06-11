@@ -37,7 +37,7 @@ public class DashboardUser {
     @Getter
     @Setter
     @Builder.Default
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     private Set<Privilege> privileges = new HashSet<>();
 
     @PrePersist

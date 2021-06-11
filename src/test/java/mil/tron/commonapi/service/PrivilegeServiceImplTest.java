@@ -1,12 +1,15 @@
 package mil.tron.commonapi.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
+import com.google.common.collect.Sets;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
+import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,10 +18,15 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import mil.tron.commonapi.dto.PrivilegeDto;
-import mil.tron.commonapi.dto.mapper.DtoMapper;
-import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.repository.PrivilegeRepository;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 
 @ExtendWith(MockitoExtension.class)
 class PrivilegeServiceImplTest {
@@ -26,6 +34,12 @@ class PrivilegeServiceImplTest {
 	
 	@Mock
 	private PrivilegeRepository repository;
+
+	@Mock
+	private DashboardUserRepository dashboardUserRepository;
+
+	@Mock
+	private AppClientUserRespository appClientUserRespository;
 	
 	@InjectMocks
 	private PrivilegeServiceImpl service;
@@ -55,5 +69,40 @@ class PrivilegeServiceImplTest {
     	assertThat(resultAsList).hasSize(1);
     	assertThat(resultAsList.get(0)).isEqualTo(privilegeDto);
     }
+
+    @Test
+	void deletePrivilege() {
+		Mockito.when(dashboardUserRepository.save(Mockito.any())).then(returnsFirstArg());
+		Mockito.when(appClientUserRespository.save(Mockito.any())).then(returnsFirstArg());
+
+		Privilege privilege = Privilege
+				.builder()
+				.id(1L)
+				.name("Person-test")
+				.build();
+
+		Privilege privilege2 = Privilege
+				.builder()
+				.id(2L)
+				.name("Organization-test")
+				.build();
+
+		DashboardUser user = DashboardUser.builder()
+				.privileges(Sets.newHashSet(privilege, privilege2))
+				.build();
+
+		AppClientUser appClientUser = AppClientUser.builder()
+				.privileges(Sets.newHashSet(privilege, privilege2))
+				.build();
+
+		Mockito.when(dashboardUserRepository.findAll()).thenReturn(Lists.newArrayList(user));
+		Mockito.when(appClientUserRespository.findAll()).thenReturn(Lists.newArrayList(appClientUser));
+
+		assertTrue(user.getPrivileges().contains(privilege));
+		assertTrue(appClientUser.getPrivileges().contains(privilege));
+		service.deletePrivilege(privilege);
+		assertFalse(user.getPrivileges().contains(privilege));
+		assertFalse(appClientUser.getPrivileges().contains(privilege));
+	}
 	
 }
