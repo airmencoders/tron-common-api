@@ -245,7 +245,7 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeWrite
-	@PostMapping({"${api-prefix.v1}/person-jwt", "${api-prefix.v2}/person-jwt"})
+	@PostMapping({"${api-prefix.v1}/person/person-jwt", "${api-prefix.v2}/person/person-jwt"})
 	public ResponseEntity<PersonDto> createPersonFromJwt(@Parameter(description = "Person to create",
 			required = true,
 			schema = @Schema(implementation = PlatformJwtDto.class))
