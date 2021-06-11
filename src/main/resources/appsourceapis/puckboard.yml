@@ -5,7 +5,7 @@ info:
     description: Puckboard's stable API definitions.
 servers:
     -
-        url: 'http://PatLovesSneks.com/v2'
+        url: '/'
 paths:
     /events:
         summary: Path used to manage the list of Events.
