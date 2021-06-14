@@ -42,4 +42,8 @@ public class AppEndpointClientInfoDto {
     @Setter
     boolean deleted;
 
+    @Getter
+    @Setter
+    UUID appSourceId;
+
 }
