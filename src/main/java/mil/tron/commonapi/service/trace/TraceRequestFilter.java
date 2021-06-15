@@ -21,12 +21,13 @@ public class TraceRequestFilter extends HttpTraceFilter {
     }
 
     /**
-     * Dont log stuff from actuator, h2-console, or from swagger paths
+     * Dont log stuff from actuator, http log audit, h2-console, or from swagger paths
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return request.getServletPath().contains("actuator")
                 || request.getServletPath().contains("api-docs")
+                || request.getServletPath().contains("/logs")
                 || request.getServletPath().contains("h2-console");
     }
 }

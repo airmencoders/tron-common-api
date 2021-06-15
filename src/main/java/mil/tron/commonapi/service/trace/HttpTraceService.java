@@ -9,11 +9,11 @@ import org.modelmapper.ModelMapper;
 import org.springframework.boot.actuate.trace.http.HttpTrace;
 import org.springframework.boot.actuate.trace.http.HttpTraceRepository;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * A class that intercepts traffic in a request and the response we send back for logging.
@@ -50,23 +50,25 @@ public class HttpTraceService implements HttpTraceRepository {
      * @param pageable Pageable object from the controller (i.e. page= & size= & sort=)
      * @return HttpLogEntryDto list (not including response and request bodies)
      */
-    public List<HttpLogEntryDto> getLogsFromDate(Date fromDate,
+    public Page<HttpLogEntryDto> getLogsFromDate(Date fromDate,
                                                  String method,
                                                  String userName,
                                                  int status,
                                                  String userAgentContains,
                                                  String requestedUrlContains,
                                                  Pageable pageable) {
-        return httpLogsRepository
-                .findByRequestTimestampGreaterThanEqual(fromDate, pageable)
-                .stream()
-                .filter(item -> method.isEmpty() || item.getRequestMethod().toLowerCase().contains(method.toLowerCase()))
-                .filter(item -> userName.isEmpty() || item.getUserName().toLowerCase().contains(userName.toLowerCase()))
-                .filter(item -> status == -1 || item.getStatusCode() == status)
-                .filter(item -> userAgentContains.isEmpty() || item.getUserAgent().toLowerCase().contains(userAgentContains.toLowerCase()))
-                .filter(item -> requestedUrlContains.isEmpty() || item.getRequestedUrl().toLowerCase().contains(requestedUrlContains.toLowerCase()))
-                .map(item -> modelMapper.map(item, HttpLogEntryDto.class))
-                .collect(Collectors.toList());
+
+        return httpLogsRepository.findRequestedLogs(
+                fromDate,
+                "%" + method + "%",
+                "%" + userName + "%",
+                status,
+                "%" + userAgentContains + "%",
+                "%" + requestedUrlContains + "%",
+                pageable)
+                    .map(item -> modelMapper.map(item, HttpLogEntryDto.class));
+
+
     }
 
     /**
