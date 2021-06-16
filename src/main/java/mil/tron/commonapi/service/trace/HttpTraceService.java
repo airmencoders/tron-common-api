@@ -9,6 +9,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.boot.actuate.trace.http.HttpTrace;
 import org.springframework.boot.actuate.trace.http.HttpTraceRepository;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ import java.util.*;
  */
 @Service
 @Profile("production | development")
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class HttpTraceService implements HttpTraceRepository {
 
     private ModelMapper modelMapper = new ModelMapper();
@@ -128,7 +131,7 @@ public class HttpTraceService implements HttpTraceRepository {
                             .requestedUrl(trace.getRequest().getUri().toString())
                             .requestHost(trace.getRequest().getUri().getHost())
                             .requestBody(contentTrace.getRequestBody())
-                            .responseBody(contentTrace.getResponseBody())
+                            .responseBody(contentTrace.getResponseBody() != null ? contentTrace.getResponseBody() : contentTrace.getErrorMessage())
                             .statusCode(trace.getResponse().getStatus())
                             .build());
         }

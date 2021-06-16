@@ -32,8 +32,7 @@ import java.util.UUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -200,5 +199,6 @@ public class HttpTraceIntegrationTest {
         assertEquals(size+5, httpLogsRepository.findAll().size());
         HttpLogEntry entry5 = httpLogsRepository.findAll().get(size+4);
         assertEquals(403, entry5.getStatusCode());
+        assertTrue(entry5.getResponseBody().contains("denied"));
     }
 }

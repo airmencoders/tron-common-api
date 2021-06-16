@@ -49,9 +49,9 @@ public class ContentTraceFilter extends OncePerRequestFilter {
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
         try {
             filterChain.doFilter(wrappedRequest, wrappedResponse);
-            traceManager.updateBody(wrappedRequest, wrappedResponse);
         }
         finally {
+            traceManager.updateBody(wrappedRequest, wrappedResponse);
             wrappedResponse.copyBodyToResponse();
         }
     }
