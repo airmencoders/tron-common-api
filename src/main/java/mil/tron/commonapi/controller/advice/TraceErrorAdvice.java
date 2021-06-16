@@ -16,7 +16,7 @@ public class TraceErrorAdvice {
     }
 
     @ExceptionHandler(Exception.class)
-    public void logExceptionDetailsFromResponse(Exception ex) throws Exception {
+    public void logExceptionDetailsFromResponse(Exception ex) throws Exception {  //NOSONAR
         manager.setErrorMessage(ex.getMessage());
         throw ex;
     }
