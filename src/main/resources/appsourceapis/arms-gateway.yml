@@ -127,12 +127,6 @@ paths:
               $ref: '#/components/schemas/AddTrainingDataRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -141,6 +135,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ADDTRAININGOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /flight-svc/flight-data:
     post:
       tags:
@@ -154,12 +154,6 @@ paths:
               $ref: '#/components/schemas/FlightDataRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -168,6 +162,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLIGHTOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /flight-svc/flight-activity:
     post:
       tags:
@@ -235,12 +235,6 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -249,6 +243,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/RATINGSDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/rated-officer-data:
     post:
       tags:
@@ -289,12 +289,6 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -303,6 +297,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PQIDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/personnel-info:
     post:
       tags:
@@ -370,12 +370,6 @@ paths:
               $ref: '#/components/schemas/ManMonthRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -384,6 +378,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PCSMANMONTHDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/passport-data:
     post:
       tags:
@@ -451,12 +451,6 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -465,6 +459,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MAXINCENTIVEPAYOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/max-badge:
     post:
       tags:
@@ -829,12 +829,6 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequestXorg'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -843,6 +837,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLYERCURRENTSTATUSOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/flyer-aircraft-total:
     post:
       tags:
@@ -856,12 +856,6 @@ paths:
               $ref: '#/components/schemas/FlyerAircraftTotalRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -870,6 +864,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLYERAIRCRAFTTOTALOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/flyer-7-30-60-90:
     post:
       tags:
@@ -883,12 +883,6 @@ paths:
               $ref: '#/components/schemas/Flyer7306090Request'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -897,6 +891,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLYER7306090OBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/flight-pay:
     post:
       tags:
@@ -937,12 +937,6 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequestXorg'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -951,6 +945,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AVIATIONSERVICEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/aircrew-position-totals:
     post:
       tags:
@@ -964,12 +964,6 @@ paths:
               $ref: '#/components/schemas/AircrewPositionTotalsRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -978,6 +972,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AIRCREWPOSITIONTOTALSOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/aircrew-personnel:
     post:
       tags:
@@ -1014,13 +1014,13 @@ paths:
       parameters:
       - name: fromDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
       - name: toDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
@@ -1088,13 +1088,13 @@ paths:
           type: string
       - name: fromDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
       - name: toDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
@@ -1163,13 +1163,13 @@ paths:
           type: string
       - name: fromDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
       - name: toDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
@@ -1204,12 +1204,6 @@ paths:
         schema:
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1218,6 +1212,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TRAININGPROFILEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/waiver:
     get:
       tags:
@@ -1282,12 +1282,6 @@ paths:
           minLength: 0
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1296,6 +1290,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TRAININGREFOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/service-component:
     get:
       tags:
@@ -1321,12 +1321,6 @@ paths:
           minLength: 0
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1335,6 +1329,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/SERVICECOMPONENTOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/rating:
     get:
       tags:
@@ -1438,12 +1438,6 @@ paths:
           minLength: 0
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1452,6 +1446,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PQICODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/physical-availability:
     get:
       tags:
@@ -1947,12 +1947,6 @@ paths:
           minLength: 0
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1961,6 +1955,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLYERGRADEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/entitlement-status:
     get:
       tags:
@@ -2064,12 +2064,6 @@ paths:
           minLength: 0
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -2078,6 +2072,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/BADGECODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/aircraft-cert:
     get:
       tags:
@@ -2134,13 +2134,13 @@ paths:
             format: double
       - name: fromDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
       - name: toDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
@@ -2205,13 +2205,13 @@ paths:
             type: string
       - name: fromDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
       - name: toDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
@@ -2282,13 +2282,13 @@ paths:
             type: string
       - name: fromDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
       - name: toDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
@@ -2323,12 +2323,6 @@ paths:
         schema:
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -2337,6 +2331,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/JUMPDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/crew-table:
     get:
       tags:
@@ -2356,13 +2356,13 @@ paths:
           type: string
       - name: fromDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
       - name: toDate
         in: query
-        description: yyyyMMdd:HHmmss
+        description: yyyy-MM-dd:HHmmss
         required: false
         schema:
           type: string
@@ -2422,10 +2422,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -2451,10 +2451,10 @@ components:
           type: array
           items:
             type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. One of orgIds and flyerIds is required, but both cannot\
-        \ be supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. One of orgIds and flyerIds is required, but both\
+        \ cannot be supplied at the same time."
     TrainingRequirementDataRequest:
       required:
       - harmCode
@@ -2464,10 +2464,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -2501,10 +2501,10 @@ components:
           type: array
           items:
             type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     TRAININGREQUIREMENTOBJIntType:
       required:
       - annualvolumeaccomplishedtotal
@@ -2758,10 +2758,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -2792,10 +2792,10 @@ components:
           format: double
         profileSearchString:
           type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     PROFILEASSIGNMENTOBJIntType:
       required:
       - flyerflyingorganizationid
@@ -2856,10 +2856,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -2889,10 +2889,10 @@ components:
           type: string
         programSearchString:
           type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     CURRENTTRAININGOBJIntType:
       required:
       - accomplishmentmethod
@@ -3131,7 +3131,7 @@ components:
         trainingProgramCode:
           type: string
         eventLogAccompDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         trainingTaskId:
           type: string
@@ -3180,10 +3180,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -3201,10 +3201,10 @@ components:
         systemId:
           type: string
         flightFromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         flightToDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         chargedOrgIds:
           type: array
@@ -3227,9 +3227,9 @@ components:
           type: array
           items:
             type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. "
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. "
     FLIGHTOBJIntType:
       required:
       - aircraftCallsign
@@ -3360,10 +3360,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -3390,10 +3390,10 @@ components:
           items:
             type: string
         flightFromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         flightToDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         crewPositionCodes:
           type: array
@@ -3404,10 +3404,10 @@ components:
           items:
             type: number
             format: double
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     FLIGHTACTIVITYOBJIntType:
       required:
       - armsflightactivitysequenceid
@@ -3696,10 +3696,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -3725,10 +3725,10 @@ components:
           type: array
           items:
             type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     RATINGSDATAOBJIntType:
       required:
       - flyeruniqueid
@@ -4309,10 +4309,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -4341,10 +4341,10 @@ components:
         manMonthRecordNumber:
           type: number
           format: double
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     PCSMANMONTHDATAOBJIntType:
       required:
       - flyerfirstname
@@ -4722,10 +4722,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -4755,10 +4755,10 @@ components:
           type: array
           items:
             type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     LINEBADGEDATAOBJIntType:
       required:
       - flyeruniqueid
@@ -4807,10 +4807,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -4838,10 +4838,10 @@ components:
             type: string
         jumpActivityDutyCode:
           type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     JUMPDATATOTALOBJIntType:
       required:
       - firstjumpdate
@@ -4976,10 +4976,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -5008,10 +5008,10 @@ components:
         jumpRecordNumber:
           type: number
           format: double
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. OrgIds and FlyerIds are not required, and cannot both be\
-        \ supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     JUMPAUDITDATAOBJIntType:
       required:
       - aircraftmds
@@ -5657,10 +5657,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -5702,10 +5702,10 @@ components:
           type: array
           items:
             type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. One of orgIds and flyerIds is required, but both cannot\
-        \ be supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. One of orgIds and flyerIds is required, but both\
+        \ cannot be supplied at the same time."
     FLYERAIRCRAFTTOTALOBJIntType:
       required:
       - airccraftmajcomcode
@@ -5906,10 +5906,10 @@ components:
           type: boolean
         systemId:
           type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. One of orgIds and flyerIds is required, but both cannot\
-        \ be supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. One of orgIds and flyerIds is required, but both\
+        \ cannot be supplied at the same time."
     FLYER7306090OBJIntType:
       required:
       - flyerflyingorganizationid
@@ -6176,10 +6176,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -6209,10 +6209,10 @@ components:
           type: array
           items:
             type: string
-      description: "Dates must match yyyyMMdd:HHmmss format. RecStatus indicates record\
-        \ status and has the folllowing options: D - Deleted, N - New, U - Updated,\
-        \ A - New/Updated. One of orgIds and flyerIds is required, but both cannot\
-        \ be supplied at the same time."
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. One of orgIds and flyerIds is required, but both\
+        \ cannot be supplied at the same time."
     AIRCREWPOSITIONTOTALSOBJIntType:
       required:
       - flyerciviliantotal
