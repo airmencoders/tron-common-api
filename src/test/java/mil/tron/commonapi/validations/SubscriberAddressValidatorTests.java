@@ -13,6 +13,8 @@ public class SubscriberAddressValidatorTests {
     void shouldReturnTrueOnValidUrls() {
         assertTrue(validator.isValid("http://tron-something.something.svc.cluster.local/v1/endpoint", null));
         assertTrue(validator.isValid("http://localhost:8080/changed", null));
+        assertTrue(validator.isValid("", null));
+        assertTrue(validator.isValid(null, null));
     }
 
     @Test

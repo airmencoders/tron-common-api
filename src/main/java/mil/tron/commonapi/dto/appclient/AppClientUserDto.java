@@ -3,6 +3,7 @@ package mil.tron.commonapi.dto.appclient;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.validations.ValidSubscriberAddress;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -39,6 +40,7 @@ public class AppClientUserDto {
 
 	@Getter
 	@Setter
+	@ValidSubscriberAddress
 	private String clusterUrl;
 
 }
