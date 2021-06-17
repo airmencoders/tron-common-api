@@ -1,19 +1,20 @@
 package mil.tron.commonapi.service;
 
-import java.util.List;
-import java.util.UUID;
-
+import com.github.fge.jsonpatch.JsonPatch;
+import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PlatformJwtDto;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.repository.filter.FilterCriteria;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
-import com.github.fge.jsonpatch.JsonPatch;
-import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.entity.Person;
-import mil.tron.commonapi.repository.filter.FilterCriteria;
+import java.util.List;
+import java.util.UUID;
 
 public interface PersonService {
 	PersonDto createPerson(PersonDto dto);
+	PersonDto createPersonFromJwt(PlatformJwtDto dto);
 	PersonDto updatePerson(UUID id, PersonDto dto);
 	PersonDto patchPerson(UUID id, JsonPatch patch);
 

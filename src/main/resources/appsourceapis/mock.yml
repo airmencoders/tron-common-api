@@ -5,8 +5,13 @@ info:
   description: Mock API definitions.
 servers:
   -
-    url: 'http://test.com/v1'
+    url: '/'
 paths:
+  /users:
+    get:
+      responses:
+        '200':
+          description: OK
   /test:
     get:
       responses:

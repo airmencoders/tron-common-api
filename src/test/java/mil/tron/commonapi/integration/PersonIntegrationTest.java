@@ -3,11 +3,7 @@ package mil.tron.commonapi.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 
-import mil.tron.commonapi.dto.FilterDto;
-import mil.tron.commonapi.dto.OrganizationDto;
-import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.dto.PersonDtoResponseWrapper;
-import mil.tron.commonapi.dto.PersonFindDto;
+import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
 import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
@@ -825,6 +821,42 @@ public class PersonIntegrationTest {
 				.content(OBJECT_MAPPER.writeValueAsString(filterDto)))
 		.andExpect(status().isBadRequest());
 		
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testP1JwtEndpoint() throws Exception {
+
+        PlatformJwtDto dto = PlatformJwtDto
+                .builder()
+                .affiliation("US Air Force")
+                .rank("E-9")
+                .email("jimmy@test.com")
+                .dodId("12345678")
+                .familyName("smith")
+                .givenName("jimmy")
+                .build();
+
+        // GO path
+        mockMvc.perform(post("/v2/person/person-jwt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("CMSgt")))
+                .andExpect(jsonPath("$.branch", equalTo("USAF")));
+
+        // ERROR path - defaults to "Unk" for rank and "OTHER" for branch
+        dto.setEmail("jimmy2@test.com");
+        dto.setDodId("123455555");
+        dto.setRank(null);
+        dto.setAffiliation(null);
+        mockMvc.perform(post("/v2/person/person-jwt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("Unk")))
+                .andExpect(jsonPath("$.branch", equalTo("OTHER")));
     }
 
     private static String resource(String name) throws IOException {
