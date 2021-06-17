@@ -7,6 +7,8 @@ import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
+import mil.tron.commonapi.dto.appsource.AppEndpointDto;
+import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
@@ -28,6 +30,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
+
+import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
 
@@ -58,6 +62,7 @@ public class AppClientIntegrationTest {
             .toString();
 
     private static final String ENDPOINT = "/v1/app-client/";
+    private static final String APP_SOURCE_ENDPOINT = "/v1/app-source/";
     private static final String DASHBOARD_USERS_ENDPOINT = "/v1/dashboard-users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -143,6 +148,7 @@ public class AppClientIntegrationTest {
                 .andReturn();
 
         UUID app1Id = OBJECT_MAPPER.readValue(app1Result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+        app1.setId(app1Id);
 
         // verify admin user has the APP_CLIENT_DEVELOPER priv, and that user1@test.com exists now
         MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
@@ -192,6 +198,7 @@ public class AppClientIntegrationTest {
                 .andReturn();
 
         UUID app2Id = OBJECT_MAPPER.readValue(app2Result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+        app2.setId(app2Id);
 
         mockMvc.perform(get(ENDPOINT + "{id}", app2Id)
                 .header(AUTH_HEADER_NAME, createToken(USER2_EMAIL))
@@ -327,6 +334,7 @@ public class AppClientIntegrationTest {
                 .andReturn();
 
         app1Id = OBJECT_MAPPER.readValue(app1Result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+        app1.setId(app1Id);
 
         mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
@@ -420,6 +428,99 @@ public class AppClientIntegrationTest {
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testAddingAndRemovingAppClientsWhenAppSourceExists() throws Exception {
+        // Test that App Clients, when added, modify the existing App Source if one exists rather than 409
+        // Test that App Clients, when deleted, modify the existing App Source if one exists rather than deleting the App object entirely
+        String user1Email = "user1@test.com";
+
+        AppSourceDetailsDto appSource = AppSourceDetailsDto.builder()
+                .name("App1")
+                .endpoints(Arrays.asList(AppEndpointDto.builder()
+                        .id(UUID.randomUUID())
+                        .path("/path")
+                        .requestType("GET")
+                        .deleted(false)
+                        .build())
+                )
+                .build();
+
+        MvcResult appSourceResult = mockMvc.perform(post(APP_SOURCE_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(appSource)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        
+        UUID app1Id = OBJECT_MAPPER.readValue(appSourceResult.getResponse().getContentAsString(), AppSourceDetailsDto.class).getId();
+        appSource.setId(app1Id);
+
+        appSourceResult = mockMvc.perform(get(APP_SOURCE_ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Verify adding a new App Client with the same name is attached to the same App row (Id)
+        AppClientUserDto appClient = AppClientUserDto.builder()
+                .id(UUID.randomUUID())
+                .name("App1")
+                .appClientDeveloperEmails(Lists.newArrayList(admin.getEmail(), user1Email))
+                .build();
+
+        MvcResult clientResult = mockMvc.perform(post(ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(appClient)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID resultId = OBJECT_MAPPER.readValue(clientResult.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+        assertEquals(app1Id, resultId);
+        appClient.setId(app1Id);
+
+        // verify data has been set
+        MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        DashboardUserDto[] users = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), DashboardUserDto[].class);
+        assertThat(Arrays.asList(users).stream().anyMatch(item -> item.getEmail().equalsIgnoreCase(user1Email))).isTrue();
+
+        // delete App1
+        mockMvc.perform(delete(ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // check that "user3@test.com" and "user1@test.com" exist no where and that "admin@admin.com" still exists in the system
+        result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        users = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), DashboardUserDto[].class);
+        assertThat(Arrays.asList(users).stream().anyMatch(item -> item.getEmail().equalsIgnoreCase(user1Email))).isFalse();
+
+        // check that the App Source still exists
+        appSourceResult = mockMvc.perform(get(APP_SOURCE_ENDPOINT + "{id}", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        AppSourceDetailsDto appSourceDetailsResult = OBJECT_MAPPER.readValue(appSourceResult.getResponse().getContentAsString(), AppSourceDetailsDto.class);
+        assertEquals(appSource.getId(), appSourceDetailsResult.getId());
+        assertEquals(appSource.getName(), appSourceDetailsResult.getName());
     }
 
 }
