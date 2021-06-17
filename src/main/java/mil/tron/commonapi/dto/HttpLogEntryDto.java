@@ -11,6 +11,8 @@ import java.util.UUID;
  * DTO for holding http log info
  */
 
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class HttpLogEntryDto {

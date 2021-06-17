@@ -10,7 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.domain.PageImpl;
 
 import java.util.Date;
 import java.util.Optional;
@@ -29,8 +29,14 @@ public class HttpTraceServiceTest {
 
     @Test
     void testGetLogsFromDate() {
-        Mockito.when(httpLogsRepository.findByRequestTimestampGreaterThanEqual(Mockito.any(), Mockito.any()))
-                .thenReturn(new SliceImpl<>(Lists.newArrayList(HttpLogEntry.builder()
+        Mockito.when(httpLogsRepository.findRequestedLogs(Mockito.any(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.anyInt(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any()))
+                .thenReturn(new PageImpl<>(Lists.newArrayList(HttpLogEntry.builder()
                         .remoteIp("blah")
                         .build(),
                         HttpLogEntry.builder()
@@ -43,7 +49,7 @@ public class HttpTraceServiceTest {
                  -1,
                 "",
                 "",
-                null).size());
+                null).getNumberOfElements());
     }
 
 
