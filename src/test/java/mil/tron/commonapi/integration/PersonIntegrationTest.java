@@ -53,6 +53,7 @@ public class PersonIntegrationTest {
     private static final String ENDPOINT = "/v1/person/";
     private static final String ENDPOINT_V2 = "/v2/person/";
     private static final String ORGANIZATION = "/v1/organization/";
+    private static final String ORGANIZATION_V2 = "/v2/organization/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -163,7 +164,7 @@ public class PersonIntegrationTest {
         JSONArray array = new JSONArray();
         array.put(obj);
 
-        mockMvc.perform(patch(ORGANIZATION + "{id}", dtoObj.getId())
+        mockMvc.perform(patch(ORGANIZATION_V2 + "{id}", dtoObj.getId())
                 .contentType("application/json-patch+json")
                 .content(array.toString()))
                 .andExpect(status().isOk());

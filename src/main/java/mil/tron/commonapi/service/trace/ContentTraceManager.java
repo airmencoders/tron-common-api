@@ -32,6 +32,10 @@ public class ContentTraceManager {
         getTrace().setResponseBody(responseBody);
     }
 
+    public void setErrorMessage(String body) {
+        getTrace().setErrorMessage(body);
+    }
+
     protected String getRequestBody(ContentCachingRequestWrapper wrappedRequest) {
         try {
             if (wrappedRequest.getContentLength() <= 0) {

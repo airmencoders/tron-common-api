@@ -56,7 +56,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -392,7 +391,7 @@ public class OrganizationIntegrationTest {
             content.put("path", "/leader");
             content.put("value", newLeaderId);
             contentArray.put(content);
-            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+            MvcResult result = mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
                     .contentType("application/json-patch+json")
                     .content(contentArray.toString()))
                     .andExpect(status().isOk())
@@ -428,7 +427,7 @@ public class OrganizationIntegrationTest {
             content.put("path", "/members/-");
             content.put("value", newMemberId);
             contentArray.put(content);
-            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+            MvcResult result = mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
                     .contentType("application/json-patch+json")
                     .content(contentArray.toString()))
                     .andExpect(status().isOk())
@@ -447,7 +446,7 @@ public class OrganizationIntegrationTest {
             content.put("op", "remove");
             content.put("path", "/parentOrganization");
             contentArray.put(content);
-            MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", this.existingOrgDto.getId())
+            MvcResult result = mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
                     .contentType("application/json-patch+json")
                     .content(contentArray.toString()))
                     .andExpect(status().isOk())

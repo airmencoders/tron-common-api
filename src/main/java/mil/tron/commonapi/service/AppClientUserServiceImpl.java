@@ -112,6 +112,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 							.deleted(item.getAppEndpoint().isDeleted())
 							.id(item.getId())
 							.basePath(generateAppSourceBasePath(item.getAppSource().getAppSourcePath()))
+							.appSourceId(item.getAppSource().getId())
 							.build())
 						.collect(Collectors.toList()))
 				.clusterUrl(client.getClusterUrl())

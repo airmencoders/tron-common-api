@@ -21,4 +21,8 @@ public class ContentTrace {
     @Setter
     protected String responseBody;
 
+    @Getter
+    @Setter
+    protected String errorMessage;
+
 }

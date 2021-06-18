@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:8088
+- url: http://localhost:8080
   description: Generated server url
 paths:
   /training-svc/training-requirement:
@@ -181,12 +181,6 @@ paths:
               $ref: '#/components/schemas/FlightActivityRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -195,6 +189,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLIGHTACTIVITYOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /flight-svc/add-flight:
     post:
       tags:
@@ -208,12 +208,6 @@ paths:
               $ref: '#/components/schemas/AddFlightRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -222,6 +216,12 @@ paths:
                 type: array
                 items:
                   type: string
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/ratings-data:
     post:
       tags:
@@ -397,12 +397,6 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -411,6 +405,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PASSPORTDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/max-min-ratings:
     post:
       tags:
@@ -799,7 +799,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DefaultArmsRequest'
+              $ref: '#/components/schemas/DefaultArmsRequestXorg'
         required: true
       responses:
         "200":
@@ -826,7 +826,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DefaultArmsRequest'
+              $ref: '#/components/schemas/DefaultArmsRequestXorg'
         required: true
       responses:
         "200":
@@ -907,7 +907,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DefaultArmsRequest'
+              $ref: '#/components/schemas/DefaultArmsRequestXorg'
         required: true
       responses:
         "200":
@@ -934,7 +934,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DefaultArmsRequest'
+              $ref: '#/components/schemas/DefaultArmsRequestXorg'
         required: true
       responses:
         "200":
@@ -1026,6 +1026,7 @@ paths:
           type: string
       - name: harmCode
         in: query
+        description: "Required parameter, corresponding to the size 4 HOSM code"
         required: true
         schema:
           maxLength: 4
@@ -1033,6 +1034,8 @@ paths:
           type: string
       - name: recStatus
         in: query
+        description: "RecStatus indicates record status and has the folllowing options:\
+          \ D - Deleted, N - New, U - Updated, A - New/Updated. "
         required: true
         schema:
           type: string
@@ -1097,6 +1100,7 @@ paths:
           type: string
       - name: harmCode
         in: query
+        description: "Required parameter, corresponding to the size 4 HOSM code"
         required: true
         schema:
           maxLength: 4
@@ -1104,6 +1108,8 @@ paths:
           type: string
       - name: recStatus
         in: query
+        description: "RecStatus indicates record status and has the folllowing options:\
+          \ D - Deleted, N - New, U - Updated, A - New/Updated. "
         required: true
         schema:
           type: string
@@ -1123,12 +1129,6 @@ paths:
         schema:
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1137,6 +1137,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TRAININGPROGRAMOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/training-profile:
     get:
       tags:
@@ -1169,6 +1175,7 @@ paths:
           type: string
       - name: harmCode
         in: query
+        description: "Required parameter, corresponding to the size 4 HOSM code"
         required: true
         schema:
           maxLength: 4
@@ -1176,6 +1183,8 @@ paths:
           type: string
       - name: recStatus
         in: query
+        description: "RecStatus indicates record status and has the folllowing options:\
+          \ D - Deleted, N - New, U - Updated, A - New/Updated. "
         required: true
         schema:
           type: string
@@ -1203,6 +1212,905 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TRAININGPROFILEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/waiver:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Waiver Code Data
+      operationId: getWaiverCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WAIVERCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/training-ref-date:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Training Reference Date Data
+      operationId: getTrainingRefDateCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TRAININGREFOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/service-component:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Service Component Data
+      operationId: getServiceComponentCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SERVICECOMPONENTOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/rating:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Rating Data
+      operationId: getRatingCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RATINGCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/pti:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests PTI Data
+      operationId: getPtiCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PTICODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/pqi:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests PQI Data
+      operationId: getPqiCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PQICODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/physical-availability:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Physical Availability Data
+      operationId: getPhysicalAvailabilityCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PHYSICALAVAILOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/org-reference:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Organization Reference Data
+      operationId: getOrgReferenceCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ORGREFERENCEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/mds:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests MDS Data
+      operationId: getMdsCode
+      parameters:
+      - name: mdsCode
+        in: query
+        required: false
+        schema:
+          maxLength: 8
+          minLength: 0
+          type: string
+      - name: aircraftTypeCode
+        in: query
+        required: false
+        schema:
+          maxLength: 1
+          minLength: 0
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MDSCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/majcom:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests MAJCOM Data
+      operationId: getMajcomCode
+      parameters:
+      - name: abbreviatedName
+        in: query
+        required: false
+        schema:
+          maxLength: 5
+          minLength: 0
+          type: string
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MAJCOMCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/lookup:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Lookup Code Data
+      operationId: getLookupCode
+      parameters:
+      - name: lookupName
+        in: query
+        required: false
+        schema:
+          maxLength: 30
+          minLength: 0
+          type: string
+      - name: codeId
+        in: query
+        required: false
+        schema:
+          maxLength: 1
+          minLength: 0
+          type: string
+      - name: codeName
+        in: query
+        required: false
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LOOKUPCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/ira:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests IRA Number Data
+      operationId: getIraNumberCode
+      parameters:
+      - name: iraNumber
+        in: query
+        required: false
+        schema:
+          maxLength: 3
+          minLength: 0
+          type: string
+      - name: iraName
+        in: query
+        required: false
+        schema:
+          maxLength: 25
+          minLength: 0
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IRANBROBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/horis:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests HORIS Data
+      operationId: getHorisCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HORISCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/harm:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests HARM Data
+      operationId: getHarmCode
+      parameters:
+      - name: harmCode
+        in: query
+        required: false
+        schema:
+          maxLength: 4
+          minLength: 0
+          type: string
+      - name: installationName
+        in: query
+        required: false
+        schema:
+          maxLength: 50
+          minLength: 0
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HARMCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/flying-act:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Flying Act Data
+      operationId: getFlyingActCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLYINGACTCDOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/flyer-status:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Flyer Status Data
+      operationId: getFlyerStatusCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLYINGSTATUSOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/flyer-security-access:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Flyer Security Access Data
+      operationId: getFlyerSecurityAccessCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SECURITYACCESSOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/flyer-grade:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Flyer Grade Data
+      operationId: getFlyerGradeCode
+      parameters:
+      - name: componentCode
+        in: query
+        required: false
+        schema:
+          maxLength: 5
+          minLength: 0
+          type: string
+      - name: gradeName
+        in: query
+        required: false
+        schema:
+          maxLength: 5
+          minLength: 0
+          type: string
+      - name: gradeCode
+        in: query
+        required: false
+        schema:
+          maxLength: 5
+          minLength: 0
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FLYERGRADEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/entitlement-status:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Entitlement Status Data
+      operationId: getEntitlementStatusCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ENTITLEMENTSTATUSOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/crew-position:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Crew Position Code Data
+      operationId: getCrewPositionCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CREWPOSITIONCDOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/badge:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Badge Code Data
+      operationId: getBadgeCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BADGECODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
+  /code-lookup-svc/aircraft-cert:
+    get:
+      tags:
+      - code-lookup-svc-controller
+      summary: Requests Aircraft Cert Code Data
+      operationId: getAircraftCertCode
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: text
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: systemId
+        in: query
+        required: true
+        schema:
+          maxLength: 100
+          minLength: 0
+          type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ARCFTCERTOBJIntType'
         "400":
           description: Bad Request
           content:
@@ -1238,6 +2146,7 @@ paths:
           type: string
       - name: harmCode
         in: query
+        description: "Required parameter, corresponding to the size 4 HOSM code"
         required: true
         schema:
           maxLength: 4
@@ -1245,6 +2154,8 @@ paths:
           type: string
       - name: recStatus
         in: query
+        description: "RecStatus indicates record status and has the folllowing options:\
+          \ D - Deleted, N - New, U - Updated, A - New/Updated. "
         required: true
         schema:
           type: string
@@ -1306,6 +2217,7 @@ paths:
           type: string
       - name: harmCode
         in: query
+        description: "Required parameter, corresponding to the size 4 HOSM code"
         required: true
         schema:
           maxLength: 4
@@ -1313,6 +2225,8 @@ paths:
           type: string
       - name: recStatus
         in: query
+        description: "RecStatus indicates record status and has the folllowing options:\
+          \ D - Deleted, N - New, U - Updated, A - New/Updated. "
         required: true
         schema:
           type: string
@@ -1380,6 +2294,7 @@ paths:
           type: string
       - name: harmCode
         in: query
+        description: "Required parameter, corresponding to the size 4 HOSM code"
         required: true
         schema:
           maxLength: 4
@@ -1387,6 +2302,8 @@ paths:
           type: string
       - name: recStatus
         in: query
+        description: "RecStatus indicates record status and has the folllowing options:\
+          \ D - Deleted, N - New, U - Updated, A - New/Updated. "
         required: true
         schema:
           type: string
@@ -1451,6 +2368,7 @@ paths:
           type: string
       - name: harmCode
         in: query
+        description: "Required parameter, corresponding to the size 4 HOSM code"
         required: true
         schema:
           maxLength: 4
@@ -1458,6 +2376,8 @@ paths:
           type: string
       - name: recStatus
         in: query
+        description: "RecStatus indicates record status and has the folllowing options:\
+          \ D - Deleted, N - New, U - Updated, A - New/Updated. "
         required: true
         schema:
           type: string
@@ -1493,6 +2413,48 @@ paths:
                 $ref: '#/components/schemas/ExceptionResponse'
 components:
   schemas:
+    DefaultArmsRequestXorg:
+      required:
+      - harmCode
+      - inverse
+      - recStatus
+      - systemId
+      type: object
+      properties:
+        fromDate:
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
+          type: string
+        toDate:
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
+          type: string
+        harmCode:
+          maxLength: 4
+          minLength: 4
+          type: string
+        recStatus:
+          type: string
+          enum:
+          - D
+          - "N"
+          - U
+          - A
+        inverse:
+          type: boolean
+        systemId:
+          type: string
+        flyerIds:
+          type: array
+          items:
+            type: number
+            format: double
+        orgIds:
+          type: array
+          items:
+            type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. One of orgIds and flyerIds is required, but both\
+        \ cannot be supplied at the same time."
     TrainingRequirementDataRequest:
       required:
       - harmCode
@@ -1502,10 +2464,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -1539,6 +2501,10 @@ components:
           type: array
           items:
             type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     TRAININGREQUIREMENTOBJIntType:
       required:
       - annualvolumeaccomplishedtotal
@@ -1792,10 +2758,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -1826,6 +2792,10 @@ components:
           format: double
         profileSearchString:
           type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     PROFILEASSIGNMENTOBJIntType:
       required:
       - flyerflyingorganizationid
@@ -1886,10 +2856,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -1919,6 +2889,10 @@ components:
           type: string
         programSearchString:
           type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     CURRENTTRAININGOBJIntType:
       required:
       - accomplishmentmethod
@@ -2157,7 +3131,7 @@ components:
         trainingProgramCode:
           type: string
         eventLogAccompDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         trainingTaskId:
           type: string
@@ -2206,10 +3180,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -2227,10 +3201,10 @@ components:
         systemId:
           type: string
         flightFromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         flightToDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         chargedOrgIds:
           type: array
@@ -2253,6 +3227,9 @@ components:
           type: array
           items:
             type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. "
     FLIGHTOBJIntType:
       required:
       - aircraftCallsign
@@ -2383,10 +3360,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -2413,10 +3390,10 @@ components:
           items:
             type: string
         flightFromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         flightToDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         crewPositionCodes:
           type: array
@@ -2427,6 +3404,10 @@ components:
           items:
             type: number
             format: double
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     FLIGHTACTIVITYOBJIntType:
       required:
       - armsflightactivitysequenceid
@@ -2715,10 +3696,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -2744,6 +3725,10 @@ components:
           type: array
           items:
             type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     RATINGSDATAOBJIntType:
       required:
       - flyeruniqueid
@@ -3324,10 +4309,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -3356,6 +4341,10 @@ components:
         manMonthRecordNumber:
           type: number
           format: double
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     PCSMANMONTHDATAOBJIntType:
       required:
       - flyerfirstname
@@ -3733,10 +4722,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -3766,6 +4755,10 @@ components:
           type: array
           items:
             type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     LINEBADGEDATAOBJIntType:
       required:
       - flyeruniqueid
@@ -3814,10 +4807,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -3845,6 +4838,10 @@ components:
             type: string
         jumpActivityDutyCode:
           type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     JUMPDATATOTALOBJIntType:
       required:
       - firstjumpdate
@@ -3979,10 +4976,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -4011,6 +5008,10 @@ components:
         jumpRecordNumber:
           type: number
           format: double
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
+        \ both be supplied at the same time."
     JUMPAUDITDATAOBJIntType:
       required:
       - aircraftmds
@@ -4656,10 +5657,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -4701,6 +5702,10 @@ components:
           type: array
           items:
             type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. One of orgIds and flyerIds is required, but both\
+        \ cannot be supplied at the same time."
     FLYERAIRCRAFTTOTALOBJIntType:
       required:
       - airccraftmajcomcode
@@ -4901,6 +5906,10 @@ components:
           type: boolean
         systemId:
           type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. One of orgIds and flyerIds is required, but both\
+        \ cannot be supplied at the same time."
     FLYER7306090OBJIntType:
       required:
       - flyerflyingorganizationid
@@ -5167,10 +6176,10 @@ components:
       type: object
       properties:
         fromDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         toDate:
-          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0?[0-9])([1-5][0-9]|0?[0-9])([0-5][0-9]|0?[0-9])"
+          pattern: "((?:19|20)\\d\\d)-(0?[1-9]|1[012])-([12][0-9]|3[01]|0?[1-9]):([1][0-9]|[2][0-3]|0[0-9])([1-5][0-9]|0[0-9])([0-5][0-9]|0[0-9])"
           type: string
         harmCode:
           maxLength: 4
@@ -5200,6 +6209,10 @@ components:
           type: array
           items:
             type: string
+      description: "Dates must match yyyy-MM-dd:HHmmss format. RecStatus indicates\
+        \ record status and has the folllowing options: D - Deleted, N - New, U -\
+        \ Updated, A - New/Updated. One of orgIds and flyerIds is required, but both\
+        \ cannot be supplied at the same time."
     AIRCREWPOSITIONTOTALSOBJIntType:
       required:
       - flyerciviliantotal
@@ -5669,6 +6682,344 @@ components:
             name: RecStatus
         harmcode:
           type: string
+    WAIVERCODEOBJIntType:
+      required:
+      - waiverCode
+      - waiverText
+      type: object
+      properties:
+        waiverCode:
+          type: string
+          xml:
+            name: WaiverCode
+        waiverText:
+          type: string
+          xml:
+            name: WaiverText
+    TRAININGREFOBJIntType:
+      required:
+      - birthReferenceCode
+      - birthReferenceText
+      type: object
+      properties:
+        birthReferenceCode:
+          type: string
+          xml:
+            name: BirthReferenceCode
+        birthReferenceText:
+          type: string
+          xml:
+            name: BirthReferenceText
+    SERVICECOMPONENTOBJIntType:
+      required:
+      - serviceComponentCode
+      - serviceComponentText
+      type: object
+      properties:
+        serviceComponentCode:
+          type: string
+          xml:
+            name: ServiceComponentCode
+        serviceComponentText:
+          type: string
+          xml:
+            name: ServiceComponentText
+    RATINGCODEOBJIntType:
+      required:
+      - ratingCode
+      - ratingName
+      type: object
+      properties:
+        ratingCode:
+          type: string
+          xml:
+            name: RatingCode
+        ratingName:
+          type: string
+          xml:
+            name: RatingName
+    PTICODEOBJIntType:
+      required:
+      - ptiCode
+      - ptiText
+      type: object
+      properties:
+        ptiCode:
+          type: string
+          xml:
+            name: PtiCode
+        ptiText:
+          type: string
+          xml:
+            name: PtiText
+    PQICODEOBJIntType:
+      required:
+      - pqiCode
+      - pqiText
+      type: object
+      properties:
+        pqiCode:
+          type: string
+          xml:
+            name: PqiCode
+        pqiText:
+          type: string
+          xml:
+            name: PqiText
+    PHYSICALAVAILOBJIntType:
+      required:
+      - physicalAvailCode
+      - physicalAvailText
+      type: object
+      properties:
+        physicalAvailCode:
+          type: string
+          xml:
+            name: PhysicalAvailCode
+        physicalAvailText:
+          type: string
+          xml:
+            name: PhysicalAvailText
+    ORGREFERENCEOBJIntType:
+      required:
+      - orgReferenceCode
+      - orgReferenceText
+      type: object
+      properties:
+        orgReferenceCode:
+          type: string
+          xml:
+            name: OrgReferenceCode
+        orgReferenceText:
+          type: string
+          xml:
+            name: OrgReferenceText
+    MDSCODEOBJIntType:
+      required:
+      - arcftTypeCode
+      - jetCode
+      - mdsCode
+      type: object
+      properties:
+        mdsCode:
+          type: string
+          xml:
+            name: MdsCode
+        jetCode:
+          type: string
+          xml:
+            name: JetCode
+        arcftTypeCode:
+          type: string
+          xml:
+            name: ArcftTypeCode
+    MAJCOMCODEOBJIntType:
+      required:
+      - majcomAbbreviatedName
+      - majcomCode
+      - majcomShortText
+      type: object
+      properties:
+        majcomCode:
+          type: string
+          xml:
+            name: MajcomCode
+        majcomShortText:
+          type: string
+          xml:
+            name: MajcomShortText
+        majcomAbbreviatedName:
+          type: string
+          xml:
+            name: MajcomAbbreviatedName
+    LOOKUPCODEOBJIntType:
+      required:
+      - codeid
+      - codename
+      - codetext
+      - lookupname
+      type: object
+      properties:
+        lookupname:
+          type: string
+          xml:
+            name: LOOKUPNAME
+        codeid:
+          type: string
+          xml:
+            name: CODEID
+        codename:
+          type: string
+          xml:
+            name: CODENAME
+        codetext:
+          type: string
+          xml:
+            name: CODETEXT
+    IRANBROBJIntType:
+      required:
+      - iraName
+      - iraNumber
+      type: object
+      properties:
+        iraNumber:
+          type: string
+          xml:
+            name: IraNumber
+        iraName:
+          type: string
+          xml:
+            name: IraName
+    HORISCODEOBJIntType:
+      required:
+      - horisCode
+      - horisText
+      type: object
+      properties:
+        horisCode:
+          type: string
+          xml:
+            name: HorisCode
+        horisText:
+          type: string
+          xml:
+            name: HorisText
+    HARMCODEOBJIntType:
+      required:
+      - harmcode
+      - installationname
+      - majcomtext
+      type: object
+      properties:
+        harmcode:
+          type: string
+          xml:
+            name: HARMCODE
+        installationname:
+          type: string
+          xml:
+            name: INSTALLATIONNAME
+        majcomtext:
+          type: string
+          xml:
+            name: MAJCOMTEXT
+    FLYINGACTCDOBJIntType:
+      required:
+      - flyingActivityCode
+      - flyingActivityText
+      type: object
+      properties:
+        flyingActivityCode:
+          type: string
+          xml:
+            name: FlyingActivityCode
+        flyingActivityText:
+          type: string
+          xml:
+            name: FlyingActivityText
+    FLYINGSTATUSOBJIntType:
+      required:
+      - flyingStatusCode
+      - flyingStatusText
+      type: object
+      properties:
+        flyingStatusCode:
+          type: string
+          xml:
+            name: FlyingStatusCode
+        flyingStatusText:
+          type: string
+          xml:
+            name: FlyingStatusText
+    SECURITYACCESSOBJIntType:
+      required:
+      - securityAccessCode
+      - securityAccessText
+      type: object
+      properties:
+        securityAccessCode:
+          type: string
+          xml:
+            name: SecurityAccessCode
+        securityAccessText:
+          type: string
+          xml:
+            name: SecurityAccessText
+    FLYERGRADEOBJIntType:
+      required:
+      - componentCode
+      - gradeCode
+      - gradeName
+      type: object
+      properties:
+        componentCode:
+          type: string
+          xml:
+            name: ComponentCode
+        gradeName:
+          type: string
+          xml:
+            name: GradeName
+        gradeCode:
+          type: string
+          xml:
+            name: GradeCode
+    ENTITLEMENTSTATUSOBJIntType:
+      required:
+      - entitlementStatusCode
+      - entitlementStatusText
+      type: object
+      properties:
+        entitlementStatusCode:
+          type: string
+          xml:
+            name: EntitlementStatusCode
+        entitlementStatusText:
+          type: string
+          xml:
+            name: EntitlementStatusText
+    CREWPOSITIONCDOBJIntType:
+      required:
+      - crewPositionCode
+      - crewPositionText
+      type: object
+      properties:
+        crewPositionCode:
+          type: string
+          xml:
+            name: CrewPositionCode
+        crewPositionText:
+          type: string
+          xml:
+            name: CrewPositionText
+    BADGECODEOBJIntType:
+      required:
+      - badgeCode
+      - badgeName
+      type: object
+      properties:
+        badgeCode:
+          type: string
+          xml:
+            name: BadgeCode
+        badgeName:
+          type: string
+          xml:
+            name: BadgeName
+    ARCFTCERTOBJIntType:
+      required:
+      - arcftCertCode
+      - arcftCertText
+      type: object
+      properties:
+        arcftCertCode:
+          type: string
+          xml:
+            name: ArcftCertCode
+        arcftCertText:
+          type: string
+          xml:
+            name: ArcftCertText
     SONICBOOMDATAOBJIntType:
       required:
       - flightrecordnumber

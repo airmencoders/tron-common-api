@@ -456,6 +456,12 @@ public class OrganizationController {
 		return new ResponseEntity<>(organizationService.removeSubordinateOrg(id, orgIds), HttpStatus.OK);
 	}
 
+	/**
+	 * @deprecated No longer valid. Use JSON patch instead. See {@link #jsonPatchPerson(UUID, JsonPatch)}
+	 * @param organizationId
+	 * @param attribs
+	 * @return
+	 */
 	@Operation(summary = "Updates an existing organization's attributes", description = "Updates an existing organization's attributes")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
@@ -468,8 +474,9 @@ public class OrganizationController {
 					description = "A provided person UUID was invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@Deprecated(since = "v2")
 	@PreAuthorizeOrganizationEdit
-	@PatchMapping({"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"})
+	@PatchMapping({"${api-prefix.v1}/organization/{id}"})
 	public ResponseEntity<OrganizationDto> patchOrganization(
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
@@ -540,15 +547,22 @@ public class OrganizationController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+<<<<<<< HEAD
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping(value = {"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<OrganizationDto> patchPerson(
+=======
+	@PreAuthorizeWrite
+	@PatchMapping(value = {"${api-prefix.v2}/organization/{id}"}, consumes = "application/json-patch+json")
+	public ResponseEntity<OrganizationDto> jsonPatchOrganization(
+>>>>>>> origin/master
 			@Parameter(description = "Organization ID to patch", required = true) @PathVariable("id") UUID orgId,
-			@Parameter(description = "Patched organization",
-					required = true,
-					schema = @Schema(example="[ {'op':'add','path':'/hello','value':'world'} ]",
-							oneOf = {JsonPatchStringArrayValue.class, JsonPatchStringValue.class,
-									JsonPatchObjectValue.class, JsonPatchObjectArrayValue.class}))
+			@io.swagger.v3.oas.annotations.parameters.RequestBody(
+					content = @Content(array = @ArraySchema(
+									schema = @Schema( 
+									anyOf = {JsonPatchStringArrayValue.class, JsonPatchStringValue.class,
+											JsonPatchObjectValue.class, JsonPatchObjectArrayValue.class}))), 
+					required = true)
 			@RequestBody JsonPatch patch) {
 		OrganizationDto organizationDto = organizationService.patchOrganization(orgId, patch);
 		return new ResponseEntity<>(organizationDto, HttpStatus.OK);
