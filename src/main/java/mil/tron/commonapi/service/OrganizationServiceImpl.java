@@ -671,7 +671,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 			// since model mapper has trouble mapping over UUID <--> Org for the nested Set<> in the Entity
 			//  just iterate over and do the lookup manually
 			if (dto.getSubordinateOrganizations() != null) {
-				for (UUID id : dto.getSubordinateOrganizations()) {
+				// Convert to set to remove duplicates
+				Set<UUID> subOrgSet = new HashSet<>(dto.getSubordinateOrganizations());
+				
+				for (UUID id : subOrgSet) {
 					org.addSubordinateOrganization(findOrganization(id));
 				}
 			}
@@ -679,7 +682,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 			// since model mapper has trouble mapping over UUID <--> Person for the nested Set<> in the Entity
 			//  just iterate over and do the lookup manually
 			if (dto.getMembers() != null) {
-				for (UUID id : dto.getMembers()) {
+				// Convert to set to remove duplicates
+				Set<UUID> memberSet = new HashSet<>(dto.getMembers());
+				
+				for (UUID id : memberSet) {
 					org.addMember(personService.getPerson(id));
 				}
 			}
