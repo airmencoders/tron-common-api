@@ -732,14 +732,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 		flattenedOrg.setId(org.getId());
 		flattenedOrg.setLeaderUUID(org.getLeader());
 		flattenedOrg.setName(org.getName());
-		flattenedOrg.setSubOrgsUUID(harvestOrgSubordinateUnits(org.getSubordinateOrganizations(), new HashSet<>()));
+		flattenedOrg.setSubOrgsUUID(new ArrayList<>(harvestOrgSubordinateUnits(new HashSet<>(org.getSubordinateOrganizations()), new HashSet<>())));
 		if (org.getMembers() != null) {
 			flattenedOrg.setMembersUUID(new ArrayList<>(org.getMembers()));
 		}
 		else {
 			flattenedOrg.setMembersUUID(new ArrayList<>());
 		}
-		flattenedOrg.setMembersUUID(harvestOrgMembers(org.getSubordinateOrganizations(), flattenedOrg.getMembers()));
+		flattenedOrg.setMembersUUID(harvestOrgMembers(new HashSet<>(org.getSubordinateOrganizations()), flattenedOrg.getMembers()));
 		return flattenedOrg;
 	}
 
@@ -750,7 +750,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		for (UUID orgId : orgIds) {
 			accumulator.add(orgId);
-			Set<UUID> ids = harvestOrgSubordinateUnits(getOrganization(orgId).getSubordinateOrganizations(), new HashSet<>());
+			Set<UUID> ids = harvestOrgSubordinateUnits(new HashSet<>(getOrganization(orgId).getSubordinateOrganizations()), new HashSet<>());
 			accumulator.addAll(ids);
 		}
 
@@ -766,7 +766,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			OrganizationDto subOrg = getOrganization(orgId);
 			if (subOrg.getLeader() != null) accumulator.add(subOrg.getLeader());  // make sure to roll up the leader if there is one
 			if (subOrg.getMembers() != null) accumulator.addAll(subOrg.getMembers());
-			List<UUID> ids = harvestOrgMembers(getOrganization(orgId).getSubordinateOrganizations(), new ArrayList<>());
+			List<UUID> ids = harvestOrgMembers(new HashSet<>(getOrganization(orgId).getSubordinateOrganizations()), new ArrayList<>());
 			accumulator.addAll(ids);
 		}
 

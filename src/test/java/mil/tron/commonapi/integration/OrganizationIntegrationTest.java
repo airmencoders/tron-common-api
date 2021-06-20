@@ -153,7 +153,7 @@ public class OrganizationIntegrationTest {
         OrganizationDto messedUpOrg = new OrganizationDto();
         messedUpOrg.setName("Messed up");
         messedUpOrg.setParentOrganizationUUID(theOrg.getId());
-        messedUpOrg.setSubOrgsUUID(Set.of(grandParent.getId()));
+        messedUpOrg.setSubOrgsUUID(List.of(grandParent.getId()));
 
         mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(greatGrandParent))).andExpect(status().isCreated());
@@ -203,7 +203,7 @@ public class OrganizationIntegrationTest {
         // now do a PUT update to 'theOrg' with the grandparent pre-populated in the
         // subOrgs, should reject
         theOrg.setParentOrganizationUUID(parent.getId());
-        theOrg.setSubOrgsUUID(Set.of(grandParent.getId()));
+        theOrg.setSubOrgsUUID(List.of(grandParent.getId()));
         mockMvc.perform(put(ENDPOINT + "{id}", theOrg.getId()).contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(theOrg))).andExpect(status().isBadRequest());
     }
@@ -236,7 +236,7 @@ public class OrganizationIntegrationTest {
         theOrg.setMembersUUID(List.of(p1.getId(), p2.getId()));
         organizationService.createOrganization(theOrg);
 
-        parent.setSubOrgsUUID(Set.of(theOrg.getId()));
+        parent.setSubOrgsUUID(List.of(theOrg.getId()));
         organizationService.updateOrganization(parent.getId(), parent);
 
         // test org members have two fields - id,firstName
@@ -516,7 +516,7 @@ public class OrganizationIntegrationTest {
         theOrg.setMembersUUID(List.of(p1.getId(), p2.getId()));
         organizationService.createOrganization(theOrg);
 
-        parent.setSubOrgsUUID(Set.of(theOrg.getId()));
+        parent.setSubOrgsUUID(List.of(theOrg.getId()));
         organizationService.updateOrganization(parent.getId(), parent);
        
         
@@ -618,7 +618,7 @@ public class OrganizationIntegrationTest {
 	            .build();
         
         organizationService.createOrganization(subOrgPerson1Leader);
-        parentOrgPersonMember.setSubOrgsUUID(Set.of(subOrgPerson1Leader.getId()));
+        parentOrgPersonMember.setSubOrgsUUID(List.of(subOrgPerson1Leader.getId()));
         organizationService.updateOrganization(parentOrgPersonMember.getId(), parentOrgPersonMember);
         
         /**

@@ -25,7 +25,7 @@ public class OrganizationDtoTest {
 
         assertEquals(p.getId(), dto.getLeader());
         assertEquals(List.of(p.getId()), dto.getMembers());
-        assertEquals(Set.of(o.getId()), dto.getSubordinateOrganizations());
+        assertEquals(List.of(o.getId()), dto.getSubordinateOrganizations());
         assertEquals(o.getId(), dto.getParentOrganization());
 
     }

@@ -451,7 +451,7 @@ public class OrganizationControllerTest {
 			newOrg.setId(UUID.randomUUID());
 			newOrg.setName("test org Child");
 
-			testOrgDto.setSubOrgsUUID(Set.of(newOrg.getId()));
+			testOrgDto.setSubOrgsUUID(List.of(newOrg.getId()));
 
 			Person p = new Person();
 			Person p2 = new Person();
@@ -462,7 +462,7 @@ public class OrganizationControllerTest {
 							.builder()
 							.id(testOrgDto.getId())
 							.members(newOrg.getMembers())
-							.subordinateOrganizations(Set.of(newOrg.getId()))
+							.subordinateOrganizations(List.of(newOrg.getId()))
 							.build());
 			Mockito.when(organizationService.getOrganization(newOrg.getId())).thenReturn(newOrg);
 			Mockito.when(organizationService.getOrganization(testOrgDto.getId())).thenReturn(testOrgDto);
@@ -479,7 +479,7 @@ public class OrganizationControllerTest {
 			newOrg.setId(UUID.randomUUID());
 			newOrg.setName("test org Child");
 
-			testOrgDto.setSubOrgsUUID(Set.of(newOrg.getId()));
+			testOrgDto.setSubOrgsUUID(List.of(newOrg.getId()));
 
 			Person p = Person.builder()
 					.id(UUID.randomUUID())
