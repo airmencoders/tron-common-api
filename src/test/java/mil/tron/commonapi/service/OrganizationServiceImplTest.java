@@ -640,7 +640,7 @@ class OrganizationServiceImplTest {
 				.branchType(org.getBranchType())
 				.orgType(org.getOrgType())
 				.members(org.getMembers().stream().map(Person::getId).collect(Collectors.toList()))
-				.subordinateOrganizations(org.getSubordinateOrganizations().stream().map(Organization::getId).collect(Collectors.toSet()))
+				.subordinateOrganizations(org.getSubordinateOrganizations().stream().map(Organization::getId).collect(Collectors.toList()))
 				.name(org.getName())
 				.build();
 
@@ -790,12 +790,12 @@ class OrganizationServiceImplTest {
 		child2.setMembersUUID(List.of(p5.getId(), p6.getId()));
 		OrganizationDto child3 = new OrganizationDto();
 
-		child2.setSubOrgsUUID(Set.of(child3.getId()));
+		child2.setSubOrgsUUID(List.of(child3.getId()));
 		child3.setParentOrganizationUUID(child2.getId());
 
 		OrganizationDto parent = new OrganizationDto();
 		parent.setMembersUUID(List.of(p1.getId(), p2.getId()));
-		parent.setSubOrgsUUID(Set.of(child1.getId(), child2.getId()));
+		parent.setSubOrgsUUID(List.of(child1.getId(), child2.getId()));
 
 		child1.setParentOrganizationUUID(parent.getId());
 		child2.setParentOrganizationUUID(parent.getId());
