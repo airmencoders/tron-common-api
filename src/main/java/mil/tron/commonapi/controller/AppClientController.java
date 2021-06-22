@@ -254,6 +254,8 @@ public class AppClientController {
 		List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
 				.stream()
 				.filter(item -> item.getName().startsWith(APP_CLIENT_DEVELOPER_PRIV)
+						|| item.getName().toLowerCase().startsWith("person")
+						|| item.getName().toLowerCase().startsWith("organization")
 						|| item.getName().startsWith("WRITE")
 						|| item.getName().startsWith("READ"))
 				.collect(Collectors.toList());
@@ -276,6 +278,8 @@ public class AppClientController {
 		List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
 				.stream()
 				.filter(item -> item.getName().startsWith(APP_CLIENT_DEVELOPER_PRIV)
+						|| item.getName().toLowerCase().startsWith("person")
+						|| item.getName().toLowerCase().startsWith("organization")
 						|| item.getName().startsWith("WRITE")
 						|| item.getName().startsWith("READ"))
 				.collect(Collectors.toList());

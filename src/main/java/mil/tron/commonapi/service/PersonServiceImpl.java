@@ -27,6 +27,7 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.repository.ranks.RankRepository;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import org.assertj.core.util.Lists;
 import org.modelmapper.Conditions;
@@ -35,6 +36,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -52,6 +55,7 @@ public class PersonServiceImpl implements PersonService {
 	private OrganizationService organizationService;
 	private final DtoMapper modelMapper;
 	private final ObjectMapper objMapper;
+	private EntityFieldAuthService entityFieldAuthService;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
 			Branch.USAF, fields(Airman.class),
 			Branch.USCG, fields(CoastGuardsman.class),
@@ -69,6 +73,7 @@ public class PersonServiceImpl implements PersonService {
 							 RankRepository rankRepository,
 							 PersonMetadataRepository personMetadataRepository,
 							 EventManagerService eventManagerService,
+							 EntityFieldAuthService entityFieldAuthService,
 							 @Lazy OrganizationService organizationService) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
@@ -76,6 +81,7 @@ public class PersonServiceImpl implements PersonService {
 		this.personMetadataRepository = personMetadataRepository;
 		this.eventManagerService = eventManagerService;
 		this.organizationService = organizationService;
+		this.entityFieldAuthService = entityFieldAuthService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -187,7 +193,6 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personDodidIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
 
-
 		PersonDto updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
 
 		PersonChangedMessage message = new PersonChangedMessage();
@@ -222,12 +227,21 @@ public class PersonServiceImpl implements PersonService {
 				}
 			});
 		}
+
+		Person adjudicatedEntity = this.applyFieldAuthority(updatedEntity);
+
 		// we have to save the person entity first, then try to delete metadata: hibernate seems to get confused
 		// if we try to remove metadata rows from the person's metadata property and it generates invalid SQL
-		PersonDto result = convertToDto(repository.save(updatedEntity), null);
+		PersonDto result = convertToDto(repository.save(adjudicatedEntity), null);
 		personMetadataRepository.deleteAll(toDelete);
 		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
 		return result;
+	}
+
+	// helper that applies entity field authorization for us
+	private Person applyFieldAuthority(Person incomingEntity) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		return entityFieldAuthService.adjudicatePersonFields(incomingEntity, authentication);
 	}
 
 	private void checkValidMetadataProperties(Branch branch, Map<String, String> metadata) {

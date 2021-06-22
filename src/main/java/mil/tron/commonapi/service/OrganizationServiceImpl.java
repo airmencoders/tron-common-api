@@ -32,6 +32,7 @@ import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.filter.SpecificationBuilder;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
@@ -40,6 +41,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
@@ -60,6 +63,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final OrganizationMetadataRepository organizationMetadataRepository;
 	private final EventManagerService eventManagerService;
 	private final DtoMapper modelMapper;
+	private final EntityFieldAuthService entityFieldAuthService;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
 	
@@ -80,7 +84,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 			PersonService personService,
 			OrganizationUniqueChecksService orgChecksService,
 			OrganizationMetadataRepository organizationMetadataRepository,
-			EventManagerService eventManagerService) {
+			EventManagerService eventManagerService,
+			EntityFieldAuthService entityFieldAuthService) {
 
 		this.repository = repository;
 		this.personRepository = personRepository;
@@ -88,8 +93,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 		this.orgChecksService = orgChecksService;
 		this.organizationMetadataRepository = organizationMetadataRepository;
 		this.eventManagerService = eventManagerService;
+		this.entityFieldAuthService = entityFieldAuthService;
 		this.modelMapper = new DtoMapper();
 		this.objMapper = new ObjectMapper();
+	}
+
+	// helper that applies entity field authorization for us
+	private Organization applyFieldAuthority(Organization incomingEntity) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		return entityFieldAuthService.adjudicateOrganizationFields(incomingEntity, authentication);
 	}
 
 	/**
@@ -127,7 +139,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			}
 		}
 
-		Organization result = repository.save(organization);
+		Organization result = repository.save(applyFieldAuthority(organization));
 
 		SubOrgAddMessage message = new SubOrgAddMessage();
 		message.setParentOrgId(organizationId);
@@ -157,7 +169,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			organization.removeSubordinateOrganization(subordinate);
 		}
 
-		Organization result = repository.save(organization);
+		Organization result = repository.save(applyFieldAuthority(organization));
 
 		SubOrgRemoveMessage message = new SubOrgRemoveMessage();
 		message.setParentOrgId(organizationId);
@@ -191,7 +203,7 @@ public class OrganizationServiceImpl implements OrganizationService {
             }
 		}
 
-        Organization result = repository.save(organization);
+        Organization result = repository.save(applyFieldAuthority(organization));
 
         if (updatedPersons.size() > 0) {
             personRepository.saveAll(updatedPersons);
@@ -230,7 +242,7 @@ public class OrganizationServiceImpl implements OrganizationService {
             return person;
         }).collect(Collectors.toList());
 
-        Organization result = repository.save(organization);
+        Organization result = repository.save(applyFieldAuthority(organization));
         
         if (primary) {
             personRepository.saveAll(updatedPersons);
@@ -480,7 +492,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 				}
 			});
 		}
-		OrganizationDto result = convertToDto(repository.save(updatedEntity));
+		OrganizationDto result = convertToDto(repository.save(applyFieldAuthority(updatedEntity)));
 		organizationMetadataRepository.deleteAll(toDelete);
 		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
 		return result;
@@ -780,7 +792,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Private helper to make sure prior to setting an orgs parent, that that propose parent
+	 * Private helper to make sure prior to setting an orgs parent, that the proposed parent
 	 * is not already in the descendents of said organization.
 	 * @param org the org we're modifying the parent for
 	 * @param parentUUIDCandidate the UUID of the proposed parent
@@ -790,7 +802,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		// if we're setting to just null, skip all checks below
 		if (parentUUIDCandidate == null) {
 			org.setParentOrganization(null);
-			repository.save(org);
+			repository.save(applyFieldAuthority(org));
 			return;
 		}
 
@@ -800,7 +812,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			Organization parentOrg = repository.findById(UUID.fromString(parentUUIDCandidate)).orElseThrow(
 					() -> new InvalidRecordUpdateRequest("Provided org UUID " + parentUUIDCandidate + " was not found"));
 			org.setParentOrganization(parentOrg);
-			repository.save(org);
+			repository.save(applyFieldAuthority(org));
 		}
 		else {
 			throw new InvalidRecordUpdateRequest("Proposed Parent UUID is already a descendent of this organization");
@@ -933,13 +945,13 @@ public class OrganizationServiceImpl implements OrganizationService {
 		List<Organization> parentalOrgs = repository.findOrganizationsByParentOrganization(org);
 		for (Organization child: parentalOrgs) {
 			child.setParentOrganization(null);
-			repository.save(child);
+			repository.save(applyFieldAuthority(child));
 		}
 
 		List<Organization> orgsThatOwnThisOrg = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
 		for (Organization parent: orgsThatOwnThisOrg) {
 			parent.removeSubordinateOrganization(org);
-			repository.save(parent);
+			repository.save(applyFieldAuthority(parent));
 		}
 	}
 
@@ -955,7 +967,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		List<Organization> modifiedOrgs = repository.findOrganizationsByLeader(leaderPerson);
 		for (Organization org : modifiedOrgs) {
 			org.setLeaderAndUpdateMembers(null);
-			repository.save(org);
+			repository.save(applyFieldAuthority(org));
 		}
 
 		List<UUID> modifiedIds = modifiedOrgs.stream().map(Organization::getId).collect(Collectors.toList());

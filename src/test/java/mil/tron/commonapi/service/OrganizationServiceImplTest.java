@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.Organization;
@@ -16,6 +17,7 @@ import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
@@ -31,11 +33,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.io.IOException;
@@ -64,6 +62,9 @@ class OrganizationServiceImplTest {
 
 	@Mock
 	private EventManagerServiceImpl eventManagerService;
+
+	@Mock
+	private EntityFieldAuthService entityFieldAuthService;
 
 	@Mock
 	OrganizationUniqueChecksServiceImpl uniqueService;
@@ -174,6 +175,9 @@ class OrganizationServiceImplTest {
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
 	    	Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 			Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
+			Mockito.when(entityFieldAuthService
+					.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+					.then(returnsFirstArg());
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	    	OrganizationDto updatedOrganization = organizationService.updateOrganization(testOrg.getId(), organizationService.convertToDto(testOrg));
 	    	assertThat(updatedOrganization.getName()).isEqualTo(testOrgDto.getName());
@@ -379,6 +383,9 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 		Mockito.when(personRepository.findById(leader.getId())).thenReturn(Optional.of(leader));
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.then(returnsFirstArg());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getLeader()).isEqualTo(leader.getId());
 
@@ -401,6 +408,9 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.then(returnsFirstArg());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getBranchType()).isEqualTo(Branch.USAF);
 		assertThat(savedOrg.getOrgType()).isEqualTo(Unit.OTHER_USAF);
@@ -413,6 +423,9 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.then(returnsFirstArg());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getName()).isEqualTo("test org");
 	}
@@ -427,6 +440,9 @@ class OrganizationServiceImplTest {
 				.thenReturn(Optional.of(newUnit));
 		Mockito.when(repository.findById(testOrg.getId()))
 				.thenReturn(Optional.of(testOrg));
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.then(returnsFirstArg());
 
 		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
 
@@ -469,6 +485,9 @@ class OrganizationServiceImplTest {
 		newUnit.setId(testOrgDto.getId());
 		newUnit.addMember(p);
 
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.then(returnsFirstArg());
 		Mockito.when(repository.findById(newUnit.getId()))
 				.thenReturn(Optional.of(testOrg))
 				.thenThrow(new InvalidRecordUpdateRequest("Not Found"))
@@ -507,6 +526,9 @@ class OrganizationServiceImplTest {
 		newUnit.setId(testOrgDto.getId());
 		newUnit.addSubordinateOrganization(subOrg);
 		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.then(returnsFirstArg());
 		Mockito.when(repository.findById(Mockito.any(UUID.class)))
 				.thenReturn(Optional.of(newUnit))
 				.thenReturn(Optional.of(subOrg))
@@ -911,6 +933,9 @@ class OrganizationServiceImplTest {
 		ArgumentCaptor<Organization> captor = ArgumentCaptor.forClass(Organization.class);
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(organizationDb));
 		Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.then(returnsFirstArg());
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(organizationDb);
 		this.organizationService.patchOrganization(orgId, newPatch);
 		verify(repository).save(captor.capture());

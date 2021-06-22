@@ -19,6 +19,7 @@ import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.ranks.RankRepository;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
@@ -70,6 +71,9 @@ class PersonServiceImplTest {
 
 	@Mock
 	private OrganizationService orgsService;
+
+	@Mock
+	private EntityFieldAuthService entityFieldAuthService;
 	
 	@InjectMocks
 	private PersonServiceImpl personService;
@@ -263,6 +267,8 @@ class PersonServiceImplTest {
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
+			Mockito.when(entityFieldAuthService.adjudicatePersonFields(Mockito.any(), Mockito.any()))
+					.then(returnsFirstArg());
 	    	PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
 	    	assertThat(updatedPerson.getId()).isEqualTo(testPerson.getId());
 		}
@@ -340,6 +346,9 @@ class PersonServiceImplTest {
 			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(tempTestPerson));
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
+			Mockito.when(entityFieldAuthService.adjudicatePersonFields(Mockito.any(), Mockito.any()))
+					.then(returnsFirstArg());
+
 			// pass through the patched entity
 			Mockito.when(repository.save(Mockito.any(Person.class))).thenAnswer(i -> i.getArguments()[0]);
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
