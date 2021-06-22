@@ -69,7 +69,7 @@ public class OrganizationDto {
     private UUID parentOrganization;
 
     @Getter
-    private Set<UUID> subordinateOrganizations = new HashSet<>();
+    private List<UUID> subordinateOrganizations = new ArrayList<>();
 
     @Getter
     @Setter
@@ -107,7 +107,7 @@ public class OrganizationDto {
      * Custom setter used by Jackson for subordinateOrganizations[] field on JSON deserialization
      */
     @JsonSetter(OrganizationDto.SUB_ORGS_FIELD)
-    public void setSubOrgsUUID(Set<UUID> ids) {
+    public void setSubOrgsUUID(List<UUID> ids) {
         this.subordinateOrganizations = ids;
     }
 
