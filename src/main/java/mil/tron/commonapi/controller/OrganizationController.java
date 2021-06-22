@@ -547,15 +547,9 @@ public class OrganizationController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-<<<<<<< HEAD
 	@PreAuthorizeOrganizationEdit
-	@PatchMapping(value = {"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"}, consumes = "application/json-patch+json")
-	public ResponseEntity<OrganizationDto> patchPerson(
-=======
-	@PreAuthorizeWrite
 	@PatchMapping(value = {"${api-prefix.v2}/organization/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<OrganizationDto> jsonPatchOrganization(
->>>>>>> origin/master
 			@Parameter(description = "Organization ID to patch", required = true) @PathVariable("id") UUID orgId,
 			@io.swagger.v3.oas.annotations.parameters.RequestBody(
 					content = @Content(array = @ArraySchema(
