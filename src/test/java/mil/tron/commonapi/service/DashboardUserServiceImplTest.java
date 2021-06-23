@@ -3,6 +3,7 @@ package mil.tron.commonapi.service;
 import mil.tron.commonapi.dto.DashboardUserDto;
 
 import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
@@ -10,7 +11,10 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.service.scratch.ScratchStorageService;
+import mil.tron.commonapi.service.scratch.ScratchStorageServiceImpl;
 import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksServiceImpl;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -43,6 +47,9 @@ public class DashboardUserServiceImplTest {
 
     @Mock
     private AppClientUserServiceImpl appClientUserService;
+
+    @Mock
+    private ScratchStorageServiceImpl scratchStorageService;
 
     @Mock
     private PrivilegeRepository privilegeRepository;
@@ -203,15 +210,69 @@ public class DashboardUserServiceImplTest {
     @Test
     void getSelfTestExists() {
     	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(testDashboardUser));
-    	
+    	Mockito.when(scratchStorageService.getAllScratchAppsContainingUser(Mockito.anyString()))
+                .thenReturn(
+                    Lists.newArrayList(ScratchStorageAppRegistryDto.builder()
+                        .id(UUID.randomUUID())
+                        .appName("Test App")
+                        .userPrivs(Lists.newArrayList(
+                            ScratchStorageAppRegistryDto.UserWithPrivs.builder()
+                                .userId(UUID.randomUUID())
+                                .emailAddress("test@test.com")
+                                .privs(
+                                    Lists.newArrayList(
+                                            ScratchStorageAppRegistryDto.PrivilegeIdPair.builder()
+                                                .priv(PrivilegeDto.builder()
+                                                    .id(1L)
+                                                    .name("SCRATCH_ADMIN")
+                                                    .build())
+                                                .build())
+                                    ).build()
+                                ))
+                        .build())
+                );
+
     	DashboardUserDto retrievedDashboardUserDto = dashboardUserService.getSelf(testDashboardUserDto.getEmail());
-    	assertThat(retrievedDashboardUserDto).isEqualTo(testDashboardUserDto);
+    	assertThat(retrievedDashboardUserDto.getPrivileges()).hasSize(2);
+    }
+
+    @Test
+    void getSelfThatsOnlyInScratchSpace() {
+        // test that we get back a Dashboard Dto even if theyre not a Dashboard user, only
+        //  in the Scratch Space
+
+        Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.empty());
+        Mockito.when(scratchStorageService.getAllScratchAppsContainingUser(Mockito.anyString()))
+                .thenReturn(
+                        Lists.newArrayList(ScratchStorageAppRegistryDto.builder()
+                                .id(UUID.randomUUID())
+                                .appName("Test App")
+                                .userPrivs(Lists.newArrayList(
+                                        ScratchStorageAppRegistryDto.UserWithPrivs.builder()
+                                                .userId(UUID.randomUUID())
+                                                .emailAddress("test@test.com")
+                                                .privs(
+                                                        Lists.newArrayList(
+                                                                ScratchStorageAppRegistryDto.PrivilegeIdPair.builder()
+                                                                        .priv(PrivilegeDto.builder()
+                                                                                .id(1L)
+                                                                                .name("SCRATCH_ADMIN")
+                                                                                .build())
+                                                                        .build())
+                                                ).build()
+                                ))
+                                .build())
+                );
+
+        DashboardUserDto retrievedDashboardUserDto = dashboardUserService.getSelf(testDashboardUserDto.getEmail());
+        assertThat(retrievedDashboardUserDto.getPrivileges()).hasSize(1);
     }
     
     @Test
     void getSelfTestNotExists() {
-    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenThrow(new UsernameNotFoundException("Not found"));
-    	
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.empty());
+        Mockito.when(scratchStorageService.getAllScratchAppsContainingUser(Mockito.anyString()))
+                .thenReturn(Lists.newArrayList());
     	assertThrows(UsernameNotFoundException.class, () -> dashboardUserService.getSelf(testDashboardUserDto.getEmail()));
     }
 }
