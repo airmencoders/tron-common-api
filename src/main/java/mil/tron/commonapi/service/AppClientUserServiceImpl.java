@@ -19,6 +19,7 @@ import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
@@ -40,6 +41,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
 
 	private AppClientUserRespository appClientRepository;
+	private AppSourceRepository appSourceRepository;
 	private DashboardUserService dashboardUserService;
 	private PrivilegeRepository privilegeRepository;
 	private DashboardUserRepository dashboardUserRepository;
@@ -54,6 +56,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private String appSourcePrefix;
 
 	public AppClientUserServiceImpl(AppClientUserRespository appClientRepository,
+									AppSourceRepository appSourceRepository,
 									DashboardUserService dashboardUserService,
 									DashboardUserRepository dashboardUserRepository,
 									PrivilegeRepository privilegeRepository,
@@ -61,6 +64,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 									SubscriberService subscriberService) {
 
 		this.appClientRepository = appClientRepository;
+		this.appSourceRepository = appSourceRepository;
 		this.dashboardUserService = dashboardUserService;
 		this.dashboardUserRepository = dashboardUserRepository;
 		this.privilegeRepository = privilegeRepository;
@@ -141,26 +145,31 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	
 	@Override
 	public AppClientUserDto createAppClientUser(AppClientUserDto appClient) {
-		appClientRepository.findByNameIgnoreCase(appClient.getName())
-			.ifPresent(user -> {
-					throw new ResourceAlreadyExistsException(String.format("Client Name: %s already exists", appClient.getName()));
-				}
-		);
-
-		AppClientUser newUser = AppClientUser.builder()
-				.id(appClient.getId())
+		AppClientUser newUser = appClientRepository
+			.findByNameIgnoreCase(appClient.getName()).orElse(null);
+		// Either it doesn't exist, or the App technically exists, but not as an App Client
+		if (newUser != null) {
+			if (newUser.isAvailableAsAppClient()) {
+				throw new ResourceAlreadyExistsException(String.format("Client Name: %s already exists", appClient.getName()));
+			} else {
+				appClient.setId(newUser.getId());
+				return updateAppClientUser(newUser.getId(), appClient);
+			}
+		} else {
+			newUser = AppClientUser.builder()
+				.availableAsAppClient(true)
 				.name(appClient.getName())
 				.clusterUrl(appClient.getClusterUrl())
 				.privileges(new HashSet<>(appClient
-						.getPrivileges()
-						.stream()
-						.map(item -> mapper.map(item, Privilege.class))
-						.collect(Collectors.toList())))
-				.build();
-		
-		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(newUser, appClient)));
+					.getPrivileges()
+					.stream()
+					.map(item -> mapper.map(item, Privilege.class))
+					.collect(Collectors.toList())))
+					.build();
+			return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(newUser, appClient)));
+		}	
 	}
-	
+
 	@Override
 	public AppClientUserDto updateAppClientUser(UUID id, AppClientUserDto appClient) {
 		if (!id.equals(appClient.getId()))
@@ -179,18 +188,13 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 			throw new InvalidRecordUpdateRequest(String.format("Client Name: %s is already in use.", appClient.getName()));
 		}
 
-
-		// Check for name uniqueness
-		if (!isNameUnique(appClient, dbUser)) {
-			throw new InvalidRecordUpdateRequest(String.format("Client Name: %s is already in use.", appClient.getName()));
-		}
-
 		dbUser.setPrivileges(new HashSet<>(appClient.getPrivileges()
 				.stream()
 				.map(item -> mapper.map(item, Privilege.class))
 				.collect(Collectors.toList())));
 
 		dbUser.setClusterUrl(appClient.getClusterUrl());
+		dbUser.setAvailableAsAppClient(true);
 
 		// save/update and return
 		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(dbUser, appClient)));
@@ -267,7 +271,17 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		subscriberService.cancelSubscriptionsByAppClient(dbUser);
 
 		AppClientUserDto dto = convertToDto(dbUser);
-    	appClientRepository.deleteById(id);
+		// If this exists as an App Source, we should disable as an App Client, else delete
+		if (appSourceRepository.existsByIdAndAvailableAsAppSourceTrue(id)) {			
+			dbUser.setAvailableAsAppClient(false);
+			dbUser.setClusterUrl(null);
+			dbUser.setAppEndpointPrivs(null);
+			dbUser.setAppClientDevelopers(null);
+			dbUser.setPrivileges(null);
+			appClientRepository.saveAndFlush(dbUser);
+		} else {
+			appClientRepository.deleteById(id);
+		}
 
     	return dto;
     }

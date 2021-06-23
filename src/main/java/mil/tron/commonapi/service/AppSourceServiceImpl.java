@@ -142,7 +142,18 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.appEndpointPrivRepository.removeAllByAppSource(AppSource.builder().id(id).build());
         // remove endpoints associated with the app source
         this.appEndpointRepository.removeAllByAppSource(AppSource.builder().id(id).build());
-        this.appSourceRepository.deleteById(toRemove.getId());
+        
+        // If this exists as an App Client, we should disable as an AppSource, else delete
+        if(this.appClientUserRespository.existsByIdAndAvailableAsAppClientTrue(id)) {
+            this.deleteAdminsFromAppSource(toRemove, "", true);
+
+            toRemove.setOpenApiSpecFilename(null);
+            toRemove.setAppSourcePath(null);
+            toRemove.setAvailableAsAppSource(false);
+            this.appSourceRepository.save(toRemove);
+        } else{
+            this.appSourceRepository.deleteById(toRemove.getId());
+        }
         return this.buildAppSourceDetailsDto(toRemove);
     }
 
@@ -195,9 +206,10 @@ public class AppSourceServiceImpl implements AppSourceService {
     private AppSourceDetailsDto saveAppSource(UUID uuid, AppSourceDetailsDto appSource) {
         AppSource appSourceToSave = uuid != null ?
             this.appSourceRepository.findById(uuid).orElse(AppSource.builder().id(uuid).build()) :
-            AppSource.builder().id(UUID.randomUUID()).build();
+            this.appSourceRepository.findByNameIgnoreCase(appSource.getName()).orElse(AppSource.builder().id(UUID.randomUUID()).build());
 
         appSourceToSave.setName(appSource.getName());
+        appSourceToSave.setAvailableAsAppSource(true);
 
         Set<AppEndpoint> appEndpoints = appSource.getEndpoints()
             .stream().map(endpointDto -> AppEndpoint.builder()
@@ -245,7 +257,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         
         appSource.setId(savedAppSource.getId());
         appSource.setClientCount(getAppSourceUniqueClientCount(savedAppSource.getAppPrivs()));
-        appSource.setEndpointCount(savedAppSource.getAppEndpoints().size());
+        appSource.setEndpointCount(appEndpoints.size());
         appSource.setAppSourcePath(savedAppSource.getAppSourcePath());
 
         return appSource;

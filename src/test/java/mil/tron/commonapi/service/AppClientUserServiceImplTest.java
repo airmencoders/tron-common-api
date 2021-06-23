@@ -7,12 +7,14 @@ import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +41,9 @@ class AppClientUserServiceImplTest {
 
 	@Mock
 	private AppClientUserRespository repository;
+
+	@Mock
+	private AppSourceRepository appSourceRepository;
 
 	@Mock
 	private PrivilegeRepository privilegeRepository;
@@ -128,6 +133,21 @@ class AppClientUserServiceImplTest {
 			AppClientUserDto result = userService.createAppClientUser(userDto);
 			assertThat(result).isEqualTo(userDto);
 		}
+
+		@Test
+		void successWhenAppSourceExists() {
+			AppClientUser clientUser = AppClientUser.builder()
+				.id(user.getId())
+				.name(user.getName())
+				.availableAsAppClient(false)
+				.build();
+			Mockito.when(repository.findByNameIgnoreCase(user.getName())).thenReturn(Optional.of(clientUser));
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(clientUser));
+			Mockito.when(repository.saveAndFlush(Mockito.any(AppClientUser.class))).thenReturn(user);
+			
+			AppClientUserDto result = userService.createAppClientUser(userDto);
+			assertThat(result).isEqualTo(userDto);
+		}
 		
 		@Test
 		void resourceAlreadyExists() {
@@ -201,9 +221,24 @@ class AppClientUserServiceImplTest {
 		@Test
 		void deleteAppClient() {
 			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(user));
+			Mockito.when(appSourceRepository.existsByIdAndAvailableAsAppSourceTrue(Mockito.any(UUID.class))).thenReturn(false);
 			doNothing().when(subscriberService).cancelSubscriptionsByAppClient(Mockito.any(AppClientUser.class));
 			AppClientUserDto deletedDto = userService.deleteAppClientUser(userDto.getId());
 			assertThat(deletedDto).isEqualTo(userDto);
+		}
+
+		@Test
+		void deleteAppClientWhenAppSourceWithSameNameExists() {			
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(user));			
+			Mockito.when(appSourceRepository.existsByIdAndAvailableAsAppSourceTrue(Mockito.any(UUID.class))).thenReturn(true);
+			doNothing().when(subscriberService).cancelSubscriptionsByAppClient(Mockito.any(AppClientUser.class));
+			AppClientUserDto deletedDto = userService.deleteAppClientUser(userDto.getId());
+			
+			assertThat(deletedDto).isEqualTo(userDto);
+			assertThat(user.getAppClientDevelopers()).isNullOrEmpty();
+			assertThat(user.getAppEndpointPrivs()).isNullOrEmpty();
+			assertThat(user.getClusterUrl()).isNull();
+			assertThat(user.isAvailableAsAppClient()).isFalse();
 		}
 	}
 

@@ -341,6 +341,32 @@ public class AppSourceServiceImplTest {
 
 			assertThat(appSourceDetailsDto.getAppSourceAdminUserEmails()).size().isGreaterThan(0);
     		assertThat(removed.getId()).isEqualTo(appSourceDetailsDto.getId());
+			assertThat(removed.getAppSourcePath()).isNull();
+			
+    		// admins should be of length 0
+    		assertThat(removed.getAppSourceAdminUserEmails().size()).isEqualTo(0);
+    	}
+
+		@Test
+    	void successDeleteWhenAppClientExists() {
+    		Mockito.when(appSourceRepository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(appSource));
+			Mockito.when(appSourceRepository.findAppSourcesByAppSourceAdminsContaining(Mockito.any()))
+					.thenReturn(Lists.newArrayList(appSource));
+			Mockito.when(appSourceRepository.saveAndFlush(Mockito.any()))
+					.thenReturn(appSource);
+			Mockito.when(appClientUserRepo.existsByIdAndAvailableAsAppClientTrue(Mockito.any(UUID.class))).thenReturn(true);
+			Mockito.when(appSourceRepository.save(Mockito.any()))
+				.thenReturn(AppSource.builder()
+					.id(appSource.getId())
+					.availableAsAppSource(false)
+					.name(appSource.getName())
+					.build());
+
+    		AppSourceDetailsDto removed = service.deleteAppSource(appSource.getId());
+
+			assertThat(appSourceDetailsDto.getAppSourceAdminUserEmails()).size().isGreaterThan(0);
+    		assertThat(removed.getId()).isEqualTo(appSourceDetailsDto.getId());
+			assertThat(removed.getAppSourcePath()).isNull();
 
     		// admins should be of length 0
     		assertThat(removed.getAppSourceAdminUserEmails().size()).isEqualTo(0);
@@ -368,6 +394,30 @@ public class AppSourceServiceImplTest {
 
     	assertThat(created).isEqualTo(appSourceDetailsDto);
     }
+
+	@Test
+	void createAppSourceOnTopOfExistingAppClient() {
+		AppSource appSource = AppSource.builder()
+			.id(appSourceDetailsDto.getId())
+			.name(appSourceDetailsDto.getName())
+			.build();
+		Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).thenReturn(appSource);
+
+		Mockito.when(appSourceRepository.findByNameIgnoreCase(Mockito.any())).thenReturn(Optional.of(appSource));
+    	
+    	List<AppEndpointPriv> existingPrivs = new ArrayList<>();
+    	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
+
+        Mockito.when(appEndpointRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(new ArrayList<>());
+    	
+    	Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
+    	Mockito.when(privilegeRepo.findByName(APP_SOURCE_ADMIN)).thenReturn(Optional.of(appSourceAdminPriv));
+    	AppSourceDetailsDto created = service.createAppSource(appSourceDetailsDto);
+
+    	appSourceDetailsDto.setId(created.getId());
+
+    	assertThat(created).isEqualTo(appSourceDetailsDto);
+	}
 
 	@Test
 	void testAddAppSourceAdmin() {

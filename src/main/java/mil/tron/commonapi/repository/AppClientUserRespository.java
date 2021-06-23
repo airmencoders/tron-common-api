@@ -11,6 +11,7 @@ import java.util.UUID;
 
 @Repository
 public interface AppClientUserRespository extends JpaRepository<AppClientUser, UUID> {
+	boolean existsByIdAndAvailableAsAppClientTrue(UUID id);
 	Optional<AppClientUser> findByNameIgnoreCase(String name);
 	List<AppClientUser> findByAppClientDevelopersContaining(DashboardUser user);
 	List<AppClientUser> findByAvailableAsAppClientTrue();
