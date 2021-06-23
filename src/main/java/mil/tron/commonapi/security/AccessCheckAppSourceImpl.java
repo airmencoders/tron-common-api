@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
@@ -13,9 +16,15 @@ import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 public class AccessCheckAppSourceImpl implements AccessCheckAppSource {
 
     private AppSourceRepository appSourceRepo;
+    private AppClientUserRespository appClientUserRespository;
+    private AppEndpointPrivRepository appEndpointPrivRepository;
 
-    public AccessCheckAppSourceImpl(AppSourceRepository appSourceRepo) {
+    public AccessCheckAppSourceImpl(AppSourceRepository appSourceRepo,
+                                    AppClientUserRespository appClientUserRespository,
+                                    AppEndpointPrivRepository appEndpointPrivRepository) {
         this.appSourceRepo = appSourceRepo;
+        this.appClientUserRespository = appClientUserRespository;
+        this.appEndpointPrivRepository = appEndpointPrivRepository;
     }
 
     @Override
@@ -33,7 +42,15 @@ public class AccessCheckAppSourceImpl implements AccessCheckAppSource {
         List<String> authPaths = unpackAuthentication(authentication);
 
         AppSource appSource = appSourceRepo.findById(id).orElse(null);
-        return determinePermission(authPaths, appSource);
+        boolean isAllowedByAppClientAuth = determinePermission(authPaths, appSource);
+
+        List<AppClientUser> appClientsForDev = this.appClientUserRespository.findByAppClientDevelopersEmail(
+                authentication.getCredentials().toString());
+        boolean isAuthorizedClient = appClientsForDev.stream().anyMatch(
+                appClient -> this.appEndpointPrivRepository.existsByAppSourceEqualsAndAppClientUserEquals(
+                        appSource, appClient)
+        );
+        return isAllowedByAppClientAuth || isAuthorizedClient;
     }
 
     @Override

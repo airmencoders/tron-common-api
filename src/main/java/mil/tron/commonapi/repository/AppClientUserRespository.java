@@ -13,5 +13,6 @@ import java.util.UUID;
 public interface AppClientUserRespository extends JpaRepository<AppClientUser, UUID> {
 	Optional<AppClientUser> findByNameIgnoreCase(String name);
 	List<AppClientUser> findByAppClientDevelopersContaining(DashboardUser user);
+	List<AppClientUser> findByAppClientDevelopersEmail(String email);
 	List<AppClientUser> findByAvailableAsAppClientTrue();
 }

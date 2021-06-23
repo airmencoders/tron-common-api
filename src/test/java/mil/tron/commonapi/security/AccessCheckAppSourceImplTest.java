@@ -47,7 +47,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void passAuthenticationCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             AppSource appSource = sourceRepo.save(
                 AppSource.builder()
                     .id(UUID.randomUUID())
@@ -62,7 +63,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource2/endpoint_GET")
         public void failAuthenticationCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             AppSource appSource = sourceRepo.save(
                 AppSource.builder()
                     .id(UUID.randomUUID())
@@ -77,7 +79,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void nullAuthenticationCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             AppSource appSource = sourceRepo.save(
                 AppSource.builder()
                     .id(UUID.randomUUID())
@@ -92,7 +95,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void nullIdCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             assertFalse(accessCheckImpl.checkByAppSourceId(SecurityContextHolder.getContext().getAuthentication(), null));
         }
         
@@ -101,7 +105,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void badIdCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             assertFalse(accessCheckImpl.checkByAppSourceId(SecurityContextHolder.getContext().getAuthentication(), "test"));
         }
 
@@ -110,7 +115,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void NoAppSourceExistsCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             assertFalse(accessCheckImpl.checkByAppSourceId(SecurityContextHolder.getContext().getAuthentication(), UUID.randomUUID().toString()));
         }
     }
@@ -122,7 +128,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void passAuthenticationCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             AppClientUser client = clientRepo.save(
                 AppClientUser.builder()
                     .id(UUID.randomUUID())
@@ -159,7 +166,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource2/endpoint_GET")
         public void failAuthenticationCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             AppClientUser client = clientRepo.save(
                 AppClientUser.builder()
                     .id(UUID.randomUUID())
@@ -196,7 +204,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void nullAuthenticationCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             AppClientUser client = clientRepo.save(
                 AppClientUser.builder()
                     .id(UUID.randomUUID())
@@ -233,7 +242,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void nullIdCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             assertFalse(accessCheckImpl.checkByAppEndpointPrivId(SecurityContextHolder.getContext().getAuthentication(), null));
         }
         
@@ -242,7 +252,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void badIdCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             assertFalse(accessCheckImpl.checkByAppEndpointPrivId(SecurityContextHolder.getContext().getAuthentication(), "test"));
         }
 
@@ -251,7 +262,8 @@ public class AccessCheckAppSourceImplTest {
         @Rollback
         @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
         public void NoAppSourceExistsCheck() {
-            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo);
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
             assertFalse(accessCheckImpl.checkByAppEndpointPrivId(SecurityContextHolder.getContext().getAuthentication(), UUID.randomUUID().toString()));
         }
     }
