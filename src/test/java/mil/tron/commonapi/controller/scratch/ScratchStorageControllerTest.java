@@ -19,6 +19,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
@@ -282,7 +283,8 @@ public class ScratchStorageControllerTest {
         }
 
         Mockito.when(service.getAllRegisteredScratchApps()).thenReturn(dtos);
-
+        Mockito.when(service.userHasAdminWithAppId(Mockito.any(), Mockito.any()))
+                .thenReturn(true);
 
         mockMvc.perform(get(SCRATCH_ENDPOINT))
                 .andExpect(status().isOk())
@@ -353,6 +355,9 @@ public class ScratchStorageControllerTest {
 
         Mockito.when(service.editExistingScratchAppEntry(Mockito.any(UUID.class), Mockito.any(ScratchStorageAppRegistryDto.class)))
                 .then(returnsSecondArg());
+
+        Mockito.when(service.userHasAdminWithAppId(Mockito.any(), Mockito.any()))
+                .thenReturn(true);
 
         ScratchStorageAppRegistryDto newEntry = ScratchStorageAppRegistryDto
                 .builder()

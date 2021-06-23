@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jayway.jsonpath.*;
-import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
-import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
-import mil.tron.commonapi.dto.ScratchStorageEntryDto;
-import mil.tron.commonapi.dto.ScratchStorageUserDto;
+import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
@@ -245,8 +242,27 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             throw new ResourceAlreadyExistsException("Scratch space application with that name already exists");
         }
 
-        return dtoMapper.map(appRegistryRepo
-                .save(dtoMapper.map(entry, ScratchStorageAppRegistryEntry.class)), ScratchStorageAppRegistryDto.class);
+        // clear the permissions/privs so we can apply the incoming from the PUT update request
+        for (ScratchStorageAppUserPriv dbObj : new HashSet<>(dbAppRegistry.getUserPrivs())) {
+            dbAppRegistry.removeUserAndPriv(dbObj);
+            appPrivRepo.deleteById(dbObj.getId());
+        }
+
+        appRegistryRepo.saveAndFlush(dbAppRegistry);
+
+        // add in the privilege(s) from the incoming data DTO
+        if (entry.getUserPrivs() != null) {
+            for (ScratchStorageAppRegistryDto.UserWithPrivs userObj : entry.getUserPrivs()) {
+                for (ScratchStorageAppRegistryDto.PrivilegeIdPair pair : userObj.getPrivs()) {
+                    addUserPrivToApp(entry.getId(), ScratchStorageAppUserPrivDto.builder()
+                        .email(userObj.getEmailAddress())
+                        .privilegeId(pair.getPriv().getId())
+                        .build());
+                }
+            }
+        }
+
+        return dtoMapper.map(appRegistryRepo.getOne(entry.getId()), ScratchStorageAppRegistryDto.class);
     }
 
     @Override

@@ -11,7 +11,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.*;
-import mil.tron.commonapi.exception.*;
+import mil.tron.commonapi.exception.ExceptionResponse;
+import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
 import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.springframework.http.HttpStatus;
@@ -101,6 +102,25 @@ public class ScratchStorageController {
         if (!scratchStorageService.userHasAdminWithAppId(appId, userEmail)) {
             throw new InvalidScratchSpacePermissions(INVALID_PERMS);
         }
+    }
+
+    /**
+     * Helper to say whether the requester is dashboard admin or the scratch admin of given app id
+     * @param appId the scratch space UUID
+     * @return true or false
+     */
+    private boolean userIsDashBoardAdminOrScratchAdmin(UUID appId) {
+
+        boolean result = true;
+
+        try {
+            this.checkUserIsDashBoardAdminOrScratchAdmin(appId);
+        }
+        catch (InvalidScratchSpacePermissions ex) {
+            result = false;
+        }
+
+        return result;
     }
 
     /**
@@ -390,7 +410,8 @@ public class ScratchStorageController {
      * @deprecated No longer valid T166. See {@link #getScratchSpaceAppsWrapped()} for new usage.
      * @return
      */
-    @Operation(summary = "Gets the entire table of Scratch Storage apps that are registered with Common API",
+    @Operation(summary = "Gets the entire table of Scratch Storage apps that are registered with Common API if requester" +
+            "is a dashboard admin, otherwise returns the scratch space apps the requester is a scratch admin for",
             description = "Requester has to have DASHBOARD_ADMIN rights")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
@@ -401,13 +422,17 @@ public class ScratchStorageController {
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @Deprecated(since = "v2")
-    @PreAuthorizeDashboardAdmin
     @GetMapping({"${api-prefix.v1}/scratch/apps"})
     public ResponseEntity<Object> getScratchSpaceApps() {
-        return new ResponseEntity<>(scratchStorageService.getAllRegisteredScratchApps(), HttpStatus.OK);
+        return new ResponseEntity<>(Lists.newArrayList(scratchStorageService
+                .getAllRegisteredScratchApps())
+                .stream()
+                .filter(item -> userIsDashBoardAdminOrScratchAdmin(item.getId()))
+                .collect(Collectors.toList()), HttpStatus.OK);
     }
     
-    @Operation(summary = "Gets the entire table of Scratch Storage apps that are registered with Common API",
+    @Operation(summary = "Gets the entire table of Scratch Storage apps that are registered with Common API if requester" +
+            "is a dashboard admin, otherwise returns the scratch space apps the requester is a scratch admin for",
             description = "Requester has to have DASHBOARD_ADMIN rights")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
@@ -417,11 +442,14 @@ public class ScratchStorageController {
                     description = "No DASHBOARD_ADMIN privileges",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @PreAuthorizeDashboardAdmin
     @WrappedEnvelopeResponse
     @GetMapping({"${api-prefix.v2}/scratch/apps"})
     public ResponseEntity<Object> getScratchSpaceAppsWrapped() {
-        return new ResponseEntity<>(scratchStorageService.getAllRegisteredScratchApps(), HttpStatus.OK);
+        return new ResponseEntity<>(Lists.newArrayList(scratchStorageService
+                .getAllRegisteredScratchApps())
+                .stream()
+                .filter(item -> userIsDashBoardAdminOrScratchAdmin(item.getId()))
+                .collect(Collectors.toList()), HttpStatus.OK);
     }
     
     @Operation(summary = "Gets all Scratch Storage apps that the current Authorized User is a user of",
@@ -500,11 +528,11 @@ public class ScratchStorageController {
                     description = "App Name is already is use",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @PreAuthorizeDashboardAdmin
     @PutMapping({"${api-prefix.v1}/scratch/apps/{id}", "${api-prefix.v2}/scratch/apps/{id}"})
     public ResponseEntity<Object> editExistingAppEntry(
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
             @Parameter(name = "entry", description = "Application Information Object", required = true) @Valid @RequestBody ScratchStorageAppRegistryDto entry) {
+        checkUserIsDashBoardAdminOrScratchAdmin(id);
         return new ResponseEntity<>(scratchStorageService.editExistingScratchAppEntry(id, entry), HttpStatus.OK);
     }
 

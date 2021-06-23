@@ -1,6 +1,8 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
@@ -9,7 +11,9 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksService;
+import org.assertj.core.util.Lists;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
 import org.modelmapper.spi.MappingContext;
@@ -29,6 +33,7 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     private final DtoMapper modelMapper;
     private AppSourceService appSourceService;
     private AppClientUserService appClientUserService;
+    private ScratchStorageService scratchStorageService;
 
     private PrivilegeRepository privRepo;
 
@@ -36,12 +41,14 @@ public class DashboardUserServiceImpl implements DashboardUserService {
                                     DashboardUserUniqueChecksService dashboardUserUniqueChecksService,
                                     PrivilegeRepository privilegeRepository,
                                     @Lazy AppSourceService appSourceService,
-                                    @Lazy AppClientUserService appClientUserService) {
+                                    @Lazy AppClientUserService appClientUserService,
+                                    ScratchStorageService scratchStorageService) {
         this.dashboardUserRepository = dashboardUserRepository;
         this.userChecksService = dashboardUserUniqueChecksService;
         this.appSourceService = appSourceService;
         this.appClientUserService = appClientUserService;
         this.privRepo = privilegeRepository;
+        this.scratchStorageService = scratchStorageService;
         this.modelMapper = new DtoMapper();
         this.modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -135,8 +142,48 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         return modelMapper.map(dto, DashboardUser.class);
     }
 
+    /**
+     * Returns the requester's information as pertains to their privileges in the Common API.  It also "mixes" in
+     * any of the Scratch Space privs that they may also have in the Scratch Space universe.  Mainly used by the UI
+     * in order to determine what views they are authorized to see.  If they aren't in the Dashboard user system nor
+     * in the Scratch Space, then we throw a 403 error.
+     * @param email the requesters P1 SSO login email address
+     * @return a DashboardUserDto populated appropriately, or 403 error
+     */
 	@Override
 	public DashboardUserDto getSelf(String email) {
-		return convertToDto(dashboardUserRepository.findByEmailIgnoreCase(email).orElseThrow(() -> new UsernameNotFoundException("Dashboard User: " + email + " not found.")));
+		 DashboardUserDto userData;
+		 Optional<DashboardUser> user = dashboardUserRepository.findByEmailIgnoreCase(email);
+         Set<PrivilegeDto> scratchPrivs = this.getScratchPermissionsForUserEmail(email);
+
+		 if (user.isPresent()) {
+		     userData = convertToDto(user.get());
+             userData.getPrivileges().addAll(scratchPrivs);  // mix-in any of the scratch space privs they may have
+             return userData;
+         }
+		 else {
+             // user was not in the dashboard user system, check maybe the are in the independent Scratch Space
+             if (scratchPrivs.isEmpty()) {
+                 throw new UsernameNotFoundException("Dashboard User: " + email + " not found.");
+             }
+             else {
+                 return DashboardUserDto.builder()
+                         .id(UUID.randomUUID())  // this ID doesn't really mean anything
+                         .email(email)
+                         .privileges(Lists.newArrayList(scratchPrivs))
+                         .build();
+             }
+         }
 	}
+
+	private Set<PrivilegeDto> getScratchPermissionsForUserEmail(String email) {
+        return Lists.newArrayList(scratchStorageService.getAllScratchAppsContainingUser(email))
+                .stream()
+                .map(ScratchStorageAppRegistryDto::getUserPrivs)
+                .flatMap(Collection::stream)
+                .map(ScratchStorageAppRegistryDto.UserWithPrivs::getPrivs)
+                .flatMap(Collection::stream)
+                .map(ScratchStorageAppRegistryDto.PrivilegeIdPair::getPriv)
+                .collect(Collectors.toSet());
+    }
 }

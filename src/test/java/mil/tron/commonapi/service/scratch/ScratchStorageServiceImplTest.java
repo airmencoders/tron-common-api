@@ -5,10 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jayway.jsonpath.JsonPath;
-import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
-import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
-import mil.tron.commonapi.dto.ScratchStorageEntryDto;
-import mil.tron.commonapi.dto.ScratchStorageUserDto;
+import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
@@ -295,7 +292,22 @@ public class ScratchStorageServiceImplTest {
 
     @Test
     void testEditRegisteredAppEntry() {
-        Mockito.when(appRegistryRepo.save(Mockito.any(ScratchStorageAppRegistryEntry.class))).then(returnsFirstArg());
+        Mockito.when(appRegistryRepo.saveAndFlush(Mockito.any(ScratchStorageAppRegistryEntry.class))).then(returnsFirstArg());
+        doNothing().when(appPrivRepo).deleteById(Mockito.any(UUID.class));
+
+        ScratchStorageUser user = ScratchStorageUser.builder()
+                .email("test@test.com")
+                .build();
+
+        Privilege p = Privilege.builder()
+                .id(7L)
+                .name("SCRATCH_ADMIN")
+                .build();
+
+        ScratchStorageAppUserPriv priv = ScratchStorageAppUserPriv.builder()
+                .user(user)
+                .privilege(p)
+                .build();
 
         ScratchStorageAppRegistryEntry newEntry = ScratchStorageAppRegistryEntry
                 .builder()
@@ -303,7 +315,12 @@ public class ScratchStorageServiceImplTest {
                 .appName("TestApp")
                 .build();
 
+        newEntry.addUserAndPriv(priv);
+
         ScratchStorageAppRegistryDto newEntryDto = mapper.map(newEntry, ScratchStorageAppRegistryDto.class);
+        Mockito.when(privRepo.findById(Mockito.anyLong())).thenReturn(Optional.of(p));
+        Mockito.when(scratchUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.ofNullable(user));
+        Mockito.when(appRegistryRepo.getOne(Mockito.any(UUID.class))).thenReturn(newEntry);
 
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
                 .thenThrow(new RecordNotFoundException("Not Found"))
@@ -311,7 +328,7 @@ public class ScratchStorageServiceImplTest {
 
         assertThrows(InvalidRecordUpdateRequest.class, () -> service.editExistingScratchAppEntry(UUID.randomUUID(), newEntryDto));
         assertThrows(RecordNotFoundException.class, () -> service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto));
-        assertEquals(newEntryDto, service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto));
+        assertEquals(newEntryDto.getId(), service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto).getId());
     }
 
     @Test

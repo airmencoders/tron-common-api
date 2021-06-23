@@ -32,8 +32,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -1586,5 +1585,207 @@ public class ScratchStorageIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isForbidden());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testNonDashboardAdminUsageFlow() throws Exception {
+
+        // as a regular old scratch-admin, that is not a dashboard-user:
+            // tests out the we can see the apps we're supposed to see
+            // tests out that we can edit out app(s)
+            // tests out that we can detect ourselves from the dashboard-users/self endpoint (like the UI will do)
+
+        ScratchStorageUserDto jon = ScratchStorageUserDto
+                .builder()
+                .email("jon@test.com")
+                .build();
+
+        ScratchStorageUserDto bill = ScratchStorageUserDto
+                .builder()
+                .email("bill@test.com")
+                .build();
+
+        ScratchStorageUserDto sara = ScratchStorageUserDto
+                .builder()
+                .email("sara@test.com")
+                .build();
+
+        ScratchStorageUserDto frank = ScratchStorageUserDto
+                .builder()
+                .email("frank@test.com")
+                .build();
+
+        ScratchStorageUserDto greg = ScratchStorageUserDto
+                .builder()
+                .email("greg@test.com")
+                .build();
+
+        ScratchStorageUserDto jim = ScratchStorageUserDto
+                .builder()
+                .email("jim@test.com")
+                .build();
+
+        // make the two apps
+        UUID app1Id;
+        UUID app2Id;
+        MvcResult app1Result = mockMvc.perform(post(ENDPOINT_V2 + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(ScratchStorageAppRegistryDto.builder()
+                                .appName("App1")
+                                .aclMode(false)
+                                .appHasImplicitRead(false)
+                                .userPrivs(new ArrayList<>())
+                                .build())))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        app1Id = UUID.fromString(JsonPath.read(app1Result.getResponse().getContentAsString(), "$.id"));
+
+        MvcResult app2Result = mockMvc.perform(post(ENDPOINT_V2 + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(ScratchStorageAppRegistryDto.builder()
+                                .appName("App2")
+                                .aclMode(true)
+                                .appHasImplicitRead(false)
+                                .userPrivs(new ArrayList<>())
+                                .build())))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        app2Id = UUID.fromString(JsonPath.read(app2Result.getResponse().getContentAsString(), "$.id"));
+
+        // set up scratch admins
+        mockMvc.perform(patch(ENDPOINT_V2 + "apps/{appId}/user", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageAppUserPrivDto.builder()
+                        .email(jon.getEmail())
+                        .privilegeId(scratchAdminPrivId)
+                        .build())))
+                .andExpect(status().isOk());
+
+        // do this one via a PUT - make Bill the scratch admin
+        mockMvc.perform(put(ENDPOINT_V2 + "apps/{appId}", app2Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageAppRegistryDto.builder()
+                        .id(app2Id)
+                        .appName("App2")
+                        .aclMode(true)
+                        .appHasImplicitRead(false)
+                        .userPrivs(Lists.newArrayList(
+                            ScratchStorageAppRegistryDto.UserWithPrivs.builder()
+                                .userId(null)
+                                .emailAddress(bill.getEmail())
+                                .privs(Lists.newArrayList(
+                                    ScratchStorageAppRegistryDto.PrivilegeIdPair.builder()
+                                        .userPrivPairId(null)
+                                        .priv(privs
+                                            .stream()
+                                            .filter(item -> item.getName().equals("SCRATCH_ADMIN"))
+                                            .findFirst()
+                                            .get())
+                                        .build()
+                                    )
+                                )
+                                .build()
+                            )
+                        )
+                        .build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userPrivs[0].emailAddress", equalToIgnoringCase(bill.getEmail())))
+                .andExpect(jsonPath("$.userPrivs[0].privs[0].priv.name", equalToIgnoringCase("SCRATCH_ADMIN")));
+
+        // do this one via a PUT - Bill makes Sara a SCRATCH_WRITE
+        mockMvc.perform(put(ENDPOINT_V2 + "apps/{appId}", app2Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageAppRegistryDto.builder()
+                        .id(app2Id)
+                        .appName("App2")
+                        .aclMode(true)
+                        .appHasImplicitRead(false)
+                        .userPrivs(Lists.newArrayList(
+                                ScratchStorageAppRegistryDto.UserWithPrivs.builder()
+                                        .userId(null)
+                                        .emailAddress(sara.getEmail())
+                                        .privs(Lists.newArrayList(
+                                                ScratchStorageAppRegistryDto.PrivilegeIdPair.builder()
+                                                        .userPrivPairId(null)
+                                                        .priv(privs
+                                                                .stream()
+                                                                .filter(item -> item.getName().equals("SCRATCH_WRITE"))
+                                                                .findFirst()
+                                                                .get())
+                                                        .build()
+                                                )
+                                        )
+                                        .build(),
+                                ScratchStorageAppRegistryDto.UserWithPrivs.builder()
+                                        .userId(null)
+                                        .emailAddress(bill.getEmail())
+                                        .privs(Lists.newArrayList(
+                                                ScratchStorageAppRegistryDto.PrivilegeIdPair.builder()
+                                                        .userPrivPairId(null)
+                                                        .priv(privs
+                                                                .stream()
+                                                                .filter(item -> item.getName().equals("SCRATCH_ADMIN"))
+                                                                .findFirst()
+                                                                .get())
+                                                        .build()
+                                                )
+                                        )
+                                        .build()
+                                )
+                        )
+                        .build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userPrivs[?(@.emailAddress == '" + sara.getEmail() + "')]", hasSize(1)))
+                .andExpect(jsonPath("$.userPrivs", hasSize(2)));
+
+        // make sure bill only sees his app in the API GET call
+        mockMvc.perform(get(ENDPOINT_V2 + "apps")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+
+        // make sure sara cant see anything
+        mockMvc.perform(get(ENDPOINT_V2 + "apps")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(sara.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // but sara does register with the /self endpoint
+        mockMvc.perform(get("/v2/dashboard-users/self")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(sara.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email", equalTo(sara.getEmail())))
+                .andExpect(jsonPath("$.privileges[?(@.name == 'SCRATCH_WRITE')]", hasSize(1)));
+
+        // but random dude doesnt register with the /self endpoint
+        mockMvc.perform(get("/v2/dashboard-users/self")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken("dude@random.com")))
+                .andExpect(status().isForbidden());
+
+
     }
 }
