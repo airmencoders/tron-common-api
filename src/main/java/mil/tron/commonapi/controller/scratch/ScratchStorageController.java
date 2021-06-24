@@ -167,6 +167,10 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getAllEntries(), HttpStatus.OK);
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getAllKeyValuePairsForAppIdWrapped(UUID)} ()} for new usage.
+     * @return
+     */
     @Operation(summary = "Retrieves all key-value pairs for for a single app",
             description = "App ID is the UUID of the owning application. Note if app is in ACL mode, then this endpoint" +
                     "will not work unless requester is a SCRATCH_ADMIN - since ACL mode restricts read/write on a key by" +
@@ -185,8 +189,36 @@ public class ScratchStorageController {
                     description = "Malformed Application UUID",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @GetMapping({"${api-prefix.v1}/scratch/{appId}", "${api-prefix.v2}/scratch/{appId}"})
+    @Deprecated(since = "v2")
+    @GetMapping({"${api-prefix.v1}/scratch/{appId}"})
     public ResponseEntity<Object> getAllKeyValuePairsForAppId(
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
+
+        validateScratchReadAccessForUser(appId,  "");
+        return new ResponseEntity<>(scratchStorageService.getAllEntriesByApp(appId), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Retrieves all key-value pairs for for a single app",
+            description = "App ID is the UUID of the owning application. Note if app is in ACL mode, then this endpoint" +
+                    "will not work unless requester is a SCRATCH_ADMIN - since ACL mode restricts read/write on a key by" +
+                    "key basis")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScratchStorageEntryDtoResponseWrapper.class)))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID not valid or found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Application UUID",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @WrappedEnvelopeResponse
+    @GetMapping({"${api-prefix.v2}/scratch/{appId}"})
+    public ResponseEntity<Object> getAllKeyValuePairsForAppIdWrapped(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
         validateScratchReadAccessForUser(appId,  "");
