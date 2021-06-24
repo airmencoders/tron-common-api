@@ -59,7 +59,7 @@ public class AppGatewayControllerTest {
         mockMvc.perform(get("/v1/app/mock/test"))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/v1/app/mock/test3"))
+        mockMvc.perform(get("/v1/app/mock/test30"))
                 .andExpect(status().isNotFound());
     }
     

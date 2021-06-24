@@ -14,6 +14,7 @@ public interface AppEndpointPrivRepository extends JpaRepository<AppEndpointPriv
     boolean existsByAppSourceEqualsAndAppClientUserEqualsAndAppEndpointEquals(AppSource appSource,
                                                                               AppClientUser clientUser,
                                                                               AppEndpoint appEndpoint);
+    boolean existsByAppSourceEqualsAndAppClientUserEquals(AppSource appSource, AppClientUser clientUser);
 
     @Transactional
     void removeAllByAppEndpoint(AppEndpoint appEndpoint);

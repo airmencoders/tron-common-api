@@ -1,5 +1,7 @@
 package mil.tron.commonapi.security;
 
+import mil.tron.commonapi.repository.AppClientUserRespository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,7 +23,9 @@ public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
     }
 
     @Bean
-    public AccessCheckAppSource accessCheckAppSource(AppSourceRepository appSourceRepository) {
-        return new AccessCheckAppSourceImpl(appSourceRepository);
+    public AccessCheckAppSource accessCheckAppSource(AppSourceRepository appSourceRepository,
+                                                     AppClientUserRespository appClientUserRespository,
+                                                     AppEndpointPrivRepository appEndpointPrivRepository) {
+        return new AccessCheckAppSourceImpl(appSourceRepository, appClientUserRespository, appEndpointPrivRepository);
     }
 }
