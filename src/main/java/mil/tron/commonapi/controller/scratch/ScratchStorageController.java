@@ -167,6 +167,10 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getAllEntries(), HttpStatus.OK);
     }
 
+    /**
+     * @deprecated No longer valid T166. See {@link #getAllKeyValuePairsForAppIdWrapped(UUID)} ()} for new usage.
+     * @return
+     */
     @Operation(summary = "Retrieves all key-value pairs for for a single app",
             description = "App ID is the UUID of the owning application. Note if app is in ACL mode, then this endpoint" +
                     "will not work unless requester is a SCRATCH_ADMIN - since ACL mode restricts read/write on a key by" +
