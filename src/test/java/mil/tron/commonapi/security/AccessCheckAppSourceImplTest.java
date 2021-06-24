@@ -3,14 +3,19 @@ package mil.tron.commonapi.security;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Set;
 import java.util.UUID;
 
 import javax.transaction.Transactional;
 
+import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.repository.DashboardUserRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
@@ -39,6 +44,9 @@ public class AccessCheckAppSourceImplTest {
 
     @Autowired
     AppClientUserRespository clientRepo;
+
+    @Autowired
+    DashboardUserRepository dashboardUserRepository;
 
     @Nested
     class ByAppSource {
@@ -118,6 +126,77 @@ public class AccessCheckAppSourceImplTest {
             AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
                     endpointPrivRepo);
             assertFalse(accessCheckImpl.checkByAppSourceId(SecurityContextHolder.getContext().getAuthentication(), UUID.randomUUID().toString()));
+        }
+
+        @Test
+        @Transactional
+        @Rollback
+        @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
+        public void UserValidAppClientDev() {
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
+            UUID appSourceId = UUID.randomUUID();
+            AppSource appSource = sourceRepo.save(
+                    AppSource.builder()
+                            .id(appSourceId)
+                            .name("Name")
+                            .appSourcePath("appsource")
+                            .build());
+            DashboardUser dashboardUser = dashboardUserRepository.save(DashboardUser.builder()
+                    .id(UUID.randomUUID())
+                    .email("test@email.com")
+                    .build());
+            AppClientUser appClient = clientRepo.saveAndFlush(AppClientUser.builder()
+                    .id(UUID.randomUUID())
+                    .appClientDevelopers(Set.of(dashboardUser))
+                    .build());
+            AppEndpoint appEndpoint = endpointRepo.save(AppEndpoint.builder()
+                    .id(UUID.randomUUID())
+                    .appSource(appSource)
+                    .build());
+            endpointPrivRepo.saveAndFlush(AppEndpointPriv.builder()
+                    .id(UUID.randomUUID())
+                    .appSource(appSource)
+                    .appClientUser(appClient)
+                    .appEndpoint(appEndpoint)
+                    .build());
+            Authentication authentication = new TestingAuthenticationToken("", "test@email.com");
+            assertTrue(accessCheckImpl.checkByAppSourceId(authentication, appSource.getId().toString()));
+        }
+        @Test
+        @Transactional
+        @Rollback
+        @WithMockUser(username="test-client-username", authorities = "appsource/endpoint_GET")
+        public void UserInvalidAppClientDev() {
+            AccessCheckAppSourceImpl accessCheckImpl = new AccessCheckAppSourceImpl(sourceRepo, clientRepo,
+                    endpointPrivRepo);
+            UUID appSourceId = UUID.randomUUID();
+            AppSource appSource = sourceRepo.save(
+                    AppSource.builder()
+                            .id(appSourceId)
+                            .name("Name")
+                            .appSourcePath("appsource")
+                            .build());
+            DashboardUser dashboardUser = dashboardUserRepository.save(DashboardUser.builder()
+                    .id(UUID.randomUUID())
+                    .email("test@email.com")
+                    .build());
+            AppClientUser appClient = clientRepo.saveAndFlush(AppClientUser.builder()
+                    .id(UUID.randomUUID())
+                    .appClientDevelopers(Set.of(dashboardUser))
+                    .build());
+            AppEndpoint appEndpoint = endpointRepo.save(AppEndpoint.builder()
+                    .id(UUID.randomUUID())
+                    .appSource(appSource)
+                    .build());
+            endpointPrivRepo.saveAndFlush(AppEndpointPriv.builder()
+                    .id(UUID.randomUUID())
+                    .appSource(appSource)
+                    .appClientUser(appClient)
+                    .appEndpoint(appEndpoint)
+                    .build());
+            Authentication authentication = new TestingAuthenticationToken("", "test-fail@email.com");
+            assertFalse(accessCheckImpl.checkByAppSourceId(authentication, appSource.getId().toString()));
         }
     }
 

@@ -43,14 +43,19 @@ public class AccessCheckAppSourceImpl implements AccessCheckAppSource {
 
         AppSource appSource = appSourceRepo.findById(id).orElse(null);
         boolean isAllowedByAppClientAuth = determinePermission(authPaths, appSource);
-
+        if (isAllowedByAppClientAuth) {
+            return true;
+        }
+        if (authentication.getCredentials() == null) {
+            return false;
+        }
         List<AppClientUser> appClientsForDev = this.appClientUserRespository.findByAppClientDevelopersEmail(
                 authentication.getCredentials().toString());
         boolean isAuthorizedClient = appClientsForDev.stream().anyMatch(
                 appClient -> this.appEndpointPrivRepository.existsByAppSourceEqualsAndAppClientUserEquals(
                         appSource, appClient)
         );
-        return isAllowedByAppClientAuth || isAuthorizedClient;
+        return isAuthorizedClient;
     }
 
     @Override
