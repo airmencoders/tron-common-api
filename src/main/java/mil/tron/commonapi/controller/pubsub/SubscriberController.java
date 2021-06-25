@@ -8,10 +8,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.pubsub.PreAuthorizeAnyAppClientOrDeveloper;
-import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
-import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.pubsub.PreAuthorizeSubscriptionCreation;
 import mil.tron.commonapi.annotation.pubsub.PreAuthorizeSubscriptionOwner;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
+import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.EventInfoDto;
 import mil.tron.commonapi.dto.EventInfoDtoResponseWrapper;
 import mil.tron.commonapi.dto.pubsub.PubSubLedgerEntryDto;
@@ -160,7 +160,7 @@ public class SubscriberController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = PubSubLedgerEntryDto.class)))),
             @ApiResponse(responseCode = "400",
                     description = "Bad Request - malformed date/time",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = BadRequestException.class))))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ExceptionResponse.class))))
     })
     @Deprecated(since = "v2")
     @GetMapping({"${api-prefix.v1}/subscriptions/events/replay"})
@@ -188,7 +188,7 @@ public class SubscriberController {
                     content = @Content(schema = @Schema(implementation = PubSubLedgerEntryDtoResponseWrapper.class))),
             @ApiResponse(responseCode = "400",
                     description = "Bad Request - malformed date/time",
-                    content = @Content(schema = @Schema(implementation = BadRequestException.class)))
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @WrappedEnvelopeResponse
     @PreAuthorizeAnyAppClientOrDeveloper
@@ -225,7 +225,7 @@ public class SubscriberController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = PubSubLedgerEntryDto.class)))),
             @ApiResponse(responseCode = "400",
                     description = "Bad Request - malformed date/time",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = BadRequestException.class))))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ExceptionResponse.class))))
     })
     @Deprecated(since = "v2")
     @PostMapping({"${api-prefix.v1}/subscriptions/events/replay-events"})
@@ -245,7 +245,7 @@ public class SubscriberController {
                     content = @Content(schema = @Schema(implementation = PubSubLedgerEntryDtoResponseWrapper.class))),
             @ApiResponse(responseCode = "400",
                     description = "Bad Request - malformed date/time",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = BadRequestException.class))))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ExceptionResponse.class))))
     })
     @WrappedEnvelopeResponse
     @PreAuthorizeAnyAppClientOrDeveloper
