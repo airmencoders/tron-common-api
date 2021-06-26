@@ -1,9 +1,6 @@
 package mil.tron.commonapi.dto;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.*;
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -52,6 +49,7 @@ public class PersonDto {
     @Setter
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     /**
