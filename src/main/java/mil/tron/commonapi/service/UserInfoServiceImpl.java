@@ -2,12 +2,27 @@ package mil.tron.commonapi.service;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.UserInfoDto;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.BadRequestException;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.PersonRepository;
 import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import java.util.Optional;
 
 @Service
 public class UserInfoServiceImpl implements UserInfoService {
+
+	private final PersonRepository personRepository;
+	private final PersonService personService;
+
+	public UserInfoServiceImpl(PersonRepository personRepository, PersonService personService) {
+		this.personRepository = personRepository;
+		this.personService = personService;
+	}
 
 	@Override
 	public UserInfoDto extractUserInfoFromHeader(String authHeader) {
@@ -49,6 +64,18 @@ public class UserInfoServiceImpl implements UserInfoService {
 		}
 		
 		return userInfo;
+	}
+
+	@Override
+	public PersonDto getExistingPersonFromUser(String authHeader) {
+		final UserInfoDto userInfo = this.extractUserInfoFromHeader(authHeader);
+		final String userEmail = userInfo.getEmail();
+		Optional<Person> person = this.personRepository.findByEmailIgnoreCase(userEmail);
+		if (person.isEmpty()) {
+			throw new RecordNotFoundException("This user does not have an existing person record.");
+		}
+		final PersonDto personDto = this.personService.convertToDto(person.get(), new PersonConversionOptions());
+		return personDto;
 	}
 
 }
