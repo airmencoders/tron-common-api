@@ -110,17 +110,13 @@ public class ScratchStorageController {
      * @return true or false
      */
     private boolean userIsDashBoardAdminOrScratchAdmin(UUID appId) {
-
-        boolean result = true;
-
         try {
             this.checkUserIsDashBoardAdminOrScratchAdmin(appId);
+            return true;
         }
         catch (InvalidScratchSpacePermissions ex) {
-            result = false;
+            return false;
         }
-
-        return result;
     }
 
     /**
