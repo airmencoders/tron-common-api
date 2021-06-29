@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.UserInfoDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.UserInfoService;
@@ -43,5 +44,24 @@ public class UserInfoController {
 		UserInfoDto userInfo = userInfoService.extractUserInfoFromHeader(authHeader);
 		
 		return new ResponseEntity<>(userInfo, HttpStatus.OK);
+	}
+
+	@Operation(summary = "Returns person record matching email for existing logged in user jwt")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
+			@ApiResponse(responseCode = "400",
+					description = "Bad Request",
+					content = @Content(
+							mediaType = "application/json",
+							schema = @Schema(implementation = ExceptionResponse.class)
+					))
+	})
+	@GetMapping("/existing-person")
+	public ResponseEntity<PersonDto> getExistingPersonRecord(@RequestHeader Map<String, String> headers) {
+		String authHeader = headers.get("authorization");
+		PersonDto person = userInfoService.getExistingPersonFromUser(authHeader);
+		return new ResponseEntity<>(person, HttpStatus.OK);
 	}
 }

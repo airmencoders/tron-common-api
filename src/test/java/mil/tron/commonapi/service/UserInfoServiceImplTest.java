@@ -3,9 +3,16 @@ package mil.tron.commonapi.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.PersonRepository;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.auth0.jwt.JWT;
@@ -14,8 +21,18 @@ import com.auth0.jwt.algorithms.Algorithm;
 import mil.tron.commonapi.dto.UserInfoDto;
 import mil.tron.commonapi.exception.BadRequestException;
 
+import javax.persistence.EntityNotFoundException;
+import java.util.Optional;
+
 @ExtendWith(MockitoExtension.class)
 class UserInfoServiceImplTest {
+
+	@Mock
+	private PersonRepository repository;
+
+	@Mock
+	private PersonService personService;
+
 	private static final String ORGANIZATION = "Test Org";
 	private static final String NAME = "Test JWT";
 	private static final String PREFERRED_USERNAME = "testjwt";
@@ -126,5 +143,20 @@ class UserInfoServiceImplTest {
 		
 		assertThat(service.extractUserInfoFromHeader(header)).isEqualTo(userInfo);
 	}
-	
+
+    @Test
+    void getExistingPersonFromUserExists() {
+		Mockito.when(this.repository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(new Person()));
+		Mockito.when(this.personService.convertToDto(Mockito.any(), Mockito.any())).thenReturn(new PersonDto());
+		String header = "Bearer " + TOKEN;
+		PersonDto personDto = this.service.getExistingPersonFromUser(header);
+		assertThat(personDto).isNotNull();
+    }
+
+    @Test
+	void getExistingPersonFromUserNotExist() {
+		Mockito.when(this.repository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.empty());
+		String header = "Bearer " + TOKEN;
+		Assertions.assertThrows(RecordNotFoundException.class, () -> this.service.getExistingPersonFromUser(header));
+	}
 }
