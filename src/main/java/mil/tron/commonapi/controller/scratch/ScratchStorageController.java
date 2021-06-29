@@ -110,13 +110,17 @@ public class ScratchStorageController {
      * @return true or false
      */
     private boolean userIsDashBoardAdminOrScratchAdmin(UUID appId) {
+
+        boolean result = true;
+
         try {
             this.checkUserIsDashBoardAdminOrScratchAdmin(appId);
-            return true;
         }
         catch (InvalidScratchSpacePermissions ex) {
-            return false;
+            result = false;
         }
+
+        return result;
     }
 
     /**
@@ -251,7 +255,7 @@ public class ScratchStorageController {
 
         // we have to be able to get the list of keys as a DASHBOARD_ADMIN -- otherwise we can't configure the
         //  space from the Client UI
-        if (!userIsDashBoardAdminOrScratchAdmin(appId)) {
+        if (!userIsDashBoardAdminOrScratchAdmin(appId)) { //NOSONAR
 
             // we weren't an admin so follow regular rules for read access
             validateScratchReadAccessForUser(appId, "");
