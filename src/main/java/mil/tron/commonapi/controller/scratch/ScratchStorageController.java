@@ -255,7 +255,8 @@ public class ScratchStorageController {
 
         // we have to be able to get the list of keys as a DASHBOARD_ADMIN -- otherwise we can't configure the
         //  space from the Client UI
-        if (!userIsDashBoardAdminOrScratchAdmin(appId)) {
+        // No sonar for false positive thinking the helper function always returns false.. when it doesn't
+        if (!userIsDashBoardAdminOrScratchAdmin(appId)) { //NOSONAR
 
             // we weren't an admin so follow regular rules for read access
             validateScratchReadAccessForUser(appId, "");
@@ -288,7 +289,8 @@ public class ScratchStorageController {
 
         // we have to be able to get the list of keys as a DASHBOARD_ADMIN -- otherwise we can't configure the
         //  space from the Client UI
-        if (!userIsDashBoardAdminOrScratchAdmin(appId)) {
+        // No sonar for false positive thinking the helper function always returns false.. when it doesn't
+        if (!userIsDashBoardAdminOrScratchAdmin(appId)) { //NOSONAR
 
             // we weren't an admin so follow regular rules for read access
             validateScratchReadAccessForUser(appId, "");
