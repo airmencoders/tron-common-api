@@ -248,6 +248,11 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             appPrivRepo.deleteById(dbObj.getId());
         }
 
+        // carry over the basic app info stuff
+        dbAppRegistry.setAppName(entry.getAppName());
+        dbAppRegistry.setAppHasImplicitRead(entry.isAppHasImplicitRead());
+        dbAppRegistry.setAclMode(entry.isAclMode());
+
         appRegistryRepo.saveAndFlush(dbAppRegistry);
 
         // add in the privilege(s) from the incoming data DTO

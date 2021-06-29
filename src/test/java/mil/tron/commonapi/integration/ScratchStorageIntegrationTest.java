@@ -463,6 +463,12 @@ public class ScratchStorageIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(user2.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0]", equalTo(entry2.getKey())));
+
+        mockMvc.perform(get(ENDPOINT + "/apps/{appId}/keys", entry2.getAppId())
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]", equalTo(entry2.getKey())));
     }
 
     @Transactional

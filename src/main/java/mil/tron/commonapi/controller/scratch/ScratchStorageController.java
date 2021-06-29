@@ -253,7 +253,13 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeysForAppId(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId, "");
+        // we have to be able to get the list of keys as a DASHBOARD_ADMIN -- otherwise we can't configure the
+        //  space from the Client UI
+        if (!userIsDashBoardAdminOrScratchAdmin(appId)) {
+
+            // we weren't an admin so follow regular rules for read access
+            validateScratchReadAccessForUser(appId, "");
+        }
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
 
@@ -280,7 +286,13 @@ public class ScratchStorageController {
     public ResponseEntity<Object> getAllKeysForAppIdWrapped(
             @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId) {
 
-        validateScratchReadAccessForUser(appId,  "");
+        // we have to be able to get the list of keys as a DASHBOARD_ADMIN -- otherwise we can't configure the
+        //  space from the Client UI
+        if (!userIsDashBoardAdminOrScratchAdmin(appId)) {
+
+            // we weren't an admin so follow regular rules for read access
+            validateScratchReadAccessForUser(appId, "");
+        }
         return new ResponseEntity<>(scratchStorageService.getAllKeysForAppId(appId), HttpStatus.OK);
     }
     
