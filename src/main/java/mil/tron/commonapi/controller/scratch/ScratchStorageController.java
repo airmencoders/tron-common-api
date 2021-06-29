@@ -1,5 +1,8 @@
 package mil.tron.commonapi.controller.scratch;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -11,9 +14,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.*;
+import mil.tron.commonapi.dto.jsondb.QueryDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.PrivilegeService;
+import mil.tron.commonapi.service.scratch.JsonDbService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +29,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -31,12 +39,14 @@ import java.util.stream.Collectors;
 public class ScratchStorageController {
     private ScratchStorageService scratchStorageService;
     private PrivilegeService privilegeService;
+    private JsonDbService jsonDbService;
     private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
     private static final String INVALID_PERMS = "Invalid User Permissions";
 
-    public ScratchStorageController(ScratchStorageService scratchStorageService, PrivilegeService privilegeService) {
+    public ScratchStorageController(ScratchStorageService scratchStorageService, PrivilegeService privilegeService, JsonDbService jsonDbService) {
         this.scratchStorageService = scratchStorageService;
         this.privilegeService = privilegeService;
+        this.jsonDbService = jsonDbService;
     }
 
     private void checkUserIsDashBoardAdminOrScratchAdmin(UUID appId) {
@@ -865,5 +875,74 @@ public class ScratchStorageController {
                 .collect(Collectors.toList());
 
         return new ResponseEntity<>(scratchPrivs, HttpStatus.OK);
+    }
+
+    // JSON DB
+
+    @GetMapping("${api-prefix.v2}/scratch/{appId}/jsondb/{table}/get/{id}")
+    public ResponseEntity<Object> getById(@PathVariable UUID appId,
+                                          @PathVariable @NotNull @NotBlank String table,
+                                          @PathVariable(name = "id" ) @NotNull @NotBlank String id) throws JsonProcessingException {
+        validateScratchReadAccessForUser(appId, table);
+        String error = "No matches for that given ID";
+        try {
+            JsonNode results = new ObjectMapper().readTree(jsonDbService.queryJson(appId, table, String.format("$[?(@.id == '%s')]", id)).toString());
+            if (results != null && results.size() > 0) {
+                return new ResponseEntity<>(results.get(0), HttpStatus.OK);
+            }
+        }
+        catch (Exception ignored) {
+            // so sonarqube doesn't complain
+            throw new RecordNotFoundException(error);
+        }
+
+        throw new RecordNotFoundException(error);
+    }
+
+    @GetMapping("${api-prefix.v2}/scratch/{appId}/jsondb/{table}/list")
+    public ResponseEntity<Object> listTable(@PathVariable UUID appId,
+                                            @PathVariable @NotNull @NotBlank String table) {
+        validateScratchReadAccessForUser(appId, table);
+        return new ResponseEntity<>(jsonDbService.queryJson(appId, table, "$"), HttpStatus.OK);
+    }
+
+    // a way to do more complex queries
+    @PostMapping("${api-prefix.v2}/scratch/{appId}/jsondb/{table}/query")
+    public ResponseEntity<Object> queryJsonTable(@PathVariable UUID appId,
+                                                 @PathVariable @NotNull @NotBlank String table,
+                                                 @RequestBody @Valid QueryDto dto) {
+        validateScratchReadAccessForUser(appId, table);
+        return new ResponseEntity<>(jsonDbService.queryJson(appId, table, dto.getQuery()), HttpStatus.OK);
+    }
+
+    @PostMapping("${api-prefix.v2}/scratch/{appId}/jsondb/{table}/create")
+    public ResponseEntity<Object> insertIntoTable(@PathVariable UUID appId,
+                                                  @PathVariable @NotNull @NotBlank String table,
+                                                  @RequestBody @NotNull @NotBlank String json) {
+
+        validateScratchWriteAccessForUser(appId, table);
+        return new ResponseEntity<>(jsonDbService.addElement(appId, table, json), HttpStatus.CREATED);
+    }
+
+    @PatchMapping("${api-prefix.v2}/scratch/{appId}/jsondb/{table}/update/{id}")
+    public ResponseEntity<Object> updateJsonTable(@PathVariable UUID appId,
+                                                  @PathVariable @NotNull @NotBlank String table,
+                                                  @PathVariable(name = "id") @NotNull @NotBlank String id,
+                                                  @RequestBody @NotNull @NotBlank String json) {
+
+        validateScratchWriteAccessForUser(appId, table);
+        return new ResponseEntity<>(
+                jsonDbService.updateElement(appId, table, id, json, String.format("$[?(@.id == '%s')]", id)),
+                HttpStatus.OK);
+    }
+
+    @DeleteMapping("${api-prefix.v2}/scratch/{appId}/jsondb/{table}/delete/{id}")
+    public ResponseEntity<Object> deleteById(@PathVariable UUID appId,
+                                             @PathVariable @NotNull @NotBlank String table,
+                                             @PathVariable(name = "id" ) @NotNull @NotBlank String id) {
+
+        validateScratchWriteAccessForUser(appId, table);
+        jsonDbService.removeElement(appId, table, String.format("$[?(@.id == '%s')]", id));
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
