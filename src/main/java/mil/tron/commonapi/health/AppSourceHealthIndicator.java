@@ -1,22 +1,24 @@
 package mil.tron.commonapi.health;
 
-import lombok.*;
-import mil.tron.commonapi.service.pubsub.SubscriberService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
 public class AppSourceHealthIndicator implements HealthIndicator {
+
+    /**
+     * Timeout parameters for hitting the app source's health url
+     */
+    private static final int CONNECT_TIMEOUT = 5;
+    private static final int READ_TIMEOUT = 5;
+
+    private static final String STATUS_CODE_FIELD = "statusCode";
 
     @Getter
     @Setter
@@ -26,56 +28,62 @@ public class AppSourceHealthIndicator implements HealthIndicator {
     @Setter
     private String name;
 
-    @Bean("healthRequester")
-    public RestTemplate healthSender(RestTemplateBuilder builder) {
-        return builder
-            .setConnectTimeout(Duration.ofSeconds(5))
-            .setReadTimeout(Duration.ofSeconds(5))
-            .build();
-    }
+    @Getter
+    @Setter
+    private RestTemplateBuilder builder;
 
-    private SubscriberService subService;
-
-    @Autowired
-    @Qualifier("healthRequester")
+    @Getter
+    @Setter
     private RestTemplate healthSender;
 
+    public AppSourceHealthIndicator(String name, String url) {
+        this.url = url;
+        this.name = name;
+        builder = new RestTemplateBuilder();
+        healthSender = builder
+                .setConnectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT))
+                .setReadTimeout(Duration.ofSeconds(READ_TIMEOUT))
+                .build();
+
+    }
+
+    /**
+     * This is run by Spring Actuator whenever we hit the /health endpoint
+     * @return Health status of the app source that owns this instance
+     */
     @Override
     public Health health() {
-
-        ResponseEntity<String> response = null;
-
         if (url == null || url.isBlank()) {
             return Health.unknown().withDetail("reason", "No valid health check url available").build();
         }
 
         try {
-            response = healthSender.getForEntity(url, String.class);
-            switch (response.getStatusCodeValue()) {
-                case 200:
-                case 201:
-                    return Health.up().withDetail("statusCode", response.getStatusCodeValue()).build();
-                default:
-                    return Health.down().withDetail("statusCode", response.getStatusCodeValue()).build();
-            }
-        }
-        catch (Exception e) {
-            if (response != null) {
+            ResponseEntity<String> response = healthSender.getForEntity(url, String.class);
+            if (response.getStatusCodeValue() >= 200 && response.getStatusCodeValue() < 300) {
                 return Health
-                        .unknown()
-                        .withDetail("statusCode", response.getStatusCodeValue())
-                        .withDetail("response", response.getBody())
-                        .withDetail("exception", e.getMessage())
-                        .build();
+                    .up()
+                    .withDetail(STATUS_CODE_FIELD, response.getStatusCodeValue())
+                    .build();
+            }
+            else if (response.getStatusCodeValue() == 503) {
+                return Health
+                    .outOfService()
+                    .withDetail(STATUS_CODE_FIELD, response.getStatusCodeValue())
+                    .build();
             }
             else {
                 return Health
-                        .unknown()
-                        .withDetail("statusCode", -1)
-                        .withDetail("response", "")
-                        .withDetail("exception", e.getMessage())
-                        .build();
+                    .down()
+                    .withDetail(STATUS_CODE_FIELD, response.getStatusCodeValue())
+                    .build();
             }
+        }
+        catch (Exception e) {
+            return Health
+                    .unknown()
+                    .withDetail(STATUS_CODE_FIELD, -1)
+                    .withDetail("error", e.getMessage())
+                    .build();
         }
     }
 }

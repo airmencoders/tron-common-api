@@ -31,6 +31,11 @@ public class AppGatewayServiceImpl implements AppGatewayService {
         this.producer = producer;
     }
 
+    @Override
+    public Map<String, AppSourceInterfaceDefinition> getDefMap() {
+        return this.appSourceDefMap;
+    }
+
     /**
      * Forwards the request to an App Source based on the app source path.
      * @param request The Servlet Request provided for forwarding
