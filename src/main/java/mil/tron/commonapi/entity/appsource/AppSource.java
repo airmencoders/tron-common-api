@@ -70,4 +70,19 @@ public class AppSource extends App {
     @OneToMany(mappedBy = "appSource")
     private Set<@Valid AppEndpointPriv> appPrivs = new HashSet<>();
 
+    /**
+     * Whether this app source wants to report up/down status
+     */
+    @Getter
+    @Setter
+    private boolean reportStatus = false;
+
+    /**
+     * The URL Common API should use to determine if this app is UP or DOWN
+     * This will be a GET Request
+     */
+    @Getter
+    @Setter
+    private String healthUrl;
+
 }

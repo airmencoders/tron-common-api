@@ -17,6 +17,7 @@ import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.health.AppSourceHealthIndicator;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
@@ -28,11 +29,14 @@ import org.assertj.core.util.Sets;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -51,6 +55,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     private PrivilegeRepository privilegeRepository;
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserService dashboardUserService;
+    private HealthContributorRegistry healthContributorRegistry;
     private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
     private static final String APP_SOURCE_NOT_FOUND_MSG = "No App Source found with id %s.";
     private static final String APP_SOURCE_NO_ENDPOINT_FOUND_MSG = "No App Source Endpoint found with id %s.";
@@ -71,6 +76,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                                 PrivilegeRepository privilegeRepository,
                                 DashboardUserRepository dashboardUserRepository,
                                 DashboardUserService dashboardUserService,
+                                HealthContributorRegistry healthContributorRegistry,
                                 @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation)
     {
         this.appSourceRepository = appSourceRepository;
@@ -80,7 +86,26 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.dashboardUserRepository = dashboardUserRepository;
         this.privilegeRepository = privilegeRepository;
         this.dashboardUserService = dashboardUserService;
+        this.healthContributorRegistry = healthContributorRegistry;
         this.appSourceApiDefinitionsLocation = appSourceApiDefinitionsLocation;
+    }
+
+    /**
+     * Launch the health check instances for each app source that's supposed to report status
+     */
+    @PostConstruct
+    void init() {
+        List<AppSource> appSources = appSourceRepository.findAll();
+        for (AppSource appSource : appSources) {
+            if (appSource.isAvailableAsAppSource() && appSource.isReportStatus()) {
+                healthContributorRegistry
+                        .registerContributor(appSource.getName(), AppSourceHealthIndicator
+                            .builder()
+                            .name(appSource.getName())
+                            .url(appSource.getHealthUrl())
+                            .build());
+            }
+        }
     }
 
     @Override
