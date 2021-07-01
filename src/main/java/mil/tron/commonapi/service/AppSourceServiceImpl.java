@@ -133,7 +133,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         if (newPath.startsWith("/")) {
             newPath = newPath.substring(1);
         }
-        return "http://" + new URL(newUrl).getHost() + "/" + UriUtils.encodeFragment(newPath, StandardCharsets.UTF_8);
+        return "http://" + new URL(newUrl).getHost() + "/" + newPath;
     }
 
     /**
