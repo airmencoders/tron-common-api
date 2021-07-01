@@ -38,11 +38,13 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.util.UriUtils;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -301,7 +303,12 @@ public class AppSourceServiceImpl implements AppSourceService {
         appSourceToSave.setName(appSource.getName());
         appSourceToSave.setAvailableAsAppSource(true);
         appSourceToSave.setReportStatus(appSource.isReportStatus());
-        appSourceToSave.setHealthUrl(appSource.getHealthUrl());
+
+        // encode the given URL as a URI
+        appSourceToSave
+                .setHealthUrl(
+                        UriUtils.encode(
+                                appSource.getHealthUrl() != null ? appSource.getHealthUrl() : "", StandardCharsets.UTF_8));
 
         Set<AppEndpoint> appEndpoints = appSource.getEndpoints()
             .stream().map(endpointDto -> AppEndpoint.builder()
