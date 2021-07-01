@@ -41,6 +41,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -111,12 +113,14 @@ public class AppSourceServiceImpl implements AppSourceService {
 
     /**
      * Helper for the registerAppReporting method to concat URL paths, that one or both
-     * may or may not have a trailing slash
+     * may or may not have a trailing slash.  Just takes the base url from the app gateway
+     * URL.
      * @param url base url
      * @param path path
+     * @throws MalformedURLException
      * @return the concatenated URL string
      */
-    private String concatPaths(String url, String path) {
+    private String concatPaths(String url, String path) throws MalformedURLException {
 
         String newUrl = (url == null ? "" : url);
         String newPath = (path == null ? "" : path);
@@ -127,8 +131,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         if (newPath.startsWith("/")) {
             newPath = newPath.substring(1);
         }
-
-        return newUrl + "/" + newPath;
+        return "http://" + new URL(newUrl).getHost() + "/" + newPath;
     }
 
     /**
@@ -136,6 +139,11 @@ public class AppSourceServiceImpl implements AppSourceService {
      * @param appSource the App Source entity
      */
     private void registerAppReporting(AppSource appSource) {
+
+        // unregister the health check for this app source (idempotent call)
+        healthContributorRegistry
+                .unregisterContributor(APP_SOURCE_HEALTH_PREFIX + appSource.getName());
+
         if (appSource.isReportStatus() && appSource.isAvailableAsAppSource()) {
             Map<String, AppSourceInterfaceDefinition> defs = appGatewayService.getDefMap();
 
@@ -152,18 +160,14 @@ public class AppSourceServiceImpl implements AppSourceService {
                                             // build the health url from the url in the app source config file + path given in the db
                                             concatPaths(defs.get(appSource.getAppSourcePath()).getSourceUrl(), appSource.getHealthUrl())));
                 }
-                // fail silently (in case that name/app was already registered
                 catch (IllegalStateException e) {
-                    appSourceServiceLog.warn("Could not register App Source Health Indicator for " + appSource.getName() + ": " + e.getMessage());
+                    appSourceServiceLog.info("App Source Health Indicator already registered for: " + appSource.getName() + ": " + e.getMessage());
+                }
+                catch (MalformedURLException e) {
+                    appSourceServiceLog.warn("Malformed Health URL for: " + appSource.getName() + ": " + e.getMessage());
                 }
 
             }
-        }
-        else {
-
-            // unregister the health check for this app source (idempotent call)
-            healthContributorRegistry
-                    .unregisterContributor(APP_SOURCE_HEALTH_PREFIX + appSource.getName());
         }
     }
 
