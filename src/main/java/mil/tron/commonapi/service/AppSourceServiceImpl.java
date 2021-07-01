@@ -38,13 +38,10 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.util.UriUtils;
 
-import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -102,16 +99,6 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.appGatewayService = appGatewayService;
     }
 
-    /**
-     * Launch the health check instances for each app source that's supposed to report status
-     */
-    @PostConstruct
-    void init() {
-        List<AppSource> appSources = appSourceRepository.findAll();
-        for (AppSource appSource : appSources) {
-            registerAppReporting(appSource);
-        }
-    }
 
     /**
      * Helper for the registerAppReporting method to concat URL paths, that one or both
@@ -140,7 +127,8 @@ public class AppSourceServiceImpl implements AppSourceService {
      * Method to register or deregister a given app source from Spring Actuator's Health registry
      * @param appSource the App Source entity
      */
-    private void registerAppReporting(AppSource appSource) {
+    @Override
+    public void registerAppReporting(AppSource appSource) {
 
         // unregister the health check for this app source (idempotent call)
         healthContributorRegistry
