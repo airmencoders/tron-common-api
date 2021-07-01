@@ -19,12 +19,15 @@ import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.health.AppSourceHealthIndicator;
+import mil.tron.commonapi.logging.CommonApiLogger;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.modelmapper.ModelMapper;
@@ -38,7 +41,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -48,6 +50,7 @@ import static java.util.stream.Collectors.groupingBy;
 
 @Service("appSourceService")
 public class AppSourceServiceImpl implements AppSourceService {
+    private final Log appSourceServiceLog = LogFactory.getLog(CommonApiLogger.class);
 
     private AppSourceRepository appSourceRepository;
     private AppEndpointPrivRepository appEndpointPrivRepository;
@@ -106,7 +109,33 @@ public class AppSourceServiceImpl implements AppSourceService {
         }
     }
 
-    void registerAppReporting(AppSource appSource) {
+    /**
+     * Helper for the registerAppReporting method to concat URL paths, that one or both
+     * may or may not have a trailing slash
+     * @param url base url
+     * @param path path
+     * @return the concatenated URL string
+     */
+    private String concatPaths(String url, String path) {
+
+        String newUrl = (url == null ? "" : url);
+        String newPath = (path == null ? "" : path);
+
+        if (newUrl.endsWith("/")) {
+            newUrl = newUrl.substring(0, newUrl.length() - 1);
+        }
+        if (newPath.startsWith("/")) {
+            newPath = newPath.substring(1);
+        }
+
+        return newUrl + "/" + newPath;
+    }
+
+    /**
+     * Method to register or deregister a given app source from Spring Actuator's Health registry
+     * @param appSource the App Source entity
+     */
+    private void registerAppReporting(AppSource appSource) {
         if (appSource.isReportStatus() && appSource.isAvailableAsAppSource()) {
             Map<String, AppSourceInterfaceDefinition> defs = appGatewayService.getDefMap();
 
@@ -121,10 +150,13 @@ public class AppSourceServiceImpl implements AppSourceService {
                                     new AppSourceHealthIndicator(
                                             APP_SOURCE_HEALTH_PREFIX + appSource.getName(),
                                             // build the health url from the url in the app source config file + path given in the db
-                                            Paths.get(defs.get(appSource.getAppSourcePath()).getSourceUrl() + appSource.getHealthUrl()).toString()));
+                                            concatPaths(defs.get(appSource.getAppSourcePath()).getSourceUrl(), appSource.getHealthUrl())));
                 }
                 // fail silently (in case that name/app was already registered
-                catch (IllegalStateException ignored) {}  //NOSONAR
+                catch (IllegalStateException e) {
+                    appSourceServiceLog.warn("Could not register App Source Health Indicator for " + appSource.getName() + ": " + e.getMessage());
+                }
+
             }
         }
         else {
