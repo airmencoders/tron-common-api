@@ -313,13 +313,13 @@ public class ScratchStorageServiceImplTest {
                 .builder()
                 .id(UUID.randomUUID())
                 .appName("TestApp")
+                .appHasImplicitRead(false)
+                .aclMode(false)
                 .build();
 
         newEntry.addUserAndPriv(priv);
 
         ScratchStorageAppRegistryDto newEntryDto = mapper.map(newEntry, ScratchStorageAppRegistryDto.class);
-        Mockito.when(privRepo.findById(Mockito.anyLong())).thenReturn(Optional.of(p));
-        Mockito.when(scratchUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.ofNullable(user));
         Mockito.when(appRegistryRepo.getOne(Mockito.any(UUID.class))).thenReturn(newEntry);
 
         Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class)))
@@ -328,7 +328,20 @@ public class ScratchStorageServiceImplTest {
 
         assertThrows(InvalidRecordUpdateRequest.class, () -> service.editExistingScratchAppEntry(UUID.randomUUID(), newEntryDto));
         assertThrows(RecordNotFoundException.class, () -> service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto));
-        assertEquals(newEntryDto.getId(), service.editExistingScratchAppEntry(newEntry.getId(), newEntryDto).getId());
+
+        ScratchStorageAppRegistryDto modEntry = ScratchStorageAppRegistryDto
+                .builder()
+                .id(newEntry.getId())
+                .appName("TestApp2")
+                .appHasImplicitRead(true)
+                .aclMode(true)
+                .build();
+
+        ScratchStorageAppRegistryDto updatedDto = service.editExistingScratchAppEntry(newEntry.getId(), modEntry);
+        assertEquals(newEntryDto.getId(), updatedDto.getId());
+        assertEquals("TestApp2", updatedDto.getAppName());
+        assertTrue(updatedDto.isAclMode());
+        assertTrue(updatedDto.isAppHasImplicitRead());
     }
 
     @Test

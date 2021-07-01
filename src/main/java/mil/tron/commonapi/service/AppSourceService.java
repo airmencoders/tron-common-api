@@ -4,11 +4,10 @@ import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.DashboardUser;
+import org.springframework.core.io.Resource;
 
 import java.util.List;
 import java.util.UUID;
-
-import org.springframework.core.io.Resource;
 
 public interface AppSourceService {
     List<AppSourceDto> getAppSources();

@@ -6,6 +6,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
 public class AppSourceInterfaceDefinition {
     String name;
     String openApiSpecFilename;

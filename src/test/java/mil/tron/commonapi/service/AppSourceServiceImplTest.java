@@ -3,27 +3,29 @@ package mil.tron.commonapi.service;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.val;
+import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.entity.AppClientUser;
-import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.health.AppSourceHealthIndicator;
 import mil.tron.commonapi.repository.AppClientUserRespository;
-import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
-import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -34,6 +36,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.*;
@@ -68,6 +71,12 @@ public class AppSourceServiceImplTest {
     @Mock
 	private DashboardUserRepository dashboardUserRepository;
 
+    @Mock
+	private AppGatewayService appGatewayService;
+
+    @Mock
+	private HealthContributorRegistry healthContributorRegistry;
+
     @InjectMocks
     private AppSourceServiceImpl service;
 
@@ -89,8 +98,19 @@ public class AppSourceServiceImplTest {
     private List<AppEndpointDto> appEndpointDtos;
     private ModelMapper mapper = new ModelMapper();
 
+    private Map<String, AppSourceInterfaceDefinition> appDefs = new HashMap<>();
+
     @BeforeEach
     void setup() {
+    	appDefs.put("puckboard",
+				AppSourceInterfaceDefinition
+						.builder()
+						.name("Puckboard")
+						.openApiSpecFilename("puckboard.yml")
+						.sourceUrl("http://puckboard-api-service.tron-puckboard.svc.cluster.local/puckboard-api/v2")
+						.appSourcePath("puckboard")
+						.build());
+
     	privileges = new HashSet<>();
     	privileges.add(
 			Privilege
@@ -285,7 +305,7 @@ public class AppSourceServiceImplTest {
             		.build();
         	
         	Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).thenReturn(AppSource.builder().id(toUpdate.getId()).name(toUpdate.getName()).build());
-        	
+			Mockito.when(healthContributorRegistry.unregisterContributor(Mockito.anyString())).thenReturn(new AppSourceHealthIndicator("", ""));
         	List<AppEndpointPriv> existingPrivs = new ArrayList<>();
         	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
         	
@@ -308,7 +328,7 @@ public class AppSourceServiceImplTest {
             		.build();
         	
         	Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).thenReturn(AppSource.builder().id(toUpdate.getId()).name(toUpdate.getName()).build());
-        	
+			Mockito.when(healthContributorRegistry.unregisterContributor(Mockito.anyString())).thenReturn(new AppSourceHealthIndicator("", ""));
         	List<AppEndpointPriv> existingPrivs = new ArrayList<>();
         	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
 
@@ -375,24 +395,37 @@ public class AppSourceServiceImplTest {
     
     @Test
     void testCreateAppSource() {
+
+    	AppSource appSource = AppSource.builder()
+				.id(appSourceDetailsDto.getId())
+				.name(appSourceDetailsDto.getName())
+				.availableAsAppSource(true)
+				.appSourceAdmins(null)
+				.build();
+
     	Mockito.when(appSourceRepository.saveAndFlush(Mockito.any()))
-                .thenReturn(AppSource.builder()
-                    .id(appSourceDetailsDto.getId())
-                    .name(appSourceDetailsDto.getName())
-                    .build());
+                .thenReturn(appSource);
     	
     	List<AppEndpointPriv> existingPrivs = new ArrayList<>();
     	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
-
+		Mockito.doNothing().when(healthContributorRegistry).registerContributor(Mockito.anyString(), Mockito.any(AppSourceHealthIndicator.class));
+		Mockito.when(healthContributorRegistry.unregisterContributor(Mockito.anyString())).thenReturn(new AppSourceHealthIndicator("", ""));
+		Mockito.when(appGatewayService.getDefMap()).thenReturn(appDefs);
         Mockito.when(appEndpointRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(new ArrayList<>());
-    	
     	Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
     	Mockito.when(privilegeRepo.findByName(APP_SOURCE_ADMIN)).thenReturn(Optional.of(appSourceAdminPriv));
+    	Mockito.when(appSourceRepository.findByNameIgnoreCase(Mockito.anyString()))
+				.thenReturn(Optional.ofNullable(appSource));
     	AppSourceDetailsDto created = service.createAppSource(appSourceDetailsDto);
 
     	appSourceDetailsDto.setId(created.getId());
-
     	assertThat(created).isEqualTo(appSourceDetailsDto);
+
+    	appSourceDetailsDto.setReportStatus(true);
+		appSource.setName("puckboard");
+    	appSource.setAppSourceAdmins(null);
+    	appSource.setAppSourcePath("puckboard");
+    	assertTrue(service.createAppSource(appSourceDetailsDto).isReportStatus());
     }
 
 	@Test
@@ -404,7 +437,7 @@ public class AppSourceServiceImplTest {
 		Mockito.when(appSourceRepository.saveAndFlush(Mockito.any())).thenReturn(appSource);
 
 		Mockito.when(appSourceRepository.findByNameIgnoreCase(Mockito.any())).thenReturn(Optional.of(appSource));
-    	
+		Mockito.when(healthContributorRegistry.unregisterContributor(Mockito.anyString())).thenReturn(new AppSourceHealthIndicator("", ""));
     	List<AppEndpointPriv> existingPrivs = new ArrayList<>();
     	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
 

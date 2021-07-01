@@ -18,7 +18,7 @@ public class ExceptionResponse {
 	private String error;
 
 	@Getter
-	private String message;
+	private String reason;
 
 	@Getter
 	private String path;
