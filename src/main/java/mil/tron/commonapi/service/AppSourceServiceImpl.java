@@ -304,11 +304,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         appSourceToSave.setAvailableAsAppSource(true);
         appSourceToSave.setReportStatus(appSource.isReportStatus());
 
-        // encode the given URL as a URI
-        appSourceToSave
-                .setHealthUrl(
-                        UriUtils.encode(
-                                appSource.getHealthUrl() != null ? appSource.getHealthUrl() : "", StandardCharsets.UTF_8));
+        appSourceToSave.setHealthUrl(appSource.getHealthUrl());
 
         Set<AppEndpoint> appEndpoints = appSource.getEndpoints()
             .stream().map(endpointDto -> AppEndpoint.builder()
