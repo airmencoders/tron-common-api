@@ -133,7 +133,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         if (newPath.startsWith("/")) {
             newPath = newPath.substring(1);
         }
-        return "http://" + new URL(newUrl).getHost() + "/" + newPath;
+        return "http://" + new URL(newUrl).getHost() + "/" + UriUtils.encodeFragment(newPath, StandardCharsets.UTF_8);
     }
 
     /**
@@ -304,11 +304,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         appSourceToSave.setAvailableAsAppSource(true);
         appSourceToSave.setReportStatus(appSource.isReportStatus());
 
-        // encode the given URL as a URI
-        appSourceToSave
-                .setHealthUrl(
-                        UriUtils.encode(
-                                appSource.getHealthUrl() != null ? appSource.getHealthUrl() : "", StandardCharsets.UTF_8));
+        appSourceToSave.setHealthUrl(appSource.getHealthUrl());
 
         Set<AppEndpoint> appEndpoints = appSource.getEndpoints()
             .stream().map(endpointDto -> AppEndpoint.builder()
