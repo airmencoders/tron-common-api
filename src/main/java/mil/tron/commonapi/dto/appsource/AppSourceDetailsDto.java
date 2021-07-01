@@ -1,21 +1,15 @@
 package mil.tron.commonapi.dto.appsource;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import lombok.*;
+import mil.tron.commonapi.dto.AppClientUserPrivDto;
+import mil.tron.commonapi.validations.AppAndIdMatch;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import mil.tron.commonapi.dto.AppClientUserPrivDto;
-import mil.tron.commonapi.validations.AppAndIdMatch;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -46,8 +40,16 @@ public class AppSourceDetailsDto {
 
     @Getter
     @Setter
+    private boolean reportStatus = false;
+
+    @Getter
+    @Setter
     @Builder.Default
     private Integer clientCount = 0;
+
+    @Getter
+    @Setter
+    private String healthUrl;
     
     @Getter
     @Setter

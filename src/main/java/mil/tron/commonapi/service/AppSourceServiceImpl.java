@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
@@ -17,22 +18,28 @@ import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.health.AppSourceHealthIndicator;
+import mil.tron.commonapi.logging.CommonApiLogger;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,6 +50,7 @@ import static java.util.stream.Collectors.groupingBy;
 
 @Service("appSourceService")
 public class AppSourceServiceImpl implements AppSourceService {
+    private final Log appSourceServiceLog = LogFactory.getLog(CommonApiLogger.class);
 
     private AppSourceRepository appSourceRepository;
     private AppEndpointPrivRepository appEndpointPrivRepository;
@@ -51,11 +59,14 @@ public class AppSourceServiceImpl implements AppSourceService {
     private PrivilegeRepository privilegeRepository;
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserService dashboardUserService;
+    private HealthContributorRegistry healthContributorRegistry;
+    private AppGatewayService appGatewayService;
     private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
     private static final String APP_SOURCE_NOT_FOUND_MSG = "No App Source found with id %s.";
     private static final String APP_SOURCE_NO_ENDPOINT_FOUND_MSG = "No App Source Endpoint found with id %s.";
     private static final String APP_SOURCE_WITH_APP_ENDPOINT_NOT_FOUND_MSG = "No App Source found with App Endpoint that has id %s.";
     private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
+    private static final String APP_SOURCE_HEALTH_PREFIX = "appsource_";
     private ModelMapper mapper = new ModelMapper();
     private static final String APP_API_SPEC_NOT_FOUND_MSG = "Could not find API Specification for App Source with id %s.";
     private String appSourceApiDefinitionsLocation;
@@ -71,6 +82,8 @@ public class AppSourceServiceImpl implements AppSourceService {
                                 PrivilegeRepository privilegeRepository,
                                 DashboardUserRepository dashboardUserRepository,
                                 DashboardUserService dashboardUserService,
+                                HealthContributorRegistry healthContributorRegistry,
+                                AppGatewayService appGatewayService,
                                 @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation)
     {
         this.appSourceRepository = appSourceRepository;
@@ -80,7 +93,78 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.dashboardUserRepository = dashboardUserRepository;
         this.privilegeRepository = privilegeRepository;
         this.dashboardUserService = dashboardUserService;
+        this.healthContributorRegistry = healthContributorRegistry;
         this.appSourceApiDefinitionsLocation = appSourceApiDefinitionsLocation;
+        this.appGatewayService = appGatewayService;
+    }
+
+    /**
+     * Launch the health check instances for each app source that's supposed to report status
+     */
+    @PostConstruct
+    void init() {
+        List<AppSource> appSources = appSourceRepository.findAll();
+        for (AppSource appSource : appSources) {
+            registerAppReporting(appSource);
+        }
+    }
+
+    /**
+     * Helper for the registerAppReporting method to concat URL paths, that one or both
+     * may or may not have a trailing slash
+     * @param url base url
+     * @param path path
+     * @return the concatenated URL string
+     */
+    private String concatPaths(String url, String path) {
+
+        String newUrl = (url == null ? "" : url);
+        String newPath = (path == null ? "" : path);
+
+        if (newUrl.endsWith("/")) {
+            newUrl = newUrl.substring(0, newUrl.length() - 1);
+        }
+        if (newPath.startsWith("/")) {
+            newPath = newPath.substring(1);
+        }
+
+        return newUrl + "/" + newPath;
+    }
+
+    /**
+     * Method to register or deregister a given app source from Spring Actuator's Health registry
+     * @param appSource the App Source entity
+     */
+    private void registerAppReporting(AppSource appSource) {
+        if (appSource.isReportStatus() && appSource.isAvailableAsAppSource()) {
+            Map<String, AppSourceInterfaceDefinition> defs = appGatewayService.getDefMap();
+
+            // if this path is registered as an app source, and it has an entry in the gateway service,
+            //  register it with the Spring Actuator's health registry
+            if (defs.containsKey(appSource.getAppSourcePath())) {
+                try {
+                    healthContributorRegistry
+                            .registerContributor(
+                                    // ID the registry entry by the apps name property
+                                    APP_SOURCE_HEALTH_PREFIX + appSource.getName(),
+                                    new AppSourceHealthIndicator(
+                                            APP_SOURCE_HEALTH_PREFIX + appSource.getName(),
+                                            // build the health url from the url in the app source config file + path given in the db
+                                            concatPaths(defs.get(appSource.getAppSourcePath()).getSourceUrl(), appSource.getHealthUrl())));
+                }
+                // fail silently (in case that name/app was already registered
+                catch (IllegalStateException e) {
+                    appSourceServiceLog.warn("Could not register App Source Health Indicator for " + appSource.getName() + ": " + e.getMessage());
+                }
+
+            }
+        }
+        else {
+
+            // unregister the health check for this app source (idempotent call)
+            healthContributorRegistry
+                    .unregisterContributor(APP_SOURCE_HEALTH_PREFIX + appSource.getName());
+        }
     }
 
     @Override
@@ -179,6 +263,8 @@ public class AppSourceServiceImpl implements AppSourceService {
         return AppSourceDetailsDto.builder()
                 .id(appSource.getId())
                 .name(appSource.getName())
+                .reportStatus(appSource.isReportStatus())
+                .healthUrl(appSource.getHealthUrl())
                 .endpoints(appSource.getAppEndpoints().stream()
                     .map(appEndpoint -> AppEndpointDto.builder()
                         .id(appEndpoint.getId())
@@ -210,6 +296,8 @@ public class AppSourceServiceImpl implements AppSourceService {
 
         appSourceToSave.setName(appSource.getName());
         appSourceToSave.setAvailableAsAppSource(true);
+        appSourceToSave.setReportStatus(appSource.isReportStatus());
+        appSourceToSave.setHealthUrl(appSource.getHealthUrl());
 
         Set<AppEndpoint> appEndpoints = appSource.getEndpoints()
             .stream().map(endpointDto -> AppEndpoint.builder()
@@ -242,6 +330,9 @@ public class AppSourceServiceImpl implements AppSourceService {
 
         // persist the app source and its changes
         AppSource savedAppSource = this.appSourceRepository.saveAndFlush(appSourceCleanAdmins);
+
+        // setup any reporting this app source needs to do
+        this.registerAppReporting(savedAppSource);
                   
         // Remove and reapply the Endpoints and Endpoint Privileges 
         // This allows us to change endpoints/privileges via PUT
