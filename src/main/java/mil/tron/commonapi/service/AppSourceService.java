@@ -4,6 +4,7 @@ import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.appsource.AppSource;
 import org.springframework.core.io.Resource;
 
 import java.util.List;
@@ -30,4 +31,6 @@ public interface AppSourceService {
 
     boolean userIsAdminForAppSource(UUID appId, String email);
     boolean userIsAdminForAppSourceByEndpoint(UUID endpointId, String email);
+
+    void registerAppReporting(AppSource appSource);
 }
