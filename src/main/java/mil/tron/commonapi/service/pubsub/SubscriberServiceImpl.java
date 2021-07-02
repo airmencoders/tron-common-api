@@ -79,8 +79,7 @@ public class SubscriberServiceImpl implements SubscriberService {
                 .orElseThrow(() -> new RecordNotFoundException(String.format(APP_CLIENT_NOT_FOUND_ERR, subscriber.getAppClientUser())));
 
         // try to get existing...
-        Optional<Subscriber> existing = subscriberRepository
-                .findByAppClientUserAndSubscribedEvent(appClientUser, subscriber.getSubscribedEvent());
+        Optional<Subscriber> existing = subscriberRepository.findById(subscriber.getId());
 
         if (existing.isPresent()) {
             // edit an existing
