@@ -746,9 +746,50 @@ class OrganizationServiceImplTest {
 		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
 		assertTrue(organizationService.orgIsInAncestryChain(greatGrandParent.getId(), theOrg));
 
-		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
+		// should return true since the subOrg cannot be added as a subordinate of 'theOrg'
 		assertFalse(organizationService.orgIsInAncestryChain(legitSubOrg.getId(), theOrg));
 
+	}
+
+	@Test
+	void testThatOrgCantAssignSubordinateOrgThatsSubOrgElsewhere() throws Exception {
+
+		Organization parent = new Organization();
+		Organization child1 = new Organization();
+		OrganizationDto child2 = new OrganizationDto();
+
+		Mockito.when(uniqueService.orgNameIsUnique(Mockito.any())).thenReturn(true);
+
+		Mockito.when(repository.findById(child1.getId()))
+				.thenReturn(Optional.of(child1));
+
+		Mockito.when(repository.findById(child2.getId()))
+				.thenReturn(Optional.of(Organization.builder().id(child2.getId()).build()));
+
+		Mockito.when(repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(child1, child2.getId()))
+				.thenReturn(Lists.newArrayList(parent));
+
+		child2.setSubOrgsUUID(Lists.newArrayList(child1.getId()));
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.updateOrganization(child2.getId(), child2));
+
+		child2.setSubOrgsUUID(null);
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.addOrg(child2.getId(), Lists.newArrayList(child1.getId())));
+
+		child2.setSubOrgsUUID(null);
+		ObjectMapper objectMapper = new ObjectMapper();
+		JSONArray contentArray = new JSONArray();
+		JSONObject content = new JSONObject();
+		content.put("op", "replace");
+		content.put("path", "/subordinateOrganizations");
+		content.put("value", Lists.newArrayList(child1.getId()));
+		contentArray.put(content);
+
+		JsonPatch newPatch = JsonPatch.fromJson(
+				objectMapper.readTree(contentArray.toString())
+		);
+
+		assertThrows(InvalidRecordUpdateRequest.class,
+				() -> organizationService.patchOrganization(child2.getId(), newPatch));
 	}
 
 	@Test

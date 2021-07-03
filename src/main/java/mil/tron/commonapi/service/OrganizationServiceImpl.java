@@ -66,7 +66,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final EntityFieldAuthService entityFieldAuthService;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
-	
+	private static final String ORG_IS_ALREADY_SUBORG_ELSEWHERE = "Organization %s is already a subordinate to another organization.";
+
 	private static final Map<Unit, Set<String>> validProperties = Map.of(
 			Unit.FLIGHT, fields(Flight.class),
 			Unit.GROUP, fields(Group.class),
@@ -133,9 +134,13 @@ public class OrganizationServiceImpl implements OrganizationService {
 					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
 			if (!orgIsInAncestryChain(subordinate.getId(), organization)) {
-				organization.addSubordinateOrganization(subordinate);
+				if (repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subordinate, organizationId).isEmpty()) {
+					organization.addSubordinateOrganization(subordinate);
+				} else {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subordinate.getName()));
+				}
 			} else {
-				throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subordinate.getId()));
+				throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subordinate.getName()));
 			}
 		}
 
@@ -327,6 +332,18 @@ public class OrganizationServiceImpl implements OrganizationService {
 					patchedOrg.getName()));
 		}
 
+		// vet all this patched org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
+		if (patchedOrg.getSubordinateOrganizations() != null && !patchedOrg.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : patchedOrg.getSubordinateOrganizations()) {
+				if (orgIsInAncestryChain(subOrg.getId(), patchedOrg)) {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getName()));
+				}
+				if (!repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subOrg, patchedOrg.getId()).isEmpty()) {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subOrg.getName()));
+				}
+			}
+		}
+
 		OrganizationDto updateOrganization = updateMetadata(patchedOrg, dbOrganization, patchedOrgDto.getMeta());
 
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
@@ -391,7 +408,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
 			for (Organization subOrg : org.getSubordinateOrganizations()) {
 				if (orgIsInAncestryChain(subOrg.getId(), org)) {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getName()));
+				}
+				if (!repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subOrg, org.getId()).isEmpty()) {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subOrg.getName()));
 				}
 			}
 		}
@@ -453,7 +473,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (entity.getSubordinateOrganizations() != null && !entity.getSubordinateOrganizations().isEmpty()) {
 			for (Organization subOrg : entity.getSubordinateOrganizations()) {
 				if (orgIsInAncestryChain(subOrg.getId(), entity)) {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getId()));
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getName()));
+				}
+				if (!repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subOrg, entity.getId()).isEmpty()) {
+					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subOrg.getName()));
 				}
 			}
 		}
