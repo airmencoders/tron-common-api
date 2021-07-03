@@ -75,7 +75,7 @@ public class SubscriberServiceImplTest {
         Mockito.when(appClientUserRespository.findByNameIgnoreCase(Mockito.anyString()))
                 .thenReturn(Optional.of(user));
 
-        Mockito.when(subscriberRepository.findByAppClientUserAndSubscribedEvent(Mockito.any(), Mockito.any()))
+        Mockito.when(subscriberRepository.findById(Mockito.any()))
                 .thenReturn(Optional.empty());
 
         Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class)))
@@ -94,7 +94,7 @@ public class SubscriberServiceImplTest {
         Mockito.when(appClientUserRespository.findByNameIgnoreCase(Mockito.anyString()))
                 .thenReturn(Optional.of(user));
 
-        Mockito.when(subscriberRepository.findByAppClientUserAndSubscribedEvent(Mockito.any(), Mockito.any()))
+        Mockito.when(subscriberRepository.findById(Mockito.any()))
                 .thenReturn(Optional.ofNullable(subscriber));
 
         Mockito.when(subscriberRepository.save(Mockito.any(Subscriber.class)))
