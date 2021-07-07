@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -44,7 +43,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceImplTest {
@@ -449,9 +447,12 @@ class OrganizationServiceImplTest {
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getParentOrganization()).isEqualTo(newUnit.getId());
 
-		// now test that adding a parent that's already a descendent fails
-		testOrg.addSubordinateOrganization(newUnit);
-		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.modify(testOrg.getId(), attribs));
+		// can't add a parent as a subordinate (guards at the entity level before a persist can happen)
+		assertThrows(InvalidRecordUpdateRequest.class, () -> testOrg.addSubordinateOrganization(newUnit));
+
+		// can't add a subordinate as a parent
+		attribs.put("parentOrganization", testOrg.getId().toString());
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.modify(newUnit.getId(), attribs));
 
 		// test bogus parent
 		Organization bogus = new Organization();
@@ -746,9 +747,50 @@ class OrganizationServiceImplTest {
 		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
 		assertTrue(organizationService.orgIsInAncestryChain(greatGrandParent.getId(), theOrg));
 
-		// should return true since the greatGrandParent cannot be added as a subordinate of 'theOrg'
+		// should return true since the subOrg cannot be added as a subordinate of 'theOrg'
 		assertFalse(organizationService.orgIsInAncestryChain(legitSubOrg.getId(), theOrg));
 
+	}
+
+	@Test
+	void testThatOrgCantAssignSubordinateOrgThatsSubOrgElsewhere() throws Exception {
+
+		Organization parent = new Organization();
+		Organization child1 = new Organization();
+		OrganizationDto child2 = new OrganizationDto();
+
+		Mockito.when(uniqueService.orgNameIsUnique(Mockito.any())).thenReturn(true);
+
+		Mockito.when(repository.findById(child1.getId()))
+				.thenReturn(Optional.of(child1));
+
+		Mockito.when(repository.findById(child2.getId()))
+				.thenReturn(Optional.of(Organization.builder().id(child2.getId()).build()));
+
+		Mockito.when(repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(child1, child2.getId()))
+				.thenReturn(Lists.newArrayList(parent));
+
+		child2.setSubOrgsUUID(Lists.newArrayList(child1.getId()));
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.updateOrganization(child2.getId(), child2));
+
+		child2.setSubOrgsUUID(null);
+		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.addOrg(child2.getId(), Lists.newArrayList(child1.getId())));
+
+		child2.setSubOrgsUUID(null);
+		ObjectMapper objectMapper = new ObjectMapper();
+		JSONArray contentArray = new JSONArray();
+		JSONObject content = new JSONObject();
+		content.put("op", "replace");
+		content.put("path", "/subordinateOrganizations");
+		content.put("value", Lists.newArrayList(child1.getId()));
+		contentArray.put(content);
+
+		JsonPatch newPatch = JsonPatch.fromJson(
+				objectMapper.readTree(contentArray.toString())
+		);
+
+		assertThrows(InvalidRecordUpdateRequest.class,
+				() -> organizationService.patchOrganization(child2.getId(), newPatch));
 	}
 
 	@Test
@@ -930,16 +972,13 @@ class OrganizationServiceImplTest {
 				.id(orgId)
 				.name("Old New Name")
 				.build();
-		ArgumentCaptor<Organization> captor = ArgumentCaptor.forClass(Organization.class);
 		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(organizationDb));
 		Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
+		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
 				.then(returnsFirstArg());
-		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(organizationDb);
-		this.organizationService.patchOrganization(orgId, newPatch);
-		verify(repository).save(captor.capture());
-		Organization capturedOrg = captor.getValue();
+		OrganizationDto capturedOrg = this.organizationService.patchOrganization(orgId, newPatch);
 		assertThat(capturedOrg.getName()).isEqualTo("Org Name");
 	}
 

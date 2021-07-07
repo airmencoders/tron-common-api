@@ -158,7 +158,7 @@ public class Person {
         }
         else if (other instanceof Person) {
             Person otherPerson = (Person) other;
-            return this.id == otherPerson.getId();
+            return this.id.equals(otherPerson.getId());
         }
         else {
             return false;
