@@ -828,9 +828,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 			// we also need to modify the (former) parent to not have this
 			//  as a sub org anymore, so go through its subordinate orgs and remove itself as the parent of org
 			List<Organization> parentOrgs = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
-			for (Organization parentOrg : parentOrgs) {
-				parentOrg.removeSubordinateOrganization(org);
-				repository.saveAndFlush(applyFieldAuthority(parentOrg));
+			for (Organization parent : parentOrgs) {
+				parent.removeSubordinateOrganization(org);
+				repository.saveAndFlush(applyFieldAuthority(parent));
 			}
 
 			repository.save(applyFieldAuthority(org));
@@ -843,10 +843,18 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 			Organization parentOrg = repository.findById(UUID.fromString(parentUUIDCandidate)).orElseThrow(
 					() -> new InvalidRecordUpdateRequest("Provided org UUID " + parentUUIDCandidate + " was not found"));
-			org.setParentOrganization(parentOrg);
-			parentOrg.addSubordinateOrganization(org);  // update sub orgs' parent org field to this org
-			repository.save(applyFieldAuthority(parentOrg));  // and save parent org
-			repository.save(applyFieldAuthority(org));  // and save sub org that was modified
+
+			// free this org from any former parent linkage
+			List<Organization> parentOrgs = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
+			for (Organization parent : parentOrgs) {
+				parent.removeSubordinateOrganization(org);
+				repository.saveAndFlush(applyFieldAuthority(parent));
+			}
+
+			org.setParentOrganization(parentOrg);  // make sure we got the new parent locked in
+			parentOrg.addSubordinateOrganization(org);  // update new parent's sub orgs field to include this org
+			repository.save(applyFieldAuthority(parentOrg));  // now save the new parent org
+			repository.save(applyFieldAuthority(org));  // finally save sub org that was modified
 		}
 		else {
 			throw new InvalidRecordUpdateRequest("Proposed Parent UUID is already a descendent of this organization");

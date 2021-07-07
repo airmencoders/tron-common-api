@@ -29,7 +29,6 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 
 import javax.transaction.Transactional;
-
 import java.util.Set;
 import java.util.UUID;
 
@@ -425,6 +424,43 @@ public class OrgRelationshipIntegrationTest {
                     .header(XFCC_HEADER_NAME, XFCC_HEADER))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.parentOrganization", nullValue()));
+        }
+
+        @Test
+        @Transactional
+        @Rollback
+        void testValidParentChange() throws Exception {
+
+            // set up the chain: Parent->Child1->Child2
+            // we should be able to set child2's parent to parent just fine
+
+            child1.setParentOrganizationUUID(parent.getId());
+            mockMvc.perform(put(ENDPOINT_V2 + "{id}", child1.getId())
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(child1)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.parentOrganization", equalTo(parent.getId().toString())));
+
+            child2.setParentOrganizationUUID(child1.getId());
+            mockMvc.perform(put(ENDPOINT_V2 + "{id}", child2.getId())
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(child2)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.parentOrganization", equalTo(child1.getId().toString())));
+
+            // now change child2's parent to parent via json patch
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", child2.getId())
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType("application/json-patch+json")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .content("[{\"op\":\"replace\",\"path\":\"/parentOrganization\",\"value\":\"" + parent.getId() + "\"}]"))
+                    .andExpect(status().isOk());
+
         }
     }
 
