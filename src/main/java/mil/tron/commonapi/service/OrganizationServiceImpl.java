@@ -37,6 +37,7 @@ import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -67,6 +68,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
 	private static final String ORG_IS_ALREADY_SUBORG_ELSEWHERE = "Organization %s is already a subordinate to another organization.";
+
+	@Value("${efa-enabled}")
+	private boolean efaEnabled;
 
 	private static final Map<Unit, Set<String>> validProperties = Map.of(
 			Unit.FLIGHT, fields(Flight.class),
@@ -105,6 +109,37 @@ public class OrganizationServiceImpl implements OrganizationService {
 		return entityFieldAuthService.adjudicateOrganizationFields(incomingEntity, authentication);
 	}
 
+	private void performOrganizationParentChildLogic(Organization org) {
+		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
+		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
+			for (Organization subOrg : org.getSubordinateOrganizations()) {
+				performFamilyTreeChecks(org, subOrg);
+			}
+		}
+	}
+
+	private void performParentChecks(Organization org) {
+		String parentUUID = org.getParentOrganization() == null ? null : org.getParentOrganization().getId().toString();
+		setOrgParentConditionally(org, parentUUID);
+	}
+
+	private void performFamilyTreeChecks(Organization org, Organization subOrg) {
+
+		if (org == null) throw new BadRequestException("Organization being modified was null");
+		if (subOrg == null) throw new BadRequestException("Subordinate Organization was null");
+
+		if (orgIsInAncestryChain(subOrg.getId(), org)) {
+			throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getName()));
+		}
+		if (!repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subOrg, org.getId()).isEmpty()) {
+			throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subOrg.getName()));
+		}
+
+		// modify the suborg's parent
+		setOrgParentConditionally(subOrg, org.getId().toString());
+		repository.save(applyFieldAuthority(subOrg));
+	}
+
 	/**
 	 * Finds a record by UUID that returns the raw entity type (not DTO)
 	 *
@@ -133,15 +168,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			Organization subordinate = repository.findById(id).orElseThrow(
 					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
-			if (!orgIsInAncestryChain(subordinate.getId(), organization)) {
-				if (repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subordinate, organizationId).isEmpty()) {
-					organization.addSubordinateOrganization(subordinate);
-				} else {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subordinate.getName()));
-				}
-			} else {
-				throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subordinate.getName()));
-			}
+			performFamilyTreeChecks(organization, subordinate);
 		}
 
 		Organization result = repository.save(applyFieldAuthority(organization));
@@ -172,6 +199,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 					() -> new InvalidRecordUpdateRequest(String.format(RESOURCE_NOT_FOUND_MSG, id)));
 
 			organization.removeSubordinateOrganization(subordinate);
+
+			// modify this suborg's parent - they were removed from being a suborg of some parent, so null out parent
+			setOrgParentConditionally(subordinate, null);
+			repository.save(applyFieldAuthority(subordinate));
 		}
 
 		Organization result = repository.save(applyFieldAuthority(organization));
@@ -332,18 +363,6 @@ public class OrganizationServiceImpl implements OrganizationService {
 					patchedOrg.getName()));
 		}
 
-		// vet all this patched org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
-		if (patchedOrg.getSubordinateOrganizations() != null && !patchedOrg.getSubordinateOrganizations().isEmpty()) {
-			for (Organization subOrg : patchedOrg.getSubordinateOrganizations()) {
-				if (orgIsInAncestryChain(subOrg.getId(), patchedOrg)) {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getName()));
-				}
-				if (!repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subOrg, patchedOrg.getId()).isEmpty()) {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subOrg.getName()));
-				}
-			}
-		}
-
 		OrganizationDto updateOrganization = updateMetadata(patchedOrg, dbOrganization, patchedOrgDto.getMeta());
 
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
@@ -404,17 +423,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", org.getName()));
 
-		// vet all this org's desired subordinate organizations, make sure none of them are already in this org's ancestry chain
-		if (org.getSubordinateOrganizations() != null && !org.getSubordinateOrganizations().isEmpty()) {
-			for (Organization subOrg : org.getSubordinateOrganizations()) {
-				if (orgIsInAncestryChain(subOrg.getId(), org)) {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getName()));
-				}
-				if (!repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subOrg, org.getId()).isEmpty()) {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subOrg.getName()));
-				}
-			}
-		}
+		performOrganizationParentChildLogic(org);
 
 		checkValidMetadataProperties(organization.getOrgType(), organization.getMeta());
 		Organization resultEntity = repository.save(org);
@@ -469,20 +478,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (!orgChecksService.orgNameIsUnique(entity))
 			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", entity.getName()));
 
-		// vet all this entity's desired subordinate organizations, make sure none of them are already in this entity's ancestry chain
-		if (entity.getSubordinateOrganizations() != null && !entity.getSubordinateOrganizations().isEmpty()) {
-			for (Organization subOrg : entity.getSubordinateOrganizations()) {
-				if (orgIsInAncestryChain(subOrg.getId(), entity)) {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_IN_ANCESTRY_MSG, subOrg.getName()));
-				}
-				if (!repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(subOrg, entity.getId()).isEmpty()) {
-					throw new InvalidRecordUpdateRequest(String.format(ORG_IS_ALREADY_SUBORG_ELSEWHERE, subOrg.getName()));
-				}
-			}
-		}
-
 		OrganizationDto result = updateMetadata(entity, dbEntity, organization.getMeta());
-
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.setOrgIds(Sets.newHashSet(result.getId()));
 		eventManagerService.recordEventAndPublish(message);
@@ -515,6 +511,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 				}
 			});
 		}
+		performOrganizationParentChildLogic(updatedEntity);
+		performParentChecks(updatedEntity);
 		OrganizationDto result = convertToDto(repository.save(applyFieldAuthority(updatedEntity)));
 		organizationMetadataRepository.deleteAll(toDelete);
 		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
@@ -822,20 +820,33 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 */
 	private void setOrgParentConditionally(Organization org, String parentUUIDCandidate) {
 
-		// if we're setting to just null, skip all checks below
+		// if we're setting parent to just null, update the parent (it doesn't have 'org' as a suborg anymore),
+		// and skip all other checks below
 		if (parentUUIDCandidate == null) {
 			org.setParentOrganization(null);
+
+			// we also need to modify the (former) parent to not have this
+			//  as a sub org anymore, so go through its subordinate orgs and remove itself as the parent of org
+			List<Organization> parentOrgs = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
+			for (Organization parentOrg : parentOrgs) {
+				parentOrg.removeSubordinateOrganization(org);
+				repository.saveAndFlush(applyFieldAuthority(parentOrg));
+			}
+
 			repository.save(applyFieldAuthority(org));
 			return;
 		}
 
-		if (!this.parentOrgCandidateIsDescendent(
-				convertToDto(org), UUID.fromString(parentUUIDCandidate))) {
+		// not setting parent to null, so check down the family tree to see if parent
+		//  candidate is a descendent already
+		if (!this.parentOrgCandidateIsDescendent(convertToDto(org), UUID.fromString(parentUUIDCandidate))) {
 
 			Organization parentOrg = repository.findById(UUID.fromString(parentUUIDCandidate)).orElseThrow(
 					() -> new InvalidRecordUpdateRequest("Provided org UUID " + parentUUIDCandidate + " was not found"));
 			org.setParentOrganization(parentOrg);
-			repository.save(applyFieldAuthority(org));
+			parentOrg.addSubordinateOrganization(org);  // update sub orgs' parent org field to this org
+			repository.save(applyFieldAuthority(parentOrg));  // and save parent org
+			repository.save(applyFieldAuthority(org));  // and save sub org that was modified
 		}
 		else {
 			throw new InvalidRecordUpdateRequest("Proposed Parent UUID is already a descendent of this organization");
