@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Class that manages the periodic health check for a given app source who
@@ -62,11 +63,11 @@ public class AppSourceHealthIndicator implements HealthIndicator {
      * a status of {@link #UNINITIALIZED_HEALTH_STATUS_VAL} to indicate that the
      * health has not ran yet in case the actuator happens to be hit right away
      */
-    private volatile Health health = Health
+    private AtomicReference<Health> health = new AtomicReference<>(Health
             .unknown()
             .withDetail(STATUS_CODE_FIELD, UNINITIALIZED_HEALTH_STATUS_VAL)
             .withDetail("error", "Health check has not run yet")
-            .build();
+            .build());
 
     public AppSourceHealthIndicator(String name, String url) {
         this.url = url;
@@ -103,7 +104,7 @@ public class AppSourceHealthIndicator implements HealthIndicator {
      */
     @Override
     public Health health() {
-        return this.health;
+        return this.health.get();
     }
 
     /**
@@ -112,7 +113,7 @@ public class AppSourceHealthIndicator implements HealthIndicator {
      */
     private void doHealthPing() {
         if (url == null || url.isBlank()) {
-            this.health = Health.unknown().withDetail("reason", "No valid health check url available").build();
+            this.health.set(Health.unknown().withDetail("reason", "No valid health check url available").build());
             return;
         }
 
@@ -120,31 +121,31 @@ public class AppSourceHealthIndicator implements HealthIndicator {
 
         try {
             response = healthSender.getForEntity(url, String.class);  // this throws on a non successful response
-            this.health = Health
+            this.health.set(Health
                     .up()
                     .withDetail(STATUS_CODE_FIELD, response.getStatusCodeValue())
-                    .build();
+                    .build());
         }
         catch (HttpClientErrorException | HttpServerErrorException e) {
             if (e.getRawStatusCode() == 503) {
-                this.health = Health
+                this.health.set(Health
                         .outOfService()
                         .withDetail(STATUS_CODE_FIELD, e.getRawStatusCode())
-                        .build();
+                        .build());
             }
             else {
-                this.health = Health
+                this.health.set(Health
                         .down()
                         .withDetail(STATUS_CODE_FIELD, e.getRawStatusCode())
-                        .build();
+                        .build());
             }
         }
         catch (Exception e) {
-            this.health = Health
+            this.health.set(Health
                     .unknown()
                     .withDetail(STATUS_CODE_FIELD, UNKNOWN_HEALTH_STATUS_VAL)
                     .withDetail("error", e.getMessage())
-                    .build();
+                    .build());
         }
     }
 
