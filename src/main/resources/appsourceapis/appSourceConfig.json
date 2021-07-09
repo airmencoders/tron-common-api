@@ -8,7 +8,7 @@
   {
     "name": "ARMS Gateway",
     "openApiSpecFilename": "arms-gateway.yml",
-    "sourceUrl": "http://arms-gateway.tron-common-api.svc.cluster.local",
+    "sourceUrl": "http://localhost:8083",
     "appSourcePath": "arms-gateway"
   }
 ]

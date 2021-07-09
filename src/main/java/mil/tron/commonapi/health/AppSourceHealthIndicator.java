@@ -39,6 +39,16 @@ public class AppSourceHealthIndicator implements HealthIndicator {
     private static final String LAST_UP_TIME = "Last Up Time";
 
     /**
+     * Custom status codes for app sources so we don't conflict
+     * with Spring's.  Spring attempts to determine overall system
+     * status and we want to control how that's done (see {@link CustomStatusAggregator}
+     */
+    public static final String APPSOURCE_UP = "APPSOURCE_UP";
+    public static final String APPSOURCE_DOWN = "APPSOURCE_DOWN";
+    public static final String APPSOURCE_ERROR = "APPSOURCE_ERROR";
+    public static final String APPSOURCE_UNKNOWN = "APPSOURCE_UNKNOWN";
+
+    /**
      * Handle to the ping task that hits the health url endpoint
      */
     private Future<?> pingTask;
@@ -73,7 +83,7 @@ public class AppSourceHealthIndicator implements HealthIndicator {
      * health has not ran yet in case the actuator happens to be hit right away
      */
     private AtomicReference<Health> health = new AtomicReference<>(Health
-            .unknown()
+            .status(APPSOURCE_UNKNOWN)
             .withDetail(STATUS_CODE_FIELD, UNINITIALIZED_HEALTH_STATUS_VAL)
             .withDetail("error", "Health check has not run yet")
             .build());
@@ -140,7 +150,7 @@ public class AppSourceHealthIndicator implements HealthIndicator {
     private void doHealthPing() {
         if (url == null || url.isBlank()) {
             this.health.set(Health
-                    .unknown()
+                    .status(APPSOURCE_UNKNOWN)
                     .withDetail("reason", "No valid health check url available")
                     .build());
             return;
@@ -152,30 +162,23 @@ public class AppSourceHealthIndicator implements HealthIndicator {
             this.lastUpTime = new Date();
             this.appSourceService.updateLastUpTime(this.appSourceId, this.lastUpTime);
             this.health.set(Health
-                    .up()
+                    .status(APPSOURCE_UP)
                     .withDetail(STATUS_CODE_FIELD, response.getStatusCodeValue())
                     .withDetail(LAST_UP_TIME, getLastUpTime())
                     .build());
         }
         catch (HttpClientErrorException | HttpServerErrorException e) {
-            if (e.getRawStatusCode() == 503) {
-                this.health.set(Health
-                        .outOfService()
-                        .withDetail(STATUS_CODE_FIELD, e.getRawStatusCode())
-                        .withDetail(LAST_UP_TIME, getLastUpTime())
-                        .build());
-            }
-            else {
-                this.health.set(Health
-                        .down()
-                        .withDetail(STATUS_CODE_FIELD, e.getRawStatusCode())
-                        .withDetail(LAST_UP_TIME, getLastUpTime())
-                        .build());
-            }
+            // for all 400/500 errors - served talked... but its some kind of ERROR response
+            this.health.set(Health
+                    .status(APPSOURCE_ERROR)
+                    .withDetail(STATUS_CODE_FIELD, e.getRawStatusCode())
+                    .withDetail(LAST_UP_TIME, getLastUpTime())
+                    .build());
         }
         catch (Exception e) {
+            // server never talked back or gave a status - status is DOWN
             this.health.set(Health
-                    .unknown()
+                    .status(APPSOURCE_DOWN)
                     .withDetail(STATUS_CODE_FIELD, UNKNOWN_HEALTH_STATUS_VAL)
                     .withDetail(LAST_UP_TIME, getLastUpTime())
                     .withDetail("error", "Could not connect to health url")
