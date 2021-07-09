@@ -1078,7 +1078,8 @@ public class AppSourceIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("UNKNOWN")));
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("UNKNOWN")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.error", equalTo("Health check has not run yet")));
 
         AppSourceHealthIndicator indicator = (AppSourceHealthIndicator) registry.getContributor("appsource_Name");
         MockRestServiceServer mockRestServiceServer = MockRestServiceServer.createServer(indicator.getHealthSender());
@@ -1091,7 +1092,8 @@ public class AppSourceIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("UP")));
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("UP")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.['Last Up Time']", notNullValue()));
 
         mockRestServiceServer.reset();
         mockRestServiceServer.expect(manyTimes(), MockRestRequestMatchers.anything())
@@ -1104,7 +1106,8 @@ public class AppSourceIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("DOWN")));
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("DOWN")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.['Last Up Time']", notNullValue()));
 
         mockRestServiceServer.reset();
         mockRestServiceServer.expect(manyTimes(), requestTo(endsWith("healthz")))
@@ -1117,8 +1120,10 @@ public class AppSourceIntegrationTest {
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("OUT_OF_SERVICE")));
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("OUT_OF_SERVICE")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.['Last Up Time']", notNullValue()));
 
+        ((AppSourceHealthIndicator) registry.unregisterContributor("appsource_Name")).cancelPing();
 
     }
 }

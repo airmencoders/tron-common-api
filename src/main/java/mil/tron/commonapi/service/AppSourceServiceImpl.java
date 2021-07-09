@@ -161,7 +161,9 @@ public class AppSourceServiceImpl implements AppSourceService {
                                             APP_SOURCE_HEALTH_PREFIX + appSource.getName(),
                                             // build the health url from the url in the app source config file + path given in the db
                                             concatPaths(defs.get(appSource.getAppSourcePath()).getSourceUrl(), appSource.getHealthUrl()),
-                                            appSourcePingRateMillis));
+                                            appSourcePingRateMillis,
+                                            appSource.getId(),
+                                            this));
                 }
                 catch (IllegalStateException e) {
                     appSourceServiceLog.info("App Source Health Indicator already registered for: " + appSource.getName() + ": " + e.getMessage());
@@ -659,6 +661,22 @@ public class AppSourceServiceImpl implements AppSourceService {
             return resource;
         } else {
             throw new RecordNotFoundException(String.format(APP_API_SPEC_NOT_FOUND_MSG, id));
+        }
+    }
+
+    @Override
+    public Date getLastUpTime(UUID appSourceId) {
+        Optional<AppSource> appSource = appSourceRepository.findById(appSourceId);
+        return appSource.map(AppSource::getLastUpTime).orElse(null);
+    }
+
+    @Override
+    public void updateLastUpTime(UUID appSourceId, Date date) {
+        Optional<AppSource> appSource = appSourceRepository.findById(appSourceId);
+        if (appSource.isPresent()) {
+            AppSource appSourceActual = appSource.get();
+            appSourceActual.setLastUpTime(date);
+            this.appSourceRepository.save(appSourceActual);
         }
     }
 }

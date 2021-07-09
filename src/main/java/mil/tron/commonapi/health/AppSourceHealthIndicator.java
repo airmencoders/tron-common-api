@@ -3,6 +3,7 @@ package mil.tron.commonapi.health;
 import lombok.Getter;
 import lombok.Setter;
 import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.service.AppSourceService;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -11,7 +12,10 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,6 +36,7 @@ public class AppSourceHealthIndicator implements HealthIndicator {
     private static final int UNINITIALIZED_HEALTH_STATUS_VAL = -2;
     private static final int UNKNOWN_HEALTH_STATUS_VAL = -1;
     private static final String STATUS_CODE_FIELD = "statusCode";
+    private static final String LAST_UP_TIME = "Last Up Time";
 
     /**
      * Handle to the ping task that hits the health url endpoint
@@ -58,6 +63,10 @@ public class AppSourceHealthIndicator implements HealthIndicator {
     //  default to 60 secs
     private long appSourcePingRateMillis = 60000L;
 
+    private Date lastUpTime;
+    private UUID appSourceId;
+    private AppSourceService appSourceService;
+
     /**
      * Health value we will continue to update.  We initialize this to
      * a status of {@link #UNINITIALIZED_HEALTH_STATUS_VAL} to indicate that the
@@ -75,10 +84,13 @@ public class AppSourceHealthIndicator implements HealthIndicator {
         this.init();
     }
 
-    public AppSourceHealthIndicator(String name, String url, long appSourcePingRateMillis) {
+    public AppSourceHealthIndicator(String name, String url, long appSourcePingRateMillis, UUID appSourceId, AppSourceService appSourceService) {
         this.url = url;
         this.name = name;
         this.appSourcePingRateMillis = appSourcePingRateMillis;
+        this.appSourceId = appSourceId;
+        this.appSourceService = appSourceService;
+        this.lastUpTime = this.appSourceService.getLastUpTime(this.appSourceId);
         this.init();
     }
 
@@ -95,7 +107,7 @@ public class AppSourceHealthIndicator implements HealthIndicator {
                         .availableProcessors());
 
         // start the health task, runs immediately, then again after delay value
-        pingTask = executor.scheduleWithFixedDelay(this::doHealthPing, 0L, appSourcePingRateMillis, TimeUnit.MILLISECONDS);
+        pingTask = executor.scheduleWithFixedDelay(this::doHealthPing, 100L, appSourcePingRateMillis, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -107,23 +119,42 @@ public class AppSourceHealthIndicator implements HealthIndicator {
         return this.health.get();
     }
 
+    private String getLastUpTime() {
+        if (this.lastUpTime == null) {
+            return "Unknown";
+        }
+        else {
+            try {
+                return new SimpleDateFormat("yyyy-MM-dd HH:mm").format(this.lastUpTime);
+            }
+            catch (NullPointerException | IllegalArgumentException e) {
+                return "Unknown";
+            }
+        }
+    }
+
     /**
      * Periodically ran task by the executor that hits the health url endpoint and
      * checks status / updates health
      */
     private void doHealthPing() {
         if (url == null || url.isBlank()) {
-            this.health.set(Health.unknown().withDetail("reason", "No valid health check url available").build());
+            this.health.set(Health
+                    .unknown()
+                    .withDetail("reason", "No valid health check url available")
+                    .build());
             return;
         }
-
         ResponseEntity<String> response = null;
 
         try {
             response = healthSender.getForEntity(url, String.class);  // this throws on a non successful response
+            this.lastUpTime = new Date();
+            this.appSourceService.updateLastUpTime(this.appSourceId, this.lastUpTime);
             this.health.set(Health
                     .up()
                     .withDetail(STATUS_CODE_FIELD, response.getStatusCodeValue())
+                    .withDetail(LAST_UP_TIME, getLastUpTime())
                     .build());
         }
         catch (HttpClientErrorException | HttpServerErrorException e) {
@@ -131,12 +162,14 @@ public class AppSourceHealthIndicator implements HealthIndicator {
                 this.health.set(Health
                         .outOfService()
                         .withDetail(STATUS_CODE_FIELD, e.getRawStatusCode())
+                        .withDetail(LAST_UP_TIME, getLastUpTime())
                         .build());
             }
             else {
                 this.health.set(Health
                         .down()
                         .withDetail(STATUS_CODE_FIELD, e.getRawStatusCode())
+                        .withDetail(LAST_UP_TIME, getLastUpTime())
                         .build());
             }
         }
@@ -144,7 +177,8 @@ public class AppSourceHealthIndicator implements HealthIndicator {
             this.health.set(Health
                     .unknown()
                     .withDetail(STATUS_CODE_FIELD, UNKNOWN_HEALTH_STATUS_VAL)
-                    .withDetail("error", e.getMessage())
+                    .withDetail(LAST_UP_TIME, getLastUpTime())
+                    .withDetail("error", "Could not connect to health url")
                     .build());
         }
     }
