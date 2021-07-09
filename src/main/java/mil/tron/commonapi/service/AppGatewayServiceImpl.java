@@ -2,10 +2,14 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.appgateway.AppGatewayRouteBuilder;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.Exchange;
 import org.apache.camel.FluentProducerTemplate;
 import org.apache.camel.http.base.HttpOperationFailedException;
+import org.apache.camel.processor.ThrottlerRejectedExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,13 +26,16 @@ import java.util.stream.Collectors;
 @Service
 public class AppGatewayServiceImpl implements AppGatewayService {
 
+	private AppSourceRepository appSourceRepo;
+	
     FluentProducerTemplate producer;
 
     Map<String, AppSourceInterfaceDefinition> appSourceDefMap = new HashMap<>();
 
     @Autowired
-    AppGatewayServiceImpl(FluentProducerTemplate producer) {
+    AppGatewayServiceImpl(FluentProducerTemplate producer, AppSourceRepository appSourceRepo) {
         this.producer = producer;
+        this.appSourceRepo = appSourceRepo;
     }
 
     @Override
@@ -63,10 +70,14 @@ public class AppGatewayServiceImpl implements AppGatewayService {
         } catch (Exception ex) {
         	throw new ResponseStatusException(HttpStatus.valueOf(400), ex.getMessage());
         }
+        
+        AppSource appSource = appSourceRepo.findByAppSourcePath(appSourceDef.getAppSourcePath());
 
         try {
-            InputStream streamResponse = (InputStream) producer.to(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT)
+            InputStream streamResponse = (InputStream) producer.to(AppGatewayRouteBuilder.generateAppSourceRouteUri(appSourceDef.getAppSourcePath()))
 				.withHeader("request-url", endpointString)
+				.withHeader("is-throttle-enabled", appSource.isThrottleEnabled())
+				.withHeader("throttle-rate-limit", appSource.getThrottleRequestCount())
 				.withHeader(Exchange.HTTP_METHOD, request.getMethod())
 				.withHeader(Exchange.CONTENT_TYPE, request.getContentType())
 				.withBody(body)
@@ -85,6 +96,18 @@ public class AppGatewayServiceImpl implements AppGatewayService {
                 throw new ResponseStatusException(
                         HttpStatus.valueOf(exception.getStatusCode()),
                         exception.getResponseBody());
+        	}
+        	
+        	/**
+        	 * Handles errors due to requests exceeding the maximum throttle rate
+        	 * set for the App Source.
+        	 */
+        	if (e.getCause() instanceof ThrottlerRejectedExecutionException) {
+        		ThrottlerRejectedExecutionException exception = (ThrottlerRejectedExecutionException) e.getCause();
+
+                throw new ResponseStatusException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        exception.getLocalizedMessage());
         	}
             
         	/**

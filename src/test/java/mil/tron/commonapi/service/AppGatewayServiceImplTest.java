@@ -2,6 +2,9 @@ package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.appgateway.AppGatewayRouteBuilder;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+
 import org.apache.camel.*;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
@@ -16,6 +19,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.server.ResponseStatusException;
@@ -28,14 +32,22 @@ import java.io.ByteArrayInputStream;
 import java.io.StringReader;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @RunWith(CamelSpringBootRunner.class)
 @ExtendWith(MockitoExtension.class)
 @SpringBootTest
 @TestPropertySource(locations = "classpath:application-test.properties")
 class AppGatewayServiceImplTest {
+	private static final String APP_SOURCE_PATH = "mock";
+	private static final String GATEWAY_ENDPOINT_URI = AppGatewayRouteBuilder.generateAppSourceRouteUri(APP_SOURCE_PATH);
+	private static final String GATEWAY_ID = AppGatewayRouteBuilder.generateAppSourceRouteId(APP_SOURCE_PATH);
 
+	@Autowired
+	private AppGatewayRouteBuilder appGatewayRouteBuilder;
+	
+	@MockBean
+	private AppSourceRepository appSourceRepo;
+	
     private AppGatewayServiceImpl appGatewayService;
 
     private CamelContext context;
@@ -48,14 +60,16 @@ class AppGatewayServiceImplTest {
 
     @BeforeEach
     void beforeEach() throws Exception {
-        RouteBuilder mockRouteBuilder = new RouteBuilder(this.context) {
+    	appGatewayRouteBuilder.createGatewayRoute(APP_SOURCE_PATH);
+    	
+    	RouteBuilder mockRouteBuilder = new RouteBuilder(this.context) {
             @Override
             public void configure() throws Exception {
-                AdviceWithRouteBuilder.adviceWith(this.getContext(), AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT_ID,
-                        endpoint -> endpoint.replaceFromWith(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT + "Stub"));
-                from(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT)
-                        .id(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT + "Mock")
-                        .to("mock:" + AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT);
+                AdviceWithRouteBuilder.adviceWith(this.getContext(), GATEWAY_ID,
+                        endpoint -> endpoint.replaceFromWith(GATEWAY_ENDPOINT_URI + "Stub"));
+                from(GATEWAY_ENDPOINT_URI)
+                        .id(GATEWAY_ID + "Mock")
+                        .to("mock:" + GATEWAY_ENDPOINT_URI);
             }
         };
         this.context.addRoutes(mockRouteBuilder);
@@ -63,13 +77,13 @@ class AppGatewayServiceImplTest {
 
     @AfterEach
     void afterEach() throws Exception {
-        this.context.removeRoute(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT + "Mock");
+        this.context.removeRoute(GATEWAY_ID + "Mock");
     }
 
     @Test
     void testBuildPathForAppSource() {
         String testUriRequest = "/api/v1/app/the-app-source/the-path/11";
-        AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate());
+        AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate(), appSourceRepo);
         String appSource = appGatewayService.buildPathForAppSource(testUriRequest);
         assertThat(appSource).isEqualTo("/the-path/11");
     }
@@ -77,7 +91,7 @@ class AppGatewayServiceImplTest {
     @Test
     void testBuildAppPath() {
         String testUriRequest = "/api/v1/app/the-app-source/the-path/11";
-        AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate());
+        AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate(), appSourceRepo);
         String appSource = appGatewayService.buildAppPath(testUriRequest);
         assertThat(appSource).isEqualTo("the-app-source");
     }
@@ -85,7 +99,7 @@ class AppGatewayServiceImplTest {
     @Test
     void testSendRequestToAppSource() throws Exception {
         MockEndpoint mockEndpoint = this.context.getEndpoint("mock:" +
-                AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT, MockEndpoint.class);
+        		GATEWAY_ENDPOINT_URI, MockEndpoint.class);
 
         mockEndpoint.returnReplyBody(new Expression() {
             @Override
@@ -100,10 +114,18 @@ class AppGatewayServiceImplTest {
         Mockito.when(mockRequest.getMethod()).thenReturn("GET");
         Mockito.when(mockRequest.getReader()).thenReturn(new BufferedReader(new StringReader("Test Body")));
         Mockito.when(mockRequest.getRequestURI()).thenReturn("/api/v1/app/mock/mock-request");
+        
+        Mockito.when(appSourceRepo.findByAppSourcePath(Mockito.anyString())).thenReturn(AppSource.builder()
+        		.throttleRequestCount(1)
+        		.throttleEnabled(true)
+        		.build()
+    		);
+        
         byte[] result = this.appGatewayService.sendRequestToAppSource(mockRequest);
         assertThat(result).isNotNull();
         
         Mockito.when(mockRequest.getMethod()).thenReturn("POST");
+        
         result = this.appGatewayService.sendRequestToAppSource(mockRequest);
         assertThat(result).isNotNull();
         

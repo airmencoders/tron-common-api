@@ -5,6 +5,7 @@ import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.validations.AppAndIdMatch;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -68,4 +69,17 @@ public class AppSourceDetailsDto {
     @Builder.Default
     @Valid
     private List<AppEndpointDto> endpoints = new ArrayList<>();
+    
+    @Getter
+    @Setter
+    @Builder.Default
+    @NotNull
+    private boolean throttleEnabled = false;
+    
+    @Getter
+    @Setter
+    @Min(0L)
+    @Builder.Default
+    @NotNull
+    private Long throttleRequestCount = 0L;
 }

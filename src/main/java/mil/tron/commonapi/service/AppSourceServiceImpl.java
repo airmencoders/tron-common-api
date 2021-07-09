@@ -280,6 +280,8 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .map(DashboardUser::getEmail)
                         .collect(Collectors.toList()))
                 .appSourcePath(appSource.getAppSourcePath())
+                .throttleRequestCount(appSource.getThrottleRequestCount())
+                .throttleEnabled(appSource.isThrottleEnabled())
                 .build();
     }
 
@@ -293,6 +295,8 @@ public class AppSourceServiceImpl implements AppSourceService {
         appSourceToSave.setReportStatus(appSource.isReportStatus());
 
         appSourceToSave.setHealthUrl(appSource.getHealthUrl());
+        appSourceToSave.setThrottleEnabled(appSource.isThrottleEnabled());
+        appSourceToSave.setThrottleRequestCount(appSource.getThrottleRequestCount());
 
         Set<AppEndpoint> appEndpoints = appSource.getEndpoints()
             .stream().map(endpointDto -> AppEndpoint.builder()

@@ -9,6 +9,7 @@ import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -85,4 +86,18 @@ public class AppSource extends App {
     @Setter
     private String healthUrl;
 
+    @Getter
+    @Setter
+    @Builder.Default
+    @NotNull
+    private boolean throttleEnabled = false;
+    
+    /**
+     * Rate Limit for the App Source
+     */
+    @Getter
+    @Setter
+    @Builder.Default
+    @NotNull
+    private long throttleRequestCount = 0L;
 }
