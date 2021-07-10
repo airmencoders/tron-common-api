@@ -33,6 +33,7 @@ import org.assertj.core.util.Sets;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.health.HealthContributor;
 import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -43,6 +44,7 @@ import javax.transaction.Transactional;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -72,6 +74,8 @@ public class AppSourceServiceImpl implements AppSourceService {
     private static final String APP_API_SPEC_NOT_FOUND_MSG = "Could not find API Specification for App Source with id %s.";
     private String appSourceApiDefinitionsLocation;
 
+    @Value("${app-source-ping-rate-millis}")
+    private long appSourcePingRateMillis = 60000L;
 
     // Per Sonarqube documentation, this shouldn't even be flagged for S107. It is though, and we should ignore it.
     @java.lang.SuppressWarnings("squid:S00107")
@@ -120,7 +124,9 @@ public class AppSourceServiceImpl implements AppSourceService {
         if (newPath.startsWith("/")) {
             newPath = newPath.substring(1);
         }
-        return "http://" + new URL(newUrl).getHost() + "/" + newPath;
+
+        URL target = new URL(newUrl);
+        return "http://" + target.getHost() + (target.getPort() == -1 ? "" : ":" + target.getPort()) + "/" + newPath;
     }
 
     /**
@@ -131,8 +137,14 @@ public class AppSourceServiceImpl implements AppSourceService {
     public void registerAppReporting(AppSource appSource) {
 
         // unregister the health check for this app source (idempotent call)
-        healthContributorRegistry
+        HealthContributor unRegItem = healthContributorRegistry
                 .unregisterContributor(APP_SOURCE_HEALTH_PREFIX + appSource.getName());
+
+        // if we did get the de-registered item back (not null), make sure its task is cancelled
+        if (unRegItem != null && unRegItem.getClass().equals(AppSourceHealthIndicator.class)) {
+            AppSourceHealthIndicator indicator = (AppSourceHealthIndicator) unRegItem;
+            indicator.cancelPing();
+        }
 
         if (appSource.isReportStatus() && appSource.isAvailableAsAppSource()) {
             Map<String, AppSourceInterfaceDefinition> defs = appGatewayService.getDefMap();
@@ -148,13 +160,19 @@ public class AppSourceServiceImpl implements AppSourceService {
                                     new AppSourceHealthIndicator(
                                             APP_SOURCE_HEALTH_PREFIX + appSource.getName(),
                                             // build the health url from the url in the app source config file + path given in the db
-                                            concatPaths(defs.get(appSource.getAppSourcePath()).getSourceUrl(), appSource.getHealthUrl())));
+                                            concatPaths(defs.get(appSource.getAppSourcePath()).getSourceUrl(), appSource.getHealthUrl()),
+                                            appSourcePingRateMillis,
+                                            appSource.getId(),
+                                            this));
                 }
                 catch (IllegalStateException e) {
                     appSourceServiceLog.info("App Source Health Indicator already registered for: " + appSource.getName() + ": " + e.getMessage());
                 }
                 catch (MalformedURLException e) {
                     appSourceServiceLog.warn("Malformed Health URL for: " + appSource.getName() + ": " + e.getMessage());
+                }
+                catch (RejectedExecutionException e) {
+                    appSourceServiceLog.warn("Could not schedule health ping task for: " + appSource.getName() + ": " + e.getMessage());
                 }
 
             }
@@ -643,6 +661,22 @@ public class AppSourceServiceImpl implements AppSourceService {
             return resource;
         } else {
             throw new RecordNotFoundException(String.format(APP_API_SPEC_NOT_FOUND_MSG, id));
+        }
+    }
+
+    @Override
+    public Date getLastUpTime(UUID appSourceId) {
+        Optional<AppSource> appSource = appSourceRepository.findById(appSourceId);
+        return appSource.map(AppSource::getLastUpTime).orElse(null);
+    }
+
+    @Override
+    public void updateLastUpTime(UUID appSourceId, Date date) {
+        Optional<AppSource> appSource = appSourceRepository.findById(appSourceId);
+        if (appSource.isPresent()) {
+            AppSource appSourceActual = appSource.get();
+            appSourceActual.setLastUpTime(date);
+            this.appSourceRepository.save(appSourceActual);
         }
     }
 }
