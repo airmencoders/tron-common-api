@@ -453,4 +453,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 			appClientRepository.saveAndFlush(appClient);
 		}
 	}
+
+	@Override
+	public Iterable<AppClientUser> getAppClientUsersContainingDeveloperEmail(String developerEmail) {
+		return appClientRepository.findByAppClientDevelopersEmailIgnoreCase(developerEmail);
+	}
 }
