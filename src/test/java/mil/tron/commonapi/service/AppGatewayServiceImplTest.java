@@ -1,9 +1,10 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.appgateway.AppGatewayRouteBuilder;
+import mil.tron.commonapi.appgateway.AppSourceConfig;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
+import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 
 import org.apache.camel.*;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
@@ -30,6 +31,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.StringReader;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,7 +49,10 @@ class AppGatewayServiceImplTest {
 	private AppGatewayRouteBuilder appGatewayRouteBuilder;
 	
 	@MockBean
-	private AppSourceRepository appSourceRepo;
+	private AppSourceService appSourceService;
+	
+	@MockBean
+	private AppSourceConfig appSourceConfig;
 	
     private AppGatewayServiceImpl appGatewayService;
 
@@ -83,7 +89,7 @@ class AppGatewayServiceImplTest {
     @Test
     void testBuildPathForAppSource() {
         String testUriRequest = "/api/v1/app/the-app-source/the-path/11";
-        AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate(), appSourceRepo);
+        AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate(), appSourceService, appSourceConfig);
         String appSource = appGatewayService.buildPathForAppSource(testUriRequest);
         assertThat(appSource).isEqualTo("/the-path/11");
     }
@@ -91,7 +97,7 @@ class AppGatewayServiceImplTest {
     @Test
     void testBuildAppPath() {
         String testUriRequest = "/api/v1/app/the-app-source/the-path/11";
-        AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate(), appSourceRepo);
+        AppGatewayServiceImpl appGatewayService = new AppGatewayServiceImpl(this.context.createFluentProducerTemplate(), appSourceService, appSourceConfig);
         String appSource = appGatewayService.buildAppPath(testUriRequest);
         assertThat(appSource).isEqualTo("the-app-source");
     }
@@ -107,19 +113,22 @@ class AppGatewayServiceImplTest {
                 return (T) new ByteArrayInputStream("[{\"fieldKey\": \"value\"]".getBytes());
             }
         });
-        this.appGatewayService.addSourceDefMapping("mock",
-                new AppSourceInterfaceDefinition("Mock", "mock.yml",
-                        "localhost", "mock"));
+
         HttpServletRequest mockRequest = Mockito.mock(HttpServletRequest.class);
         Mockito.when(mockRequest.getMethod()).thenReturn("GET");
         Mockito.when(mockRequest.getReader()).thenReturn(new BufferedReader(new StringReader("Test Body")));
         Mockito.when(mockRequest.getRequestURI()).thenReturn("/api/v1/app/mock/mock-request");
-        
-        Mockito.when(appSourceRepo.findByAppSourcePath(Mockito.anyString())).thenReturn(AppSource.builder()
-        		.throttleRequestCount(1)
+        AppSourceInterfaceDefinition appSourceDef = new AppSourceInterfaceDefinition("Mock", "mock.yml", "localhost", "mock");
+        Mockito.when(this.appSourceConfig.getPathToDefinitionMap()).thenReturn(Map.of("mock", appSourceDef));
+        Mockito.when(this.appSourceConfig.getAppSourceDefs()).thenReturn(Map.of(appSourceDef, AppSource.builder()
         		.throttleEnabled(true)
-        		.build()
-    		);
+        		.throttleRequestCount(1L)
+        		.build()));
+        
+        Mockito.when(appSourceService.getAppSource(Mockito.any())).thenReturn(AppSourceDetailsDto.builder()
+        		.throttleRequestCount(1L)
+        		.throttleEnabled(true)
+        		.build());
         
         byte[] result = this.appGatewayService.sendRequestToAppSource(mockRequest);
         assertThat(result).isNotNull();

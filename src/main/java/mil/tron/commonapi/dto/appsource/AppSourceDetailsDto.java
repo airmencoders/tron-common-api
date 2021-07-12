@@ -41,6 +41,7 @@ public class AppSourceDetailsDto {
 
     @Getter
     @Setter
+    @Builder.Default
     private boolean reportStatus = false;
 
     @Getter

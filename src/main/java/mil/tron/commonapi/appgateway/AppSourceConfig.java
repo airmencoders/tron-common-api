@@ -24,7 +24,8 @@ import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 public class AppSourceConfig {
 
     private Map<AppSourceInterfaceDefinition, AppSource> appSourceDefs;
-
+    private Map<String, AppSourceInterfaceDefinition> appSourcePathToDefinitionMap;
+    
     private AppSourceRepository appSourceRepository;
 
     @Autowired
@@ -32,6 +33,7 @@ public class AppSourceConfig {
                            @Value("${appsource.definition-file}") String appSourceDefFile) {
         this.appSourceRepository = appSourceRepository;
         this.appSourceDefs = new HashMap<>();
+        this.appSourcePathToDefinitionMap = new HashMap<>();
         this.registerAppSources(this.parseAppSourceDefs(appSourceDefFile));
     }
 
@@ -94,5 +96,28 @@ public class AppSourceConfig {
         }
         return this.appSourceRepository.findByNameIgnoreCaseWithEndpoints(appDef.getName());
     }
+    
+    /**
+     * Adds a source def mapping to the map
+     * @param appSourcePath
+     * @param appDef
+     * @return True if the app def is added. False if the app source path is not added and was already defined.
+     */
+    public boolean addAppSourcePathToDefMapping(String appSourcePath, AppSourceInterfaceDefinition appDef) {
+        if (this.appSourcePathToDefinitionMap.get(appSourcePath) == null) {
+            this.appSourcePathToDefinitionMap.put(appSourcePath, appDef);
+            return true;
+        }
+        return false;
+    }
+
+    public void clearAppSourceDefs() {
+        this.appSourcePathToDefinitionMap.clear();
+    }
+    
+    public Map<String, AppSourceInterfaceDefinition> getPathToDefinitionMap() {
+    	return this.appSourcePathToDefinitionMap;
+    }
+
 
 }

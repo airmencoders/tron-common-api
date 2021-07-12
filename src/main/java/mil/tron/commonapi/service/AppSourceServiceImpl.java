@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service;
 
+import mil.tron.commonapi.appgateway.AppSourceConfig;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
@@ -34,10 +35,16 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.HealthContributorRegistry;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.transaction.Transactional;
 import java.net.MalformedURLException;
@@ -61,7 +68,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserService dashboardUserService;
     private HealthContributorRegistry healthContributorRegistry;
-    private AppGatewayService appGatewayService;
+    private AppSourceConfig appSourceConfig;
     private static final String APP_SOURCE_ADMIN_PRIV = "APP_SOURCE_ADMIN";
     private static final String APP_SOURCE_NOT_FOUND_MSG = "No App Source found with id %s.";
     private static final String APP_SOURCE_NO_ENDPOINT_FOUND_MSG = "No App Source Endpoint found with id %s.";
@@ -70,6 +77,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     private static final String APP_SOURCE_HEALTH_PREFIX = "appsource_";
     private ModelMapper mapper = new ModelMapper();
     private static final String APP_API_SPEC_NOT_FOUND_MSG = "Could not find API Specification for App Source with id %s.";
+    private static final String APP_SOURCE_DETAILS_CACHE_NAME = "app_source_details_cache";
     private String appSourceApiDefinitionsLocation;
 
 
@@ -84,7 +92,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                                 DashboardUserRepository dashboardUserRepository,
                                 DashboardUserService dashboardUserService,
                                 HealthContributorRegistry healthContributorRegistry,
-                                AppGatewayService appGatewayService,
+                                AppSourceConfig appSourceConfig,
                                 @Value("${appsource-definitions}") String appSourceApiDefinitionsLocation)
     {
         this.appSourceRepository = appSourceRepository;
@@ -96,7 +104,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         this.dashboardUserService = dashboardUserService;
         this.healthContributorRegistry = healthContributorRegistry;
         this.appSourceApiDefinitionsLocation = appSourceApiDefinitionsLocation;
-        this.appGatewayService = appGatewayService;
+        this.appSourceConfig = appSourceConfig;
     }
 
 
@@ -135,7 +143,7 @@ public class AppSourceServiceImpl implements AppSourceService {
                 .unregisterContributor(APP_SOURCE_HEALTH_PREFIX + appSource.getName());
 
         if (appSource.isReportStatus() && appSource.isAvailableAsAppSource()) {
-            Map<String, AppSourceInterfaceDefinition> defs = appGatewayService.getDefMap();
+            Map<String, AppSourceInterfaceDefinition> defs = appSourceConfig.getPathToDefinitionMap();
 
             // if this path is registered as an app source, and it has an entry in the gateway service,
             //  register it with the Spring Actuator's health registry
@@ -173,21 +181,23 @@ public class AppSourceServiceImpl implements AppSourceService {
                         .build()).collect(Collectors.toList());
     }
 
+    @CachePut(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, key="#appSource.getId()")
     @Override
     public AppSourceDetailsDto createAppSource(AppSourceDetailsDto appSource) {
         return this.saveAppSource(null, appSource);
     }
 
+    @Cacheable(value=APP_SOURCE_DETAILS_CACHE_NAME, key="#id")
     @Override
     public AppSourceDetailsDto getAppSource(UUID id) {
         Optional<AppSource> appSourceRecord = this.appSourceRepository.findById(id);
         if (appSourceRecord.isEmpty()) {
             throw new RecordNotFoundException(String.format("App Source with id %s was not found.", id));
         }
-        AppSource appSource = appSourceRecord.get();
-        return this.buildAppSourceDetailsDto(appSource);
+        return this.buildAppSourceDetailsDto(appSourceRecord.get());
     }
 
+    @CachePut(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, key="#id")
     @Override
     public AppSourceDetailsDto updateAppSource(UUID id, AppSourceDetailsDto appSourceDetailsDto) {
         // validate id
@@ -206,6 +216,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         return this.saveAppSource(id, appSourceDetailsDto);
     }
 
+    @CacheEvict(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, key="#id")
     @Transactional
     @Override
     public AppSourceDetailsDto deleteAppSource(UUID id) {
@@ -388,6 +399,7 @@ public class AppSourceServiceImpl implements AppSourceService {
      * @param appSourceId app source's id
      * @param email the user's email
      */
+    @CachePut(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, key="#appSourceId")
     @Override
     public AppSourceDetailsDto addAppSourceAdmin(UUID appSourceId, String email) {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
@@ -451,6 +463,7 @@ public class AppSourceServiceImpl implements AppSourceService {
      * @param appSourceId the app source's id
      * @param email the user's email
      */
+    @CachePut(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, key="#appSourceId")
     @Override
     public AppSourceDetailsDto removeAdminFromAppSource(UUID appSourceId, String email) {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
@@ -523,6 +536,7 @@ public class AppSourceServiceImpl implements AppSourceService {
      * @param appSourceId UUID of the app source to remove all app client privileges from
      * @return the modified app source details dto
      */
+    @CachePut(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, key="#appSourceId")
     @Override
     public AppSourceDetailsDto deleteAllAppClientPrivs(UUID appSourceId) {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
@@ -544,6 +558,7 @@ public class AppSourceServiceImpl implements AppSourceService {
      * @param dto the AppEndPointPrivDto containing the app source, app client, and app source endpoint's UUIDs
      * @return the modified AppSourceDetailsDto or else throws if that app source to app client to endpoint priv exists
      */
+    @CachePut(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, key="#dto.getAppSourceId()")
     @Override
     public AppSourceDetailsDto addEndPointPrivilege(AppEndPointPrivDto dto) {
         AppSource appSource = this.appSourceRepository.findById(dto.getAppSourceId())
@@ -584,6 +599,7 @@ public class AppSourceServiceImpl implements AppSourceService {
      * @param appSourceEndPointPrivId the UUID of the app source endpoint priv to delete
      * @return the modified AppSourceDetailsDto or else throws if that app source to app client to endpoint priv exists
      */
+    @CachePut(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, key="#appSourceId")
     @Override
     public AppSourceDetailsDto removeEndPointPrivilege(UUID appSourceId, UUID appSourceEndPointPrivId) {
         AppSource appSource = this.appSourceRepository.findById(appSourceId)
@@ -612,6 +628,7 @@ public class AppSourceServiceImpl implements AppSourceService {
      * Deletes an admin with given DashboardUser from all app sources he/she may be an admin of
      * @param user DashboardUser to search and delete from app source(s)
      */
+    @CacheEvict(cacheNames=APP_SOURCE_DETAILS_CACHE_NAME, allEntries=true)
     @Override
     public void deleteAdminFromAllAppSources(DashboardUser user) {
         List<AppSource> usersAppSources = appSourceRepository.findAppSourcesByAppSourceAdminsContaining(user);
