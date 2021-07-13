@@ -49,7 +49,7 @@ public class AccessCheckAppSourceImpl implements AccessCheckAppSource {
         if (authentication.getCredentials() == null) {
             return false;
         }
-        List<AppClientUser> appClientsForDev = this.appClientUserRespository.findByAppClientDevelopersEmail(
+        List<AppClientUser> appClientsForDev = this.appClientUserRespository.findByAppClientDevelopersEmailIgnoreCase(
                 authentication.getCredentials().toString());
         boolean isAuthorizedClient = appClientsForDev.stream().anyMatch(
                 appClient -> this.appEndpointPrivRepository.existsByAppSourceEqualsAndAppClientUserEquals(

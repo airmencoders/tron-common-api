@@ -7,7 +7,6 @@ import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -347,6 +346,29 @@ class AppClientUserServiceImplTest {
 
 		userService.deleteDeveloperFromAllAppClient(newUser);
 		assertTrue(newAppClient.getAppClientDevelopers().isEmpty());
+	}
+	
+	@Test
+	void testGetAppClientUsersContainingDeveloperEmail() {
+		DashboardUser newUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dude@dude.com")
+				.privileges(Set.of(appClientDev))
+				.build();
+
+		AppClientUser newAppClient = AppClientUser.builder()
+				.id(UUID.randomUUID())
+				.name("Some App")
+				.appClientDevelopers(Sets.newHashSet(newUser))
+				.build();
+		
+		List<AppClientUser> appClientUsers = Lists.newArrayList(newAppClient);
+
+		Mockito.when(repository.findByAppClientDevelopersEmailIgnoreCase((Mockito.anyString())))
+			.thenReturn(appClientUsers);
+
+		Iterable<AppClientUser> retrievedAppClientUsers = userService.getAppClientUsersContainingDeveloperEmail(newUser.getEmail());
+		assertEquals(appClientUsers, retrievedAppClientUsers);
 	}
 
 }

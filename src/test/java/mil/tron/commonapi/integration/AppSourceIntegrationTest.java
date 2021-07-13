@@ -8,6 +8,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import lombok.val;
 import mil.tron.commonapi.CacheConfig;
+import mil.tron.commonapi.appgateway.AppSourceConfig;
+import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
@@ -23,6 +25,7 @@ import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.health.AppSourceHealthIndicator;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
@@ -30,19 +33,26 @@ import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.AppSourceServiceImpl;
+import org.assertj.core.util.Maps;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
+import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.Assert;
@@ -52,13 +62,18 @@ import javax.transaction.Transactional;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.client.ExpectedCount.manyTimes;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = { "security.enabled=true" })
+@SpringBootTest(properties = { "security.enabled=true, app-source-ping-rate-millis=100" })
 @TestPropertySource(
 		locations = "classpath:application-test.properties",
 		properties = "caching.enabled=true"
@@ -127,6 +142,12 @@ public class AppSourceIntegrationTest {
     @Autowired
     @Qualifier(CacheConfig.SERVICE_ENTITY_CACHE_MANAGER)
     CacheManager cacheManager;
+
+    @Autowired
+    private HealthContributorRegistry registry;
+
+    @Autowired
+    private AppSourceConfig appSourceConfig;
 
     private DashboardUser admin;
 
@@ -1157,5 +1178,122 @@ public class AppSourceIntegrationTest {
 		// Check that this item does not exist in cache
 		assertThat(getCachedAppSourceById(testAppSource.getId())).isEmpty();
 	}
-	
+
+    @Test
+    @Transactional
+    @Rollback
+    void testHealthChecks() throws Exception {
+
+        Mockito.when(appSourceConfig.getPathToDefinitionMap())
+                .thenReturn(Maps.newHashMap("name", AppSourceInterfaceDefinition
+                        .builder()
+                        .appSourcePath("name")
+                        .sourceUrl("http://localhost")
+                        .name("Name")
+                        .openApiSpecFilename("some.yaml")
+                        .build()));
+
+        val appClientUserUuid = UUID.randomUUID();
+        appClientUserRespository.save(
+                AppClientUser.builder()
+                        .id(appClientUserUuid)
+                        .name("App User 1")
+                        .build()
+        );
+        AppEndpointDto appEndpointDto = AppEndpointDto.builder()
+                .id(UUID.randomUUID())
+                .path("/path")
+                .requestType(RequestMethod.GET.toString())
+                .build();
+        List<AppClientUserPrivDto> privDtos = new ArrayList<>();
+        privDtos.add(
+                AppClientUserPrivDto
+                        .builder()
+                        .appClientUser(appClientUserUuid)
+                        .appClientUserName("App User 1")
+                        .appEndpoint(appEndpointDto.getId())
+                        .privilege(appEndpointDto.getPath())
+                        .build()
+        );
+        AppSourceDetailsDto appSource = AppSourceDetailsDto.builder()
+                .name("Name")
+                .appClients(privDtos)
+                .endpoints(Arrays.asList(appEndpointDto))
+                .reportStatus(true)
+                .healthUrl("/healthz")
+                .build();
+        appSourceServiceImpl.createAppSource(appSource);
+        val appSources = appSourceServiceImpl.getAppSources();
+        assertEquals(1, appSources.size());
+
+        // have to modify app source path in the db itself since that cant
+        //  be set over the rest interface
+        AppSource source = appSourceRepository.findByNameIgnoreCase("Name").get();
+        source.setAppSourcePath("name");
+        appSourceRepository.save(source);
+
+        // force update over rest so health checks get registered
+        appSourceServiceImpl.updateAppSource(appSource.getId(), appSource);
+
+        mockMvc.perform(get("/actuator/health")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("APPSOURCE_UNKNOWN")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.error", equalTo("Health check has not run yet")));
+
+        Thread.sleep(1000);
+
+        mockMvc.perform(get("/actuator/health")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("APPSOURCE_DOWN")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.error", equalTo("Could not connect to health url")));
+
+        AppSourceHealthIndicator indicator = (AppSourceHealthIndicator) registry.getContributor("appsource_Name");
+        MockRestServiceServer mockRestServiceServer = MockRestServiceServer.createServer(indicator.getHealthSender());
+        mockRestServiceServer.expect(manyTimes(), MockRestRequestMatchers.anything())
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        Thread.sleep(1000);
+        mockMvc.perform(get("/actuator/health")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("APPSOURCE_UP")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.['Last Up Time']", notNullValue()));
+
+        mockRestServiceServer.reset();
+        mockRestServiceServer.expect(manyTimes(), MockRestRequestMatchers.anything())
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        Thread.sleep(1000);
+
+        mockMvc.perform(get("/actuator/health")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("APPSOURCE_ERROR")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.['Last Up Time']", notNullValue()));
+
+        mockRestServiceServer.reset();
+        mockRestServiceServer.expect(manyTimes(), requestTo(endsWith("healthz")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+        Thread.sleep(1000);
+
+        mockMvc.perform(get("/actuator/health")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("APPSOURCE_ERROR")))
+                .andExpect(jsonPath("$.components.appsource_Name.details.['Last Up Time']", notNullValue()));
+
+        ((AppSourceHealthIndicator) registry.unregisterContributor("appsource_Name")).cancelPing();
+
+    }
 }

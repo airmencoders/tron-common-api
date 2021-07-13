@@ -14,6 +14,6 @@ public interface AppClientUserRespository extends JpaRepository<AppClientUser, U
 	boolean existsByIdAndAvailableAsAppClientTrue(UUID id);
 	Optional<AppClientUser> findByNameIgnoreCase(String name);
 	List<AppClientUser> findByAppClientDevelopersContaining(DashboardUser user);
-	List<AppClientUser> findByAppClientDevelopersEmail(String email);
+	List<AppClientUser> findByAppClientDevelopersEmailIgnoreCase(String email);
 	List<AppClientUser> findByAvailableAsAppClientTrue();
 }
