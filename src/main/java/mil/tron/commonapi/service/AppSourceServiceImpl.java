@@ -690,6 +690,7 @@ public class AppSourceServiceImpl implements AppSourceService {
         return appSource.map(AppSource::getLastUpTime).orElse(null);
     }
 
+    @CachePut(cacheNames=CacheConfig.APP_SOURCE_DETAILS_CACHE_NAME, key="#appSourceId")
     @Override
     public void updateLastUpTime(UUID appSourceId, Date date) {
         Optional<AppSource> appSource = appSourceRepository.findById(appSourceId);

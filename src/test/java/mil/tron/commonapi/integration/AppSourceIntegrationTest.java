@@ -33,10 +33,9 @@ import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.AppSourceServiceImpl;
-import org.assertj.core.util.Maps;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -73,11 +72,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = { "security.enabled=true, app-source-ping-rate-millis=100" })
-@TestPropertySource(
-		locations = "classpath:application-test.properties",
-		properties = "caching.enabled=true"
-	)
+@SpringBootTest(properties = { "security.enabled=true", "app-source-ping-rate-millis=100", "caching.enabled=true" })
+@TestPropertySource(locations = "classpath:application-test.properties")
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
 public class AppSourceIntegrationTest {
@@ -1183,15 +1179,13 @@ public class AppSourceIntegrationTest {
     @Transactional
     @Rollback
     void testHealthChecks() throws Exception {
-
-        Mockito.when(appSourceConfig.getPathToDefinitionMap())
-                .thenReturn(Maps.newHashMap("name", AppSourceInterfaceDefinition
+        appSourceConfig.addAppSourcePathToDefMapping("name", AppSourceInterfaceDefinition
                         .builder()
                         .appSourcePath("name")
                         .sourceUrl("http://localhost")
                         .name("Name")
                         .openApiSpecFilename("some.yaml")
-                        .build()));
+                        .build());
 
         val appClientUserUuid = UUID.randomUUID();
         appClientUserRespository.save(
