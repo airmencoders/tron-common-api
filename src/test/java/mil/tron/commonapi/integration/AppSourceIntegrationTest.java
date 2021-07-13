@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import lombok.val;
+import mil.tron.commonapi.CacheConfig;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
@@ -32,6 +33,7 @@ import mil.tron.commonapi.service.AppSourceServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
@@ -123,6 +125,7 @@ public class AppSourceIntegrationTest {
     private DashboardUserRepository dashRepo;
     
     @Autowired
+    @Qualifier(CacheConfig.SERVICE_ENTITY_CACHE_MANAGER)
     CacheManager cacheManager;
 
     private DashboardUser admin;
