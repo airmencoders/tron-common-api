@@ -74,13 +74,11 @@ public class AppSourceDetailsDto {
     @Getter
     @Setter
     @Builder.Default
-    @NotNull
     private boolean throttleEnabled = false;
     
     @Getter
     @Setter
     @Min(0L)
     @Builder.Default
-    @NotNull
     private Long throttleRequestCount = 0L;
 }
