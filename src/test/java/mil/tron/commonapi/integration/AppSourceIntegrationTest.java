@@ -1090,7 +1090,6 @@ public class AppSourceIntegrationTest {
 		
 		// Check that the updated item is in the cache
 		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getAppSourcePath()).isEqualTo(testAppSource.getAppSourcePath());
-		System.out.println(OBJECT_MAPPER.writeValueAsString(getCachedAppSourceById(testAppSource.getId()).get()));
 		
 		// Remove Admins and check cache is updated
 		appSourceServiceImpl.removeAdminFromAppSource(testAppSource.getId(), "test@admin.com");
