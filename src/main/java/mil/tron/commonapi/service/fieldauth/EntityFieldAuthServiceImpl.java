@@ -135,14 +135,19 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
                 .orElseThrow(() -> new RecordNotFoundException("Person not found with id: " + incomingPerson.getId()));
 
         // if we can't get requester information or they do not have EDIT privilege, then don't let any change through, return the existing one.
-        if (requester == null || !requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_EDIT"))) {
+        if (requester == null) {
             return existingPerson;
         }
 
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
             return incomingPerson;
-
+        
+        // Must have EDIT privilege by this point to proceed
+        if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_EDIT"))) {
+        	return existingPerson;
+        }
+        
         // for each protected field we need to decide whether to use the incoming value or leave the existing
         //  based on the privs of the app client
         for (Field f : personFields) {
@@ -182,13 +187,18 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
                 .orElseThrow(() -> new RecordNotFoundException("Existing org not found with id: " + incomingOrg.getId()));
 
         // if we can't get requester information or they do not have EDIT privilege, then don't let any change through, return the existing one.
-        if (requester == null || !requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_EDIT"))) {
+        if (requester == null) {
             return existingOrg;
         }
 
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
             return incomingOrg;
+        
+        // Must have EDIT privilege by this point to proceed
+        if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_EDIT"))) {
+        	return existingOrg;
+        }
 
         // for each protected field we need to decide whether to use the incoming value or leave the existing
         //  based on the privs of the app client
