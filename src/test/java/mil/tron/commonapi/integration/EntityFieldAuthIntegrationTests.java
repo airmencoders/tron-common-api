@@ -3,9 +3,11 @@ package mil.tron.commonapi.integration;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import mil.tron.commonapi.dto.*;
+import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.PrivilegeDtoResponseWrapper;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDtoResponseWrapped;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -16,7 +18,6 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,14 +32,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = { "security.enabled=true", "liquibase.enabled=true" })
 @TestPropertySource(locations = "classpath:application-test.properties")
@@ -289,6 +291,7 @@ public class EntityFieldAuthIntegrationTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDto)))
                 .andExpect(status().isOk())
+                .andExpect(header().string("x-denied-entity-fields", containsString("rank")))
                 .andExpect(jsonPath("$.rank", equalTo("Unk")));
 
         // Org edit allowed now (albeit no access to any of the protected fields)
@@ -355,6 +358,7 @@ public class EntityFieldAuthIntegrationTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDto)))
                 .andExpect(status().isOk())
+                .andExpect(header().string("x-denied-entity-fields", not(containsString("rank"))))
                 .andExpect(jsonPath("$.rank", equalTo("Capt")));
     }
 
