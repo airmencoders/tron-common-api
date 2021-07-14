@@ -134,17 +134,13 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         Person existingPerson = personRepository.findById(incomingPerson.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Person not found with id: " + incomingPerson.getId()));
 
-        // if we can't get requester information, then don't let any change through, return the existing one.
-        if (requester == null) {
+        // if we can't get requester information or they do not have EDIT privilege, then don't let any change through, return the existing one.
+        if (requester == null || !requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_EDIT"))) {
             return existingPerson;
         }
 
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
-            return incomingPerson;
-
-        // or if we're an entity with the PERSON_CREATE, then accept full incoming object
-        if (requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_CREATE")))
             return incomingPerson;
 
         // for each protected field we need to decide whether to use the incoming value or leave the existing
@@ -185,17 +181,13 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         Organization existingOrg = organizationRepository.findById(incomingOrg.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Existing org not found with id: " + incomingOrg.getId()));
 
-        // if we can't get requester information, then don't let any change through, return the existing one.
-        if (requester == null) {
+        // if we can't get requester information or they do not have EDIT privilege, then don't let any change through, return the existing one.
+        if (requester == null || !requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_EDIT"))) {
             return existingOrg;
         }
 
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
-            return incomingOrg;
-
-        // or if we're an entity with the ORGANIZATION_CREATE, then accept full incoming object
-        if (requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_CREATE")))
             return incomingOrg;
 
         // for each protected field we need to decide whether to use the incoming value or leave the existing
