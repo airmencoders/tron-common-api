@@ -268,8 +268,6 @@ class AppClientUserServiceImplTest {
 			doNothing().when(subscriberService).cancelSubscriptionsByAppClient(Mockito.any(AppClientUser.class));
 			AppClientUserDto deletedDto = userService.deleteAppClientUser(userDto.getId());
 			
-			deletedDto.getPrivileges().forEach(i -> System.out.println("deleted: " + i.getName()));
-			userDto.getPrivileges().forEach(i -> System.out.println("user: " + i.getName()));
 			assertThat(deletedDto).isEqualTo(userDto);
 			assertThat(user.getAppClientDevelopers()).isNullOrEmpty();
 			assertThat(user.getAppEndpointPrivs()).isNullOrEmpty();
