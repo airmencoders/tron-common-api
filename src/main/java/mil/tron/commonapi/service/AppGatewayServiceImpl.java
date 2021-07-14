@@ -1,11 +1,16 @@
 package mil.tron.commonapi.service;
 
 import mil.tron.commonapi.appgateway.AppGatewayRouteBuilder;
+import mil.tron.commonapi.appgateway.AppSourceConfig;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
+import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
+import mil.tron.commonapi.entity.appsource.AppSource;
+
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.Exchange;
 import org.apache.camel.FluentProducerTemplate;
 import org.apache.camel.http.base.HttpOperationFailedException;
+import org.apache.camel.processor.ThrottlerRejectedExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,25 +20,22 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class AppGatewayServiceImpl implements AppGatewayService {
 
+	private AppSourceService appSourceService;
+	private AppSourceConfig appSourceConfig;
+	
     FluentProducerTemplate producer;
 
-    Map<String, AppSourceInterfaceDefinition> appSourceDefMap = new HashMap<>();
-
     @Autowired
-    AppGatewayServiceImpl(FluentProducerTemplate producer) {
+    AppGatewayServiceImpl(FluentProducerTemplate producer, AppSourceService appSourceService, AppSourceConfig appSourceConfig) {
         this.producer = producer;
-    }
-
-    @Override
-    public Map<String, AppSourceInterfaceDefinition> getDefMap() {
-        return this.appSourceDefMap;
+        this.appSourceService = appSourceService;
+        this.appSourceConfig = appSourceConfig;
     }
 
     /**
@@ -45,10 +47,13 @@ public class AppGatewayServiceImpl implements AppGatewayService {
      */
     public byte[] sendRequestToAppSource(HttpServletRequest request)
             throws ResponseStatusException, IOException {
+    	Map<String, AppSourceInterfaceDefinition> appSourcePathToDefMap = this.appSourceConfig.getPathToDefinitionMap();
+    	Map<AppSourceInterfaceDefinition, AppSource>  appSourceDefToEntityMap = this.appSourceConfig.getAppSourceDefs();
+    	
         String sendToPath = this.buildPathForAppSource(request.getRequestURI());
         String appPath = this.buildAppPath(request.getRequestURI());
         // use producer to send
-        AppSourceInterfaceDefinition appSourceDef = this.appSourceDefMap.get(appPath);
+        AppSourceInterfaceDefinition appSourceDef = appSourcePathToDefMap.get(appPath);
         if (appSourceDef == null) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     String.format("No App Source for %s.", appPath));
@@ -63,10 +68,14 @@ public class AppGatewayServiceImpl implements AppGatewayService {
         } catch (Exception ex) {
         	throw new ResponseStatusException(HttpStatus.valueOf(400), ex.getMessage());
         }
+        
+        AppSourceDetailsDto appSourceDetails = appSourceService.getAppSource(appSourceDefToEntityMap.get(appSourceDef).getId());
 
         try {
-            InputStream streamResponse = (InputStream) producer.to(AppGatewayRouteBuilder.APP_GATEWAY_ENDPOINT)
+            InputStream streamResponse = (InputStream) producer.to(AppGatewayRouteBuilder.generateAppSourceRouteUri(appSourceDef.getAppSourcePath()))
 				.withHeader("request-url", endpointString)
+				.withHeader("is-throttle-enabled", appSourceDetails.isThrottleEnabled())
+				.withHeader("throttle-rate-limit", appSourceDetails.getThrottleRequestCount())
 				.withHeader(Exchange.HTTP_METHOD, request.getMethod())
 				.withHeader(Exchange.CONTENT_TYPE, request.getContentType())
 				.withBody(body)
@@ -86,6 +95,18 @@ public class AppGatewayServiceImpl implements AppGatewayService {
                         HttpStatus.valueOf(exception.getStatusCode()),
                         exception.getResponseBody());
         	}
+        	
+        	/**
+        	 * Handles errors due to requests exceeding the maximum throttle rate
+        	 * set for the App Source.
+        	 */
+        	if (e.getCause() instanceof ThrottlerRejectedExecutionException) {
+        		ThrottlerRejectedExecutionException exception = (ThrottlerRejectedExecutionException) e.getCause();
+
+                throw new ResponseStatusException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        exception.getLocalizedMessage());
+        	}
             
         	/**
         	 * Handles all other exceptions. This may occur under conditions in which the
@@ -97,24 +118,6 @@ public class AppGatewayServiceImpl implements AppGatewayService {
         return response;
     }
 
-    /**
-     * Adds a source def mapping to the map
-     * @param appSourcePath
-     * @param appDef
-     * @return True if the app def is added. False if the app source path is not added and was already defined.
-     */
-    public boolean addSourceDefMapping(String appSourcePath, AppSourceInterfaceDefinition appDef) {
-        if (this.appSourceDefMap.get(appSourcePath) == null) {
-            this.appSourceDefMap.put(appSourcePath, appDef);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public void clearAppSourceDefs() {
-        this.appSourceDefMap.clear();
-    }
 
     /***
      * Expected uri string /api/v1/app/{appsource}/{appsource-request-path}

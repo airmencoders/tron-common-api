@@ -7,6 +7,8 @@ import mil.tron.commonapi.entity.DashboardUser;
 
 import javax.persistence.*;
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -67,6 +69,7 @@ public class AppSource extends App {
      */
     @Getter
     @Setter
+    @Builder.Default
     private boolean reportStatus = false;
 
     /**
@@ -76,6 +79,21 @@ public class AppSource extends App {
     @Getter
     @Setter
     private String healthUrl;
+
+    @Getter
+    @Setter
+    @Builder.Default
+    @NotNull
+    private boolean throttleEnabled = false;
+    
+    /**
+     * Rate Limit for the App Source
+     */
+    @Getter
+    @Setter
+    @Builder.Default
+    @NotNull
+    private long throttleRequestCount = 0L;
 
     /**
      * Last time this App Source received an "UP" status on its health

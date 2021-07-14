@@ -2,10 +2,13 @@ package mil.tron.commonapi.integration;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import lombok.val;
+import mil.tron.commonapi.CacheConfig;
+import mil.tron.commonapi.appgateway.AppSourceConfig;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
@@ -29,17 +32,16 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
-import mil.tron.commonapi.service.AppGatewayService;
 import mil.tron.commonapi.service.AppSourceServiceImpl;
-import org.assertj.core.util.Maps;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.actuate.health.HealthContributorRegistry;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cache.CacheManager;
+import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -70,7 +72,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = { "security.enabled=true", "app-source-ping-rate-millis=100" })
+@SpringBootTest(properties = { "security.enabled=true", "app-source-ping-rate-millis=100", "caching.enabled=true" })
 @TestPropertySource(locations = "classpath:application-test.properties")
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
@@ -93,8 +95,8 @@ public class AppSourceIntegrationTest {
     private static final String ENDPOINT_V2 = "/v2/app-source/";
     private static final String DASHBOARD_USERS_ENDPOINT = "/v1/dashboard-users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-
+    private static final String CACHE_NAME = "app_source_details_cache";
+	
     /**
      * Private helper to create a JWT on the fly
      * @param email email to embed with the "email" claim
@@ -132,12 +134,16 @@ public class AppSourceIntegrationTest {
 
     @Autowired
     private DashboardUserRepository dashRepo;
+    
+    @Autowired
+    @Qualifier(CacheConfig.SERVICE_ENTITY_CACHE_MANAGER)
+    CacheManager cacheManager;
 
     @Autowired
     private HealthContributorRegistry registry;
 
-    @MockBean
-    private AppGatewayService appGatewayService;
+    @Autowired
+    private AppSourceConfig appSourceConfig;
 
     private DashboardUser admin;
 
@@ -1017,20 +1023,169 @@ public class AppSourceIntegrationTest {
 
         assertNotNull(resource);
     }
+    
+	private Optional<AppSourceDetailsDto> getCachedAppSourceById(UUID id) {
+        return Optional.ofNullable(cacheManager.getCache(CACHE_NAME)).map(c -> c.get(id, AppSourceDetailsDto.class));
+    }
+    	
+	@Transactional
+	@Rollback
+	@Test
+	void appSourceShouldBeCached() {
+		AppSource testAppSource = AppSource.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test App Source")
+	                .appSourcePath("test_app_source")
+	                .build();
+			
+		appSourceRepository.saveAndFlush(testAppSource);
+		
+		// Cache should be empty at this point
+		assertThat(getCachedAppSourceById(testAppSource.getId())).isEmpty();
+		
+		// Call getAppSource() to save it into the cache
+		assertThat(appSourceServiceImpl.getAppSource(testAppSource.getId())).isNotNull();
+		
+		// Check that this item is in the cache
+		assertThat(testAppSource.getId()).hasToString(getCachedAppSourceById(testAppSource.getId()).get().getId().toString());
+	}
+	
+	@Transactional
+	@Rollback
+	@Test
+	void appSourceShouldBeCachedWhenCreated() {
+		AppSourceDetailsDto testAppSource = AppSourceDetailsDto.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test App Source")
+	                .appSourcePath("test_app_source")
+	                .build();
+		
+		// Cache should be empty at this point
+		assertThat(getCachedAppSourceById(testAppSource.getId())).isEmpty();
+		
+		// Creating an App Source should put it into cache
+		appSourceServiceImpl.createAppSource(testAppSource);
+
+		// Check that this item is in the cache
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getId()).hasToString(testAppSource.getId().toString());
+	}
+	
+	@Transactional
+	@Rollback
+	@Test
+	void appSourceCacheShouldBeUpdatedWhenAppSourceUpdated() throws JsonProcessingException {
+		UUID appClientId = UUID.randomUUID();
+		UUID appEndpointId = UUID.randomUUID();
+		
+        AppClientUser testAppClient = AppClientUser.builder()
+                .id(appClientId)
+                .name("Test App Client")
+                .build();
+        appClientUserRespository.save(testAppClient);
+
+        AppSourceDetailsDto testAppSource = AppSourceDetailsDto.builder()
+                .name("App Source Test")
+                .endpoints(Arrays.asList(
+                        AppEndpointDto.builder()    
+                                .id(appEndpointId)
+                                .path("/path")                            
+                                .requestType(RequestMethod.GET.toString())
+                                .build()
+                ))
+                .appSourceAdminUserEmails(List.of("test@admin.com"))
+                .build();
+		
+		// Cache should be empty at this point
+		assertThat(getCachedAppSourceById(testAppSource.getId())).isEmpty();
+		
+		// Creating an App Source should put it into cache
+		appSourceServiceImpl.createAppSource(testAppSource);
+		
+		// Check that this item is in the cache
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getId()).hasToString(testAppSource.getId().toString());
+		
+		// Update the item should also update the cache
+		testAppSource.setAppSourcePath("new_app_source_path");
+		appSourceServiceImpl.updateAppSource(testAppSource.getId(), testAppSource);
+		
+		// Check that the updated item is in the cache
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getAppSourcePath()).isEqualTo(testAppSource.getAppSourcePath());
+		
+		// Remove Admins and check cache is updated
+		appSourceServiceImpl.removeAdminFromAppSource(testAppSource.getId(), "test@admin.com");
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getAppSourceAdminUserEmails()).doesNotContain("test@admin.com");
+		
+		// Add Admins and check cache is updated
+		appSourceServiceImpl.addAppSourceAdmin(testAppSource.getId(), "test@admin.com");
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getAppSourceAdminUserEmails()).contains("test@admin.com");
+		
+		// Add endpoint privilege and check cache is updated
+		AppEndPointPrivDto appEndpointPriv = AppEndPointPrivDto.builder()
+				.appClientUserId(appClientId)
+				.appSourceId(testAppSource.getId())
+				.appEndpointId(appEndpointId)
+				.build();
+		appSourceServiceImpl.addEndPointPrivilege(appEndpointPriv);
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getAppClients()).hasSize(1);
+		
+		// Remove endpoint privilege and check cache is updated
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getAppClients()).hasSize(1);
+		AppSource savedTestAppSource = appSourceRepository.findById(testAppSource.getId()).get();
+		AppEndpointPriv[] appEndpointPrivs = new AppEndpointPriv[savedTestAppSource.getAppPrivs().size()];
+		appEndpointPrivs = savedTestAppSource.getAppPrivs().toArray(appEndpointPrivs);
+		appSourceServiceImpl.removeEndPointPrivilege(testAppSource.getId(), appEndpointPrivs[0].getId());
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getAppClients()).isEmpty();
+		
+		// Remove all app client privileges and check cache is updated
+		appSourceServiceImpl.deleteAllAppClientPrivs(testAppSource.getId());
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getAppClients()).isEmpty();
+		
+		// Remove all Admins and check item removed from cache
+		// Do this last because this will reset the entire cache due to using @CacheEvict
+		savedTestAppSource = appSourceRepository.findById(testAppSource.getId()).get();
+		DashboardUser[] dashboardUsers = new DashboardUser[savedTestAppSource.getAppSourceAdmins().size()];
+		dashboardUsers = savedTestAppSource.getAppSourceAdmins().toArray(dashboardUsers);
+		appSourceServiceImpl.deleteAdminFromAllAppSources(dashboardUsers[0]);
+		assertThat(getCachedAppSourceById(testAppSource.getId())).isEmpty();
+	}
+	
+	@Transactional
+	@Rollback
+	@Test
+	void appSourceInCacheShouldBeRemovedWhenDeleted() {
+		AppSourceDetailsDto testAppSource = AppSourceDetailsDto.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test App Source")
+	                .appSourcePath("test_app_source")
+	                .build();
+			
+		// Cache should be empty at this point
+		assertThat(getCachedAppSourceById(testAppSource.getId())).isEmpty();
+		
+		// Creating an App Source should put it into cache
+		appSourceServiceImpl.createAppSource(testAppSource);
+		
+		// Check that this item is in the cache
+		assertThat(getCachedAppSourceById(testAppSource.getId()).get().getId()).hasToString(testAppSource.getId().toString());
+		
+		// Delete the item
+		appSourceServiceImpl.deleteAppSource(testAppSource.getId());
+		
+		// Check that this item does not exist in cache
+		assertThat(getCachedAppSourceById(testAppSource.getId())).isEmpty();
+	}
 
     @Test
     @Transactional
     @Rollback
     void testHealthChecks() throws Exception {
-
-        Mockito.when(appGatewayService.getDefMap())
-                .thenReturn(Maps.newHashMap("name", AppSourceInterfaceDefinition
+        appSourceConfig.addAppSourcePathToDefMapping("name", AppSourceInterfaceDefinition
                         .builder()
                         .appSourcePath("name")
                         .sourceUrl("http://localhost")
                         .name("Name")
                         .openApiSpecFilename("some.yaml")
-                        .build()));
+                        .build());
 
         val appClientUserUuid = UUID.randomUUID();
         appClientUserRespository.save(

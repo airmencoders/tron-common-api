@@ -27,7 +27,6 @@ import mil.tron.commonapi.controller.AppGatewayController;
 import mil.tron.commonapi.entity.appsource.AppEndpoint;
 import mil.tron.commonapi.entity.appsource.AppSource;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
-import mil.tron.commonapi.service.AppGatewayService;
 
 @Service
 @Slf4j
@@ -39,27 +38,28 @@ public class AppSourceEndpointsBuilder {
 
     private AppSourceConfig appSourceConfig;
 
-    private AppGatewayService appGatewayService;
 
     private AppEndpointRepository appEndpointRepository;
 
     private ApplicationProperties versionProperties;
 
+    private AppGatewayRouteBuilder appGatewayRouteBuilder;
+    
     @Autowired
     AppSourceEndpointsBuilder(RequestMappingHandlerMapping requestMappingHandlerMapping,
                               AppGatewayController queryController,
-                              AppGatewayService appGatewayService,
                               AppSourceConfig appSourceConfig,
                               AppEndpointRepository appEndpointRepository,
-                              ApplicationProperties versionProperties
+                              ApplicationProperties versionProperties,
+                              AppGatewayRouteBuilder appGatewayRouteBuilder
 
     ) {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
         this.queryController = queryController;
         this.appSourceConfig = appSourceConfig;
         this.versionProperties = versionProperties;
-        this.appGatewayService = appGatewayService;
         this.appEndpointRepository = appEndpointRepository;
+        this.appGatewayRouteBuilder = appGatewayRouteBuilder;
         this.createAppSourceEndpoints(this.appSourceConfig);
     }
 
@@ -77,8 +77,12 @@ public class AppSourceEndpointsBuilder {
     public void initializeWithAppSourceDef(AppSourceInterfaceDefinition appDef, AppSource appSource) {
         try {
             List<AppSourceEndpoint> appSourceEndpoints = this.parseAppSourceEndpoints(appDef.getOpenApiSpecFilename());
-            boolean newMapping = this.appGatewayService.addSourceDefMapping(appDef.getAppSourcePath(),
-                    appDef);
+             boolean newMapping = this.appSourceConfig.addAppSourcePathToDefMapping(appDef.getAppSourcePath(),
+                     appDef);
+            
+            // Register Camel routes for each individual App Source
+            appGatewayRouteBuilder.createGatewayRoute(appDef.getAppSourcePath());
+            
             if (newMapping) {
                 for (AppSourceEndpoint appEndpoint: appSourceEndpoints) {
                     for(String prefix : this.versionProperties.getCombinedPrefixes()) {
