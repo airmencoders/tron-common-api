@@ -4,6 +4,7 @@ import mil.tron.commonapi.annotation.efa.ProtectedField;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.OrganizationRepository;
@@ -15,10 +16,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -32,6 +38,7 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
     private final PrivilegeService privilegeService;
     private static final String PERSON_PREFIX = "Person-";
     private static final String ORG_PREFIX = "Organization-";
+    private static final String DENIED_FIELDS_HEADER = "x-denied-entity-fields";
     private final List<Field> personFields = FieldUtils.getFieldsListWithAnnotation(Person.class, ProtectedField.class);
     private final List<Field> orgFields = FieldUtils.getFieldsListWithAnnotation(Organization.class, ProtectedField.class);
 
@@ -131,6 +138,9 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         // if EFA isn't even enabled, just return the new entity
         if (!efaEnabled) return incomingPerson;
 
+        List<String> deniedFields = new ArrayList<>();
+        HttpServletResponse response = getResponseObject();
+
         Person existingPerson = personRepository.findById(incomingPerson.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Person not found with id: " + incomingPerson.getId()));
 
@@ -159,6 +169,8 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
                             f.getName(),
                             FieldUtils.readField(existingPerson, f.getName(), true),
                             true);
+
+                    deniedFields.add(f.getName());
                 }
                 catch (IllegalAccessException e) {
                     throw new InvalidRecordUpdateRequest("Tried to access a Person field with bad permissions or a field that does not exist");
@@ -166,8 +178,25 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             }
         }
 
+        if (!deniedFields.isEmpty()) {
+            response.addHeader(DENIED_FIELDS_HEADER, String.join(",", deniedFields));
+        }
+
         // return the (possible modified) entity to the service
         return incomingPerson;
+    }
+
+    private HttpServletResponse getResponseObject() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            throw new BadRequestException("Unable to get request attributes for entity field auth");
+        }
+        HttpServletResponse response = ((ServletRequestAttributes)requestAttributes).getResponse();
+        if (response == null) {
+            throw new BadRequestException("Unable to get http response instance for entity field auth");
+        }
+
+        return response;
     }
 
     /**
@@ -181,6 +210,9 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
 
         // if EFA isn't even enabled, just return the new entity
         if (!efaEnabled) return incomingOrg;
+
+        List<String> deniedFields = new ArrayList<>();
+        HttpServletResponse response = getResponseObject();
 
         Organization existingOrg = organizationRepository.findById(incomingOrg.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Existing org not found with id: " + incomingOrg.getId()));
@@ -210,11 +242,17 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
                             f.getName(),
                             FieldUtils.readField(existingOrg, f.getName(), true),
                             true);
+
+                    deniedFields.add(f.getName());
                 }
                 catch (IllegalAccessException e) {
                     throw new InvalidRecordUpdateRequest("Tried to access an Org field with bad permissions or a field that does not exist");
                 }
             }
+        }
+
+        if (!deniedFields.isEmpty()) {
+            response.addHeader(DENIED_FIELDS_HEADER, String.join(",", deniedFields));
         }
 
         // return the (possible modified) entity to the service
