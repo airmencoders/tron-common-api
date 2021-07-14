@@ -134,7 +134,7 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         Person existingPerson = personRepository.findById(incomingPerson.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Person not found with id: " + incomingPerson.getId()));
 
-        // if we can't get requester information or they do not have EDIT privilege, then don't let any change through, return the existing one.
+        // if we can't get requester information, then don't let any change through, return the existing one.
         if (requester == null) {
             return existingPerson;
         }
@@ -186,7 +186,7 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         Organization existingOrg = organizationRepository.findById(incomingOrg.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Existing org not found with id: " + incomingOrg.getId()));
 
-        // if we can't get requester information or they do not have EDIT privilege, then don't let any change through, return the existing one.
+        // if we can't get requester information, then don't let any change through, return the existing one.
         if (requester == null) {
             return existingOrg;
         }
