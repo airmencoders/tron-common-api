@@ -152,11 +152,12 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
             return incomingPerson;
-
-        // or if we're an entity with the PERSON_CREATE, then accept full incoming object
-        if (requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_CREATE")))
-            return incomingPerson;
-
+        
+        // Must have EDIT privilege by this point to proceed
+        if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_EDIT"))) {
+        	return existingPerson;
+        }
+        
         // for each protected field we need to decide whether to use the incoming value or leave the existing
         //  based on the privs of the app client
         for (Field f : personFields) {
@@ -225,10 +226,11 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
             return incomingOrg;
-
-        // or if we're an entity with the ORGANIZATION_CREATE, then accept full incoming object
-        if (requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_CREATE")))
-            return incomingOrg;
+        
+        // Must have EDIT privilege by this point to proceed
+        if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_EDIT"))) {
+        	return existingOrg;
+        }
 
         // for each protected field we need to decide whether to use the incoming value or leave the existing
         //  based on the privs of the app client

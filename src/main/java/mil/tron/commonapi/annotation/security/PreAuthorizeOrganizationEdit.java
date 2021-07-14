@@ -6,6 +6,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("hasAuthority('ORGANIZATION_EDIT') || hasAuthority('ORGANIZATION_CREATE') || hasAuthority('DASHBOARD_ADMIN')")
+@PreAuthorize("hasAuthority('ORGANIZATION_EDIT') || hasAuthority('DASHBOARD_ADMIN')")
 public @interface PreAuthorizeOrganizationEdit {
 }

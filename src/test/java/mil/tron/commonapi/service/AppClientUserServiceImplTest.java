@@ -1,6 +1,8 @@
 package mil.tron.commonapi.service;
 
 import com.google.common.collect.Sets;
+
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -62,6 +64,9 @@ class AppClientUserServiceImplTest {
 	private List<AppClientUser> users;
 	private AppClientUser user;
 	private AppClientUserDto userDto;
+	
+	private AppClientUser userForSanitization;
+	private AppClientUserDto userForSanitizationDto;
 
 	private Privilege appClientDev, dashBoardUser;
 	private DashboardUser appClientDevPerson;
@@ -94,6 +99,18 @@ class AppClientUserServiceImplTest {
 		userDto = MODEL_MAPPER.map(user, AppClientUserDto.class);
 		
 		users.add(user);
+		
+		
+		userForSanitization = new AppClientUser();
+		userForSanitization.setId(UUID.randomUUID());
+		userForSanitization.setName("User For Sanitization");
+		userForSanitization.setPrivileges(Sets.newHashSet(
+				new Privilege(1L, "PERSON_EDIT"),
+				new Privilege(2L, "Person-middleName")
+			));
+		
+		userForSanitizationDto = MODEL_MAPPER.map(userForSanitization, AppClientUserDto.class);
+		userForSanitizationDto.getPrivileges().add(PrivilegeDto.builder().id(3L).name("Organization-members").build());
 	}
 	
 	@Test
@@ -131,6 +148,15 @@ class AppClientUserServiceImplTest {
 			
 			AppClientUserDto result = userService.createAppClientUser(userDto);
 			assertThat(result).isEqualTo(userDto);
+		}
+		
+		@Test
+		void successCreateSanitization() {
+			Mockito.when(repository.findByNameIgnoreCase(userForSanitization.getName())).thenReturn(Optional.ofNullable(null));
+			Mockito.when(repository.saveAndFlush(Mockito.any(AppClientUser.class))).thenReturn(userForSanitization);
+			
+			AppClientUserDto result = userService.createAppClientUser(userForSanitizationDto);
+			assertThat(result.getPrivileges()).containsAll(userForSanitizationDto.getPrivileges());
 		}
 
 		@Test
@@ -207,6 +233,15 @@ class AppClientUserServiceImplTest {
 	    	userDto.setName(null);
 	    	AppClientUserDto updatedUser = userService.updateAppClientUser(userDto.getId(), userDto);
 	    	assertThat(updatedUser).isEqualTo(MODEL_MAPPER.map(user, AppClientUserDto.class));
+		}
+		
+		@Test
+		void successUpdateSanitization() {
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(userForSanitization));
+			Mockito.when(repository.saveAndFlush(Mockito.any(AppClientUser.class))).thenReturn(userForSanitization);
+			
+			AppClientUserDto result = userService.updateAppClientUser(userForSanitizationDto.getId(), userForSanitizationDto);
+			assertThat(result.getPrivileges()).containsAll(userForSanitizationDto.getPrivileges());
 		}
 	}
 	
@@ -370,5 +405,4 @@ class AppClientUserServiceImplTest {
 		Iterable<AppClientUser> retrievedAppClientUsers = userService.getAppClientUsersContainingDeveloperEmail(newUser.getEmail());
 		assertEquals(appClientUsers, retrievedAppClientUsers);
 	}
-
 }
