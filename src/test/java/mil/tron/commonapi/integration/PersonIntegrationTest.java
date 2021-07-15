@@ -839,13 +839,86 @@ public class PersonIntegrationTest {
                 .givenName("jimmy")
                 .build();
 
-        // GO path
+        // GO path - USAF
         mockMvc.perform(post("/v2/person/person-jwt")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.rank", equalTo("CMSgt")))
                 .andExpect(jsonPath("$.branch", equalTo("USAF")));
+
+        // GO path - USA
+        dto.setAffiliation("US Army");
+        dto.setDodId("12345677");
+        dto.setEmail("jimmy@army.com");
+        dto.setRank("E-6");
+        mockMvc.perform(post("/v2/person/person-jwt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("SSG")))
+                .andExpect(jsonPath("$.branch", equalTo("USA")));
+
+        // GO path - USSF
+        dto.setAffiliation("US Space Force");
+        dto.setDodId("12345676");
+        dto.setEmail("jimmy@ussf.com");
+        dto.setRank("E-3");
+        mockMvc.perform(post("/v2/person/person-jwt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("Spc3")))
+                .andExpect(jsonPath("$.branch", equalTo("USSF")));
+
+        // GO path - USN
+        dto.setAffiliation("US Navy");
+        dto.setDodId("12345675");
+        dto.setEmail("jimmy@navy.com");
+        dto.setRank("O-2");
+        mockMvc.perform(post("/v2/person/person-jwt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("LTJG")))
+                .andExpect(jsonPath("$.branch", equalTo("USN")));
+
+        // GO path - USCG
+        dto.setAffiliation("US Coast Guard");
+        dto.setDodId("12345674");
+        dto.setEmail("jimmy@uscg.com");
+        dto.setRank("O-2");
+        mockMvc.perform(post("/v2/person/person-jwt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("LTJG")))
+                .andExpect(jsonPath("$.branch", equalTo("USCG")));
+
+        // GO path - USMC
+        dto.setAffiliation("US Marine Corps");
+        dto.setDodId("12345673");
+        dto.setEmail("jimmy@usmc.com");
+        dto.setRank("E-7");
+        mockMvc.perform(post("/v2/person/person-jwt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("GySgt")))
+                .andExpect(jsonPath("$.branch", equalTo("USMC")));
+
+        // GO path - Contractor (it seems P1 has rank as N/A in the system for CTRs)
+        dto.setAffiliation("Contractor");
+        dto.setDodId("12345672");
+        dto.setEmail("jimmy@revacomm.com");
+        dto.setRank("N/A");
+        mockMvc.perform(post("/v2/person/person-jwt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("CTR")))
+                .andExpect(jsonPath("$.branch", equalTo("OTHER")));
+
 
         // ERROR path - defaults to "Unk" for rank and "OTHER" for branch
         dto.setEmail("jimmy2@test.com");
