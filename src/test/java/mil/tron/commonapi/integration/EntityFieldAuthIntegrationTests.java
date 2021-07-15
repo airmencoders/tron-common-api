@@ -290,8 +290,9 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDto)))
-                .andExpect(status().isOk())
-                .andExpect(header().string("x-denied-entity-fields", containsString("rank")))
+                .andExpect(status().isNonAuthoritativeInformation())
+                .andExpect(header().string("Warning", containsString("rank")))
+                .andExpect(header().string("Warning", containsString("214")))
                 .andExpect(jsonPath("$.rank", equalTo("Unk")));
 
         // Org edit allowed now (albeit no access to any of the protected fields)
@@ -299,7 +300,7 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(organizationDto)))
-                .andExpect(status().isOk());
+                .andExpect(status().isNonAuthoritativeInformation());
 
         // add some field-level permissions, get the App Client record
         MvcResult appClient = mockMvc.perform(get("/v2/app-client")
@@ -357,8 +358,8 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDto)))
-                .andExpect(status().isOk())
-                .andExpect(header().string("x-denied-entity-fields", not(containsString("rank"))))
+                .andExpect(status().isNonAuthoritativeInformation())
+                .andExpect(header().string("Warning", not(containsString("rank"))))
                 .andExpect(jsonPath("$.rank", equalTo("Capt")));
     }
 

@@ -35,6 +35,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -215,6 +216,9 @@ public class PersonController {
 	@Operation(summary = "Adds a person", description = "Adds a person.  Query Ranks controller for available Ranks and Branches. " +
 		"If a given Rank or Branch is invalid, the Person will be created with rank 'Unknown' and branch 'Other'")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = PersonDto.class))),
@@ -227,15 +231,21 @@ public class PersonController {
 	})
 	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v1}/person", "${api-prefix.v2}/person"})
-	public ResponseEntity<PersonDto> createPerson(@Parameter(description = "Person to create",
-		required = true,
-		schema = @Schema(implementation = PersonDto.class)) 
-		@Valid @RequestBody PersonDto person) {
-		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
+	public ResponseEntity<PersonDto> createPerson(
+			HttpServletResponse response,
+			@Parameter(description = "Person to create",
+				required = true,
+				schema = @Schema(implementation = PersonDto.class)) @Valid @RequestBody PersonDto person) {
+		return new ResponseEntity<>(personService.createPerson(person),
+				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
+						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
 	}
 
 	@Operation(summary = "Adds a person using info from P1 JWT")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = PersonDto.class))),
@@ -248,16 +258,22 @@ public class PersonController {
 	})
 	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v1}/person/person-jwt", "${api-prefix.v2}/person/person-jwt"})
-	public ResponseEntity<PersonDto> createPersonFromJwt(@Parameter(description = "Person to create",
-			required = true,
-			schema = @Schema(implementation = PlatformJwtDto.class))
-												  @Valid @RequestBody PlatformJwtDto person) {
-		return new ResponseEntity<>(personService.createPersonFromJwt(person), HttpStatus.CREATED);
+	public ResponseEntity<PersonDto> createPersonFromJwt(
+			HttpServletResponse response,
+			@Parameter(description = "Person to create",
+				required = true,
+				schema = @Schema(implementation = PlatformJwtDto.class)) @Valid @RequestBody PlatformJwtDto person) {
+		return new ResponseEntity<>(personService.createPersonFromJwt(person),
+				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
+						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
 	}
 
 
 	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = PersonDto.class))),
@@ -268,6 +284,7 @@ public class PersonController {
 	@PreAuthorizePersonEdit
 	@PutMapping(value = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"})
 	public ResponseEntity<Object> updatePerson(
+			HttpServletResponse response,
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
 			@Parameter(description = "Updated person", 
 				required = true, 
@@ -275,7 +292,7 @@ public class PersonController {
 				@Valid @RequestBody PersonDto person) {
 
 		PersonDto updatedPerson = personService.updatePerson(personId, person);
-		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
+		return new ResponseEntity<>(updatedPerson, HttpStatus.valueOf(response.getStatus()));
 	}
 
 	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
@@ -310,6 +327,9 @@ public class PersonController {
 
 	@Operation(summary = "Patches an existing person", description = "Patches an existing person")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = PersonDto.class))),
@@ -323,6 +343,7 @@ public class PersonController {
 	@PreAuthorizePersonEdit
 	@PatchMapping(path = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<PersonDto> patchPerson(
+			HttpServletResponse response,
 			@Parameter(description = "Person ID to patch", required = true) @PathVariable("id") UUID personId,
 			@Parameter(description = "Patched person",
 					required = true,
@@ -331,7 +352,7 @@ public class PersonController {
 									JsonPatchObjectValue.class, JsonPatchObjectArrayValue.class}))
 			@RequestBody JsonPatch patch) {
 		PersonDto updatedPerson = personService.patchPerson(personId, patch);
-		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
+		return new ResponseEntity<>(updatedPerson, HttpStatus.valueOf(response.getStatus()));
 	}
 
 
@@ -363,6 +384,9 @@ public class PersonController {
 					"no new persons will have been committed to the database (if one entity fails, the entire operation fails). " +
 					"The return error message will list the offending UUID or other data that caused the error.")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = PersonDto.class))),
@@ -377,9 +401,12 @@ public class PersonController {
 	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v1}/person/persons"})
 	public ResponseEntity<Object> addPersons(
+			HttpServletResponse response,
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
-		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
+		return new ResponseEntity<>(personService.bulkAddPeople(people),
+				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
+						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Add one or more members to the database",
@@ -388,6 +415,9 @@ public class PersonController {
 					"no new persons will have been committed to the database (if one entity fails, the entire operation fails). " +
 					"The return error message will list the offending UUID or other data that caused the error.")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = PersonDtoResponseWrapper.class))),
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = PersonDtoResponseWrapper.class))),
@@ -402,9 +432,12 @@ public class PersonController {
 	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v2}/person/persons"})
 	public ResponseEntity<Object> addPersonsWrapped(
+			HttpServletResponse response,
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
-		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
+		return new ResponseEntity<>(personService.bulkAddPeople(people),
+				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
+						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Retrieves persons filtered", description = "Retrieves filtered list of persons")

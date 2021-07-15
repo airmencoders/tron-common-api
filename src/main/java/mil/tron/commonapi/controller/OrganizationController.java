@@ -11,11 +11,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
-import mil.tron.commonapi.annotation.security.*;
+import mil.tron.commonapi.annotation.security.PreAuthorizeOrganizationCreate;
+import mil.tron.commonapi.annotation.security.PreAuthorizeOrganizationDelete;
+import mil.tron.commonapi.annotation.security.PreAuthorizeOrganizationEdit;
+import mil.tron.commonapi.annotation.security.PreAuthorizeOrganizationRead;
 import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.OrganizationDto;
-import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
 import mil.tron.commonapi.dto.OrganizationDtoPaginationResponseWrapper;
+import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringArrayValue;
@@ -25,7 +28,6 @@ import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.OrganizationService;
-
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -35,6 +37,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.*;
 
@@ -273,6 +276,9 @@ public class OrganizationController {
 	
 	@Operation(summary = "Adds an organization", description = "Adds an organization")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
@@ -283,16 +289,21 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationCreate
 	@PostMapping({"${api-prefix.v1}/organization", "${api-prefix.v2}/organization"})
 	public ResponseEntity<OrganizationDto> createOrganization(
+			HttpServletResponse response,
 			@Parameter(description = "Organization to create",
-			required = true,
-			schema = @Schema(implementation = OrganizationDto.class))
-			@Valid @RequestBody OrganizationDto organization) {
+				required = true,
+				schema = @Schema(implementation = OrganizationDto.class)) @Valid @RequestBody OrganizationDto organization) {
 
-		return new ResponseEntity<>(organizationService.createOrganization(organization), HttpStatus.CREATED);
+		return new ResponseEntity<>(organizationService.createOrganization(organization),
+				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
+						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
 	}
 
 	@Operation(summary = "Updates an existing organization", description = "Updates an existing organization")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
@@ -306,6 +317,7 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PutMapping({"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"})
 	public ResponseEntity<OrganizationDto> updateOrganization(
+			HttpServletResponse response,
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Updated organization",
 				required = true,
@@ -315,7 +327,7 @@ public class OrganizationController {
 		OrganizationDto org = organizationService.updateOrganization(organizationId, organization);
 		
 		if (org != null)
-			return new ResponseEntity<>(org, HttpStatus.OK);
+			return new ResponseEntity<>(org, HttpStatus.valueOf(response.getStatus()));
 		else
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
@@ -395,9 +407,12 @@ public class OrganizationController {
 
 	@Operation(summary = "Add member(s) to an organization", description = "Adds member(s) to an organization")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "204",
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "A organization UUID was invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -408,19 +423,23 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping({"${api-prefix.v1}/organization/{id}/members", "${api-prefix.v2}/organization/{id}/members"})
 	public ResponseEntity<Object> addOrganizationMember(
+		HttpServletResponse response,
         @Parameter(description = "UUID of the organization record", required = true) @PathVariable UUID id,
         @Parameter(description = "UUID(s) of the member(s) to add", required = true) @RequestBody List<UUID> personId,
 		@Parameter(description = "Whether to make the organization the primary organization for the user", required = false)
 				@RequestParam(name = "primary", required = false, defaultValue = "true") boolean primary) {
 
-		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId, primary), HttpStatus.OK);
+		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId, primary), HttpStatus.valueOf(response.getStatus()));
 	}
 
 	@Operation(summary = "Add subordinate organizations to an organization", description = "Adds subordinate orgs to an organization")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "204",
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Host organization UUID was invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -430,10 +449,12 @@ public class OrganizationController {
 	})
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping({"${api-prefix.v1}/organization/{id}/subordinates", "${api-prefix.v2}/organization/{id}/subordinates"})
-	public ResponseEntity<Object> addSubordinateOrganization(@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
-															 @Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
+	public ResponseEntity<Object> addSubordinateOrganization(
+			HttpServletResponse response,
+			@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
+		 	@Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
 
-		return new ResponseEntity<>(organizationService.addSubordinateOrg(id, orgIds), HttpStatus.OK);
+		return new ResponseEntity<>(organizationService.addSubordinateOrg(id, orgIds), HttpStatus.valueOf(response.getStatus()));
 	}
 
 	@Operation(summary = "Remove subordinate organizations from an organization", description = "Removes subordinate orgs from an organization")
@@ -464,6 +485,9 @@ public class OrganizationController {
 	 */
 	@Operation(summary = "Updates an existing organization's attributes", description = "Updates an existing organization's attributes")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
@@ -478,10 +502,11 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping({"${api-prefix.v1}/organization/{id}"})
 	public ResponseEntity<OrganizationDto> patchOrganization(
+			HttpServletResponse response,
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
 
-			return new ResponseEntity<>(organizationService.modify(organizationId, attribs), HttpStatus.OK);
+			return new ResponseEntity<>(organizationService.modify(organizationId, attribs), HttpStatus.valueOf(response.getStatus()));
 	}
 
 	/**
@@ -495,6 +520,9 @@ public class OrganizationController {
 					"any new organizations up to that organization that caused the failure will have been committed (but none thereafter)" +
 					"The return error message will list the offending UUID or other data that caused the error.")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
@@ -508,8 +536,12 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@Deprecated(since = "v2")
 	@PostMapping({"${api-prefix.v1}/organization/organizations"})
-	public ResponseEntity<Object> addNewOrganizations(@RequestBody List<OrganizationDto> orgs) {
-		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
+	public ResponseEntity<Object> addNewOrganizations(
+			HttpServletResponse response,
+			@RequestBody List<OrganizationDto> orgs) {
+		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs),
+				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
+						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Adds one or more organization entities",
@@ -518,6 +550,9 @@ public class OrganizationController {
 					"any new organizations up to that organization that caused the failure will have been committed (but none thereafter)" +
 					"The return error message will list the offending UUID or other data that caused the error.")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = OrganizationDtoResponseWrapper.class))),
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDtoResponseWrapper.class))),
@@ -531,12 +566,19 @@ public class OrganizationController {
 	@WrappedEnvelopeResponse
 	@PreAuthorizeOrganizationEdit
 	@PostMapping({"${api-prefix.v2}/organization/organizations"})
-	public ResponseEntity<Object> addNewOrganizationsWrapped(@RequestBody List<OrganizationDto> orgs) {
-		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
+	public ResponseEntity<Object> addNewOrganizationsWrapped(
+			HttpServletResponse response,
+			@RequestBody List<OrganizationDto> orgs) {
+		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs),
+				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
+						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
 	}
 
 	@Operation(summary = "Patches an existing organization", description = "Patches an existing organization")
 	@ApiResponses(value = {
+			@ApiResponse(responseCode = "203",
+					description = "Successful - Entity Field Authority denied access to some fields",
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
@@ -550,6 +592,7 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping(value = {"${api-prefix.v2}/organization/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<OrganizationDto> jsonPatchOrganization(
+			HttpServletResponse response,
 			@Parameter(description = "Organization ID to patch", required = true) @PathVariable("id") UUID orgId,
 			@io.swagger.v3.oas.annotations.parameters.RequestBody(
 					content = @Content(array = @ArraySchema(
@@ -559,7 +602,7 @@ public class OrganizationController {
 					required = true)
 			@RequestBody JsonPatch patch) {
 		OrganizationDto organizationDto = organizationService.patchOrganization(orgId, patch);
-		return new ResponseEntity<>(organizationDto, HttpStatus.OK);
+		return new ResponseEntity<>(organizationDto, HttpStatus.valueOf(response.getStatus()));
 	}
 
 	// helper to build the options map for customization of return DTOs

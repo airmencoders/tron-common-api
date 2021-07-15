@@ -12,7 +12,9 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.PrivilegeService;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.http.HttpHeaders;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,6 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
     private final PrivilegeService privilegeService;
     private static final String PERSON_PREFIX = "Person-";
     private static final String ORG_PREFIX = "Organization-";
-    private static final String DENIED_FIELDS_HEADER = "x-denied-entity-fields";
     private final List<Field> personFields = FieldUtils.getFieldsListWithAnnotation(Person.class, ProtectedField.class);
     private final List<Field> orgFields = FieldUtils.getFieldsListWithAnnotation(Organization.class, ProtectedField.class);
 
@@ -179,12 +180,20 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             }
         }
 
-        if (!deniedFields.isEmpty()) {
-            response.addHeader(DENIED_FIELDS_HEADER, String.join(",", deniedFields));
-        }
+        this.affixHeaderEntityAuthInfo(response, deniedFields);
 
         // return the (possible modified) entity to the service
         return incomingPerson;
+    }
+
+    private void affixHeaderEntityAuthInfo(HttpServletResponse response, List<String> deniedFields) {
+        if (!deniedFields.isEmpty()) {
+            // some fields were not allowed a change...
+            // sets header information and warning code IAW RFC 7231 (IETF)
+            //  that the information was modified by proxy (in this case the Common API)
+            response.setStatus(HttpStatus.NON_AUTHORITATIVE_INFORMATION.value());
+            response.addHeader("Warning", "214 - Denied Entity Fields: " + String.join(",", deniedFields));
+        }
     }
 
     private HttpServletResponse getResponseObject() {
@@ -253,9 +262,7 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             }
         }
 
-        if (!deniedFields.isEmpty()) {
-            response.addHeader(DENIED_FIELDS_HEADER, String.join(",", deniedFields));
-        }
+        this.affixHeaderEntityAuthInfo(response, deniedFields);
 
         // return the (possible modified) entity to the service
         return incomingOrg;
