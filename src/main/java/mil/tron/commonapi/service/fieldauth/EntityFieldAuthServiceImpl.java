@@ -40,7 +40,6 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
     private final PrivilegeService privilegeService;
     private static final String PERSON_PREFIX = "Person-";
     private static final String ORG_PREFIX = "Organization-";
-    private static final String DENIED_FIELDS_HEADER = "x-denied-entity-fields";
     private final List<Field> personFields = FieldUtils.getFieldsListWithAnnotation(Person.class, ProtectedField.class);
     private final List<Field> orgFields = FieldUtils.getFieldsListWithAnnotation(Organization.class, ProtectedField.class);
 
