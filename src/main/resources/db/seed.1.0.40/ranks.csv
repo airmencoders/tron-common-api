@@ -1,0 +1,134 @@
+id,branch_type,pay_grade,abbreviation,name
+9f7a2276-df22-4773-ba17-42ed2f4ccde8,USA,E-1,PV1,Private
+218e8ff1-cccf-4422-a051-2d4c8fa9f676,USA,E-2,PV2,Private
+19c6d9bc-a43b-493c-ac46-ea3efaa439da,USA,E-3,PFC,Private First Class
+97824733-5ddc-4862-8444-0d8c06a73d91,USA,E-4,SPC,Specialist
+9590ae4d-4278-4ff0-a3b8-b0cf0d2df039,USA,E-5,SGT,Sergeant
+6765f404-6b0d-422b-87af-339e5b7527f2,USA,E-6,SSG,Staff Sergeant
+97794e34-9f50-4b38-bbbe-09c59bfefd5e,USA,E-7,SFC,Sergeant First Class
+af6b4452-1d6b-4ff0-9587-82b592aaa609,USA,E-8,MSG,Master Sergeant
+d7313c65-fcf5-4657-9d6c-c8b593abf91b,USA,E-9,SGM,Sergeant Major
+71e224d9-3260-4eb6-8cf6-fb017b58d05e,USA,W-1,WO1,Warrant Officer 1
+9b006dea-256c-41f9-ba4c-65a72b0c5fa0,USA,W-2,CW2,Chief Warrant Officer 2
+d5e9912e-9cc0-4c9c-b4f4-bc430f0e21b2,USA,W-3,CW3,Chief Warrant Officer 3
+0c26b742-1724-4c49-bfa8-c6280eddf567,USA,W-4,CW4,Chief Warrant Officer 4
+3211ccca-acb9-4891-8265-4a0e00d4bb54,USA,W-5,CW5,Chief Warrant Officer 5
+6de4dc17-120b-4568-9632-9a9b82cdf948,USA,O-1,2LT,Second Lieutenant
+d076de0f-da3b-425c-828f-804234cd31ac,USA,O-2,1LT,First Lieutenant
+632c1661-d908-4901-ab6b-589f773f6879,USA,O-3,CPT,Captain
+69ee9058-f9d4-4d38-8f09-807322a38b8a,USA,O-4,MAJ,Major
+06b47068-0c2b-45c3-a252-6018b3ba86e9,USA,O-5,LTC,Lieutenant Colonel
+d0160d88-43ca-452e-961c-c6faf9b45011,USA,O-6,COL,Colonel
+e5aa111d-6b89-4c2a-a2a3-504749174364,USA,O-7,BG,Brigadier General
+8e561c0a-141b-4c50-a5fd-0e72a49578a0,USA,O-8,MG,Major General
+8cb19ed4-4003-4fa7-a19f-b8ac736f09c6,USA,O-9,LTG,Lieutenant General
+8f88ea90-41dd-498f-ba31-08b0b65961b6,USA,O-10,GEN,General
+8afdb268-e566-4e49-b6b5-1a76cc790bcf,USA,O-11,GA,General of the Army
+c8616c1d-16a4-40e6-9abd-e9a43876a9e5,USA,GS,CIV,Civilian
+03d362dd-7ed4-4474-b4e5-4371f62cf655,USA,CTR,CTR,Contractor
+ead8501f-f9e2-44fa-a6e8-ccb35f310846,USMC,E-1,Pvt,Private
+c1bce4fd-c36c-4e44-bfb8-f2c29acd2ce0,USMC,E-2,PFC,Private First Class
+181988b9-b27c-4987-bac2-e1651fe61a05,USMC,E-3,LCpl,Lance Corporal
+c62b389c-fd9c-49a1-b01c-dbddd2c75ce4,USMC,E-4,Cpl,Corporal
+98c86178-50f0-4121-8faf-8094aa9b17fc,USMC,E-5,Sgt,Sergeant
+6867f360-2599-432f-b290-f876fbf4a13c,USMC,E-6,SSgt,Staff Sergeant
+93ac3906-bcd4-4339-9aa5-fc66ccb18b6f,USMC,E-7,GySgt,Gunnery Sergeant
+f0f61758-1cd5-4697-ad63-2f74dd2e0b8d,USMC,E-8,MSgt,Master Sergeant
+d4f2bfab-e993-4152-bce7-58c130a3f55d,USMC,E-9,1stSgt,First Sergeant
+b8ed01a8-178e-4edb-aff4-4f124b519fa3,USMC,E-9,MGySgt,Master Gunnery Sergeant
+1735c8b2-2d52-4289-96d7-21238ef70c70,USMC,W-1,WO1,Warrant Officer 1
+3a9d8387-cecb-4bbb-9ae7-36665d1f3ca7,USMC,W-2,CW2,Chief Warrant Officer 2
+ccb7bc25-16e8-48cf-bcfa-d4b509b1af6b,USMC,W-3,CW3,Chief Warrant Officer 3
+6f3d10e7-0384-4f5b-9346-892871f8652a,USMC,W-4,CW4,Chief Warrant Officer 4
+c8d7d0b4-464a-4ab2-be6c-212a88a02ee8,USMC,W-5,CW5,Chief Warrant Officer 5
+b8edb623-ee33-4796-a523-1ec4d8ac1e02,USMC,O-1,2ndLt,Second Lieutenant
+c24882a7-3d13-401d-b199-d36a28ede4ca,USMC,O-2,1stLt,First Lieutenant
+d42147ae-216f-4747-a69b-7a20e4d70267,USMC,O-3,Capt,Captain
+e8f75bf0-2684-4096-994c-edd02aea04dd,USMC,O-4,Maj,Major
+2faf2327-c955-4a7c-a6f3-cac19fe6200a,USMC,O-5,LtCol,Lieutenant Colonel
+b3db3eaa-8459-49c7-aeb4-28d4728eef0e,USMC,O-6,Col,Colonel
+a6c6b827-0f6b-45d2-b447-331e1eba25d3,USMC,O-7,BGen,Brigadier General
+cdb153c9-8767-45f0-a5ba-4514eb097472,USMC,O-8,MajGen,Major General
+c2180e9e-9f03-4495-a902-641230c0ffbf,USMC,O-9,LtGen,Lieutenant General
+ef33760c-fc2e-4e9c-bdb0-2d98ceb90e91,USMC,O-10,Gen,General
+84cd6767-4f9d-4778-ba67-8df27de3ec2a,USMC,GS,CIV,Civilian
+ce8c497c-eddb-433a-8ecb-ee5fcefc0e03,USMC,CTR,CTR,Contractor
+ab38f716-e8b0-4334-8393-9bf403f404fc,USN,E-1,SR,Seaman Recruit
+0216d004-de5e-4654-9de3-89a625a8be6c,USN,E-2,SA,Seaman Apprentice
+8073ad15-19cf-4d72-a6c0-d3f0f168338b,USN,E-3,SN,Seaman
+f8a7a9f6-aa91-4f9d-b96d-8c70871e7446,USN,E-4,PO3,Petty Officer Third Class
+2c451188-8c19-40bd-9fb3-bab5f29cab37,USN,E-5,PO2,Petty Officer Second Class
+e504cf7c-1299-4c08-92b4-9044fb49a014,USN,E-6,PO1,Petty Officer First Class
+8b0235a7-1c69-4b6f-a99c-566cd5e5c3f9,USN,E-7,CPO,Chief Petty Officer
+bd27f953-ddf3-4b94-9dba-7b2a97f9c5f4,USN,E-8,SCPO,Senior Chief Petty Officer
+854ebc79-2fb2-47d1-98d7-c2c999285174,USN,E-9,MCPO,Master Chief Petty Officer
+a9640c80-7543-4cb8-9025-a8e575d00767,USN,W-1,WO,Warrant Officer 1
+e1d103f6-6861-444e-826b-87f8b322ddbe,USN,W-2,CW2,Chief Warrant Officer 2
+50435df3-7e93-4e92-9450-6b2e2ea5cf6f,USN,W-3,CW3,Chief Warrant Officer 3
+b2d327b7-573b-492b-aee8-346de5c56ae1,USN,W-4,CW4,Chief Warrant Officer 4
+135b457e-355b-423a-9eef-70aeab5f8fb4,USN,W-5,CW5,Chief Warrant Officer 5
+4bad10bd-0e02-4897-83d6-c71f845967d0,USN,O-1,ENS,Ensign
+b105bdf9-7ce2-40cd-ab3c-6a066634624e,USN,O-2,LTJG,Lieutenant Junior Grade
+20b5465a-0aba-40cd-80b0-d1a9efc21ed2,USN,O-3,LT,Lieutenant
+cddbc9d5-b29c-468f-9571-73fbfa586fcd,USN,O-4,LCDR,Lieutenant Commander
+9ff4a93e-722e-49af-a369-460a36dbe64b,USN,O-5,CDR,Commander
+f93bd607-5853-4fbd-8cc0-22921d398b24,USN,O-6,CAPT,Captain
+268802bd-6ee4-4208-acaa-6620e905a8db,USN,O-7,RDML,Rear Admiral Lower Half
+d9fdbda2-5a86-44bf-9aba-74587b17dc11,USN,O-8,RADM,Rear Admiral
+7c27aad8-a5d4-4698-9cc2-e6db3c4cd618,USN,O-9,VADM,Vice Admiral
+345a52a5-fdb2-427a-a7b1-883b74db6829,USN,O-10,ADM,Admiral
+d0ff4248-dcbb-407a-bdf2-7f1fa1ddd8c1,USN,O-11,FADM,Fleet Admiral
+1b5182cc-7272-42ec-bef7-3086c20c9be6,USN,GS,CIV,Civilian
+384881da-b913-4685-ae24-c392b416e75a,USN,CTR,CTR,Contractor
+ad355368-cd78-4507-9f73-c3ca8e3a56b2,USSF,E-1,Spc1,Specialist 1
+3b9264d7-9a2e-407b-97e9-535b33da0ae8,USSF,E-2,Spc2,Specialist 2
+bc716820-29d3-44e8-9731-b415fa239251,USSF,E-3,Spc3,Specialist 3
+e5b257cc-74b3-4b8d-80ea-35d2941f5faf,USSF,E-4,Spc4,Specialist 4
+480aff9c-f944-4183-8ebd-518922f6058c,USSF,E-5,Sgt,Sergeant
+e4580c61-dc16-489e-b7ba-61722672261d,USSF,E-6,TSgt,Technical Sergeant
+5aa5a35b-7fa2-4658-b9e3-4ec09b570600,USSF,E-7,MSgt,Master Sergeant
+6a87bd66-861f-4a0e-accc-1b1d65b636cf,USSF,E-8,SMSgt,Senior Master Sergeant
+bb59cde4-a23d-46cc-a6a6-68866abbfe11,USSF,E-9,CMSgt,Chief Master Sergeant
+62b479cd-0729-4349-90d1-d594b0411af2,USSF,O-1,2d Lt,Second Lieutenant
+9eb1b152-c91b-44c4-853a-01e9f6c18aed,USSF,O-2,1st Lt,First Lieutenant
+dc263b73-cab5-40a1-b3f2-9a9e3759e8a7,USSF,O-3,Capt,Captain
+5f5eda68-345b-4247-b18c-07c3b676fb2b,USSF,O-4,Maj,Major
+bd27fc3f-e81c-49da-a4ab-a449e722ed88,USSF,O-5,Lt Col,Lieutenant Colonel
+e91872da-8676-410e-a075-d202238f7b29,USSF,O-6,Col,Colonel
+118e3d82-3e85-41b1-ac65-c4f11ad831bf,USSF,O-7,Brig Gen,Brigadier General
+7a0a1fc0-eb31-47e3-bbd0-7df6a35ba0e7,USSF,O-8,Maj Gen,Major General
+d9f0f526-39d7-416c-abc6-7252dcb4b8c4,USSF,O-9,Lt Gen,Lieutenant General
+ce25102a-dd82-4d76-9e25-d107a92ba8fc,USSF,O-10,Gen,General
+8013ffe1-1d0f-4ad0-bc80-6b740427f9f8,USSF,GS,CIV,Civilian
+7db198d8-26f8-441a-b853-aad2b0fbc5c7,USSF,CTR,CTR,Contractor
+5fa82092-fefe-4547-9d51-267c3f433db5,USCG,E-1,SR,Seaman Recruit
+dd64e08e-0562-4178-bdef-b4e288c1db8e,USCG,E-2,SA,Seaman Apprentice
+40f29bed-53b1-449f-9a51-1136edc0fc84,USCG,E-3,SN,Seaman
+68c09fac-730b-4830-8d90-769513b8b7ca,USCG,E-4,PO3,Petty Officer Third Class
+e20d62c4-31dd-4fdf-83e0-b37df4fd2c67,USCG,E-5,PO2,Petty Officer Second Class
+a58afafb-9215-40a1-ab8b-b9dd634bb126,USCG,E-6,PO1,Petty Officer First Class
+8becd264-251d-4a1b-99d6-92dc6ecb7d3d,USCG,E-7,CPO,Chief Petty Officer
+959a68e0-3bc6-4b48-b5cc-3ee53986cbf8,USCG,E-8,SCPO,Senior Chief Petty Officer
+904807f0-bdd9-4e4e-8dc4-f6fd380493ce,USCG,E-9,MCPO,Master Chief Petty Officer
+289f045e-852f-4d24-97c5-74f2a5998a30,USCG,W-2,CWO2,Chief Warrant Officer 2
+e968fa97-87a1-4579-a2b9-8a8ebda8412e,USCG,W-3,CWO3,Chief Warrant Officer 3
+45e313f6-794e-4894-87f6-7eba2ce2cf8a,USCG,W-4,CWO4,Chief Warrant Offer 4
+8d48bbe9-4f29-41ba-bbda-74b6b32414c4,USCG,O-1,ENS,Ensign
+81cf5576-b9b3-4270-980d-346ed7a6d84f,USCG,O-2,LTJG,Lieutenant Junior Grade
+6babfe15-6975-4261-b05e-a51bd26e377c,USCG,O-3,LT,Lieutenant
+bab85414-12db-46e1-9f58-5dd70f2d6a0a,USCG,O-4,LCDR,Lieutenant Commander
+2e32c49b-5fa7-4eb6-b15b-77619cc584ec,USCG,O-5,CDR,Commander
+ae960a07-5f66-4417-a893-e3d5293f1d3a,USCG,O-6,CAPT,Captain
+47fcebc5-3922-4523-8205-f15082400d43,USCG,O-7,RDML,Rear Admiral Lower Half
+05695b49-12ee-4ea7-82ec-d5c19fbfa1a2,USCG,O-8,RADM,Rear Admiral Upper Half
+946e8af8-7dba-46ac-924a-4f4aad07f958,USCG,O-9,VADM,Vice Admiral
+de319a25-e64c-4529-9ae8-c293b4c5763b,USCG,O-10,ADM,Admiral
+143ce655-ca21-4322-904e-6773b75d5e80,USCG,O-11,FADM,Fleet Admiral
+e0ee2df7-b077-4fca-9739-6110786424c5,USCG,GS,CIV,Civilian
+9a39fdc7-29bf-4652-8ad8-dd7f3cbc06b2,USCG,CTR,CTR,Contractor
+4f9c70b6-e259-4420-8431-3fbbd80dd144,USA,SES,SES,Senior Executive Service
+09c43b31-0d0b-41b8-8c0f-f3dc4a378813,USMC,SES,SES,Senior Executive Service
+f3e02d86-cf4b-455c-bdfc-ec66bbdd5053,USSF,SES,SES,Senior Executive Service
+6b990f02-7a1b-4586-bf44-498452bf1ad2,USN,SES,SES,Senior Executive Service
+bdd50cf4-a1fe-4064-9e66-1db9f1ec81b2,USCG,SES,SES,Senior Executive Service
+3c1f21e5-424b-4d0d-b713-8ec0e7b777cc,OTHER,N/A,CTR,Contractor
