@@ -49,7 +49,7 @@ public class PersonDto {
     @Setter
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     /**
