@@ -154,16 +154,23 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
             return incomingPerson;
         
+        boolean isOwnUser = existingPerson.getEmail().equalsIgnoreCase(requester.getName());
+        
         // Must have EDIT privilege by this point to proceed
-        if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_EDIT"))) {
+        // Or the authenticated user must be editing their own record
+        if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_EDIT")) && !isOwnUser) {
         	return existingPerson;
         }
         
-        // for each protected field we need to decide whether to use the incoming value or leave the existing
-        //  based on the privs of the app client
+        /**
+         * for each protected field we need to decide whether to use the incoming value or leave the existing
+         * based on the privs of the app client.
+         * 
+         * If this is a user editing their own data, allow them to edit everything except DODID and email
+         */
         for (Field f : personFields) {
-            if (!requester.getAuthorities().contains(new SimpleGrantedAuthority(PERSON_PREFIX + f.getName()))) {
-
+            if ((!requester.getAuthorities().contains(new SimpleGrantedAuthority(PERSON_PREFIX + f.getName())) && !isOwnUser) ||
+            		(isOwnUser && (f.getName().equalsIgnoreCase(Person.DODID_FIELD) || f.getName().equalsIgnoreCase(Person.EMAIL_FIELD)))) {
                 try {
                     // requester did not have the rights to this field, negate its value by
                     //  overwriting from existing object
