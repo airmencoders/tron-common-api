@@ -2,6 +2,7 @@ package mil.tron.commonapi.integration;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import mil.tron.commonapi.dto.OrganizationDto;
@@ -361,6 +362,52 @@ public class EntityFieldAuthIntegrationTests {
                 .andExpect(status().isNonAuthoritativeInformation())
                 .andExpect(header().string("Warning", not(containsString("rank"))))
                 .andExpect(jsonPath("$.rank", equalTo("Capt")));
+    }
+    
+    @Test
+    @Transactional
+    @Rollback
+    void testUserCanEditOwnData() throws JsonProcessingException, Exception {
+    	var dashboardUserOnly = DashboardUser.builder()
+                .id(UUID.randomUUID())
+                .email("dashboard@user.com")
+                .privileges(Set.of(
+                        privilegeRepository.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))))
+                .build();
+
+        dashboardUserRepository.save(dashboardUserOnly);
+        
+        var dashboardPerson = PersonDto.builder()
+        		.id(UUID.randomUUID())
+        		.firstName("dashboard")
+        		.lastName("user")
+        		.email(dashboardUserOnly.getEmail())
+        		.rank("Capt")
+        		.branch(Branch.USAF)
+        		.build();
+        
+        mockMvc.perform(post("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(adminUser.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dashboardPerson)))
+                .andExpect(status().isCreated());
+        
+        var newPerson = PersonDto.builder()
+        		.id(dashboardPerson.getId())
+        		.firstName("new dashboard")
+        		.lastName("new user")
+        		.email(dashboardUserOnly.getEmail())
+        		.dodid("11111")
+        		.build();
+        
+        mockMvc.perform(put("/v2/person/self/{id}", newPerson.getId())
+                .header(AUTH_HEADER_NAME, createToken(dashboardUserOnly.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newPerson)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dodid", equalTo(null)));
     }
 
     String generateXfccHeader(String namespace) {
