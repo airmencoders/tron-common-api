@@ -2,6 +2,7 @@ package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import javax.validation.constraints.NotBlank;
@@ -22,6 +23,7 @@ public class ScratchStorageEntryDto {
     @Getter
     @Setter
     @Builder.Default
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     @Getter

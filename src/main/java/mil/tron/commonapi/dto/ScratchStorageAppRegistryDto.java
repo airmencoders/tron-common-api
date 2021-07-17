@@ -3,6 +3,7 @@ package mil.tron.commonapi.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.collect.Lists;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
@@ -55,6 +56,7 @@ public class ScratchStorageAppRegistryDto {
 
         @Getter
         @Setter
+        @Schema(accessMode = Schema.AccessMode.READ_ONLY)
         private UUID userPrivPairId;
 
         @Getter
@@ -73,6 +75,7 @@ public class ScratchStorageAppRegistryDto {
 
         @Getter
         @Setter
+        @Schema(accessMode = Schema.AccessMode.READ_ONLY)
         private UUID userId;
 
         @Getter
@@ -89,6 +92,7 @@ public class ScratchStorageAppRegistryDto {
      */
     @Getter
     @Setter
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id;
 
     /**

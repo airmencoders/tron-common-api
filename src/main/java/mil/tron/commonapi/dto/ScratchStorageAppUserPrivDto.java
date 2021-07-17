@@ -1,6 +1,7 @@
 package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import javax.validation.constraints.Email;
@@ -23,6 +24,7 @@ public class ScratchStorageAppUserPrivDto {
     @Getter
     @Setter
     @Builder.Default
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     @Getter
