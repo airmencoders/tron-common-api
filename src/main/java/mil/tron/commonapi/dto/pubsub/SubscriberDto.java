@@ -1,6 +1,7 @@
 package mil.tron.commonapi.dto.pubsub;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 
@@ -20,6 +21,7 @@ public class SubscriberDto {
     @Builder.Default
     @Getter
     @Setter
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     @Getter

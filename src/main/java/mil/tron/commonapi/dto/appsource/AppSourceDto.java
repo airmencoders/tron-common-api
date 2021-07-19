@@ -1,5 +1,6 @@
 package mil.tron.commonapi.dto.appsource;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import javax.validation.constraints.NotBlank;
@@ -21,6 +22,7 @@ public class AppSourceDto {
     @Getter
     @Setter
     @Builder.Default
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     @Getter

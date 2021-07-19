@@ -2,6 +2,7 @@ package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import javax.persistence.Id;
@@ -21,6 +22,7 @@ public class DashboardUserDto {
     @Setter
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     @Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
