@@ -16,8 +16,6 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,7 +24,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
@@ -49,23 +46,6 @@ public class EventPublisher {
 
     @Value("${webhook-queue-max-size:1000000}")
     private long webhookQueueSize;
-
-    @Value("${webhook-send-timeout-secs:5}")
-    private long webhookSendTimeoutSecs;
-
-    /**
-     * Publisher REST bean that will timeout after 5secs to a subscriber so that
-     * a subscriber can't block/hang the publisher thread
-     * @param builder
-     * @return RestTemplate for use by the EventPublisher
-     */
-    @Bean("eventSender")
-    public RestTemplate publisherSender(RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(Duration.ofSeconds(webhookSendTimeoutSecs))
-                .setReadTimeout(Duration.ofSeconds(webhookSendTimeoutSecs))
-                .build();
-    }
 
     private SubscriberService subService;
 
