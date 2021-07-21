@@ -17,8 +17,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration test that launches the FULL server and Spring error handlers so we can
@@ -62,5 +64,28 @@ public class ErrorValidationIntegrationTest {
 
         assertEquals(400, response.statusCode());
         assertEquals("An acceptable DODID must be 5-10 digits or a null value", JsonPath.read(response.body(), "$.reason"));
+
+        person.setDodid(null);
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person", randomServerPort)))
+                .POST(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
+                .header("content-type", "application/json")
+                .build();
+
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(201, response.statusCode());
+        UUID id = UUID.fromString(JsonPath.read(response.body(), "$.id"));
+
+        // do an invalid json patch so we can test for a generalized response error message
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, id)))
+                .method("PATCH", HttpRequest.BodyPublishers.ofString("{}"))
+                .header("content-type", "application/json-patch+json")
+                .build();
+
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(400, response.statusCode());
+        assertTrue(JsonPath.read(response.body(), "$.reason").toString().contains("check format of the request"));
     }
 }

@@ -42,8 +42,18 @@ public class TronCommonAppError {
             reason = "";
         }
 
-        if (reason == null || reason.isBlank())
-            reason = (String) defaultErrorAttributes.getOrDefault("message", "");
+        // if reason still blank, get Exception type - if its HttpMessageNotReadableException, then make the
+        //   error more generalized, instead of a nasty deserialization details message
+        if (reason == null || reason.isBlank()) {
+            String exception = (String) defaultErrorAttributes.getOrDefault("exception", "");
+            if (!exception.isBlank() && exception.contains("HttpMessageNotReadableException")) {
+                reason = "Could not deserialize request data - check format of the request payload and try again";
+            }
+            else {
+                // fall back is the raw message itself from spring
+                reason = (String) defaultErrorAttributes.getOrDefault("message", "");
+            }
+        }
 
         return new TronCommonAppError(((Integer)defaultErrorAttributes.getOrDefault("status", "")),
                 reason,
