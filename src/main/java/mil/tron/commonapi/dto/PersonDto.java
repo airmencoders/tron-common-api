@@ -104,7 +104,7 @@ public class PersonDto {
     @PiiField
     @Getter
     @Setter
-    @ValidDodId
+    @ValidDodId(message = "An acceptable DODID must be 5-10 digits or a null value")
     private String dodid;
 
     /**
