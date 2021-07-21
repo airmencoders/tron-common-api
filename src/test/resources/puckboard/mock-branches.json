@@ -1,538 +1,2170 @@
 {
   "result": [
     {
+      "id": 1,
+      "name": "Army",
+      "organizations": [
+        {
+          "organizationId": "c59a689c-280f-4928-a5a9-087abba25a04",
+          "organizationName": "Army Demo Parent",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 1,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "d52786a2-c394-4de1-b780-a7c884d88ece",
+          "organizationName": "Army Demo Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 1,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "ranks": [
+        {
+          "rankName": "Private",
+          "payGrade": "E-1",
+          "rankAbbr": "PV1",
+          "rankStatus": "Enlisted",
+          "rankId": 122,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Private",
+          "payGrade": "E-2",
+          "rankAbbr": "PV2",
+          "rankStatus": "Enlisted",
+          "rankId": 123,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Private First Class",
+          "payGrade": "E-3",
+          "rankAbbr": "PFC",
+          "rankStatus": "Enlisted",
+          "rankId": 124,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Corporal",
+          "payGrade": "E-4",
+          "rankAbbr": "CPL",
+          "rankStatus": "Enlisted",
+          "rankId": 125,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Specialist",
+          "payGrade": "E-4",
+          "rankAbbr": "SPC",
+          "rankStatus": "Enlisted",
+          "rankId": 126,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Sergeant",
+          "payGrade": "E-5",
+          "rankAbbr": "SGT",
+          "rankStatus": "Enlisted",
+          "rankId": 127,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Staff Sergeant",
+          "payGrade": "E-6",
+          "rankAbbr": "SSG",
+          "rankStatus": "Enlisted",
+          "rankId": 128,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Sergeant First Class",
+          "payGrade": "E-7",
+          "rankAbbr": "SFC",
+          "rankStatus": "Enlisted",
+          "rankId": 129,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Master Sergeant",
+          "payGrade": "E-8",
+          "rankAbbr": "MSG",
+          "rankStatus": "Enlisted",
+          "rankId": 130,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "First Sergeant",
+          "payGrade": "E-8",
+          "rankAbbr": "1SG",
+          "rankStatus": "Enlisted",
+          "rankId": 131,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Sergeant Major",
+          "payGrade": "E-9",
+          "rankAbbr": "SGM",
+          "rankStatus": "Enlisted",
+          "rankId": 132,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Command Sergeant Major",
+          "payGrade": "E-9",
+          "rankAbbr": "CSM",
+          "rankStatus": "Enlisted",
+          "rankId": 133,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Sergeant Major of the Army",
+          "payGrade": "E-9",
+          "rankAbbr": "SMA",
+          "rankStatus": "Enlisted",
+          "rankId": 134,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Warrant Officer 1",
+          "payGrade": "W-1",
+          "rankAbbr": "WO1",
+          "rankStatus": "Warrant",
+          "rankId": 135,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 2",
+          "payGrade": "W-2",
+          "rankAbbr": "CW2",
+          "rankStatus": "Warrant",
+          "rankId": 136,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 3",
+          "payGrade": "W-3",
+          "rankAbbr": "CW3",
+          "rankStatus": "Warrant",
+          "rankId": 137,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 4",
+          "payGrade": "W-4",
+          "rankAbbr": "CW4",
+          "rankStatus": "Warrant",
+          "rankId": 138,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 5",
+          "payGrade": "W-5",
+          "rankAbbr": "CW5",
+          "rankStatus": "Warrant",
+          "rankId": 139,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Second Lieutenant",
+          "payGrade": "O-1",
+          "rankAbbr": "2LT",
+          "rankStatus": "Officer",
+          "rankId": 140,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "First Lieutenant",
+          "payGrade": "O-2",
+          "rankAbbr": "1LT",
+          "rankStatus": "Officer",
+          "rankId": 141,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Captain",
+          "payGrade": "O-3",
+          "rankAbbr": "CPT",
+          "rankStatus": "Officer",
+          "rankId": 142,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Major",
+          "payGrade": "O-4",
+          "rankAbbr": "MAJ",
+          "rankStatus": "Officer",
+          "rankId": 143,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant Colonel",
+          "payGrade": "O-5",
+          "rankAbbr": "LTC",
+          "rankStatus": "Officer",
+          "rankId": 144,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Colonel",
+          "payGrade": "O-6",
+          "rankAbbr": "COL",
+          "rankStatus": "Officer",
+          "rankId": 145,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Brigadier General",
+          "payGrade": "O-7",
+          "rankAbbr": "BG",
+          "rankStatus": "Officer",
+          "rankId": 146,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Major General",
+          "payGrade": "O-8",
+          "rankAbbr": "MG",
+          "rankStatus": "Officer",
+          "rankId": 147,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant General",
+          "payGrade": "O-9",
+          "rankAbbr": "LTG",
+          "rankStatus": "Officer",
+          "rankId": 148,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "General",
+          "payGrade": "O-10",
+          "rankAbbr": "GEN",
+          "rankStatus": "Officer",
+          "rankId": 149,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "General of the Army",
+          "payGrade": "O-11",
+          "rankAbbr": "GA",
+          "rankStatus": "Officer",
+          "rankId": 150,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Civilian",
+          "payGrade": "GS-13",
+          "rankAbbr": "Civ",
+          "rankStatus": "Civilian",
+          "rankId": 153,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Contractor",
+          "payGrade": "GS-13",
+          "rankAbbr": "Ctr",
+          "rankStatus": "Contractor",
+          "rankId": 154,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "createdBy": null,
+      "lastModifiedBy": null,
+      "createdDate": null,
+      "lastModifiedDate": null
+    },
+    {
       "id": 2,
       "name": "Marine Corps",
-      "enlistedRanks": [
+      "organizations": [
+        {
+          "organizationId": "e512a9f2-1304-42a8-8ad2-0ded5f084623",
+          "organizationName": "Tron Marine Parent Wing",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 2,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "d2265748-fde4-4ddc-bfda-72ca88d8a7f6",
+          "organizationName": "Tron Marine Demo Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 2,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "ranks": [
         {
           "rankName": "Private",
           "payGrade": "E-1",
           "rankAbbr": "Pvt",
           "rankStatus": "Enlisted",
-          "rankId": 23
+          "rankId": 23,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Private First Class",
           "payGrade": "E-2",
           "rankAbbr": "PFC",
           "rankStatus": "Enlisted",
-          "rankId": 24
+          "rankId": 24,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Lance Corporal",
           "payGrade": "E-3",
           "rankAbbr": "LCpl",
           "rankStatus": "Enlisted",
-          "rankId": 25
+          "rankId": 25,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Corporal",
           "payGrade": "E-4",
           "rankAbbr": "Cpl",
           "rankStatus": "Enlisted",
-          "rankId": 26
+          "rankId": 26,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Sergeant",
           "payGrade": "E-5",
           "rankAbbr": "Sgt",
           "rankStatus": "Enlisted",
-          "rankId": 27
+          "rankId": 27,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Staff Sergeant",
           "payGrade": "E-6",
           "rankAbbr": "SSgt",
           "rankStatus": "Enlisted",
-          "rankId": 28
+          "rankId": 28,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Gunnery Sergeant",
           "payGrade": "E-7",
           "rankAbbr": "GySgt",
           "rankStatus": "Enlisted",
-          "rankId": 29
+          "rankId": 29,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Master Sergeant",
           "payGrade": "E-8",
           "rankAbbr": "MSgt",
           "rankStatus": "Enlisted",
-          "rankId": 30
+          "rankId": 30,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "First Sergeant",
           "payGrade": "E-9",
           "rankAbbr": "1stSg",
           "rankStatus": "Enlisted",
-          "rankId": 31
+          "rankId": 31,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Master Gunnery Sergeant",
           "payGrade": "E-9",
           "rankAbbr": "MGySg",
           "rankStatus": "Enlisted",
-          "rankId": 32
+          "rankId": 32,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Sergeant Major",
           "payGrade": "E-9",
           "rankAbbr": "SgtMa",
           "rankStatus": "Enlisted",
-          "rankId": 33
+          "rankId": 33,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Sergeant Major Of The Marine Corps",
           "payGrade": "E-9",
           "rankAbbr": "sgtMa",
           "rankStatus": "Enlisted",
-          "rankId": 34
-        }
-      ],
-      "officerRanks": [
-        {
-          "rankName": "Second Lieutenant",
-          "payGrade": "O-1",
-          "rankAbbr": "2ndLt",
-          "rankStatus": "Officer",
-          "rankId": 40
+          "rankId": 34,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
-        {
-          "rankName": "First Lieutenant",
-          "payGrade": "O-2",
-          "rankAbbr": "1stLt",
-          "rankStatus": "Officer",
-          "rankId": 41
-        },
-        {
-          "rankName": "Captain",
-          "payGrade": "O-3",
-          "rankAbbr": "Capt",
-          "rankStatus": "Officer",
-          "rankId": 42
-        },
-        {
-          "rankName": "Major",
-          "payGrade": "O-4",
-          "rankAbbr": "Maj",
-          "rankStatus": "Officer",
-          "rankId": 43
-        },
-        {
-          "rankName": "Lieutenant Colonel",
-          "payGrade": "O-5",
-          "rankAbbr": "LtCol",
-          "rankStatus": "Officer",
-          "rankId": 44
-        },
-        {
-          "rankName": "Colonel",
-          "payGrade": "O-6",
-          "rankAbbr": "Col",
-          "rankStatus": "Officer",
-          "rankId": 45
-        },
-        {
-          "rankName": "Brigadier General",
-          "payGrade": "O-7",
-          "rankAbbr": "BGen",
-          "rankStatus": "Officer",
-          "rankId": 46
-        },
-        {
-          "rankName": "Major General",
-          "payGrade": "O-8",
-          "rankAbbr": "MajGen",
-          "rankStatus": "Officer",
-          "rankId": 47
-        },
-        {
-          "rankName": "Lieutenant General",
-          "payGrade": "O-9",
-          "rankAbbr": "LtGen",
-          "rankStatus": "Officer",
-          "rankId": 48
-        },
-        {
-          "rankName": "General",
-          "payGrade": "O-10",
-          "rankAbbr": "Gen",
-          "rankStatus": "Officer",
-          "rankId": 49
-        }
-      ],
-      "warrantOfficerRanks": [
         {
           "rankName": "Warrant Officer 1",
           "payGrade": "W-1",
           "rankAbbr": "WO1",
           "rankStatus": "Warrant Officer",
-          "rankId": 35
+          "rankId": 35,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Chief Warrant Officer 2",
           "payGrade": "W-2",
           "rankAbbr": "CW2",
           "rankStatus": "Warrant Officer",
-          "rankId": 36
+          "rankId": 36,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Chief Warrant Officer 3",
           "payGrade": "W-3",
           "rankAbbr": "CW3",
           "rankStatus": "Warrant Officer",
-          "rankId": 37
+          "rankId": 37,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Chief Warrant Officer 4",
           "payGrade": "W-4",
           "rankAbbr": "CW4",
           "rankStatus": "Warrant Officer",
-          "rankId": 38
+          "rankId": 38,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Chief Warrant Officer 5",
           "payGrade": "W-5",
           "rankAbbr": "CW5",
           "rankStatus": "Warrant Officer",
-          "rankId": 39
-        }
-      ],
-      "organizations": [
-        {
-          "classType": "Organization",
-          "organizationId": "e512a9f2-1304-42a8-8ad2-0ded5f084623",
-          "organizationName": "Tron Marine Parent Wing",
-          "organizationType": "Wing",
-          "isSchedulingUnit": false,
-          "classType": null,
-          "branchId": 2
+          "rankId": 39,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
-        {
-          "classType": "Organization",
-          "organizationId": "d2265748-fde4-4ddc-bfda-72ca88d8a7f6",
-          "organizationName": "Tron Marine Demo Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 2
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "name": "Navy",
-      "enlistedRanks": [],
-      "officerRanks": [],
-      "warrantOfficerRanks": [],
-      "organizations": []
-    },
-    {
-      "id": 4,
-      "name": "Air Force",
-      "enlistedRanks": [
-        {
-          "rankName": "Airman Basic",
-          "payGrade": "E-1",
-          "rankAbbr": "AB",
-          "rankStatus": "Enlisted",
-          "rankId": 1
-        },
-        {
-          "rankName": "Airman",
-          "payGrade": "E-2",
-          "rankAbbr": "Amn",
-          "rankStatus": "Enlisted",
-          "rankId": 2
-        },
-        {
-          "rankName": "Airman First Class",
-          "payGrade": "E-3",
-          "rankAbbr": "A1C",
-          "rankStatus": "Enlisted",
-          "rankId": 3
-        },
-        {
-          "rankName": "Senior Airman",
-          "payGrade": "E-4",
-          "rankAbbr": "SrA",
-          "rankStatus": "Enlisted",
-          "rankId": 4
-        },
-        {
-          "rankName": "Staff Sergeant",
-          "payGrade": "E-5",
-          "rankAbbr": "SSgt",
-          "rankStatus": "Enlisted",
-          "rankId": 5
-        },
-        {
-          "rankName": "Technical Sergeant",
-          "payGrade": "E-6",
-          "rankAbbr": "TSgt",
-          "rankStatus": "Enlisted",
-          "rankId": 6
-        },
-        {
-          "rankName": "Master Sergeant",
-          "payGrade": "E-7",
-          "rankAbbr": "MSgt",
-          "rankStatus": "Enlisted",
-          "rankId": 7
-        },
-        {
-          "rankName": "Senior Master Sergeant",
-          "payGrade": "E-8",
-          "rankAbbr": "SMSgt",
-          "rankStatus": "Enlisted",
-          "rankId": 8
-        },
-        {
-          "rankName": "Chief Master Sergeant",
-          "payGrade": "E-9",
-          "rankAbbr": "CMSgt",
-          "rankStatus": "Enlisted",
-          "rankId": 9
-        },
-        {
-          "rankName": "Chief Master Sergeant Of The Air Force",
-          "payGrade": "E-9",
-          "rankAbbr": "CMSAF",
-          "rankStatus": "Enlisted",
-          "rankId": 10
-        },
-        {
-          "rankName": "Command Chief Master Sergeant",
-          "payGrade": "E-9",
-          "rankAbbr": "CCM",
-          "rankStatus": "Enlisted",
-          "rankId": 21
-        }
-      ],
-      "officerRanks": [
         {
           "rankName": "Second Lieutenant",
           "payGrade": "O-1",
-          "rankAbbr": "2d Lt",
+          "rankAbbr": "2ndLt",
           "rankStatus": "Officer",
-          "rankId": 11
+          "rankId": 40,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "First Lieutenant",
           "payGrade": "O-2",
-          "rankAbbr": "1st Lt",
+          "rankAbbr": "1stLt",
           "rankStatus": "Officer",
-          "rankId": 12
+          "rankId": 41,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Captain",
           "payGrade": "O-3",
           "rankAbbr": "Capt",
           "rankStatus": "Officer",
-          "rankId": 13
+          "rankId": 42,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Major",
           "payGrade": "O-4",
           "rankAbbr": "Maj",
           "rankStatus": "Officer",
-          "rankId": 14
+          "rankId": 43,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Lieutenant Colonel",
           "payGrade": "O-5",
-          "rankAbbr": "Lt Col",
+          "rankAbbr": "LtCol",
           "rankStatus": "Officer",
-          "rankId": 15
+          "rankId": 44,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Colonel",
           "payGrade": "O-6",
           "rankAbbr": "Col",
           "rankStatus": "Officer",
-          "rankId": 16
+          "rankId": 45,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Brigadier General",
           "payGrade": "O-7",
-          "rankAbbr": "Brig Gen",
+          "rankAbbr": "BGen",
           "rankStatus": "Officer",
-          "rankId": 17
+          "rankId": 46,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Major General",
           "payGrade": "O-8",
-          "rankAbbr": "Maj Gen",
+          "rankAbbr": "MajGen",
           "rankStatus": "Officer",
-          "rankId": 18
+          "rankId": 47,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "Lieutenant General",
           "payGrade": "O-9",
-          "rankAbbr": "Lt Gen",
+          "rankAbbr": "LtGen",
           "rankStatus": "Officer",
-          "rankId": 19
+          "rankId": 48,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "General",
           "payGrade": "O-10",
           "rankAbbr": "Gen",
           "rankStatus": "Officer",
-          "rankId": 20
+          "rankId": 49,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Civilian",
+          "payGrade": "GS-13",
+          "rankAbbr": "Civ",
+          "rankStatus": "Civilian",
+          "rankId": 159,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Contractor",
+          "payGrade": "GS-13",
+          "rankAbbr": "Ctr",
+          "rankStatus": "Contractor",
+          "rankId": 160,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "createdBy": null,
+      "lastModifiedBy": null,
+      "createdDate": null,
+      "lastModifiedDate": null
+    },
+    {
+      "id": 3,
+      "name": "Navy",
+      "organizations": [
+        {
+          "organizationId": "e8d087b3-c160-484f-a99f-45da3504b3dd",
+          "organizationName": "Navy Demo Parent",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 3,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "d59beb03-10b5-4bae-b852-0ab80602add8",
+          "organizationName": "Navy Demo Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 3,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "ranks": [
+        {
+          "rankName": "Seaman Recruit",
+          "payGrade": "E-1",
+          "rankAbbr": "SR",
+          "rankStatus": "Enlisted",
+          "rankId": 70,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Seaman Apprentice",
+          "payGrade": "E-2",
+          "rankAbbr": "SA",
+          "rankStatus": "Enlisted",
+          "rankId": 71,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Seaman",
+          "payGrade": "E-3",
+          "rankAbbr": "SN",
+          "rankStatus": "Enlisted",
+          "rankId": 72,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Petty Officer Third Class",
+          "payGrade": "E-4",
+          "rankAbbr": "PO3",
+          "rankStatus": "Enlisted",
+          "rankId": 73,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Petty Officer Second Class",
+          "payGrade": "E-5",
+          "rankAbbr": "PO2",
+          "rankStatus": "Enlisted",
+          "rankId": 74,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Petty Officer First Class",
+          "payGrade": "E-6",
+          "rankAbbr": "PO1",
+          "rankStatus": "Enlisted",
+          "rankId": 75,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Petty Officer",
+          "payGrade": "E-7",
+          "rankAbbr": "CPO",
+          "rankStatus": "Enlisted",
+          "rankId": 76,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Senior Chief Petty Officer",
+          "payGrade": "E-8",
+          "rankAbbr": "SCPO",
+          "rankStatus": "Enlisted",
+          "rankId": 77,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Master Chief Petty Officer",
+          "payGrade": "E-9",
+          "rankAbbr": "MCPO",
+          "rankStatus": "Enlisted",
+          "rankId": 78,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Command Master Chief Petty Officer",
+          "payGrade": "E-9",
+          "rankAbbr": "CMDCM",
+          "rankStatus": "Enlisted",
+          "rankId": 79,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Master Chief Petty Officer Of The Navy",
+          "payGrade": "E-9",
+          "rankAbbr": "MCPON",
+          "rankStatus": "Enlisted",
+          "rankId": 80,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Warrant Officer 1",
+          "payGrade": "W-1",
+          "rankAbbr": "WO",
+          "rankStatus": "Warrant",
+          "rankId": 81,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 2",
+          "payGrade": "W-2",
+          "rankAbbr": "CW2",
+          "rankStatus": "Warrant",
+          "rankId": 82,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 3",
+          "payGrade": "W-3",
+          "rankAbbr": "CW3",
+          "rankStatus": "Warrant",
+          "rankId": 83,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 4",
+          "payGrade": "W-4",
+          "rankAbbr": "CW4",
+          "rankStatus": "Warrant",
+          "rankId": 84,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 5",
+          "payGrade": "W-5",
+          "rankAbbr": "CW5",
+          "rankStatus": "Warrant",
+          "rankId": 85,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Ensign",
+          "payGrade": "O-1",
+          "rankAbbr": "ENS",
+          "rankStatus": "Officer",
+          "rankId": 86,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant Junior Grade",
+          "payGrade": "O-2",
+          "rankAbbr": "LTJG",
+          "rankStatus": "Officer",
+          "rankId": 87,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant",
+          "payGrade": "O-3",
+          "rankAbbr": "LT",
+          "rankStatus": "Officer",
+          "rankId": 88,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant Commander",
+          "payGrade": "O-4",
+          "rankAbbr": "LCDR",
+          "rankStatus": "Officer",
+          "rankId": 89,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Commander",
+          "payGrade": "O-5",
+          "rankAbbr": "CDR",
+          "rankStatus": "Officer",
+          "rankId": 90,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Captain",
+          "payGrade": "O-6",
+          "rankAbbr": "CAPT",
+          "rankStatus": "Officer",
+          "rankId": 91,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Rear Admiral Lower Half",
+          "payGrade": "O-7",
+          "rankAbbr": "RDML",
+          "rankStatus": "Officer",
+          "rankId": 92,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Rear Admiral",
+          "payGrade": "O-8",
+          "rankAbbr": "RADM",
+          "rankStatus": "Officer",
+          "rankId": 93,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Vice Admiral",
+          "payGrade": "O-9",
+          "rankAbbr": "VADM",
+          "rankStatus": "Officer",
+          "rankId": 94,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Admiral",
+          "payGrade": "O-10",
+          "rankAbbr": "ADM",
+          "rankStatus": "Officer",
+          "rankId": 95,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Fleet Admiral",
+          "payGrade": "O-11",
+          "rankAbbr": "FADM",
+          "rankStatus": "Officer",
+          "rankId": 96,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Civilian",
+          "payGrade": "GS-13",
+          "rankAbbr": "Civ",
+          "rankStatus": "Civilian",
+          "rankId": 155,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Contractor",
+          "payGrade": "GS-13",
+          "rankAbbr": "Ctr",
+          "rankStatus": "Contractor",
+          "rankId": 156,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "createdBy": null,
+      "lastModifiedBy": null,
+      "createdDate": null,
+      "lastModifiedDate": null
+    },
+    {
+      "id": 4,
+      "name": "Air Force",
+      "organizations": [
+        {
+          "organizationId": "b9b50e31-2269-480c-aae8-1c59c65d6cc2",
+          "organizationName": "15th Wing",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "4262c1ee-66fc-4f29-915b-958be4f94bbe",
+          "organizationName": "535th Airlift Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "f37669d5-d6df-49fe-9c8f-bc1a0f4ecc49",
+          "organizationName": "204th Airlift Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "d8549f9b-f785-4afb-a9c6-1884b6fc93b3",
+          "organizationName": "315th Airlift Wing",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "e265715d-c438-4b63-b14b-515c2f59f9cb",
+          "organizationName": "300th Airlift Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "e7bb0b0f-579b-4731-8847-c61a723bcd3d",
+          "organizationName": "317th Airlift Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "7556867b-24f1-4beb-8803-b8b8b48b58ef",
+          "organizationName": "701st Airlift Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "5e03e096-f88a-49ae-854e-56f1372a8917",
+          "organizationName": "437th Airlift Wing",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "dae15c2a-e3fa-4af2-8bc1-56aae9c81154",
+          "organizationName": "14th Airlift Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "34de042a-e8dd-43c5-9936-686d93be401e",
+          "organizationName": "15th Airlift Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "710b68b5-1786-4fa3-b51c-d91c6f9f9084",
+          "organizationName": "16th Airlift Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9a",
+          "organizationName": "Tron Parent Wing",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
+          "organizationName": "Tron Demo Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
+          "organizationName": "Tron Demo Squadron 2",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 4,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "ranks": [
+        {
+          "rankName": "Airman Basic",
+          "payGrade": "E-1",
+          "rankAbbr": "AB",
+          "rankStatus": "Enlisted",
+          "rankId": 1,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Airman",
+          "payGrade": "E-2",
+          "rankAbbr": "Amn",
+          "rankStatus": "Enlisted",
+          "rankId": 2,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Airman First Class",
+          "payGrade": "E-3",
+          "rankAbbr": "A1C",
+          "rankStatus": "Enlisted",
+          "rankId": 3,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Senior Airman",
+          "payGrade": "E-4",
+          "rankAbbr": "SrA",
+          "rankStatus": "Enlisted",
+          "rankId": 4,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Staff Sergeant",
+          "payGrade": "E-5",
+          "rankAbbr": "SSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 5,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Technical Sergeant",
+          "payGrade": "E-6",
+          "rankAbbr": "TSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 6,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Master Sergeant",
+          "payGrade": "E-7",
+          "rankAbbr": "MSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 7,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Senior Master Sergeant",
+          "payGrade": "E-8",
+          "rankAbbr": "SMSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 8,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Master Sergeant",
+          "payGrade": "E-9",
+          "rankAbbr": "CMSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 9,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Master Sergeant Of The Air Force",
+          "payGrade": "E-9",
+          "rankAbbr": "CMSAF",
+          "rankStatus": "Enlisted",
+          "rankId": 10,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Second Lieutenant",
+          "payGrade": "O-1",
+          "rankAbbr": "2d Lt",
+          "rankStatus": "Officer",
+          "rankId": 11,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Captain",
+          "payGrade": "O-3",
+          "rankAbbr": "Capt",
+          "rankStatus": "Officer",
+          "rankId": 13,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Major",
+          "payGrade": "O-4",
+          "rankAbbr": "Maj",
+          "rankStatus": "Officer",
+          "rankId": 14,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant Colonel",
+          "payGrade": "O-5",
+          "rankAbbr": "Lt Col",
+          "rankStatus": "Officer",
+          "rankId": 15,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Colonel",
+          "payGrade": "O-6",
+          "rankAbbr": "Col",
+          "rankStatus": "Officer",
+          "rankId": 16,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Brigadier General",
+          "payGrade": "O-7",
+          "rankAbbr": "Brig Gen",
+          "rankStatus": "Officer",
+          "rankId": 17,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Major General",
+          "payGrade": "O-8",
+          "rankAbbr": "Maj Gen",
+          "rankStatus": "Officer",
+          "rankId": 18,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant General",
+          "payGrade": "O-9",
+          "rankAbbr": "Lt Gen",
+          "rankStatus": "Officer",
+          "rankId": 19,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "General",
+          "payGrade": "O-10",
+          "rankAbbr": "Gen",
+          "rankStatus": "Officer",
+          "rankId": 20,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Command Chief Master Sergeant",
+          "payGrade": "E-9",
+          "rankAbbr": "CCM",
+          "rankStatus": "Enlisted",
+          "rankId": 21,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         },
         {
           "rankName": "General of the Air Force",
           "payGrade": "O-10",
           "rankAbbr": "GAF",
           "rankStatus": "Officer",
-          "rankId": 22
+          "rankId": 22,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "First Lieutenant",
+          "payGrade": "O-2",
+          "rankAbbr": "1st Lt",
+          "rankStatus": "Officer",
+          "rankId": 12,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Civilian",
+          "payGrade": "GS-13",
+          "rankAbbr": "Civ",
+          "rankStatus": "Civilian",
+          "rankId": 151,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Contractor",
+          "payGrade": "GS-13",
+          "rankAbbr": "Ctr",
+          "rankStatus": "Contractor",
+          "rankId": 152,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
         }
       ],
-      "warrantOfficerRanks": [],
-      "organizations": [
-        {
-          "classType": "Organization",
-          "organizationId": "b9b50e31-2269-480c-aae8-1c59c65d6cc2",
-          "organizationName": "15th Wing",
-          "organizationType": "Wing",
-          "isSchedulingUnit": false,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "4262c1ee-66fc-4f29-915b-958be4f94bbe",
-          "organizationName": "535th Airlift Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "f37669d5-d6df-49fe-9c8f-bc1a0f4ecc49",
-          "organizationName": "204th Airlift Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "d8549f9b-f785-4afb-a9c6-1884b6fc93b3",
-          "organizationName": "315th Airlift Wing",
-          "organizationType": "Wing",
-          "isSchedulingUnit": false,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "e265715d-c438-4b63-b14b-515c2f59f9cb",
-          "organizationName": "300th Airlift Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "e7bb0b0f-579b-4731-8847-c61a723bcd3d",
-          "organizationName": "317th Airlift Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "7556867b-24f1-4beb-8803-b8b8b48b58ef",
-          "organizationName": "701st Airlift Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "5e03e096-f88a-49ae-854e-56f1372a8917",
-          "organizationName": "437th Airlift Wing",
-          "organizationType": "Wing",
-          "isSchedulingUnit": false,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "dae15c2a-e3fa-4af2-8bc1-56aae9c81154",
-          "organizationName": "14th Airlift Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "34de042a-e8dd-43c5-9936-686d93be401e",
-          "organizationName": "15th Airlift Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "710b68b5-1786-4fa3-b51c-d91c6f9f9084",
-          "organizationName": "16th Airlift Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9a",
-          "organizationName": "Tron Parent Wing",
-          "organizationType": "Wing",
-          "isSchedulingUnit": false,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9e",
-          "organizationName": "Tron Demo Squadron",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        },
-        {
-          "classType": "Organization",
-          "organizationId": "5240eead-3d09-43fd-91f9-c93227f42d9f",
-          "organizationName": "Tron Demo Squadron 2",
-          "organizationType": "Squadron",
-          "isSchedulingUnit": true,
-          "classType": null,
-          "branchId": 4
-        }
-      ]
+      "createdBy": null,
+      "lastModifiedBy": null,
+      "createdDate": null,
+      "lastModifiedDate": null
     },
     {
       "id": 5,
       "name": "Space Force",
-      "enlistedRanks": [],
-      "officerRanks": [],
-      "warrantOfficerRanks": [],
-      "organizations": []
+      "organizations": [
+        {
+          "organizationId": "88d9ced1-bd68-48c0-ac4b-2429e0f7568a",
+          "organizationName": "Space Force Demo Parent",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 5,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "4395cef0-a77f-47d7-9ffa-95802f6e6c56",
+          "organizationName": "Space Force Demo Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 5,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "ranks": [
+        {
+          "rankName": "Specialist 1",
+          "payGrade": "E-1",
+          "rankAbbr": "Spc1",
+          "rankStatus": "Enlisted",
+          "rankId": 50,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Specialist 2",
+          "payGrade": "E-2",
+          "rankAbbr": "Spc2",
+          "rankStatus": "Enlisted",
+          "rankId": 51,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Specialist 3",
+          "payGrade": "E-3",
+          "rankAbbr": "Spc3",
+          "rankStatus": "Enlisted",
+          "rankId": 52,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Specialist 4",
+          "payGrade": "E-4",
+          "rankAbbr": "Spc4",
+          "rankStatus": "Enlisted",
+          "rankId": 53,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Sergeant",
+          "payGrade": "E-5",
+          "rankAbbr": "Sgt",
+          "rankStatus": "Enlisted",
+          "rankId": 54,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Technical Sergeant",
+          "payGrade": "E-6",
+          "rankAbbr": "TSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 55,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Master Sergeant",
+          "payGrade": "E-7",
+          "rankAbbr": "MSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 56,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Senior Master Sergeant",
+          "payGrade": "E-8",
+          "rankAbbr": "SMSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 57,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Master Sergeant",
+          "payGrade": "E-9",
+          "rankAbbr": "CMSgt",
+          "rankStatus": "Enlisted",
+          "rankId": 58,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Master Sergeant of the Space Force",
+          "payGrade": "E-9",
+          "rankAbbr": "CMSSF",
+          "rankStatus": "Enlisted",
+          "rankId": 59,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Second Lieutenant",
+          "payGrade": "O-1",
+          "rankAbbr": "2d Lt",
+          "rankStatus": "Officer",
+          "rankId": 60,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "First Lieutenant",
+          "payGrade": "O-2",
+          "rankAbbr": "1st Lt",
+          "rankStatus": "Officer",
+          "rankId": 61,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Captain",
+          "payGrade": "O-3",
+          "rankAbbr": "Capt",
+          "rankStatus": "Officer",
+          "rankId": 62,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Major",
+          "payGrade": "O-4",
+          "rankAbbr": "Maj",
+          "rankStatus": "Officer",
+          "rankId": 63,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant Colonel",
+          "payGrade": "O-5",
+          "rankAbbr": "Lt Col",
+          "rankStatus": "Officer",
+          "rankId": 64,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Colonel",
+          "payGrade": "O-6",
+          "rankAbbr": "Col",
+          "rankStatus": "Officer",
+          "rankId": 65,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Brigadier General",
+          "payGrade": "O-7",
+          "rankAbbr": "Brig Gen",
+          "rankStatus": "Officer",
+          "rankId": 66,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Major General",
+          "payGrade": "O-8",
+          "rankAbbr": "Maj Gen",
+          "rankStatus": "Officer",
+          "rankId": 67,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant General",
+          "payGrade": "O-9",
+          "rankAbbr": "Lt Gen",
+          "rankStatus": "Officer",
+          "rankId": 68,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "General",
+          "payGrade": "O-10",
+          "rankAbbr": "Gen",
+          "rankStatus": "Officer",
+          "rankId": 69,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Civilian",
+          "payGrade": "GS-13",
+          "rankAbbr": "Civ",
+          "rankStatus": "Civilian",
+          "rankId": 157,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Contractor",
+          "payGrade": "GS-13",
+          "rankAbbr": "Ctr",
+          "rankStatus": "Contractor",
+          "rankId": 158,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "createdBy": null,
+      "lastModifiedBy": null,
+      "createdDate": null,
+      "lastModifiedDate": null
     },
     {
       "id": 6,
       "name": "Coast Guard",
-      "enlistedRanks": [],
-      "officerRanks": [],
-      "warrantOfficerRanks": [],
-      "organizations": []
+      "organizations": [
+        {
+          "organizationId": "b04a279b-7f42-406a-8aea-b0c85ef423c7",
+          "organizationName": "Coast Guard Demo Parent",
+          "isSchedulingUnit": false,
+          "classType": null,
+          "branchId": 6,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "organizationId": "1d367f0f-101e-48ef-b735-e00d65b8c855",
+          "organizationName": "Coast Guard Demo Squadron",
+          "isSchedulingUnit": true,
+          "classType": null,
+          "branchId": 6,
+          "type": null,
+          "chatTeams": null,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "ranks": [
+        {
+          "rankName": "Seaman Recruit",
+          "payGrade": "E-1",
+          "rankAbbr": "SR",
+          "rankStatus": "Enlisted",
+          "rankId": 97,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Seaman Apprentice",
+          "payGrade": "E-2",
+          "rankAbbr": "SA",
+          "rankStatus": "Enlisted",
+          "rankId": 98,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Seaman",
+          "payGrade": "E-3",
+          "rankAbbr": "SN",
+          "rankStatus": "Enlisted",
+          "rankId": 99,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Petty Officer Third Class",
+          "payGrade": "E-4",
+          "rankAbbr": "PO3",
+          "rankStatus": "Enlisted",
+          "rankId": 100,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Petty Officer Second Class",
+          "payGrade": "E-5",
+          "rankAbbr": "PO2",
+          "rankStatus": "Enlisted",
+          "rankId": 101,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Petty Officer First Class",
+          "payGrade": "E-6",
+          "rankAbbr": "PO1",
+          "rankStatus": "Enlisted",
+          "rankId": 102,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Petty Officer",
+          "payGrade": "E-7",
+          "rankAbbr": "CPO",
+          "rankStatus": "Enlisted",
+          "rankId": 103,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Senior Chief Petty Officer",
+          "payGrade": "E-8",
+          "rankAbbr": "SCPO",
+          "rankStatus": "Enlisted",
+          "rankId": 104,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Master Chief Petty Officer",
+          "payGrade": "E-9",
+          "rankAbbr": "MCPO",
+          "rankStatus": "Enlisted",
+          "rankId": 105,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Fleet/Command Master Chief Petty Officer",
+          "payGrade": "E-9",
+          "rankAbbr": "CMC",
+          "rankStatus": "Enlisted",
+          "rankId": 106,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Master Chief Petty Officer of the Coast Guard",
+          "payGrade": "E-9",
+          "rankAbbr": "MCPOCG",
+          "rankStatus": "Enlisted",
+          "rankId": 107,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 2",
+          "payGrade": "W-2",
+          "rankAbbr": "CWO2",
+          "rankStatus": "Warrant",
+          "rankId": 108,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Officer 3",
+          "payGrade": "W-3",
+          "rankAbbr": "CWO3",
+          "rankStatus": "Warrant",
+          "rankId": 109,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Chief Warrant Offer 4",
+          "payGrade": "W-4",
+          "rankAbbr": "CWO4",
+          "rankStatus": "Warrant",
+          "rankId": 110,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Ensign",
+          "payGrade": "O-1",
+          "rankAbbr": "ENS",
+          "rankStatus": "Officer",
+          "rankId": 111,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant Junior Grade",
+          "payGrade": "O-2",
+          "rankAbbr": "LTJG",
+          "rankStatus": "Officer",
+          "rankId": 112,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant",
+          "payGrade": "O-3",
+          "rankAbbr": "LT",
+          "rankStatus": "Officer",
+          "rankId": 113,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Lieutenant Commander",
+          "payGrade": "O-4",
+          "rankAbbr": "LCDR",
+          "rankStatus": "Officer",
+          "rankId": 114,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Commander",
+          "payGrade": "O-5",
+          "rankAbbr": "CDR",
+          "rankStatus": "Officer",
+          "rankId": 115,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Captain",
+          "payGrade": "O-6",
+          "rankAbbr": "CAPT",
+          "rankStatus": "Officer",
+          "rankId": 116,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Rear Admiral Lower Half",
+          "payGrade": "O-7",
+          "rankAbbr": "RDML",
+          "rankStatus": "Officer",
+          "rankId": 117,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Rear Admiral Upper Half",
+          "payGrade": "O-8",
+          "rankAbbr": "RADM",
+          "rankStatus": "Officer",
+          "rankId": 118,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Vice Admiral",
+          "payGrade": "O-9",
+          "rankAbbr": "VADM",
+          "rankStatus": "Officer",
+          "rankId": 119,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Admiral",
+          "payGrade": "O-10",
+          "rankAbbr": "ADM",
+          "rankStatus": "Officer",
+          "rankId": 120,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Fleet Admiral",
+          "payGrade": "O-11",
+          "rankAbbr": "FADM",
+          "rankStatus": "Officer",
+          "rankId": 121,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Civilian",
+          "payGrade": "GS-13",
+          "rankAbbr": "Civ",
+          "rankStatus": "Civilian",
+          "rankId": 161,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        },
+        {
+          "rankName": "Contractor",
+          "payGrade": "GS-13",
+          "rankAbbr": "Ctr",
+          "rankStatus": "Contractor",
+          "rankId": 162,
+          "createdBy": null,
+          "lastModifiedBy": null,
+          "createdDate": null,
+          "lastModifiedDate": null
+        }
+      ],
+      "createdBy": null,
+      "lastModifiedBy": null,
+      "createdDate": null,
+      "lastModifiedDate": null
     }
   ]
 }

@@ -105,14 +105,12 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
         for (int i = 0; i < branchInfoJson.size(); i++) {
             JsonNode node = branchInfoJson.get(i);
             Branch branch = resolveServiceName(node.get(BRANCH_ID_FIELD).asInt());
-            for (String rankSetName : Lists.newArrayList("enlistedRanks", "officerRanks", "warrantOfficerRanks")) {
-                JsonNode rankSet = node.get(rankSetName);
-                for (int j = 0; j < rankSet.size(); j++) {
-                    JsonNode rankNode = rankSet.get(j);
-                    allRanks.put(
-                            rankNode.get(PERSON_RANK_FIELD).asInt(),
-                            new RankInfo(rankNode.get(PERSON_RANK_ABBR_FIELD).textValue(),branch));
-                }
+            JsonNode rankSet = node.get("ranks");
+            for (int j = 0; j < rankSet.size(); j++) {
+                JsonNode rankNode = rankSet.get(j);
+                allRanks.put(
+                        rankNode.get(PERSON_RANK_FIELD).asInt(),
+                        new RankInfo(rankNode.get(PERSON_RANK_ABBR_FIELD).textValue(),branch));
             }
         }
 
@@ -124,13 +122,26 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
         return branchId >= 0 && branchId < branchMapping.length ? branchMapping[branchId] : Branch.USAF;
     }
 
-    // helper function to infer unit type by its name
-    private Unit resolveUnitType(JsonNode node) {
+    // helper function to infer unit type by its name, and if that fails use the "OTHER_*" for the branchType
+    private Unit resolveUnitType(JsonNode node, Branch branchType) {
         if (node != null) {
             if (node.textValue().toLowerCase().contains("squadron")) return Unit.SQUADRON;
             else if (node.textValue().toLowerCase().contains("wing")) return Unit.WING;
+            else if (node.textValue().toLowerCase().contains("group")) return Unit.GROUP;
+            else if (node.textValue().toLowerCase().contains("flight")) return Unit.FLIGHT;
+            else if (node.textValue().toLowerCase().contains("brigade")) return Unit.BRIGADE;
+            else if (node.textValue().toLowerCase().contains("company")) return Unit.COMPANY;
+            else if (node.textValue().toLowerCase().contains("troop")) return Unit.TROOP;
+            else if (node.textValue().toLowerCase().contains("battalion")) return Unit.BATTALION;
+            else if (node.textValue().toLowerCase().contains("division")) return Unit.DIVISION;
+            else if (branchType.equals(Branch.USA)) return Unit.OTHER_USA;
+            else if (branchType.equals(Branch.USN)) return Unit.OTHER_USN;
+            else if (branchType.equals(Branch.USCG)) return Unit.OTHER_USCG;
+            else if (branchType.equals(Branch.USMC)) return Unit.OTHER_USMC;
+            else if (branchType.equals(Branch.USSF)) return Unit.OTHER_USSF;
         }
 
+        // something weird happened, default other usaf unit
         return Unit.OTHER_USAF;
     }
 
@@ -158,7 +169,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
                 s.setId(id);
                 s.setName(name);
                 s.setBranchType(resolveServiceName(node.get(ORG_TYPE_FIELD).asInt()));
-                s.setOrgType(resolveUnitType(node.get(ORG_NAME_FIELD)));
+                s.setOrgType(resolveUnitType(node.get(ORG_NAME_FIELD), s.getBranchType()));
                 orgService.createOrganization(s);
                 unitIdStatus.put(id, "Created - " + name);
             }
