@@ -43,14 +43,11 @@ public class JsonDbServiceImpl implements JsonDbService {
             .jsonProvider(new JacksonJsonNodeJsonProvider())
             .mappingProvider(new JacksonMappingProvider())
             .build();
+    private final Object lockObj = new Object();
 
     public JsonDbServiceImpl(ScratchStorageRepository repository) {
         this.repository = repository;
     }
-
-    //
-    //
-    // methods to treat scratch space like a json db
 
     /**
      * Helper method that takes a JsonNode tree representing the Json Schema blob for a give
@@ -60,7 +57,7 @@ public class JsonDbServiceImpl implements JsonDbService {
      * A valid schema must also have an ID field named ID and its type must be UUID.
      * @param schemaBlob schema data from database
      */
-    public void validateSchema(JsonNode schemaBlob) {
+    private void validateSchema(JsonNode schemaBlob) {
         boolean foundIdField = false;
         for (String field : Lists.newArrayList(schemaBlob.fieldNames())) {
             if (!schemaBlob.get(field).isTextual()) {
@@ -83,7 +80,7 @@ public class JsonDbServiceImpl implements JsonDbService {
      * @param fieldValue value specifying the data type of this field, as specificied in the users "schema" they defined
      * @return the default value for a given field and its type
      */
-    public static Object defaultValueForField(String fieldName, String fieldValue) {
+    private static Object defaultValueForField(String fieldName, String fieldValue) {
 
         // if a schema field has an exclamation in its data type - then its required field
         if (fieldValue.contains(REQUIRED_IDENTIFIER)) {
@@ -120,7 +117,7 @@ public class JsonDbServiceImpl implements JsonDbService {
      * @param blob            the json value (the entire table) of json data used for uniqueness checks if needed
      * @param updateOperation boolean whether we're doing an update or not (disables the unique checks)
      */
-    public static void validateField(String fieldName,
+    private static void validateField(String fieldName,
                                      String schemaType,
                                      JsonNode fieldValue,
                                      boolean fieldIsUnique,
@@ -161,7 +158,7 @@ public class JsonDbServiceImpl implements JsonDbService {
 
         // do any unique checks
         if (fieldIsUnique && !updateOperation) {
-            String jsonPath = "$[?(@." + fieldName + " == '" + fieldValue.asText() + "')]";
+            String jsonPath = "$[?(@.['" + fieldName + "'] == '" + fieldValue.asText() + "')]";
             List<Map<String, Object>> elems = JsonPath.read(blob.jsonString(), jsonPath);
             if (fieldValue.asText() != null && !fieldValue.asText().isBlank() && elems.size() != 0) {
                 throw new ResourceAlreadyExistsException("Field " + fieldName + " violated uniqueness");
@@ -244,37 +241,39 @@ public class JsonDbServiceImpl implements JsonDbService {
     @Override
     public Object addElement(UUID appId, String tableName, Object json) {
 
-        ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+        synchronized (lockObj) {
+            ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
+                    .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
 
-        DocumentContext cxt;
-        Object retVal;
+            DocumentContext cxt;
+            Object retVal;
 
-        try {
-            cxt = JsonPath.using(configuration).parse(entry.getValue());
-        } catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            try {
+                cxt = JsonPath.using(configuration).parse(entry.getValue());
+            } catch (Exception e) {
+                throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            }
+
+            try {
+                retVal = validateEntityValue(appId, tableName, json, cxt, false);
+                cxt = cxt.add("$", retVal);
+            } catch (ResourceAlreadyExistsException e) {
+                throw new ResourceAlreadyExistsException(e.getMessage());
+            } catch (InvalidFieldValueException e) {
+                throw new InvalidFieldValueException(e.getMessage());
+            } catch (Exception e) {
+                throw new InvalidJsonPathQueryException(e.getMessage());
+            }
+
+            try {
+                entry.setValue(cxt.jsonString());
+                repository.save(entry);
+            } catch (Exception e) {
+                throw new RuntimeException("Error serializing table contents");
+            }
+
+            return retVal;
         }
-
-        try {
-            retVal = validateEntityValue(appId, tableName, json, cxt, false);
-            cxt = cxt.add("$", retVal);
-        } catch(ResourceAlreadyExistsException e) {
-            throw new ResourceAlreadyExistsException(e.getMessage());
-        } catch (InvalidFieldValueException e) {
-            throw new InvalidFieldValueException(e.getMessage());
-        } catch (Exception e) {
-            throw new InvalidJsonPathQueryException(e.getMessage());
-        }
-
-        try {
-            entry.setValue(cxt.jsonString());
-            repository.save(entry);
-        } catch (Exception e) {
-            throw new RuntimeException("Error serializing table contents");
-        }
-
-        return retVal;
     }
 
     /**
@@ -288,33 +287,35 @@ public class JsonDbServiceImpl implements JsonDbService {
     @Override
     public void removeElement(UUID appId, String tableName, String path) {
 
-        ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+        synchronized (lockObj) {
+            ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
+                    .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
 
-        DocumentContext cxt;
+            DocumentContext cxt;
 
-        try {
-            cxt = JsonPath.using(configuration).parse(entry.getValue());
-        } catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
-        }
+            try {
+                cxt = JsonPath.using(configuration).parse(entry.getValue());
+            } catch (Exception e) {
+                throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            }
 
-        if (cxt.read(path) != null) {
-            // see if record even exists
-            if (cxt.read(path).toString().equals("[]"))
-                throw new RecordNotFoundException("Path does not exist");
+            if (cxt.read(path) != null) {
+                // see if record even exists
+                if (cxt.read(path).toString().equals("[]"))
+                    throw new RecordNotFoundException("Path does not exist");
 
-            // delete the existent record
-            cxt = cxt.delete(path);
-        } else {
-            throw new RecordNotFoundException("Record Not Found");
-        }
+                // delete the existent record
+                cxt = cxt.delete(path);
+            } else {
+                throw new RecordNotFoundException("Record Not Found");
+            }
 
-        try {
-            entry.setValue(cxt.jsonString());
-            repository.save(entry);
-        } catch (Exception e) {
-            throw new RuntimeException("Error serializing table contents");
+            try {
+                entry.setValue(cxt.jsonString());
+                repository.save(entry);
+            } catch (Exception e) {
+                throw new RuntimeException("Error serializing table contents");
+            }
         }
     }
 
@@ -332,52 +333,53 @@ public class JsonDbServiceImpl implements JsonDbService {
     @Override
     public Object updateElement(UUID appId, String tableName, Object entityId, Object json, String path) {
 
-        ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+        synchronized (lockObj) {
+            ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
+                    .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
 
-        DocumentContext cxt;
-        Object retVal = null;
+            DocumentContext cxt;
+            Object retVal = null;
 
-        try {
-            cxt = JsonPath.using(configuration).parse(entry.getValue());
-        } catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
-        }
-
-        try {
-            // make sure the update json has an ID field and its equal to the supplied entity ID
-            JsonNode nodes = MAPPER.readTree(json.toString());
-            if (!nodes.has(ID_FIELD_NAME) || !nodes.get(ID_FIELD_NAME).textValue().equals(entityId.toString())) {
-                throw new InvalidFieldValueException("No ID field provided in update JSON or mismatched from path ID");
-            }
-        }
-        catch (JsonProcessingException e) {
-            throw new InvalidFieldValueException("Error validating presence of an ID field in JSON");
-        }
-
-
-        if (cxt.read(path) != null) {
-            // check element/entity even exists already
-            if (cxt.read(path).toString().equals("[]")) {
-                throw new RecordNotFoundException("Path Not Found");
+            try {
+                cxt = JsonPath.using(configuration).parse(entry.getValue());
+            } catch (Exception e) {
+                throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
             }
 
-            // once path exists/succeeds, we update in-place
-            retVal = validateEntityValue(appId, tableName, json, cxt, true);
-            cxt = cxt.set(path, retVal);
-        } else {
-            throw new RecordNotFoundException("Record Not Found");
-        }
+            try {
+                // make sure the update json has an ID field and its equal to the supplied entity ID
+                JsonNode nodes = MAPPER.readTree(json.toString());
+                if (!nodes.has(ID_FIELD_NAME) || !nodes.get(ID_FIELD_NAME).textValue().equals(entityId.toString())) {
+                    throw new InvalidFieldValueException("No ID field provided in update JSON or mismatched from path ID");
+                }
+            } catch (JsonProcessingException e) {
+                throw new InvalidFieldValueException("Error validating presence of an ID field in JSON");
+            }
 
-        try {
-            // re-persist blob
-            entry.setValue(cxt.jsonString());
-            repository.save(entry);
-        } catch (Exception e) {
-            throw new RuntimeException("Error serializing table contents");
-        }
 
-        return retVal;
+            if (cxt.read(path) != null) {
+                // check element/entity even exists already
+                if (cxt.read(path).toString().equals("[]")) {
+                    throw new RecordNotFoundException("Path Not Found");
+                }
+
+                // once path exists/succeeds, we update in-place
+                retVal = validateEntityValue(appId, tableName, json, cxt, true);
+                cxt = cxt.set(path, retVal);
+            } else {
+                throw new RecordNotFoundException("Record Not Found");
+            }
+
+            try {
+                // re-persist blob
+                entry.setValue(cxt.jsonString());
+                repository.save(entry);
+            } catch (Exception e) {
+                throw new RuntimeException("Error serializing table contents");
+            }
+
+            return retVal;
+        }
     }
 
     /**
@@ -391,17 +393,19 @@ public class JsonDbServiceImpl implements JsonDbService {
     @Override
     public Object queryJson(UUID appId, String tableName, String path) {
 
-        ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+        synchronized (lockObj) {
+            ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
+                    .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
 
-        DocumentContext cxt;
+            DocumentContext cxt;
 
-        try {
-            cxt = JsonPath.using(configuration).parse(entry.getValue());
-        } catch (Exception e) {
-            throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            try {
+                cxt = JsonPath.using(configuration).parse(entry.getValue());
+            } catch (Exception e) {
+                throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+            }
+
+            return cxt.read(path);
         }
-
-        return cxt.read(path);
     }
 }
