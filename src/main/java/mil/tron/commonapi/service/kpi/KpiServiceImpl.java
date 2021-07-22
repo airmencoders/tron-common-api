@@ -9,10 +9,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import mil.tron.commonapi.dto.kpi.AppSourceMetricSummary;
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
 import mil.tron.commonapi.dto.kpi.UniqueVisitorSummaryDto;
-import mil.tron.commonapi.dto.kpi.UserWithRequestCount;
+import mil.tron.commonapi.entity.kpi.AppSourceMetricSummary;
+import mil.tron.commonapi.entity.kpi.UserWithRequestCount;
 import mil.tron.commonapi.repository.HttpLogsRepository;
 import mil.tron.commonapi.repository.MeterValueRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
@@ -53,7 +53,7 @@ public class KpiServiceImpl implements KpiService {
 		List<UserWithRequestCount> dashboardUsers = new ArrayList<>();
 		List<UserWithRequestCount> appClients = new ArrayList<>();
 		// Split the users into Dashboard users and App Client users based on the name.
-		// If the name includes a domain, consider it a Dashboard user (@something.test)
+		// If the name includes a domain, consider it a Dashboard user (eg: contains @something.test)
 		// and everything else will be an App Client.
 		userRequestCounts.forEach(userRequestCount -> {
 			Matcher emailMatcher = EMAIL_DOMAIN_PATTERN.matcher(userRequestCount.getName());

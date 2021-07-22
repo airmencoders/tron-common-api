@@ -4,7 +4,7 @@ import java.util.Date;
 import java.util.List;
 
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
-import mil.tron.commonapi.dto.kpi.UserWithRequestCount;
+import mil.tron.commonapi.entity.kpi.UserWithRequestCount;
 
 public interface KpiService {
 	List<UserWithRequestCount> getUsersWithRequestCount(Date startDate, Date endDate);

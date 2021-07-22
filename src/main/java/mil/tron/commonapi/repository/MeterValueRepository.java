@@ -8,10 +8,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import mil.tron.commonapi.dto.kpi.AppSourceMetricSummary;
 import mil.tron.commonapi.entity.CountMetric;
 import mil.tron.commonapi.entity.EndpointCountMetric;
 import mil.tron.commonapi.entity.MeterValue;
+import mil.tron.commonapi.entity.kpi.AppSourceMetricSummary;
 
 public interface MeterValueRepository extends CrudRepository<MeterValue, UUID>{
     List<MeterValue> findAllByAppEndpointIdAndTimestampBetweenOrderByTimestampDesc(UUID id, Date startDate, Date endDate);

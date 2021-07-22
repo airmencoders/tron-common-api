@@ -1,5 +1,4 @@
-package mil.tron.commonapi.dto.kpi;
-
+package mil.tron.commonapi.entity.kpi;
 
 public interface UserWithRequestCount {
 	String getName();
