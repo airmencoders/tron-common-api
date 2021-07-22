@@ -1,5 +1,6 @@
 package mil.tron.commonapi.controller;
 
+import mil.tron.commonapi.appgateway.AppSourceConfig;
 import mil.tron.commonapi.appgateway.AppSourceEndpointsBuilder;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import mil.tron.commonapi.entity.appsource.AppSource;
@@ -36,6 +37,9 @@ public class AppGatewayControllerTest {
 
     @MockBean
     private AppGatewayService appGatewayService;
+    
+    @MockBean
+    private AppSourceConfig appSourceConfig;
 
     @Test
     @WithMockUser(username = "guardianangel", authorities = "mock/test")
@@ -51,7 +55,7 @@ public class AppGatewayControllerTest {
         byte[] mockResult = "result".getBytes();
         Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
                 .thenReturn(mockResult);
-        Mockito.when(appGatewayService.addSourceDefMapping("mock", appDef))
+        Mockito.when(appSourceConfig.addAppSourcePathToDefMapping("mock", appDef))
                 .thenReturn(true);
 
         this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);
@@ -78,7 +82,7 @@ public class AppGatewayControllerTest {
         
         Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
                 .thenReturn(mockResult);
-        Mockito.when(appGatewayService.addSourceDefMapping("mock-post", appDef))
+        Mockito.when(appSourceConfig.addAppSourcePathToDefMapping("mock-post", appDef))
                 .thenReturn(true);
 
         this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);
@@ -102,7 +106,7 @@ public class AppGatewayControllerTest {
         
         Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
                 .thenReturn(mockResult);
-        Mockito.when(appGatewayService.addSourceDefMapping("mock-delete", appDef))
+        Mockito.when(appSourceConfig.addAppSourcePathToDefMapping("mock-delete", appDef))
                 .thenReturn(true);
 
         this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);
@@ -126,7 +130,7 @@ public class AppGatewayControllerTest {
         
         Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
                 .thenReturn(mockResult);
-        Mockito.when(appGatewayService.addSourceDefMapping("mock-put", appDef))
+        Mockito.when(appSourceConfig.addAppSourcePathToDefMapping("mock-put", appDef))
                 .thenReturn(true);
 
         this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);
@@ -149,7 +153,7 @@ public class AppGatewayControllerTest {
         Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
                 .thenReturn(null);
 
-        Mockito.when(appGatewayService.addSourceDefMapping("mock-fail", appDef))
+        Mockito.when(appSourceConfig.addAppSourcePathToDefMapping("mock-fail", appDef))
                 .thenReturn(true);
         this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);
 

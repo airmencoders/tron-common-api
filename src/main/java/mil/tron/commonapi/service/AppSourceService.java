@@ -4,8 +4,10 @@ import mil.tron.commonapi.dto.appsource.AppEndPointPrivDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDto;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.appsource.AppSource;
 import org.springframework.core.io.Resource;
 
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,4 +32,12 @@ public interface AppSourceService {
 
     boolean userIsAdminForAppSource(UUID appId, String email);
     boolean userIsAdminForAppSourceByEndpoint(UUID endpointId, String email);
+
+    void registerAppReporting(AppSource appSource);
+
+    /**
+     * Methods to write/read the last UP status a reporting app source hjad
+     */
+    Date getLastUpTime(UUID appSourceId);
+    void updateLastUpTime(UUID appSourceId, Date date);
 }

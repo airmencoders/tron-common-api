@@ -10,16 +10,15 @@ import org.springframework.security.config.annotation.method.configuration.Globa
 
 import mil.tron.commonapi.ApplicationProperties;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import mil.tron.commonapi.service.AppClientUserService;
 
 @Configuration
 @ConditionalOnProperty(name = "security.enabled", havingValue="true")
 @EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true, order = 1)
 public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
-
     @Bean
-    public AccessCheck accessCheck(ApplicationProperties versionProperties) 
-    {
-        return new AccessCheckImpl(versionProperties);
+    public AccessCheck accessCheck(ApplicationProperties versionProperties, AppClientUserService appClientUserService) {
+        return new AccessCheckImpl(versionProperties, appClientUserService);
     }
 
     @Bean

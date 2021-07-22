@@ -182,7 +182,7 @@ public class Organization {
     public boolean equals(Object other) {
         if (other instanceof Organization) {
             Organization otherOrg = (Organization) other;
-            return this.id == otherOrg.getId();
+            return this.id.equals(otherOrg.getId());
         } else {
             return false;
         }
@@ -196,6 +196,9 @@ public class Organization {
     public void addSubordinateOrganization(Organization subOrg) {
         if (subOrg.getId().equals(this.getId())) {
             throw new InvalidRecordUpdateRequest("An organization cannot add itself as a subordinate");
+        }
+        if (this.getParentOrganization() != null && this.getParentOrganization().getId().equals(subOrg.getId())) {
+            throw new InvalidRecordUpdateRequest("An organization cannot add their parent as a subordinate");
         }
         this.subordinateOrganizations.add(subOrg);
     }

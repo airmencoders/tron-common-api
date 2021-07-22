@@ -55,6 +55,7 @@ public class OrganizationDto {
 
     @Getter
     @Setter
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     @Schema(nullable = true)

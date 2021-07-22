@@ -36,8 +36,15 @@ public class SpecificationBuilder {
 					Path<Object> dbPathObj = getDbPathObject(root, joinAttribute, field);
 					
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
-					
-					return criteriaBuilder.equal(dbPathObj, castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
+
+					if (dbPathObj.getJavaType().equals(String.class)) {
+						// treat as string, make case-insensitive
+						return criteriaBuilder.equal(criteriaBuilder.lower(dbPathObj.as(String.class)),
+								castToRequiredType(dbPathObj.getJavaType(), field, input.getValue().toLowerCase()));
+					}
+					else {
+						return criteriaBuilder.equal(dbPathObj, castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
+					}
 				};
 	
 			case NOT_EQUALS:
@@ -46,9 +53,15 @@ public class SpecificationBuilder {
 					Path<Object> dbPathObj = getDbPathObject(root, joinAttribute, field);
 					
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
-					
-					return criteriaBuilder.notEqual(dbPathObj,
-							castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
+
+					if (dbPathObj.getJavaType().equals(String.class)) {
+						// treat as string, make case-insensitive
+						return criteriaBuilder.notEqual(criteriaBuilder.lower(dbPathObj.as(String.class)),
+								castToRequiredType(dbPathObj.getJavaType(), field, input.getValue().toLowerCase()));
+					}
+					else {
+						return criteriaBuilder.notEqual(dbPathObj, castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
+					}
 				};
 	
 			case GREATER_THAN:
@@ -79,8 +92,9 @@ public class SpecificationBuilder {
 					Path<String> dbPathObj = getDbPathObject(root, joinAttribute, field);
 	
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
-	
-					return criteriaBuilder.like(dbPathObj, "%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()) + "%");
+
+					return criteriaBuilder.like(criteriaBuilder.lower(dbPathObj),  // make case-insensitive
+							"%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue().toLowerCase()) + "%");
 				};
 	
 			case NOT_LIKE:
@@ -90,7 +104,8 @@ public class SpecificationBuilder {
 	
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
 	
-					return criteriaBuilder.notLike(dbPathObj, "%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()) + "%");
+					return criteriaBuilder.notLike(criteriaBuilder.lower(dbPathObj),  // make case-insensitive
+							"%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()) + "%");
 				};
 	
 			case IN:
@@ -111,7 +126,8 @@ public class SpecificationBuilder {
 	
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
 	
-					return criteriaBuilder.like(dbPathObj, castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()) + "%");
+					return criteriaBuilder.like(criteriaBuilder.lower(dbPathObj),  // make case-insensitive
+							castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()) + "%");
 				};
 	
 			case ENDS_WITH:
@@ -121,7 +137,8 @@ public class SpecificationBuilder {
 	
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
 	
-					return criteriaBuilder.like(dbPathObj, "%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
+					return criteriaBuilder.like(criteriaBuilder.lower(dbPathObj),  // make case-insensitive
+							"%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
 				};
 	
 			default:

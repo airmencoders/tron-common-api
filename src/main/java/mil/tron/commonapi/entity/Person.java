@@ -28,6 +28,10 @@ public class Person {
 	@JsonIgnore
 	public static final String RANK_FIELD = "rank";
 	@JsonIgnore
+	public static final String EMAIL_FIELD = "email";
+	@JsonIgnore
+	public static final String DODID_FIELD = "dodid";
+	@JsonIgnore
 	public static final String ORG_MEMBERSHIPS_FIELD = "organizationMemberships";
 	@JsonIgnore
 	public static final String ORG_LEADERSHIPS_FIELD = "organizationLeaderships";
@@ -158,7 +162,7 @@ public class Person {
         }
         else if (other instanceof Person) {
             Person otherPerson = (Person) other;
-            return this.id == otherPerson.getId();
+            return this.id.equals(otherPerson.getId());
         }
         else {
             return false;

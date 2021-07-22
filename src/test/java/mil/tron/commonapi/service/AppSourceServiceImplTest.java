@@ -3,6 +3,7 @@ package mil.tron.commonapi.service;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.val;
+import mil.tron.commonapi.appgateway.AppSourceConfig;
 import mil.tron.commonapi.appgateway.AppSourceInterfaceDefinition;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.dto.DashboardUserDto;
@@ -72,7 +73,7 @@ public class AppSourceServiceImplTest {
 	private DashboardUserRepository dashboardUserRepository;
 
     @Mock
-	private AppGatewayService appGatewayService;
+    private AppSourceConfig appSourceConfig;
 
     @Mock
 	private HealthContributorRegistry healthContributorRegistry;
@@ -410,7 +411,7 @@ public class AppSourceServiceImplTest {
     	Mockito.when(appSourcePrivRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(existingPrivs);
 		Mockito.doNothing().when(healthContributorRegistry).registerContributor(Mockito.anyString(), Mockito.any(AppSourceHealthIndicator.class));
 		Mockito.when(healthContributorRegistry.unregisterContributor(Mockito.anyString())).thenReturn(new AppSourceHealthIndicator("", ""));
-		Mockito.when(appGatewayService.getDefMap()).thenReturn(appDefs);
+		Mockito.when(appSourceConfig.getPathToDefinitionMap()).thenReturn(appDefs);
         Mockito.when(appEndpointRepo.findAllByAppSource(Mockito.any(AppSource.class))).thenReturn(new ArrayList<>());
     	Mockito.when(appClientUserRepo.findById(Mockito.any())).thenReturn(Optional.of(appClientUser));
     	Mockito.when(privilegeRepo.findByName(APP_SOURCE_ADMIN)).thenReturn(Optional.of(appSourceAdminPriv));

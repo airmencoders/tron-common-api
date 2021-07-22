@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.service.OrganizationServiceImpl;
@@ -85,6 +86,9 @@ public class PuckboardExtractorServiceImplTest {
         Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(false);
         Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
         Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());
+        Mockito.when(orgService.getOrganization(Mockito.any())).thenReturn(new OrganizationDto());
+        Mockito.when(orgService.removeMember(Mockito.any(), Mockito.anyList())).thenReturn(new Organization());
+        Mockito.when(orgService.addMember(Mockito.any(), Mockito.anyList(), Mockito.anyBoolean())).thenReturn(new Organization());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
@@ -103,6 +107,9 @@ public class PuckboardExtractorServiceImplTest {
         Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
         Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());
+        Mockito.when(orgService.getOrganization(Mockito.any())).thenReturn(new OrganizationDto());
+        Mockito.when(orgService.removeMember(Mockito.any(), Mockito.anyList())).thenReturn(new Organization());
+        Mockito.when(orgService.addMember(Mockito.any(), Mockito.anyList(), Mockito.anyBoolean())).thenReturn(new Organization());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
@@ -123,6 +130,9 @@ public class PuckboardExtractorServiceImplTest {
         Mockito.when(orgRepo.existsById(Mockito.any(UUID.class))).thenReturn(true);
         Mockito.when(orgService.createOrganization(Mockito.any(OrganizationDto.class))).then(returnsFirstArg());
         Mockito.when(orgService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).then(returnsSecondArg());
+        Mockito.when(orgService.getOrganization(Mockito.any())).thenReturn(new OrganizationDto());
+        Mockito.when(orgService.removeMember(Mockito.any(), Mockito.anyList())).thenReturn(new Organization());
+        Mockito.when(orgService.addMember(Mockito.any(), Mockito.anyList(), Mockito.anyBoolean())).thenReturn(new Organization());
 
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 

@@ -2,6 +2,7 @@ package mil.tron.commonapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import javax.validation.constraints.NotNull;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public class AppClientUserPrivDto {
 
     @Getter
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id;
 
     @NotNull

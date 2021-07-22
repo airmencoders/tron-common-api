@@ -50,6 +50,9 @@ public class GatewayCacheResolverTest {
 
     @MockBean
     private AppGatewayService appGatewayService;
+    
+    @MockBean
+    private AppSourceConfig appSourceConfig;
 
     ApplicationProperties prefixProperties;
 
@@ -79,7 +82,7 @@ public class GatewayCacheResolverTest {
         byte[] mockResult = "result".getBytes();
         Mockito.when(appGatewayService.sendRequestToAppSource(any(HttpServletRequest.class)))
                 .thenReturn(mockResult);
-        Mockito.when(appGatewayService.addSourceDefMapping("mock", appDef))
+        Mockito.when(appSourceConfig.addAppSourcePathToDefMapping("mock", appDef))
                 .thenReturn(true);
 
         this.appSourceEndpointsBuilder.initializeWithAppSourceDef(appDef, appSource);

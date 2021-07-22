@@ -2,10 +2,13 @@ package mil.tron.commonapi.integration;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import mil.tron.commonapi.dto.*;
+import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.PrivilegeDtoResponseWrapper;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDtoResponseWrapped;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -16,7 +19,6 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,14 +33,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = { "security.enabled=true", "liquibase.enabled=true" })
 @TestPropertySource(locations = "classpath:application-test.properties")
@@ -288,7 +291,9 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isNonAuthoritativeInformation())
+                .andExpect(header().string("Warning", containsString("rank")))
+                .andExpect(header().string("Warning", containsString("214")))
                 .andExpect(jsonPath("$.rank", equalTo("Unk")));
 
         // Org edit allowed now (albeit no access to any of the protected fields)
@@ -296,7 +301,7 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(organizationDto)))
-                .andExpect(status().isOk());
+                .andExpect(status().isNonAuthoritativeInformation());
 
         // add some field-level permissions, get the App Client record
         MvcResult appClient = mockMvc.perform(get("/v2/app-client")
@@ -354,8 +359,55 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isNonAuthoritativeInformation())
+                .andExpect(header().string("Warning", not(containsString("rank"))))
                 .andExpect(jsonPath("$.rank", equalTo("Capt")));
+    }
+    
+    @Test
+    @Transactional
+    @Rollback
+    void testUserCanEditOwnData() throws JsonProcessingException, Exception {
+    	var dashboardUserOnly = DashboardUser.builder()
+                .id(UUID.randomUUID())
+                .email("dashboard@user.com")
+                .privileges(Set.of(
+                        privilegeRepository.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))))
+                .build();
+
+        dashboardUserRepository.save(dashboardUserOnly);
+        
+        var dashboardPerson = PersonDto.builder()
+        		.id(UUID.randomUUID())
+        		.firstName("dashboard")
+        		.lastName("user")
+        		.email(dashboardUserOnly.getEmail())
+        		.rank("Capt")
+        		.branch(Branch.USAF)
+        		.build();
+        
+        mockMvc.perform(post("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(adminUser.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dashboardPerson)))
+                .andExpect(status().isCreated());
+        
+        var newPerson = PersonDto.builder()
+        		.id(dashboardPerson.getId())
+        		.firstName("new dashboard")
+        		.lastName("new user")
+        		.email(dashboardUserOnly.getEmail())
+        		.dodid("11111")
+        		.build();
+        
+        mockMvc.perform(put("/v2/person/self/{id}", newPerson.getId())
+                .header(AUTH_HEADER_NAME, createToken(dashboardUserOnly.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newPerson)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dodid", equalTo(null)));
     }
 
     String generateXfccHeader(String namespace) {

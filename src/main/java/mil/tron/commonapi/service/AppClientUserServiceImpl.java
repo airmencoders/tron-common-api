@@ -156,17 +156,19 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 				return updateAppClientUser(newUser.getId(), appClient);
 			}
 		} else {
+			AppClientUserDto sanitizedAppClientUserDto = sanitizeAppClientUserDto(appClient);
+			
 			newUser = AppClientUser.builder()
 				.availableAsAppClient(true)
-				.name(appClient.getName())
-				.clusterUrl(appClient.getClusterUrl())
-				.privileges(new HashSet<>(appClient
+				.name(sanitizedAppClientUserDto.getName())
+				.clusterUrl(sanitizedAppClientUserDto.getClusterUrl())
+				.privileges(new HashSet<>(sanitizedAppClientUserDto
 					.getPrivileges()
 					.stream()
 					.map(item -> mapper.map(item, Privilege.class))
 					.collect(Collectors.toList())))
 					.build();
-			return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(newUser, appClient)));
+			return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(newUser, sanitizedAppClientUserDto)));
 		}	
 	}
 
@@ -187,17 +189,20 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		if (!isNameUnique(appClient, dbUser)) {
 			throw new InvalidRecordUpdateRequest(String.format("Client Name: %s is already in use.", appClient.getName()));
 		}
-
-		dbUser.setPrivileges(new HashSet<>(appClient.getPrivileges()
+		
+		AppClientUserDto sanitizedAppClientUserDto = sanitizeAppClientUserDto(appClient);
+		
+		dbUser.setName(sanitizedAppClientUserDto.getName());
+		dbUser.setPrivileges(new HashSet<>(sanitizedAppClientUserDto.getPrivileges()
 				.stream()
 				.map(item -> mapper.map(item, Privilege.class))
 				.collect(Collectors.toList())));
 
-		dbUser.setClusterUrl(appClient.getClusterUrl());
+		dbUser.setClusterUrl(sanitizedAppClientUserDto.getClusterUrl());
 		dbUser.setAvailableAsAppClient(true);
 
 		// save/update and return
-		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(dbUser, appClient)));
+		return convertToDto(appClientRepository.saveAndFlush(cleanAndResetDevs(dbUser, sanitizedAppClientUserDto)));
 	}
 
 	/**
@@ -452,5 +457,41 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 			appClient.getAppClientDevelopers().remove(user);
 			appClientRepository.saveAndFlush(appClient);
 		}
+	}
+
+	@Override
+	public Iterable<AppClientUser> getAppClientUsersContainingDeveloperEmail(String developerEmail) {
+		return appClientRepository.findByAppClientDevelopersEmailIgnoreCase(developerEmail);
+	}
+	
+	/**
+	 * Performs sanitization for a dto.
+	 * 
+	 * @param clientUserDto the dto to sanitize
+	 * @return sanitized dto
+	 */
+	private AppClientUserDto sanitizeAppClientUserDto(AppClientUserDto clientUserDto) {
+		sanitizeEfaPrivileges(clientUserDto.getPrivileges());
+		
+		return clientUserDto;
+	}
+	
+	/**
+	 * Removes unused Entity Field Authorization privileges from a list of privilege dtos.
+	 * For example, if PERSON_EDIT is not included in {@code privileges}, then any 
+	 * Person- prefixed privilege will be removed. The removals happen in place.
+	 * 
+	 * @param privileges the list of privileges to sanitize
+	 */
+	private void sanitizeEfaPrivileges(List<PrivilegeDto> privileges) {
+		boolean hasPersonEdit = privileges.stream().anyMatch(privilege -> privilege.getName().equals("PERSON_EDIT"));
+		boolean hasOrgEdit = privileges.stream().anyMatch(privilege -> privilege.getName().equals("ORGANIZATION_EDIT"));
+
+		List<PrivilegeDto> privilegesToBeSanitized = privileges.stream().filter(privilege -> {
+			return (!hasPersonEdit && privilege.getName().startsWith("Person-")) || 
+					(!hasOrgEdit && privilege.getName().startsWith("Organization-"));
+		}).collect(Collectors.toList());
+		
+		privileges.removeAll(privilegesToBeSanitized);
 	}
 }

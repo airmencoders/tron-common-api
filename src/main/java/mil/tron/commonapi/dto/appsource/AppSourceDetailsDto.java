@@ -1,10 +1,12 @@
 package mil.tron.commonapi.dto.appsource;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import mil.tron.commonapi.dto.AppClientUserPrivDto;
 import mil.tron.commonapi.validations.AppAndIdMatch;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ public class AppSourceDetailsDto {
     @Getter
     @Setter
     @Builder.Default
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
     @Getter
@@ -40,6 +43,7 @@ public class AppSourceDetailsDto {
 
     @Getter
     @Setter
+    @Builder.Default
     private boolean reportStatus = false;
 
     @Getter
@@ -68,4 +72,15 @@ public class AppSourceDetailsDto {
     @Builder.Default
     @Valid
     private List<AppEndpointDto> endpoints = new ArrayList<>();
+    
+    @Getter
+    @Setter
+    @Builder.Default
+    private boolean throttleEnabled = false;
+    
+    @Getter
+    @Setter
+    @Min(0L)
+    @Builder.Default
+    private Long throttleRequestCount = 0L;
 }

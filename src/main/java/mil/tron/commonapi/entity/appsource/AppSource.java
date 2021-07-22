@@ -1,23 +1,17 @@
 package mil.tron.commonapi.entity.appsource;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.ManyToMany;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.validation.Valid;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import mil.tron.commonapi.entity.DashboardUser;
+
+import javax.persistence.*;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /***
  * An App Source is an app which provides data to app clients
@@ -75,6 +69,7 @@ public class AppSource extends App {
      */
     @Getter
     @Setter
+    @Builder.Default
     private boolean reportStatus = false;
 
     /**
@@ -84,5 +79,28 @@ public class AppSource extends App {
     @Getter
     @Setter
     private String healthUrl;
+
+    @Getter
+    @Setter
+    @Builder.Default
+    @NotNull
+    private boolean throttleEnabled = false;
+    
+    /**
+     * Rate Limit for the App Source
+     */
+    @Getter
+    @Setter
+    @Builder.Default
+    @NotNull
+    private long throttleRequestCount = 0L;
+
+    /**
+     * Last time this App Source received an "UP" status on its health
+     */
+    @Getter
+    @Setter
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
+    private Date lastUpTime;
 
 }

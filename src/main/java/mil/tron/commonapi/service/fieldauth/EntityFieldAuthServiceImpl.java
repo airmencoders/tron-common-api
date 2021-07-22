@@ -4,6 +4,7 @@ import mil.tron.commonapi.annotation.efa.ProtectedField;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.OrganizationRepository;
@@ -11,14 +12,21 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.PrivilegeService;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.http.HttpHeaders;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -131,6 +139,9 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         // if EFA isn't even enabled, just return the new entity
         if (!efaEnabled) return incomingPerson;
 
+        List<String> deniedFields = new ArrayList<>();
+        HttpServletResponse response = getResponseObject();
+
         Person existingPerson = personRepository.findById(incomingPerson.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Person not found with id: " + incomingPerson.getId()));
 
@@ -142,16 +153,24 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
             return incomingPerson;
-
-        // or if we're an entity with the PERSON_CREATE, then accept full incoming object
-        if (requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_CREATE")))
-            return incomingPerson;
-
-        // for each protected field we need to decide whether to use the incoming value or leave the existing
-        //  based on the privs of the app client
+        
+        boolean isOwnUser = existingPerson.getEmail().equalsIgnoreCase(requester.getName());
+        
+        // Must have EDIT privilege by this point to proceed
+        // Or the authenticated user must be editing their own record
+        if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_EDIT")) && !isOwnUser) {
+        	return existingPerson;
+        }
+        
+        /**
+         * for each protected field we need to decide whether to use the incoming value or leave the existing
+         * based on the privs of the app client.
+         * 
+         * If this is a user editing their own data, allow them to edit everything except DODID and email
+         */
         for (Field f : personFields) {
-            if (!requester.getAuthorities().contains(new SimpleGrantedAuthority(PERSON_PREFIX + f.getName()))) {
-
+            if ((!requester.getAuthorities().contains(new SimpleGrantedAuthority(PERSON_PREFIX + f.getName())) && !isOwnUser) ||
+            		(isOwnUser && (f.getName().equalsIgnoreCase(Person.DODID_FIELD) || f.getName().equalsIgnoreCase(Person.EMAIL_FIELD)))) {
                 try {
                     // requester did not have the rights to this field, negate its value by
                     //  overwriting from existing object
@@ -159,6 +178,8 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
                             f.getName(),
                             FieldUtils.readField(existingPerson, f.getName(), true),
                             true);
+
+                    deniedFields.add(f.getName());
                 }
                 catch (IllegalAccessException e) {
                     throw new InvalidRecordUpdateRequest("Tried to access a Person field with bad permissions or a field that does not exist");
@@ -166,8 +187,33 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             }
         }
 
+        this.affixHeaderEntityAuthInfo(response, deniedFields);
+
         // return the (possible modified) entity to the service
         return incomingPerson;
+    }
+
+    private void affixHeaderEntityAuthInfo(HttpServletResponse response, List<String> deniedFields) {
+        if (!deniedFields.isEmpty()) {
+            // some fields were not allowed a change...
+            // sets header information and warning code IAW RFC 7231 (IETF)
+            //  that the information was modified by proxy (in this case the Common API)
+            response.setStatus(HttpStatus.NON_AUTHORITATIVE_INFORMATION.value());
+            response.addHeader("Warning", "214 - Denied Entity Fields: " + String.join(",", deniedFields));
+        }
+    }
+
+    private HttpServletResponse getResponseObject() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            throw new BadRequestException("Unable to get request attributes for entity field auth");
+        }
+        HttpServletResponse response = ((ServletRequestAttributes)requestAttributes).getResponse();
+        if (response == null) {
+            throw new BadRequestException("Unable to get http response instance for entity field auth");
+        }
+
+        return response;
     }
 
     /**
@@ -182,6 +228,9 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         // if EFA isn't even enabled, just return the new entity
         if (!efaEnabled) return incomingOrg;
 
+        List<String> deniedFields = new ArrayList<>();
+        HttpServletResponse response = getResponseObject();
+
         Organization existingOrg = organizationRepository.findById(incomingOrg.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Existing org not found with id: " + incomingOrg.getId()));
 
@@ -193,10 +242,11 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
         if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
             return incomingOrg;
-
-        // or if we're an entity with the ORGANIZATION_CREATE, then accept full incoming object
-        if (requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_CREATE")))
-            return incomingOrg;
+        
+        // Must have EDIT privilege by this point to proceed
+        if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_EDIT"))) {
+        	return existingOrg;
+        }
 
         // for each protected field we need to decide whether to use the incoming value or leave the existing
         //  based on the privs of the app client
@@ -210,12 +260,16 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
                             f.getName(),
                             FieldUtils.readField(existingOrg, f.getName(), true),
                             true);
+
+                    deniedFields.add(f.getName());
                 }
                 catch (IllegalAccessException e) {
                     throw new InvalidRecordUpdateRequest("Tried to access an Org field with bad permissions or a field that does not exist");
                 }
             }
         }
+
+        this.affixHeaderEntityAuthInfo(response, deniedFields);
 
         // return the (possible modified) entity to the service
         return incomingOrg;

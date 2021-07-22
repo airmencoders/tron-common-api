@@ -1,6 +1,7 @@
 package mil.tron.commonapi.dto.appclient;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.validations.ValidSubscriberAddress;
@@ -20,6 +21,7 @@ public class AppClientUserDto {
     @Getter
     @Setter
     @Builder.Default
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
 	@Getter

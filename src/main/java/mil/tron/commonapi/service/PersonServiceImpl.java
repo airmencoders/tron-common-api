@@ -158,14 +158,33 @@ public class PersonServiceImpl implements PersonService {
 		// now convert branch
 		if ("US Air Force".equals(dto.getAffiliation())) {
 			personDto.setBranch(Branch.USAF);
-		} else {
+		}
+		else if ("US Army".equals(dto.getAffiliation())) {
+			personDto.setBranch(Branch.USA);
+		}
+		else if ("US Marine Corps".equals(dto.getAffiliation())) {
+			personDto.setBranch(Branch.USMC);
+		}
+		else if ("US Navy".equals(dto.getAffiliation())) {
+			personDto.setBranch(Branch.USN);
+		}
+		else if ("US Coast Guard".equals(dto.getAffiliation())) {
+			personDto.setBranch(Branch.USCG);
+		}
+		else if ("US Space Force".equals(dto.getAffiliation())) {
+			personDto.setBranch(Branch.USSF);
+		}
+		else if ("Contractor".equals(dto.getAffiliation())) {
+			personDto.setBranch(Branch.OTHER);
+		}
+		else {
 			personDto.setBranch(Branch.OTHER);
 		}
 
 		// now convert rank, P1 uses Pay Grade for "rank"
 		personDto.setRank(Lists.newArrayList(rankRepository.findAll())
 				.stream()
-				.filter(item -> item.getPayGrade().equals(dto.getRank()))
+				.filter(item -> item.getPayGrade().equals(dto.getRank()) && item.getBranchType().equals(personDto.getBranch()))
 				.findFirst()
 					.orElse(rankRepository.findByAbbreviationAndBranchType("Unk", Branch.OTHER)
 					.orElseThrow(() -> new RecordNotFoundException("Unable to find rank match")))
