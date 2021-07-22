@@ -1,7 +1,6 @@
 package mil.tron.commonapi.service.puckboard;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
@@ -18,10 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionSystemException;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class PuckboardExtractorServiceImpl implements PuckboardExtractorService {
@@ -125,20 +121,15 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     // helper function to infer unit type by its name, and if that fails use the "OTHER_*" for the branchType
     private Unit resolveUnitType(JsonNode node, Branch branchType) {
         if (node != null) {
-            if (node.textValue().toLowerCase().contains("squadron")) return Unit.SQUADRON;
-            else if (node.textValue().toLowerCase().contains("wing")) return Unit.WING;
-            else if (node.textValue().toLowerCase().contains("group")) return Unit.GROUP;
-            else if (node.textValue().toLowerCase().contains("flight")) return Unit.FLIGHT;
-            else if (node.textValue().toLowerCase().contains("brigade")) return Unit.BRIGADE;
-            else if (node.textValue().toLowerCase().contains("company")) return Unit.COMPANY;
-            else if (node.textValue().toLowerCase().contains("troop")) return Unit.TROOP;
-            else if (node.textValue().toLowerCase().contains("battalion")) return Unit.BATTALION;
-            else if (node.textValue().toLowerCase().contains("division")) return Unit.DIVISION;
-            else if (branchType.equals(Branch.USA)) return Unit.OTHER_USA;
-            else if (branchType.equals(Branch.USN)) return Unit.OTHER_USN;
-            else if (branchType.equals(Branch.USCG)) return Unit.OTHER_USCG;
-            else if (branchType.equals(Branch.USMC)) return Unit.OTHER_USMC;
-            else if (branchType.equals(Branch.USSF)) return Unit.OTHER_USSF;
+            Optional<Unit> unit = Arrays.stream(Unit.values())
+                    .filter(item -> node.textValue().toUpperCase().contains(item.toString())).findFirst();
+
+            if (unit.isPresent()) return unit.get();
+            if (branchType.equals(Branch.USA)) return Unit.OTHER_USA;
+            if (branchType.equals(Branch.USN)) return Unit.OTHER_USN;
+            if (branchType.equals(Branch.USCG)) return Unit.OTHER_USCG;
+            if (branchType.equals(Branch.USMC)) return Unit.OTHER_USMC;
+            if (branchType.equals(Branch.USSF)) return Unit.OTHER_USSF;
         }
 
         // something weird happened, default other usaf unit
@@ -245,15 +236,15 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private void assignPersonToOrg(JsonNode node, UUID id) {
         // now go thru each puckboard org person was in - either add or remove depending on active status
         UUID primaryOrg = UUID.fromString(node.get(PERSON_PRIMARY_ORG_FIELD).textValue());
-        List<String> personOrgIds = ImmutableList.copyOf(node.get(ORG_STATUS_FIELD).fieldNames());
-        for (String org : personOrgIds) {
-            JsonNode orgNode = node.get(ORG_STATUS_FIELD).get(org);
-            UUID orgId = UUID.fromString(orgNode.get(ORG_ID_FIELD).textValue());
+        for (JsonNode org : Lists.newArrayList(node.get(ORG_STATUS_FIELD).elements())) {
+            UUID orgId = UUID.fromString(org.get(ORG_ID_FIELD).textValue());
 
-            if (orgNode.get("active").booleanValue()) {
-                orgService.addOrganizationMember(orgId, Lists.newArrayList(id), orgId.equals(primaryOrg));
-            } else {
+            if (orgService.getOrganization(orgId).getMembers().contains(id)) {
                 orgService.removeOrganizationMember(orgId, Lists.newArrayList(id));
+            }
+
+            if (org.get("active").booleanValue()) {
+                orgService.addOrganizationMember(orgId, Lists.newArrayList(id), orgId.equals(primaryOrg));
             }
         }
     }
