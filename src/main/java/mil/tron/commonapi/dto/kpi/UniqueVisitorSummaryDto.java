@@ -1,17 +1,13 @@
 package mil.tron.commonapi.dto.kpi;
 
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
+import lombok.Data;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
-@NoArgsConstructor
+@Data
 @Builder
-@EqualsAndHashCode
 public class UniqueVisitorSummaryDto {
 	@Getter
 	@Setter
