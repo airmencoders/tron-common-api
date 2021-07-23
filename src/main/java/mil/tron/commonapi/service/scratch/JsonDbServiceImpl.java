@@ -10,9 +10,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
-import mil.tron.commonapi.exception.InvalidFieldValueException;
-import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.*;
 import mil.tron.commonapi.exception.scratch.InvalidDataTypeException;
 import mil.tron.commonapi.exception.scratch.InvalidJsonPathQueryException;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
@@ -124,36 +122,26 @@ public class JsonDbServiceImpl implements JsonDbService {
                                      DocumentContext blob,
                                      boolean updateOperation) {
 
-        if (schemaType.contains(STRING_TYPE)) {
-            if (!fieldValue.isTextual()) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a string but wasnt");
-            }
+        if (schemaType.contains(STRING_TYPE) && !fieldValue.isTextual()) {
+            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a string but wasnt");
         }
-        if (schemaType.contains(EMAIL_TYPE)) {
-            if (!fieldValue.isTextual()
-                    && EmailValidator.getInstance().isValid(fieldValue.asText())) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be an email but wasnt");
-            }
+        if (schemaType.contains(EMAIL_TYPE) && (!fieldValue.isTextual() && EmailValidator.getInstance().isValid(fieldValue.asText()))) {
+            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be an email but wasnt");
         }
-        if (schemaType.contains(NUMBER_TYPE)) {
-            if (!fieldValue.isNumber()) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a number but wasnt");
-            }
+        if (schemaType.contains(NUMBER_TYPE) && !fieldValue.isNumber()) {
+            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a number but wasnt");
         }
-        if (schemaType.contains(BOOLEAN_TYPE)) {
-            if (!fieldValue.isBoolean()) {
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a boolean but wasnt");
-            }
+        if (schemaType.contains(BOOLEAN_TYPE) && !fieldValue.isBoolean()) {
+            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a boolean but wasnt");
         }
-        if (schemaType.contains(UUID_TYPE)) {
-            if (!fieldValue.isTextual()
+        if (schemaType.contains(UUID_TYPE) &&
+            (!fieldValue.isTextual()
                     // make sure we have a valid UUID format
                     && !fieldValue
                     .asText()
-                    .matches(UUID_REGEX)) {
+                    .matches(UUID_REGEX))) {
 
-                throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a uuid but wasnt");
-            }
+            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a uuid but wasnt");
         }
 
         // do any unique checks
@@ -197,13 +185,13 @@ public class JsonDbServiceImpl implements JsonDbService {
         } catch (InvalidFieldValueException e) {
             throw new InvalidFieldValueException(e.getMessage());
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Cannot parse the JSON schema specification for table " + tableName);
+            throw new BadJsonException("Cannot parse the JSON schema specification for table " + tableName);
         }
 
         try {
             nodes = MAPPER.readTree(json.toString());
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error parsing entity value");
+            throw new BadJsonException("Error parsing entity value");
         }
 
         Map<String, Object> obj = new HashMap<>();
@@ -269,7 +257,7 @@ public class JsonDbServiceImpl implements JsonDbService {
                 entry.setValue(cxt.jsonString());
                 repository.save(entry);
             } catch (Exception e) {
-                throw new RuntimeException("Error serializing table contents");
+                throw new InvalidRecordUpdateRequest("Error serializing table contents");
             }
 
             return retVal;
@@ -314,7 +302,7 @@ public class JsonDbServiceImpl implements JsonDbService {
                 entry.setValue(cxt.jsonString());
                 repository.save(entry);
             } catch (Exception e) {
-                throw new RuntimeException("Error serializing table contents");
+                throw new InvalidRecordUpdateRequest("Error serializing table contents");
             }
         }
     }
@@ -375,7 +363,7 @@ public class JsonDbServiceImpl implements JsonDbService {
                 entry.setValue(cxt.jsonString());
                 repository.save(entry);
             } catch (Exception e) {
-                throw new RuntimeException("Error serializing table contents");
+                throw new InvalidRecordUpdateRequest("Error serializing table contents");
             }
 
             return retVal;
