@@ -2,7 +2,6 @@ package mil.tron.commonapi.integration;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import mil.tron.commonapi.dto.OrganizationDto;
@@ -13,12 +12,16 @@ import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDtoResponseWrapped;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,8 +71,13 @@ public class EntityFieldAuthIntegrationTests {
     @Autowired
     private PrivilegeRepository privilegeRepository;
 
+    @Autowired
+    private PersonRepository personRepository;
+
     private PersonDto personDto = PersonDto
             .builder()
+            .firstName("Homer")
+            .lastName("Simpson")
             .id(UUID.randomUUID())
             .email("test@test.com")
             .build();
@@ -301,7 +309,7 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(organizationDto)))
-                .andExpect(status().isNonAuthoritativeInformation());
+                .andExpect(status().isOk());
 
         // add some field-level permissions, get the App Client record
         MvcResult appClient = mockMvc.perform(get("/v2/app-client")
@@ -344,6 +352,10 @@ public class EntityFieldAuthIntegrationTests {
                         .stream()
                         .filter(item -> item.getName().endsWith("-lastName"))
                         .findFirst().orElseThrow(() -> new RecordNotFoundException("NO lastName priv found")));
+        privs.add(clientPrivs
+                .stream()
+                .filter(item -> item.getName().endsWith("-leader"))
+                .findFirst().orElseThrow(() -> new RecordNotFoundException("NO leader priv found")));
 
         appRecord.setPrivileges(privs);
 
@@ -359,15 +371,86 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDto)))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Warning"));
+
+        // try to change the firstName thru json patch - should get a 203 with firstName
+        //  since we tried to change that and we didn't have the privileges
+        JSONObject content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/firstName");
+        content.put("value", "George");
+        JSONArray contentArr = new JSONArray();
+        contentArr.put(content);
+        mockMvc.perform(patch("/v2/person/{id}", personDto.getId())
+                .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
+                .contentType("application/json-patch+json")
+                .content(contentArr.toString()))
                 .andExpect(status().isNonAuthoritativeInformation())
-                .andExpect(header().string("Warning", not(containsString("rank"))))
-                .andExpect(jsonPath("$.rank", equalTo("Capt")));
+                .andExpect(header().string("Warning", endsWith("firstName")))
+                .andExpect(header().string("Warning", containsString("214")))
+                .andExpect(jsonPath("$.firstName", equalTo("Homer")));
+
+        // try to change the lastName thru json patch - should NOT get a 203
+        content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/lastName");
+        content.put("value", "Smithers");
+        contentArr = new JSONArray();
+        contentArr.put(content);
+        mockMvc.perform(patch("/v2/person/{id}", personDto.getId())
+                .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
+                .contentType("application/json-patch+json")
+                .content(contentArr.toString()))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Warning"))
+                .andExpect(jsonPath("$.lastName", equalTo("Smithers")));
+
+
+        UUID leaderId = UUID.randomUUID();
+        personRepository.save(Person
+                .builder()
+                .id(leaderId)
+                .firstName("Monty")
+                .lastName("Burns")
+                .email("mb@springfield.gov")
+                .build());
+
+        // try to change the leader of Org thru json patch - should NOT get a 203
+        content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/leader");
+        content.put("value", leaderId.toString());
+        contentArr = new JSONArray();
+        contentArr.put(content);
+        mockMvc.perform(patch("/v2/organization/{id}", organizationDto.getId())
+                .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
+                .contentType("application/json-patch+json")
+                .content(contentArr.toString()))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Warning"))
+                .andExpect(jsonPath("$.leader", equalTo(leaderId.toString())));
+
+        content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/name");
+        content.put("value", "Springfield Nuclear");
+        contentArr = new JSONArray();
+        contentArr.put(content);
+        mockMvc.perform(patch("/v2/organization/{id}", organizationDto.getId())
+                .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
+                .contentType("application/json-patch+json")
+                .content(contentArr.toString()))
+                .andExpect(status().isNonAuthoritativeInformation())
+                .andExpect(header().string("Warning", endsWith("name")))
+                .andExpect(header().string("Warning", containsString("214")))
+                .andExpect(jsonPath("$.name", equalTo(organizationDto.getName())));
     }
     
     @Test
     @Transactional
     @Rollback
-    void testUserCanEditOwnData() throws JsonProcessingException, Exception {
+    void testUserCanEditOwnData() throws Exception {
     	var dashboardUserOnly = DashboardUser.builder()
                 .id(UUID.randomUUID())
                 .email("dashboard@user.com")
