@@ -12,7 +12,6 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.PrivilegeService;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.http.HttpHeaders;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -28,6 +27,7 @@ import javax.transaction.Transactional;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -172,6 +172,14 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             if ((!requester.getAuthorities().contains(new SimpleGrantedAuthority(PERSON_PREFIX + f.getName())) && !isOwnUser) ||
             		(isOwnUser && (f.getName().equalsIgnoreCase(Person.DODID_FIELD) || f.getName().equalsIgnoreCase(Person.EMAIL_FIELD)))) {
                 try {
+
+                    // if the incoming value is equal to the existing value for this field, then
+                    //  it doesn't count as an attempt to change, so go to next field
+                    if (Objects.equals(FieldUtils.readField(existingPerson, f.getName(), true),
+                            FieldUtils.readField(incomingPerson, f.getName(), true))) {
+                        continue;
+                    }
+
                     // requester did not have the rights to this field, negate its value by
                     //  overwriting from existing object
                     FieldUtils.writeField(incomingPerson,
