@@ -15,6 +15,7 @@ import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.jsondb.QueryDto;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -723,6 +724,25 @@ public class ScratchStorageController {
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id) {
 
         return new ResponseEntity<>(scratchStorageService.deleteScratchStorageApp(id), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Gets the list of key names the requesting user can access (based on their email)",
+            description = "Checks read access again all keys in given appId, if allowed, keyname is included in return list")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Operation Successful",
+                    content = @Content(schema = @Schema(implementation = GenericStringArrayResponseWrapper.class)))
+    })
+    @WrappedEnvelopeResponse
+    @GetMapping("${api-prefix.v2}/scratch/apps/{id}/read")
+    public ResponseEntity<Object> getAppKeysUserCanReadFrom(
+            @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
+            Authentication authentication) {
+
+        if (authentication == null) throw new BadRequestException("There is no authentication information found");
+
+        return new ResponseEntity<>(scratchStorageService
+                .getKeysUserCanReadFrom(id, authentication.getCredentials().toString()), HttpStatus.OK);
     }
 
 

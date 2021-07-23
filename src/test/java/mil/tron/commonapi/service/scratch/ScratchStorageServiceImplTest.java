@@ -698,6 +698,49 @@ public class ScratchStorageServiceImplTest {
     }
 
     @Test
+    void testGetKeysUserCanRead() {
+        UUID id = UUID.randomUUID();
+
+        Mockito.when(appRegistryRepo.findById(id))
+                .thenReturn(Optional.of(ScratchStorageAppRegistryEntry
+                        .builder()
+                        .id(id)
+                        .appName("CoolAppWithAcl")
+                        .aclMode(true)
+                        .userPrivs(Set.of(
+                            ScratchStorageAppUserPriv
+                                .builder()
+                                .user(ScratchStorageUser.builder().email("admin@test1.com").build())
+                                .privilege(privAdmin)
+                                .build()
+                        ))
+                        .build()));
+
+        Mockito.when(repository.findAllKeysForAppId(id))
+                .thenReturn(Lists.newArrayList("Test", "Test1", "Test_acl", "Test1_acl"));
+
+        Mockito.when(repository.findByAppIdAndKey(id, "Test_acl")).thenReturn(Optional.of(
+                        ScratchStorageEntry.builder()
+                            .id(UUID.randomUUID())
+                            .appId(id)
+                            .key("Test_acl")
+                            .value(" { \"implicitRead\": true, \"access\": { \"john@test.com\": \"KEY_READ\" }}")
+                            .build()));
+
+        Mockito.when(repository.findByAppIdAndKey(id, "Test1_acl")).thenReturn(Optional.of(
+                ScratchStorageEntry.builder()
+                        .id(UUID.randomUUID())
+                        .appId(id)
+                        .key("Test1_acl")
+                        .value(" { \"implicitRead\": false, \"access\": { \"john@test.com\": \"KEY_READ\" }}")
+                        .build()));
+
+        assertEquals(4, service.getKeysUserCanReadFrom(id, "admin@test1.com").size());
+        assertEquals(2, service.getKeysUserCanReadFrom(id, "john@test.com").size());
+        assertEquals(1, service.getKeysUserCanReadFrom(id, "random_person@test.com").size());
+    }
+
+    @Test
     void testGetKeyValueAsJson() {
 
         ScratchStorageEntry entry = ScratchStorageEntry.builder()

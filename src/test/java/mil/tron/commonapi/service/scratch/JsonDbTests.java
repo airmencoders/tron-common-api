@@ -10,7 +10,6 @@ import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
 import mil.tron.commonapi.exception.InvalidFieldValueException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.scratch.InvalidJsonDbSchemaException;
 import mil.tron.commonapi.exception.scratch.InvalidJsonPathQueryException;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import org.assertj.core.util.Sets;
@@ -355,7 +354,7 @@ public class JsonDbTests {
     }
 
     @Test
-    void testInvalidJsonDbSchemaDetected() {
+    void testInvalidSchemaDetected() {
         UUID appId = UUID.randomUUID();
 
         String jsonValue = "[ " +
@@ -398,71 +397,16 @@ public class JsonDbTests {
                 .thenReturn(Optional.ofNullable(schemaEntry1))
                 .thenReturn(Optional.ofNullable(schemaEntry2));
 
-        assertThrows(InvalidJsonDbSchemaException.class, () -> service.addElement(appId,
+        assertThrows(InvalidFieldValueException.class, () -> service.addElement(appId,
                 "table",
                 "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"age\": 41, \"name\": \"Bill\", \"email\": \"b@test.com\" } "));
 
-        assertThrows(InvalidJsonDbSchemaException.class, () -> service.addElement(appId,
+        assertThrows(InvalidFieldValueException.class, () -> service.addElement(appId,
                 "table",
                 "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"age\": 41, \"name\": \"Bill\", \"email\": \"b@test.com\" }"));
 
-        assertThrows(InvalidJsonDbSchemaException.class, () -> service.addElement(appId,
+        assertThrows(InvalidFieldValueException.class, () -> service.addElement(appId,
                 "table",
                 "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"age\": 41, \"name\": \"Bill\", \"email\": \"b@test.com\" } "));
-    }
-
-    @Test
-    void testJsonDbForeignJoins() throws JsonProcessingException {
-
-        // a simple two table one-to-one linkage
-
-        UUID appId = UUID.randomUUID();
-
-        String users = "[ " +
-                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102d\", \"name\": \"Frank\", \"roleId\": \"97031086-58a2-4228-8fa6-6d6544c1103d\" }, " +
-                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1102e\", \"name\": \"Bill\", \"roleId\": \"97031086-58a2-4228-8fa6-6d6544c1103e\"} " +
-                "]";
-        String usersSchema = "{ \"id\": \"uuid\", \"name\": \"string\", \"roleId\": \"foreign-roles\" }";
-
-        String roles = "[ " +
-                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1103d\", \"name\" : \"ADMIN\" }, " +
-                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1103e\", \"name\" : \"USER\" }, " +
-                "{ \"id\": \"97031086-58a2-4228-8fa6-6d6544c1103f\", \"name\" : \"MAINT\" } " +
-                "]";
-        String rolesSchema = "{ \"id\": \"uuid\", \"name\": \"string*\" }";
-
-        Map<String, ScratchStorageEntry> db = new HashMap<>();
-
-        db.put("users", ScratchStorageEntry.builder()
-                .id(UUID.randomUUID())
-                .key("users")
-                .value(users)
-                .build());
-
-        db.put("users_schema", ScratchStorageEntry.builder()
-                .id(UUID.randomUUID())
-                .key("users_schema")
-                .value(usersSchema)
-                .build());
-
-        db.put("roles", ScratchStorageEntry.builder()
-                .id(UUID.randomUUID())
-                .key("roles")
-                .value(roles)
-                .build());
-
-        db.put("roles_schema", ScratchStorageEntry.builder()
-                .id(UUID.randomUUID())
-                .key("roles_schema")
-                .value(rolesSchema)
-                .build());
-
-        Mockito.when(repository.existsByAppIdAndKey(Mockito.any(), Mockito.any())).thenReturn(true);
-        Mockito.when(repository.findByAppIdAndKey(Mockito.any(), Mockito.any()))
-                .thenAnswer(invocationOnMock -> Optional.of(db.getOrDefault(invocationOnMock.getArgument(1).toString(), null)));
-
-
-        Object result = service.queryJson(appId, "users", "$[?(@.name == 'Frank')]");
-        assertNotNull(result);
     }
 }

@@ -591,4 +591,18 @@ public class ScratchStorageControllerTest {
                 .andExpect(status().isNoContent());
 
     }
+
+    @Test
+    @WithMockUser(username="user@test.com", password = "user@test.com")
+    void testGetAllAppKeysUserCanRead() throws Exception {
+
+        UUID id = UUID.randomUUID();
+        Mockito.when(service.getKeysUserCanReadFrom(id, "user@test.com"))
+                .thenReturn(Lists.newArrayList("test", "test1"));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/apps/{appId}/read", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
+
+    }
 }
