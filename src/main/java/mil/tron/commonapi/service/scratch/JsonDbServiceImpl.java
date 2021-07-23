@@ -7,20 +7,23 @@ import com.google.common.collect.Lists;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.ParseContext;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.exception.*;
 import mil.tron.commonapi.exception.scratch.InvalidDataTypeException;
+import mil.tron.commonapi.exception.scratch.InvalidJsonDbSchemaException;
 import mil.tron.commonapi.exception.scratch.InvalidJsonPathQueryException;
 import mil.tron.commonapi.repository.scratch.ScratchStorageRepository;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class JsonDbServiceImpl implements JsonDbService {
@@ -31,6 +34,7 @@ public class JsonDbServiceImpl implements JsonDbService {
     private static final String EMAIL_TYPE = "email";
     private static final String NUMBER_TYPE = "number";
     private static final String BOOLEAN_TYPE = "boolean";
+    private static final String FOREIGN_TYPE = "foreign";
     private static final String UNIQUE_IDENTIFIER = "*";
     private static final String REQUIRED_IDENTIFIER = "!";
     private static final String ID_FIELD_NAME = "id";
@@ -47,27 +51,53 @@ public class JsonDbServiceImpl implements JsonDbService {
         this.repository = repository;
     }
 
+    @Builder
+    @Data
+    private static class ForeignKey {
+        private String fieldName;
+        private String tableReference;
+    }
+
     /**
      * Helper method that takes a JsonNode tree representing the Json Schema blob for a give
      * key/table from the scratch space... if it's invalid then we throw an exception.
      *
      * A valid schema must have fields with values that are strings/text value.
      * A valid schema must also have an ID field named ID and its type must be UUID.
+     * A valid schema must have valid foreign key references (points to a table that exists)
+     * @param appId app Id of the scratch space
      * @param schemaBlob schema data from database
+     * @return list of Foreign Keys (if any)
      */
-    private void validateSchema(JsonNode schemaBlob) {
+    private List<ForeignKey> validateSchema(UUID appId, JsonNode schemaBlob) {
+        List<ForeignKey> foreignKeys = new ArrayList<>();
         boolean foundIdField = false;
         for (String field : Lists.newArrayList(schemaBlob.fieldNames())) {
             if (!schemaBlob.get(field).isTextual()) {
-                throw new InvalidFieldValueException("Schema appears to be invalid");
+                throw new InvalidJsonDbSchemaException("Schema appears to be invalid");
             }
             if (field.equals(ID_FIELD_NAME)
                     && schemaBlob.get(field).textValue().equals(UUID_TYPE)) foundIdField = true;
+            if (schemaBlob.get(field).textValue().startsWith(FOREIGN_TYPE)) {
+                String[] parts = schemaBlob.get(field).textValue().split("-");
+
+                // foreign key after first hyphen must resolve to a valid table name
+                if (parts.length < 2) throw new InvalidJsonDbSchemaException("Schema Foreign key " + field + " is invalid");
+                // strip off "foreign-" from the joined array to see if its a valid table (assume theres more hyphens)
+                String tableName = Arrays.stream(parts).skip(1).collect(Collectors.joining("-"));
+                if (!repository.existsByAppIdAndKey(appId, tableName)) {
+                    throw new InvalidJsonDbSchemaException("Schema Foreign key " + field + " points to non-existent table - " + tableName);
+                }
+
+                foreignKeys.add(ForeignKey.builder().fieldName(field).tableReference(tableName).build());
+            }
         }
 
         if (!foundIdField) {
-            throw new InvalidFieldValueException("Schema appears to be invalid - No ID Field found or had the wrong type");
+            throw new InvalidJsonDbSchemaException("Schema appears to be invalid - No ID Field found or had the wrong type");
         }
+
+        return foreignKeys;
     }
 
     /**
@@ -99,6 +129,9 @@ public class JsonDbServiceImpl implements JsonDbService {
         }
         if (fieldValue.contains(UUID_TYPE)) {
             return UUID.randomUUID();
+        }
+        if (fieldValue.contains(FOREIGN_TYPE)) {
+            throw new InvalidDataTypeException("Field - " + fieldName + " - has to have a value as a foreign key");
         }
 
         throw new InvalidDataTypeException("Invalid type specified for schema field - " + fieldValue);
@@ -181,7 +214,7 @@ public class JsonDbServiceImpl implements JsonDbService {
         // parse schema and validate it
         try {
             schemaNodes = MAPPER.readTree(entry.getValue());
-            validateSchema(schemaNodes);
+            validateSchema(appId, schemaNodes);
         } catch (InvalidFieldValueException e) {
             throw new InvalidFieldValueException(e.getMessage());
         } catch (JsonProcessingException e) {
@@ -249,6 +282,8 @@ public class JsonDbServiceImpl implements JsonDbService {
                 throw new ResourceAlreadyExistsException(e.getMessage());
             } catch (InvalidFieldValueException e) {
                 throw new InvalidFieldValueException(e.getMessage());
+            } catch (InvalidJsonDbSchemaException e) {
+                throw new InvalidJsonDbSchemaException(e.getMessage());
             } catch (Exception e) {
                 throw new InvalidJsonPathQueryException(e.getMessage());
             }
@@ -393,7 +428,37 @@ public class JsonDbServiceImpl implements JsonDbService {
                 throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
             }
 
-            return cxt.read(path);
+            return resolveResponse(cxt.read(path), appId, tableName);
         }
+    }
+
+    /**
+     * Helper that looks in a
+     * @param json
+     * @return
+     */
+    private Object resolveResponse(Object json, UUID appId, String tableName) {
+        ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName + "_schema")
+                .orElseThrow(() -> new RecordNotFoundException("Cant find key/table schema with that name"));
+
+        // parse schema and validate it
+        DocumentContext cxt = JsonPath.parse(json);
+        JsonNode schemaNodes;
+        List<ForeignKey> foreignKeys;
+        try {
+            schemaNodes = MAPPER.readTree(entry.getValue());
+            foreignKeys = validateSchema(appId, schemaNodes);
+        } catch (InvalidFieldValueException e) {
+            throw new InvalidFieldValueException(e.getMessage());
+        } catch (JsonProcessingException e) {
+            throw new BadJsonException("Cannot parse the JSON schema specification for table " + tableName);
+        }
+
+        // for each foreign key column, go grab associated data
+        for (ForeignKey key : foreignKeys) {
+            cxt = cxt.set("$." + key.fieldName, this.queryJson(appId, key.tableReference, "$[?(@.id == '" + cxt.read("$." + key.fieldName) + "')]"));
+        }
+
+        return cxt;
     }
 }
