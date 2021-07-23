@@ -166,11 +166,9 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
          * for each protected field we need to decide whether to use the incoming value or leave the existing
          * based on the privs of the app client.
          * 
-         * If this is a user editing their own data, allow them to edit everything except DODID and email
-         */
+        */
         for (Field f : personFields) {
-            if ((!requester.getAuthorities().contains(new SimpleGrantedAuthority(PERSON_PREFIX + f.getName())) && !isOwnUser) ||
-            		(isOwnUser && (f.getName().equalsIgnoreCase(Person.DODID_FIELD) || f.getName().equalsIgnoreCase(Person.EMAIL_FIELD)))) {
+            if (requesterHasPrivsOrIsOwner(requester, isOwnUser, f)) {
                 try {
 
                     // if the incoming value is equal to the existing value for this field, then
@@ -199,6 +197,19 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
 
         // return the (possible modified) entity to the service
         return incomingPerson;
+    }
+
+    /**
+     * Checks if requester has rights to change applicable person fields OR they are a user editing their own data,
+     *  in which case - allow them to edit everything except DODID and email
+     * @param requester the Authentication object of the request
+     * @param isOwnUser if requester is owner (the person) of representing by the Person object
+     * @param f field that is up for a possible change
+     * @return true if the field is allowed to be changed
+     */
+    private boolean requesterHasPrivsOrIsOwner(Authentication requester, boolean isOwnUser, Field f) {
+        return (!requester.getAuthorities().contains(new SimpleGrantedAuthority(PERSON_PREFIX + f.getName())) && !isOwnUser) ||
+                (isOwnUser && (f.getName().equalsIgnoreCase(Person.DODID_FIELD) || f.getName().equalsIgnoreCase(Person.EMAIL_FIELD)));
     }
 
     private void affixHeaderEntityAuthInfo(HttpServletResponse response, List<String> deniedFields) {
@@ -262,6 +273,14 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             if (!requester.getAuthorities().contains(new SimpleGrantedAuthority(ORG_PREFIX + f.getName()))) {
 
                 try {
+
+                    // if the incoming value is equal to the existing value for this field, then
+                    //  it doesn't count as an attempt to change, so go to next field
+                    if (Objects.equals(FieldUtils.readField(existingOrg, f.getName(), true),
+                            FieldUtils.readField(incomingOrg, f.getName(), true))) {
+                        continue;
+                    }
+
                     // requester did not have the rights to this field, negate its value by
                     //  overwriting from existing object
                     FieldUtils.writeField(incomingOrg,
