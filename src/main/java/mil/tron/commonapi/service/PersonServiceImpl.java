@@ -445,6 +445,10 @@ public class PersonServiceImpl implements PersonService {
 			JsonNode patched = patch.apply(objMapper.convertValue(personDto, JsonNode.class));
 			return objMapper.treeToValue(patched, PersonDto.class);
 		}
+		catch (NullPointerException e) {
+			// apparently JSONPatch lib throws a NullPointerException on a null path, instead of a nicer one
+			throw new InvalidRecordUpdateRequest("Json Patch cannot have a null path value");
+		}
 		catch (JsonPatchException | JsonProcessingException e) {
 			throw new InvalidRecordUpdateRequest(String.format("Error patching person with email %s.", personDto.getEmail()));
 		}

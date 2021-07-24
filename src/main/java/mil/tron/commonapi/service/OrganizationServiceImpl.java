@@ -952,6 +952,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 			JsonNode patched = patch.apply(this.objMapper.convertValue(organizationDto, JsonNode.class));
 			return this.objMapper.treeToValue(patched, OrganizationDto.class);
 		}
+		catch (NullPointerException e) {
+			// apparently JSONPatch lib throws a NullPointerException on a null path, instead of a nicer one
+			throw new InvalidRecordUpdateRequest("Json Patch cannot have a null path value");
+		}
 		catch (JsonPatchException | JsonProcessingException e) {
 			throw new InvalidRecordUpdateRequest(String.format("Error patching organization %s.",
 					organizationDto.getId()));
