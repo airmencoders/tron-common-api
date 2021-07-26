@@ -169,6 +169,15 @@ public class PersonIntegrationTest {
                 .content(array.toString()))
                 .andExpect(status().isOk());
 
+        array.remove(0);
+        obj.remove("path");
+        obj.remove("value");
+        array.put(obj);
+        mockMvc.perform(patch(ORGANIZATION_V2 + "{id}", dtoObj.getId())
+                .contentType("application/json-patch+json")
+                .content(array.toString()))
+                .andExpect(status().isBadRequest());
+
 
         mockMvc.perform(delete(ENDPOINT + "{id}", id))
                 .andExpect(status().isNoContent());
