@@ -7,6 +7,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,14 +56,14 @@ class KpiServiceImplTest {
 	
 	@Test
 	void getAppSourceCountTest() {
-		Mockito.when(appSourceRepo.countByAvailableAsAppSourceTrue()).thenReturn(10L);
+		Mockito.when(appSourceRepo.countByAvailableAsAppSourceTrue()).thenReturn(Optional.of(10L));
 		
 		assertThat(kpiService.getAppSourceCount()).isEqualTo(10L);
 	}
 	
 	@Test
 	void getAverageLatencyForSuccessfulResponseTest() {
-		Mockito.when(httpLogsRepo.getAverageLatencyForSuccessfulResponse(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(33L);
+		Mockito.when(httpLogsRepo.getAverageLatencyForSuccessfulResponse(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(Optional.of(33L));
 		
 		assertThat(kpiService.getAverageLatencyForSuccessResponse(Date.from(Instant.now()), Date.from(Instant.now().plus(1L, ChronoUnit.DAYS)))).isEqualTo(33L);
 	}
@@ -84,8 +85,8 @@ class KpiServiceImplTest {
 		
 		Mockito.when(httpLogsRepo.getUsersWithRequestCount(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(userRequestCount);
 		
-		Mockito.when(appSourceRepo.countByAvailableAsAppSourceTrue()).thenReturn(10L);
-		Mockito.when(httpLogsRepo.getAverageLatencyForSuccessfulResponse(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(33L);
+		Mockito.when(appSourceRepo.countByAvailableAsAppSourceTrue()).thenReturn(Optional.of(10L));
+		Mockito.when(httpLogsRepo.getAverageLatencyForSuccessfulResponse(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(Optional.of(33L));
 		
 		List<AppSourceMetricSummary> appSourceMetricSummary = new ArrayList<>();
 		AppSourceMetricSummary appSourceMetric = AppSourceMetricSummaryDto.builder()

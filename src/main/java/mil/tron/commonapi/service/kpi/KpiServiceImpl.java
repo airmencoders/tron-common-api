@@ -39,12 +39,12 @@ public class KpiServiceImpl implements KpiService {
 
 	@Override
 	public long getAppSourceCount() {
-		return this.appSourceRepo.countByAvailableAsAppSourceTrue();
+		return this.appSourceRepo.countByAvailableAsAppSourceTrue().orElse(0L);
 	}
 
 	@Override
 	public long getAverageLatencyForSuccessResponse(Date startDate, Date endDate) {
-		return this.httpLogsRepo.getAverageLatencyForSuccessfulResponse(startDate, endDate);
+		return this.httpLogsRepo.getAverageLatencyForSuccessfulResponse(startDate, endDate).orElse(0L);
 	}
 
 	@Override
@@ -85,5 +85,4 @@ public class KpiServiceImpl implements KpiService {
 					)
 				.build();
 	}
-
 }

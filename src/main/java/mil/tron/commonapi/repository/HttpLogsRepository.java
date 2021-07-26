@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -32,5 +33,5 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
     @Query(value = "SELECT AVG(h.timeTakenMs)"
     		+ " FROM HttpLogEntry h"
     		+ " WHERE h.statusCode >= 200 AND h.statusCode < 300 AND h.requestTimestamp BETWEEN :startDate and :endDate")
-    long getAverageLatencyForSuccessfulResponse(Date startDate, Date endDate);
+    Optional<Long> getAverageLatencyForSuccessfulResponse(Date startDate, Date endDate);
 }

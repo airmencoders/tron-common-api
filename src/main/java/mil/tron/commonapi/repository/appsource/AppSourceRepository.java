@@ -17,5 +17,5 @@ public interface AppSourceRepository extends JpaRepository<AppSource, UUID>, App
     Optional<AppSource> findByAppPrivs_Id(UUID id);
     List<AppSource> findAppSourcesByAppSourceAdminsContaining(DashboardUser user);
     List<AppSource> findByAvailableAsAppSourceTrue();
-    long countByAvailableAsAppSourceTrue();
+    Optional<Long> countByAvailableAsAppSourceTrue();
 }
