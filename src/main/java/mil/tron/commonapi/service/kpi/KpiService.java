@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service.kpi;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -10,5 +11,6 @@ public interface KpiService {
 	List<UserWithRequestCount> getUsersWithRequestCount(Date startDate, Date endDate);
 	Long getAppSourceCount();
 	Long getAverageLatencyForSuccessResponse(Date startDate, Date endDate);
-	KpiSummaryDto aggregateKpis(Date startDate, Date endDate);
+	KpiSummaryDto aggregateKpis(LocalDate startDate, LocalDate endDate);
+	KpiSummaryDto saveAggregatedKpis(KpiSummaryDto dto);
 }

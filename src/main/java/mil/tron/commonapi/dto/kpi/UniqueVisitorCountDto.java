@@ -1,10 +1,9 @@
 package mil.tron.commonapi.dto.kpi;
 
-
-import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -15,12 +14,13 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import mil.tron.commonapi.entity.kpi.VisitorType;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
-public class KpiSummaryDto {
+public class UniqueVisitorCountDto {
     @Getter
     @Setter
     @Builder.Default
@@ -29,29 +29,17 @@ public class KpiSummaryDto {
 	
 	@Getter
 	@Setter
+	@Enumerated(EnumType.STRING)
 	@NotNull
-	private LocalDate startDate;
-	
-	@Getter
-	@Setter
-	@NotNull
-	private LocalDate endDate;
-	
-	@Getter
-	@Setter
-	private Long averageLatencyForSuccessfulRequests;
+	private VisitorType visitorType;
 	
 	@Getter
 	@Setter
 	@NotNull
-	private Long appSourceCount;
+	private Long uniqueCount;
 	
 	@Getter
 	@Setter
 	@NotNull
-	private Long appClientToAppSourceRequestCount;
-	
-	@Getter
-	@Setter
-	private List<UniqueVisitorCountDto> uniqueVisitorCounts;
+	private Long requestCount;
 }

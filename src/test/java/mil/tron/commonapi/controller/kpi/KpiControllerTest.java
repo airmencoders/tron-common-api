@@ -3,7 +3,8 @@ package mil.tron.commonapi.controller.kpi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
-import mil.tron.commonapi.dto.kpi.UniqueVisitorSummaryDto;
+import mil.tron.commonapi.dto.kpi.UniqueVisitorCountDto;
+import mil.tron.commonapi.entity.kpi.VisitorType;
 import mil.tron.commonapi.service.kpi.KpiService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -17,7 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -33,20 +36,27 @@ class KpiControllerTest {
 
     @Test
     void getKpiSummaryTest() throws Exception{
+    	List<UniqueVisitorCountDto> uniqueVisitorCount = new ArrayList<>();
+		uniqueVisitorCount.add(UniqueVisitorCountDto.builder()
+					.visitorType(VisitorType.DASHBOARD_USER)
+					.uniqueCount(4L)
+					.requestCount(100L)
+					.build());
+		
+		uniqueVisitorCount.add(UniqueVisitorCountDto.builder()
+				.visitorType(VisitorType.APP_CLIENT)
+				.uniqueCount(2L)
+				.requestCount(10L)
+				.build());
+    	
     	KpiSummaryDto summary = KpiSummaryDto.builder()
         		.appClientToAppSourceRequestCount(10L)
         		.appSourceCount(1L)
         		.averageLatencyForSuccessfulRequests(33L)
-        		.uniqueVisitorySummary(UniqueVisitorSummaryDto.builder()
-        				.appClientCount(2L)
-        				.appClientRequestCount(10L)
-        				.dashboardUserCount(4L)
-        				.dashboardUserRequestCount(100L)
-        				.build()
-    				)
+        		.uniqueVisitorCounts(uniqueVisitorCount)
         		.build();
     	
-        Mockito.when(kpiService.aggregateKpis(Mockito.any(Date.class), Mockito.any(Date.class)))
+        Mockito.when(kpiService.aggregateKpis(Mockito.any(LocalDate.class), Mockito.nullable(LocalDate.class)))
                 .thenReturn(summary);
         mockMvc.perform(get(ENDPOINT + "summary?startDate=2021-05-27"))
                 .andExpect(status().isOk())
@@ -56,12 +66,6 @@ class KpiControllerTest {
     @Test
     void getKpiSummary_ShouldFailOnBadParameter_Test() throws Exception{
         mockMvc.perform(get(ENDPOINT + "summary"))
-                .andExpect(status().isBadRequest());
-    }
-    
-    @Test
-    void getKpiSummary_ShouldFailOnEndDateLessThanStartDate_Test() throws Exception{
-        mockMvc.perform(get(ENDPOINT + "summary?startDate=2021-05-27&endDate=2021-04-11"))
                 .andExpect(status().isBadRequest());
     }
 }

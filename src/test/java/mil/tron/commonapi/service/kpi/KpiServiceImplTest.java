@@ -2,12 +2,16 @@ package mil.tron.commonapi.service.kpi;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,10 +22,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import mil.tron.commonapi.dto.kpi.AppSourceMetricSummaryDto;
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
-import mil.tron.commonapi.dto.kpi.UniqueVisitorSummaryDto;
+import mil.tron.commonapi.dto.kpi.UniqueVisitorCountDto;
 import mil.tron.commonapi.dto.kpi.UserWithRequestCountDto;
 import mil.tron.commonapi.entity.kpi.AppSourceMetricSummary;
 import mil.tron.commonapi.entity.kpi.UserWithRequestCount;
+import mil.tron.commonapi.entity.kpi.VisitorType;
 import mil.tron.commonapi.repository.HttpLogsRepository;
 import mil.tron.commonapi.repository.MeterValueRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
@@ -36,6 +41,9 @@ class KpiServiceImplTest {
 	
 	@Mock
 	private MeterValueRepository meterValueRepo;
+	
+	@Mock
+	private Clock systemUtcClock;
 
 	@InjectMocks
 	private KpiServiceImpl kpiService;
@@ -83,6 +91,19 @@ class KpiServiceImplTest {
 				.build();
 		userRequestCount.add(appClientUserRequestCount);
 		
+		List<UniqueVisitorCountDto> uniqueVisitorCount = new ArrayList<>();
+		uniqueVisitorCount.add(UniqueVisitorCountDto.builder()
+					.visitorType(VisitorType.DASHBOARD_USER)
+					.uniqueCount(1L)
+					.requestCount(dashboardUserRequestCount.getRequestCount())
+					.build());
+		
+		uniqueVisitorCount.add(UniqueVisitorCountDto.builder()
+				.visitorType(VisitorType.APP_CLIENT)
+				.uniqueCount(1L)
+				.requestCount(appClientUserRequestCount.getRequestCount())
+				.build());
+		
 		Mockito.when(httpLogsRepo.getUsersWithRequestCount(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(userRequestCount);
 		
 		Mockito.when(appSourceRepo.countByAvailableAsAppSourceTrue()).thenReturn(Optional.of(10L));
@@ -98,20 +119,22 @@ class KpiServiceImplTest {
 		
 		Mockito.when(meterValueRepo.getAllAppSourceMetricsSummary(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(appSourceMetricSummary);
 		
+		Clock fixedClock = Clock.fixed(LocalDate.now(Clock.systemUTC()).atStartOfDay(ZoneId.of("UTC")).toInstant(), ZoneId.of("UTC"));
+		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
+		Mockito.when(systemUtcClock.getZone()).thenReturn(fixedClock.getZone());
+
+		var today = LocalDate.now(Clock.systemUTC());
+		var tomorrow = LocalDate.now(Clock.systemUTC()).plusDays(1);
 		KpiSummaryDto responseSummary = KpiSummaryDto.builder()
+				.startDate(today)
+				.endDate(tomorrow)
 				.appClientToAppSourceRequestCount(1L)
 				.appSourceCount(10L)
 				.averageLatencyForSuccessfulRequests(33L)
-				.uniqueVisitorySummary(UniqueVisitorSummaryDto.builder()
-						.appClientCount(1L)
-						.appClientRequestCount(50L)
-						.dashboardUserCount(1L)
-						.dashboardUserRequestCount(100L)
-						.build()
-						)
+				.uniqueVisitorCounts(uniqueVisitorCount)
 				.build();
 		
-		assertThat(kpiService.aggregateKpis(Date.from(Instant.now()), Date.from(Instant.now().plus(1L, ChronoUnit.DAYS)))).usingRecursiveComparison().isEqualTo(responseSummary);
+		assertThat(kpiService.aggregateKpis(today, tomorrow)).usingRecursiveComparison().ignoringFieldsOfTypes(UUID.class).isEqualTo(responseSummary);
 	}
 	
 }
