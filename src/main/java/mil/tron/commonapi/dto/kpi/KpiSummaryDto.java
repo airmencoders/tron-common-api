@@ -11,15 +11,15 @@ import lombok.Setter;
 public class KpiSummaryDto {
 	@Getter
 	@Setter
-	private long averageLatencyForSuccessfulRequests;
+	private Long averageLatencyForSuccessfulRequests;
 	
 	@Getter
 	@Setter
-	private long appSourceCount;
+	private Long appSourceCount;
 	
 	@Getter
 	@Setter
-	private long appClientToAppSourceRequestCount;
+	private Long appClientToAppSourceRequestCount;
 	
 	@Getter
 	@Setter

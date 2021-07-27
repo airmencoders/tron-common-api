@@ -11,17 +11,17 @@ import lombok.Setter;
 public class UniqueVisitorSummaryDto {
 	@Getter
 	@Setter
-	private long dashboardUserCount;
+	private Long dashboardUserCount;
 	
 	@Getter
 	@Setter
-	private long dashboardUserRequestCount;
+	private Long dashboardUserRequestCount;
 	
 	@Getter
 	@Setter
-	private long appClientCount;
+	private Long appClientCount;
 	
 	@Getter
 	@Setter
-	private long appClientRequestCount;
+	private Long appClientRequestCount;
 }
