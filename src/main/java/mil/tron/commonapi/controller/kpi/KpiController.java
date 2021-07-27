@@ -1,7 +1,9 @@
 package mil.tron.commonapi.controller.kpi;
 
 import java.time.Instant;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -27,7 +29,7 @@ import mil.tron.commonapi.service.kpi.KpiService;
 @RequestMapping({"${api-prefix.v2}/kpi"})
 @PreAuthorizeDashboardAdmin
 public class KpiController {
-	private static final String DATE_MESSAGE = "Start date must be before End Date";
+	private static final String DATE_MESSAGE = "Start date must be before or equal to End Date";
 	
 	private KpiService kpiService;
 
@@ -44,7 +46,10 @@ public class KpiController {
                 description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "400",
-            	description = "Bad Rquest (Start Date required. Start date must be before end date.)",
+            	description = "Bad Request. Possible reasons include: \n\n"
+            			+ "Start Date required.\n\n"
+            			+ "Start date must be before or equal to End Date.\n\n"
+            			+ "Start date cannot be in the future (there would be no data).",
                 	content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @GetMapping("/summary")
@@ -52,11 +57,22 @@ public class KpiController {
             @Parameter(description = "Earliest date to include", required = true) @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
             @Parameter(description = "Latest date to include. Will default to today if not provided") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
 	) {
+		if (startDate.after(Date.from(Instant.now()))) {
+			throw new BadRequestException("Start Date cannot be in the future");
+		}
+		
     	if (endDate == null) {
     		endDate = Date.from(Instant.now());
     	}
     	
-    	if(startDate.compareTo(endDate) >= 0) {
+    	Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+		now.setTime(endDate);
+		now.set(Calendar.HOUR_OF_DAY, 23);
+		now.set(Calendar.MINUTE, 59);
+		now.set(Calendar.SECOND, 59);
+		endDate = now.getTime();
+    	
+    	if(startDate.compareTo(endDate) > 0) {
             throw new BadRequestException(DATE_MESSAGE);
         }
     	

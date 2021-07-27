@@ -15,5 +15,5 @@ public class UserWithRequestCountDto implements UserWithRequestCount {
 	
 	@Getter
 	@Setter
-	private long requestCount;
+	private Long requestCount;
 }
