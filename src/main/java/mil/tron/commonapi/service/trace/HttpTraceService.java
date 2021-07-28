@@ -120,6 +120,8 @@ public class HttpTraceService implements HttpTraceRepository {
             List<String> userAgentHeader = lowerCaseHeaders.get("user-agent");
             String userAgent = userAgentHeader != null ? userAgentHeader.get(0) : "Unknown";
 
+            sanitizeBodies(trace, contentTrace);
+
             httpLogsRepository.save(
                     HttpLogEntry
                             .builder()
@@ -147,11 +149,11 @@ public class HttpTraceService implements HttpTraceRepository {
     public void sanitizeBodies(HttpTrace trace, ContentTrace contentTrace) {
 
         if (trace.getRequest().getUri().toString() != null
-                && trace.getRequest().getUri().toString().contains("/arms-gateway")
+                && trace.getRequest().getUri().toString().contains("app/arms-gateway")
                 && contentTrace != null) {
 
-            contentTrace.setResponseBody("Request data redacted");
-            contentTrace.setRequestBody("Response data redacted");
+            contentTrace.setResponseBody("Redacted");
+            contentTrace.setRequestBody("Redacted");
         }
     }
 }
