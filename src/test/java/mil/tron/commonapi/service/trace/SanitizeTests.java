@@ -1,6 +1,5 @@
 package mil.tron.commonapi.service.trace;
 
-import liquibase.pro.packaged.H;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.trace.http.HttpTrace;
@@ -11,7 +10,6 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 public class SanitizeTests {
