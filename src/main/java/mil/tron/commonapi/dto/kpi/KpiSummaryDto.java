@@ -1,14 +1,16 @@
 package mil.tron.commonapi.dto.kpi;
 
 
-import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,16 +32,20 @@ public class KpiSummaryDto {
 	@Getter
 	@Setter
 	@NotNull
-	private LocalDate startDate;
+	@JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
+	@Schema(type="string", format = "date")
+	private Date startDate;
 	
 	@Getter
 	@Setter
 	@NotNull
-	private LocalDate endDate;
+	@JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
+	@Schema(type="string", format = "date")
+	private Date endDate;
 	
 	@Getter
 	@Setter
-	private Long averageLatencyForSuccessfulRequests;
+	private Double averageLatencyForSuccessfulRequests;
 	
 	@Getter
 	@Setter

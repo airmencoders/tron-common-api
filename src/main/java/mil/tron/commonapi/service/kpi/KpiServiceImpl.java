@@ -1,8 +1,11 @@
 package mil.tron.commonapi.service.kpi;
 
 import java.time.Clock;
+import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -62,36 +65,38 @@ public class KpiServiceImpl implements KpiService {
 	}
 
 	@Override
-	public Long getAverageLatencyForSuccessResponse(Date startDate, Date endDate) {
+	public Double getAverageLatencyForSuccessResponse(Date startDate, Date endDate) {
 		return this.httpLogsRepo.getAverageLatencyForSuccessfulResponse(startDate, endDate).orElse(null);
 	}
 
 	@Override
-	public KpiSummaryDto aggregateKpis(LocalDate startDate, LocalDate endDate) {
-		if (startDate.isAfter(LocalDate.now(systemUtcClock))) {
+	public KpiSummaryDto aggregateKpis(Date startDate, Date endDate) {
+		if (startDate.after(Date.from(Instant.now(systemUtcClock)))) {
 			throw new BadRequestException("Start Date cannot be in the future");
 		}
 		
-    	if (endDate == null) {
-    		endDate = LocalDate.now(systemUtcClock);
+		if (endDate == null) {
+    		endDate = Date.from(Instant.now(systemUtcClock));
     	}
     	
     	if (startDate.compareTo(endDate) > 0) {
-    		
             throw new BadRequestException("Start date must be before or equal to End Date");
         }
     	
-		var start = Date.from(startDate.atStartOfDay(ZoneId.of("UTC")).toInstant());
-		var end = Date.from(endDate.atStartOfDay(ZoneId.of("UTC")).toInstant());
-		
+		// Set end date to 23:59:59 time to ensure it is inclusive
     	Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		now.setTime(end);
+		now.setTime(endDate);
 		now.set(Calendar.HOUR_OF_DAY, 23);
 		now.set(Calendar.MINUTE, 59);
 		now.set(Calendar.SECOND, 59);
-		end = now.getTime();
+		endDate = now.getTime();
 		
-		List<UserWithRequestCount> userRequestCounts = this.getUsersWithRequestCount(start, end);
+		now.setTime(startDate);
+		now.set(Calendar.HOUR_OF_DAY, 0);
+		now.set(Calendar.MINUTE, 0);
+		now.set(Calendar.SECOND, 0);
+		
+		List<UserWithRequestCount> userRequestCounts = this.getUsersWithRequestCount(startDate, endDate);
 		List<UserWithRequestCount> dashboardUsers = new ArrayList<>();
 		List<UserWithRequestCount> appClients = new ArrayList<>();
 		// Split the users into Dashboard users and App Client users based on the name.
@@ -106,7 +111,7 @@ public class KpiServiceImpl implements KpiService {
 			}
 		});
 		
-		List<AppSourceMetricSummary> appSourceMetricsSummary = this.meterValueRepo.getAllAppSourceMetricsSummary(start, end);
+		List<AppSourceMetricSummary> appSourceMetricsSummary = this.meterValueRepo.getAllAppSourceMetricsSummary(startDate, endDate);
 		long appClientToAppSourceRequestCount = appSourceMetricsSummary.stream().collect(Collectors.summingLong(AppSourceMetricSummary::getRequestCount));
 		
 		long dashboardUserCount = dashboardUsers.size();
@@ -130,7 +135,7 @@ public class KpiServiceImpl implements KpiService {
 				.startDate(startDate)
 				.endDate(endDate)
 				.appSourceCount(this.getAppSourceCount())
-				.averageLatencyForSuccessfulRequests(this.getAverageLatencyForSuccessResponse(start, end))
+				.averageLatencyForSuccessfulRequests(this.getAverageLatencyForSuccessResponse(startDate, endDate))
 				.appClientToAppSourceRequestCount(appClientToAppSourceRequestCount)
 				.uniqueVisitorCounts(uniqueVisitorCount)
 				.build();
@@ -138,19 +143,58 @@ public class KpiServiceImpl implements KpiService {
 	
 	@Override
 	public KpiSummaryDto saveAggregatedKpis(KpiSummaryDto dto) {
-		KpiSummary entity = modelMapper.map(dto, KpiSummary.class);
+		KpiSummary entity = convertToEntity(dto);
 		KpiSummary savedEntity = kpiRepo.save(entity);
 		
-		return modelMapper.map(savedEntity, KpiSummaryDto.class);
+		return convertToDto(savedEntity);
+	}
+
+	@Override
+	public List<KpiSummaryDto> getKpisRangeOnStartDateBetween(Date startDate, Date endDate) {
+		LocalDate thisWeekMonday = LocalDate.now(systemUtcClock).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+		Date thisWeekMondayAsDate = Date.from(thisWeekMonday.atStartOfDay(ZoneId.of("UTC")).toInstant());
+		
+		// If start date is within this week, there would exist no data as there would be
+		// no aggregated data for the most current week and in the future.
+		if (startDate.compareTo(thisWeekMondayAsDate) >= 0) {
+			throw new BadRequestException("Start Date cannot be set within the current week or the future");
+		}
+		
+		if (endDate == null) {
+    		endDate = Date.from(Instant.now(systemUtcClock));
+    	}
+    	
+    	if (startDate.compareTo(endDate) > 0) {
+            throw new BadRequestException("Start date must be before or equal to End Date");
+        }
+    	
+		return kpiRepo.findByStartDateBetween(startDate, endDate)
+				.stream()
+				.map(this::convertToDto)
+				.collect(Collectors.toList());
 	}
 	
+	private KpiSummaryDto convertToDto(KpiSummary entity) {
+		return modelMapper.map(entity, KpiSummaryDto.class);
+	}
+	
+	private KpiSummary convertToEntity(KpiSummaryDto dto) {
+		return modelMapper.map(dto, KpiSummary.class);
+	}
+	
+	/**
+	 * Scheduled task to run every Monday at 00:00:00 (12:00:00 am) that gets aggregated
+	 * KPI data for the previous week and save it to the database.
+	 */
 	@Scheduled(cron = "0 0 0 * * MON", zone = "UTC")
 	private void weeklyAggregatedKpisTask() {
 		LocalDate today = LocalDate.now(systemUtcClock);
-		LocalDate endOfWeek = today.minusDays(1);
-		LocalDate startOfWeek = today.minusDays(7);
+		LocalDate startOfLastWeek = today.with(TemporalAdjusters.previous(DayOfWeek.MONDAY));
+		LocalDate endOfLastWeek = startOfLastWeek.with(TemporalAdjusters.next(DayOfWeek.SUNDAY));
 		
-		KpiSummaryDto aggregatedKpis = aggregateKpis(startOfWeek, endOfWeek);
+		Date startDate = Date.from(startOfLastWeek.atStartOfDay(ZoneId.of("UTC")).toInstant());
+		Date endDate = Date.from(endOfLastWeek.atStartOfDay(ZoneId.of("UTC")).toInstant());
+		KpiSummaryDto aggregatedKpis = aggregateKpis(startDate, endDate);
 		
 		saveAggregatedKpis(aggregatedKpis);
 	}

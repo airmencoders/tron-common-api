@@ -1,7 +1,7 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
     <changeSet author="Dylan" id="1627379204797-1">
-        <preConditions onFail="WARN">
+        <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="kpi_summary"/>
             </not> 
@@ -28,7 +28,7 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1627379204797-2">
-        <preConditions onFail="WARN">
+        <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="kpi_summary_unique_visitor_counts"/>
             </not> 
@@ -45,7 +45,7 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1627379204797-3">
-        <preConditions onFail="WARN">
+        <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="unique_visitor_count"/>
             </not> 
@@ -68,7 +68,7 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1627379204797-4">
-        <preConditions onFail="WARN">
+        <preConditions onFail="CONTINUE">
             <tableExists tableName="kpi_summary"/>
         </preConditions>
 
@@ -76,7 +76,7 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1627379204797-5">
-        <preConditions onFail="WARN">
+        <preConditions onFail="CONTINUE">
             <tableExists tableName="kpi_summary"/>
         </preConditions>
 
@@ -84,7 +84,7 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1627379204797-6">
-        <preConditions onFail="WARN">
+        <preConditions onFail="CONTINUE">
             <tableExists tableName="kpi_summary_unique_visitor_counts"/>
         </preConditions>
 
@@ -92,7 +92,7 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1627379204797-7">
-        <preConditions onFail="WARN">
+        <preConditions onFail="CONTINUE">
             <tableExists tableName="kpi_summary_unique_visitor_counts"/>
             <tableExists tableName="kpi_summary"/>
         </preConditions>
@@ -101,7 +101,7 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1627379204797-8">
-        <preConditions onFail="WARN">
+        <preConditions onFail="CONTINUE">
             <tableExists tableName="kpi_summary_unique_visitor_counts"/>
             <tableExists tableName="unique_visitor_count"/>
         </preConditions>

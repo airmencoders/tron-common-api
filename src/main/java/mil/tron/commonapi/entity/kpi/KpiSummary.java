@@ -1,6 +1,6 @@
 package mil.tron.commonapi.entity.kpi;
 
-import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,13 +36,13 @@ public class KpiSummary {
 	@Setter
 	@Column(unique=true)
 	@NotNull
-	private LocalDate startDate;
+	private Date startDate;
 	
 	@Getter
 	@Setter
 	@Column(unique=true)
 	@NotNull
-	private LocalDate endDate;
+	private Date endDate;
 	
 	@Getter
 	@Setter

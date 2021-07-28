@@ -3,9 +3,12 @@ package mil.tron.commonapi.controller.kpi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
+import mil.tron.commonapi.dto.kpi.KpiSummaryDtoResponseWrapper;
 import mil.tron.commonapi.dto.kpi.UniqueVisitorCountDto;
 import mil.tron.commonapi.entity.kpi.VisitorType;
 import mil.tron.commonapi.service.kpi.KpiService;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @SpringBootTest
@@ -33,15 +36,18 @@ class KpiControllerTest {
 
     @MockBean
     private KpiService kpiService;
-
-    @Test
-    void getKpiSummaryTest() throws Exception{
-    	List<UniqueVisitorCountDto> uniqueVisitorCount = new ArrayList<>();
+    
+    List<UniqueVisitorCountDto> uniqueVisitorCount;
+    KpiSummaryDto kpiSummaryDto;
+    
+    @BeforeEach
+    void setup() {
+    	uniqueVisitorCount = new ArrayList<>();
 		uniqueVisitorCount.add(UniqueVisitorCountDto.builder()
-					.visitorType(VisitorType.DASHBOARD_USER)
-					.uniqueCount(4L)
-					.requestCount(100L)
-					.build());
+				.visitorType(VisitorType.DASHBOARD_USER)
+				.uniqueCount(4L)
+				.requestCount(100L)
+				.build());
 		
 		uniqueVisitorCount.add(UniqueVisitorCountDto.builder()
 				.visitorType(VisitorType.APP_CLIENT)
@@ -49,23 +55,46 @@ class KpiControllerTest {
 				.requestCount(10L)
 				.build());
     	
-    	KpiSummaryDto summary = KpiSummaryDto.builder()
+    	kpiSummaryDto = KpiSummaryDto.builder()
         		.appClientToAppSourceRequestCount(10L)
         		.appSourceCount(1L)
-        		.averageLatencyForSuccessfulRequests(33L)
+        		.averageLatencyForSuccessfulRequests(33d)
         		.uniqueVisitorCounts(uniqueVisitorCount)
         		.build();
-    	
-        Mockito.when(kpiService.aggregateKpis(Mockito.any(LocalDate.class), Mockito.nullable(LocalDate.class)))
-                .thenReturn(summary);
+    }
+
+    @Test
+    void getKpiSummaryTest() throws Exception{
+        Mockito.when(kpiService.aggregateKpis(Mockito.any(Date.class), Mockito.nullable(Date.class)))
+                .thenReturn(kpiSummaryDto);
         mockMvc.perform(get(ENDPOINT + "summary?startDate=2021-05-27"))
                 .andExpect(status().isOk())
-                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(summary)));
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(kpiSummaryDto)));
     }
     
     @Test
-    void getKpiSummary_ShouldFailOnBadParameter_Test() throws Exception{
+    void getKpiSummary_shouldFail_whenBadQueryParameter() throws Exception{
         mockMvc.perform(get(ENDPOINT + "summary"))
                 .andExpect(status().isBadRequest());
+    }
+    
+    @Test
+    void getKpiSeries() throws Exception {
+    	List<KpiSummaryDto> response = new ArrayList<>();
+    	response.add(kpiSummaryDto);
+    	KpiSummaryDtoResponseWrapper wrapper = new KpiSummaryDtoResponseWrapper();
+    	wrapper.setData(response);
+    	
+    	Mockito.when(kpiService.getKpisRangeOnStartDateBetween(Mockito.any(Date.class), Mockito.nullable(Date.class))).thenReturn(response);
+    	
+    	mockMvc.perform(get(ENDPOINT + "series?startDate=2021-05-27"))
+	        .andExpect(status().isOk())
+	        .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(wrapper)));
+    }
+    
+    @Test
+    void getKpiSeries_shouldFail_whenBadQueryParameter() throws Exception {
+    	mockMvc.perform(get(ENDPOINT + "series"))
+    	.andExpect(status().isBadRequest());
     }
 }
