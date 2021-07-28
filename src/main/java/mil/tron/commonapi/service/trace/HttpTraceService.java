@@ -142,7 +142,7 @@ public class HttpTraceService implements HttpTraceRepository {
     }
 
     /**
-     * Helper to replace all 9 consecutive digit requests in the arms gateway traffic with all zeros
+     * Helper to blank out the req/res bodies of the ARMS Gateway Traffic
      * @param trace the http trace
      * @param contentTrace the current content trace
      */
