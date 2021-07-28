@@ -16,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A class that intercepts traffic in a request and the response we send back for logging.
@@ -134,6 +136,22 @@ public class HttpTraceService implements HttpTraceRepository {
                             .responseBody(contentTrace.getResponseBody() != null ? contentTrace.getResponseBody() : contentTrace.getErrorMessage())
                             .statusCode(trace.getResponse().getStatus())
                             .build());
+        }
+    }
+
+    /**
+     * Helper to replace all 9 consecutive digit requests in the arms gateway traffic with all zeros
+     * @param trace the http trace
+     * @param contentTrace the current content trace
+     */
+    public void sanitizeBodies(HttpTrace trace, ContentTrace contentTrace) {
+
+        if (trace.getRequest().getUri().toString() != null
+                && trace.getRequest().getUri().toString().contains("/arms-gateway")
+                && contentTrace != null) {
+
+            contentTrace.setResponseBody("Request data redacted");
+            contentTrace.setRequestBody("Response data redacted");
         }
     }
 }
