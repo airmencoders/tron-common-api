@@ -118,6 +118,8 @@ public class HttpTraceService implements HttpTraceRepository {
             List<String> userAgentHeader = lowerCaseHeaders.get("user-agent");
             String userAgent = userAgentHeader != null ? userAgentHeader.get(0) : "Unknown";
 
+            sanitizeBodies(trace, contentTrace);
+
             httpLogsRepository.save(
                     HttpLogEntry
                             .builder()
@@ -134,6 +136,22 @@ public class HttpTraceService implements HttpTraceRepository {
                             .responseBody(contentTrace.getResponseBody() != null ? contentTrace.getResponseBody() : contentTrace.getErrorMessage())
                             .statusCode(trace.getResponse().getStatus())
                             .build());
+        }
+    }
+
+    /**
+     * Helper to blank out the req/res bodies of the ARMS Gateway Traffic
+     * @param trace the http trace
+     * @param contentTrace the current content trace
+     */
+    public void sanitizeBodies(HttpTrace trace, ContentTrace contentTrace) {
+
+        if (trace.getRequest().getUri().toString() != null
+                && trace.getRequest().getUri().toString().contains("app/arms-gateway")
+                && contentTrace != null) {
+
+            contentTrace.setResponseBody("Redacted");
+            contentTrace.setRequestBody("Redacted");
         }
     }
 }
