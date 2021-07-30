@@ -340,7 +340,7 @@ public class PersonControllerTest {
 					.header("authorization", MockToken.token)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(testPersonJson))
-				.andExpect(status().isUnauthorized());
+				.andExpect(status().isForbidden());
 		}
 	}
 
