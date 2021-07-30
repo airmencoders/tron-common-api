@@ -231,11 +231,11 @@ class KpiServiceImplTest {
 		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
 		Mockito.when(systemUtcClock.getZone()).thenReturn(fixedClock.getZone());
 		
-		// Monday, July 26, 2021 2:00:00
-		Instant dateWithinCurrentWeek = Instant.ofEpochMilli(1627264800000L);
+		// Monday, August 2, 2021 0:00:00
+		Instant dateThatWillBeWithinCurrentWeek = Instant.ofEpochMilli(1627862400000L);
 		
 		assertThatThrownBy(() -> {
-			kpiService.getKpisRangeOnStartDateBetween(Date.from(dateWithinCurrentWeek), null);
+			kpiService.getKpisRangeOnStartDateBetween(Date.from(dateThatWillBeWithinCurrentWeek), null);
 		})
 		.isInstanceOf(BadRequestException.class)
 		.hasMessageContaining("Start Date cannot be set within the current week or the future");
@@ -243,15 +243,15 @@ class KpiServiceImplTest {
 	
 	@Test
 	void getKpisRangeOnStartDateBetween_shouldThrow_whenStartDateIsGreaterThanEndDate() {
-		// Monday, July 26, 2021 0:00:00
-		Instant currentDate = Instant.ofEpochMilli(1627257600000L);
+		// Wednesday, August 11, 2021 0:00:00
+		Instant currentDate = Instant.ofEpochMilli(1628640000000L);
 		
 		Clock fixedClock = Clock.fixed(currentDate, ZoneId.of("UTC"));
 		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
 		Mockito.when(systemUtcClock.getZone()).thenReturn(fixedClock.getZone());
 		
-		// Thursday, July 22, 2021 0:00:00
-		Instant startDate = Instant.ofEpochMilli(1626912000000L);
+		// Wednesday, August 4, 2021 0:00:00
+		Instant startDate = Instant.ofEpochMilli(1628035200000L);
 		
 		// Wednesday, July 21, 2021 0:00:00
 		Instant endDate = Instant.ofEpochMilli(1626825600000L);

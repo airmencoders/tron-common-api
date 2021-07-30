@@ -95,6 +95,7 @@ public class KpiServiceImpl implements KpiService {
 		now.set(Calendar.HOUR_OF_DAY, 0);
 		now.set(Calendar.MINUTE, 0);
 		now.set(Calendar.SECOND, 0);
+		startDate = now.getTime();
 		
 		List<UserWithRequestCount> userRequestCounts = this.getUsersWithRequestCount(startDate, endDate);
 		List<UserWithRequestCount> dashboardUsers = new ArrayList<>();
@@ -154,8 +155,24 @@ public class KpiServiceImpl implements KpiService {
 		LocalDate thisWeekMonday = LocalDate.now(systemUtcClock).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 		Date thisWeekMondayAsDate = Date.from(thisWeekMonday.atStartOfDay(ZoneId.of("UTC")).toInstant());
 		
-		// If start date is within this week, there would exist no data as there would be
-		// no aggregated data for the most current week and in the future.
+		/**
+		 * Get last week Monday based off the passed in Start Date and
+		 * use that as the new Start Date.
+		 * 
+		 * For example, given a start date of 2021-07-28 (Wednesday), getLastWeekMondayFromStartDate should
+		 * equal to 2021-07-19 (Monday).
+		 * 
+		 * Given 2021-07-26 (Monday), getLastWeekMondayFromStartDate should be 2021-07-19 (Monday)
+		 */
+		LocalDate getLastWeekFromStartDate = LocalDate.ofInstant(startDate.toInstant(), ZoneId.of("UTC")).minusWeeks(1);
+		LocalDate getLastWeekMondayFromStartDate = getLastWeekFromStartDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+		
+		startDate = Date.from(getLastWeekMondayFromStartDate.atStartOfDay(ZoneId.of("UTC")).toInstant());
+		
+		/**
+		 * If Start Date ends up being within this week, throw exception
+		 * since there is a guarantee that there would be no data.
+		 */
 		if (startDate.compareTo(thisWeekMondayAsDate) >= 0) {
 			throw new BadRequestException("Start Date cannot be set within the current week or the future");
 		}
