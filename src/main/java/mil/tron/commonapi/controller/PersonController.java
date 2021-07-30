@@ -295,13 +295,18 @@ public class PersonController {
 		return new ResponseEntity<>(updatedPerson, HttpStatus.valueOf(response.getStatus()));
 	}
 
-	@Operation(summary = "Updates an existing person", description = "Updates an existing person")
+	@Operation(summary = "Allows a Person to update their own existing record.", 
+			description = "The email from the updated Person record must match the email in the authenticated user's JWT,"
+					+ " otherwise this action will be rejected.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = PersonDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Resource not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Mismatch in email between updated Person record and user's JWT)",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PutMapping(value = {"${api-prefix.v1}/person/self/{id}", "${api-prefix.v2}/person/self/{id}"})
@@ -321,7 +326,7 @@ public class PersonController {
 		  PersonDto updatedPerson = personService.updatePerson(personId, person);
 		  return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 		} else {
-		  throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authorized to perform this action.");
+		  throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is forbidden from performing this action.");
 		}
 	}
 
