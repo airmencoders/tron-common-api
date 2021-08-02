@@ -27,6 +27,7 @@ public class ExceptionResponse {
 	private String path;
 	
 	@Getter
-	@Schema(description = "Field will only exist if there are validation errors")
+	@Schema(nullable = true,
+			description = "Field will only exist if there are validation errors")
 	private List<ValidationError> errors;
 }
