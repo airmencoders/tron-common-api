@@ -104,6 +104,7 @@ public class PersonDto {
      */
     @PiiField
     @Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String email;
