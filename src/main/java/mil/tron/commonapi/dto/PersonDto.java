@@ -7,10 +7,13 @@ import lombok.*;
 import mil.tron.commonapi.annotation.security.PiiField;
 import mil.tron.commonapi.dto.persons.*;
 import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.validations.NullOrNotBlankValidation;
 import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.validation.constraints.Email;
+import javax.validation.constraints.Size;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -57,6 +60,8 @@ public class PersonDto {
      */
     @Schema(nullable = true)
     @PiiField
+    @Size(max = 255)
+    @NullOrNotBlankValidation
     @Getter
     @Setter
     private String firstName;
@@ -66,6 +71,8 @@ public class PersonDto {
      */
     @Schema(nullable = true)
     @PiiField
+    @Size(max = 255)
+    @NullOrNotBlankValidation
     @Getter
     @Setter
     private String middleName;
@@ -75,6 +82,8 @@ public class PersonDto {
      */
     @Schema(nullable = true)
     @PiiField
+    @Size(max = 255)
+    @NullOrNotBlankValidation
     @Getter
     @Setter
     private String lastName;
@@ -84,6 +93,8 @@ public class PersonDto {
      * Examples: Mr., Ms., Dr., SSgt, PFC, PO2, LCpl
      */
     @Schema(nullable = true)
+    @Size(max = 255)
+    @NullOrNotBlankValidation
     @Getter
     @Setter
     private String title;
@@ -135,6 +146,8 @@ public class PersonDto {
      * The person's address
      */
     @Schema(nullable = true)
+    @Size(max = 255)
+    @NullOrNotBlankValidation
     @Getter
     @Setter
     private String address;
@@ -152,6 +165,8 @@ public class PersonDto {
      * The person's official job title
      */
     @Schema(nullable = true)
+    @Size(max = 255)
+    @NullOrNotBlankValidation
     @Getter
     @Setter
     private String dutyTitle;
