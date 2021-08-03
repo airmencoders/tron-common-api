@@ -9,6 +9,8 @@ import mil.tron.commonapi.entity.kpi.UserWithRequestCount;
 public interface KpiService {
 	List<UserWithRequestCount> getUsersWithRequestCount(Date startDate, Date endDate);
 	Long getAppSourceCount();
-	Long getAverageLatencyForSuccessResponse(Date startDate, Date endDate);
+	Double getAverageLatencyForSuccessResponse(Date startDate, Date endDate);
 	KpiSummaryDto aggregateKpis(Date startDate, Date endDate);
+	KpiSummaryDto saveAggregatedKpis(KpiSummaryDto dto);
+	List<KpiSummaryDto> getKpisRangeOnStartDateBetween(Date startDate, Date endDate);
 }

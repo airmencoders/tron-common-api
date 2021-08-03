@@ -33,5 +33,5 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
     @Query(value = "SELECT AVG(h.timeTakenMs)"
     		+ " FROM HttpLogEntry h"
     		+ " WHERE h.statusCode >= 200 AND h.statusCode < 300 AND h.requestTimestamp BETWEEN :startDate and :endDate")
-    Optional<Long> getAverageLatencyForSuccessfulResponse(Date startDate, Date endDate);
+    Optional<Double> getAverageLatencyForSuccessfulResponse(Date startDate, Date endDate);
 }

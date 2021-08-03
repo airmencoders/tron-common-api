@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.exception.custom.ValidationError;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,9 +19,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -63,7 +67,8 @@ public class ErrorValidationIntegrationTest {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         assertEquals(400, response.statusCode());
-        assertEquals("An acceptable DODID must be 5-10 digits or a null value", JsonPath.read(response.body(), "$.reason"));
+        List<String> errorMessages = JsonPath.read(response.body(), "$.errors[*].defaultMessage");
+        assertIterableEquals(List.of("An acceptable DODID must be 5-10 digits or a null value"), errorMessages);
 
         person.setDodid(null);
         request = HttpRequest.newBuilder()
