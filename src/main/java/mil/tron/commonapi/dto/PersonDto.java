@@ -11,8 +11,6 @@ import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.validation.constraints.Email;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -96,7 +94,7 @@ public class PersonDto {
      */
     @PiiField
     @Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
-    @NotNull
+    @Schema(nullable = true)
     @Getter
     @Setter
     private String email;
