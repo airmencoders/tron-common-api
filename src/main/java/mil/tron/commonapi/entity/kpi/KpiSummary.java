@@ -1,16 +1,17 @@
-package mil.tron.commonapi.dto.kpi;
-
+package mil.tron.commonapi.entity.kpi;
 
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,25 +23,25 @@ import lombok.Setter;
 @AllArgsConstructor
 @Data
 @Builder
-public class KpiSummaryDto {
+@Entity
+@Table(name="kpi_summary")
+public class KpiSummary {
+	@Id
     @Getter
     @Setter
     @Builder.Default
-    @JsonIgnore
     private UUID id = UUID.randomUUID();
 	
 	@Getter
 	@Setter
+	@Column(unique=true)
 	@NotNull
-	@JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-	@Schema(type="string", format = "date")
 	private Date startDate;
 	
 	@Getter
 	@Setter
+	@Column(unique=true)
 	@NotNull
-	@JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
-	@Schema(type="string", format = "date")
 	private Date endDate;
 	
 	@Getter
@@ -59,5 +60,6 @@ public class KpiSummaryDto {
 	
 	@Getter
 	@Setter
-	private List<UniqueVisitorCountDto> uniqueVisitorCounts;
+	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<UniqueVisitorCount> uniqueVisitorCounts;
 }
