@@ -129,11 +129,11 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 					//  return the regular digitize app client
 					if (token.getCredentials() == null) return user;
 
-					// if this scratch space has IMPLICIT_READ enabled -or- the requester's
+					// if this scratch space has the requester's
 					//   p1 email address (from JWT) is authorized for this scratch space in any
 					//   form then proceed to the app client entity lookup
 					//   DIGITIZE_APP_PREFIX + scratch-space-name
-					if (dto.isAppHasImplicitRead() || dto
+					if (dto
 							.getUserPrivs()
 							.stream()
 							.map(ScratchStorageAppRegistryDto.UserWithPrivs::getEmailAddress)

@@ -263,9 +263,10 @@ class AppClientUserPreAuthenticatedServiceTest {
 		assertEquals(digitizeTestApp.getName(), service.loadUserDetails(token).getUsername());
 
 		// everything exists but scratch app does not have Implicit Read and the requester does NOT have privs with it
+		//  access denied
 		theApp.setAppHasImplicitRead(true);
 		theApp.setUserPrivs(Lists.newArrayList());
-		assertEquals(digitizeTestApp.getName(), service.loadUserDetails(token).getUsername());
+		assertEquals("digitize", service.loadUserDetails(token).getUsername());
 
 		// everything exists but scratch app does not have Implicit Read and the requester does NOT have privs with it
 		//   request should then follow privs of regular digitize app privs

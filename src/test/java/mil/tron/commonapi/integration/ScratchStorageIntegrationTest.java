@@ -1971,18 +1971,18 @@ public class ScratchStorageIntegrationTest {
                 .header("digitize-id", app1Id))
                 .andExpect(status().isForbidden());
 
-        // now switch app1 to have implicit read - now all going thru this app can access
+        // now switch app1 to have implicit read - shouldnt make any difference
         mockMvc.perform(patch(ENDPOINT_V2 + "apps/{id}/implicitRead?value={value}", app1Id, true)
                 .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
                 .andExpect(status().isOk());
 
-        // others can access now with app1's creds
+        // access denied
         mockMvc.perform(get("/v2/person")
                 .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
                 .header(XFCC_HEADER_NAME, generateXfccHeader("digitize"))
                 .header("digitize-id", app1Id))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
 
         // turn off implicit read and enable ACL Mode
         mockMvc.perform(patch(ENDPOINT_V2 + "apps/{id}/implicitRead?value={value}", app1Id, false)
