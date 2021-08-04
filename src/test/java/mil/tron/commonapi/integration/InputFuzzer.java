@@ -253,21 +253,20 @@ public class InputFuzzer {
                             "}"))
                     .andExpect(status().isBadRequest());
 
-            // test that string fields are limited to 255 chars, throws 500 error
-            assertThrows(Exception.class, () ->
-                mockMvc.perform(post(ENDPOINT)
-                        .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                        .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\n" +
-                                "    \"firstName\":\"" + StringUtils.repeat('J', 256) + "\",\n" +
-                                "    \"middleName\": \"J\",\n" +
-                                "    \"lastName\": \"Smith\",\n" +
-                                "    \"email\": \"js@TEST.com\",\n" +
-                                "    \"rank\": \"Capt\",\n" +
-                                "    \"branch\": \"USAF\"\n" +
-                                "}"))
-            );
+            // test that string fields are limited to 255 chars, throws 400 error
+            mockMvc.perform(post(ENDPOINT)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\n" +
+                            "    \"firstName\":\"" + StringUtils.repeat('J', 256) + "\",\n" +
+                            "    \"middleName\": \"J\",\n" +
+                            "    \"lastName\": \"Smith\",\n" +
+                            "    \"email\": \"js@TEST.com\",\n" +
+                            "    \"rank\": \"Capt\",\n" +
+                            "    \"branch\": \"USAF\"\n" +
+                            "}"))
+                    .andExpect(status().isBadRequest());
 
             // test GO Path
             MvcResult result = mockMvc.perform(post(ENDPOINT)
