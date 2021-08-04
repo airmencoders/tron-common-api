@@ -47,6 +47,8 @@ public class PersonDto {
 	public static final String ORG_LEADERSHIPS_FIELD = "organizationLeaderships";
 	@JsonIgnore
 	public static final String BRANCH_FIELD = "branch";
+	@JsonIgnore
+	private static final String NULL_OR_NOT_BLANK_DESCRIPTION = "Must be null or not blank";
 
     @Getter
     @Setter
@@ -58,7 +60,8 @@ public class PersonDto {
     /**
      * The person's first (given) name
      */
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
     @PiiField
     @Size(max = 255)
     @NullOrNotBlankValidation
@@ -69,7 +72,8 @@ public class PersonDto {
     /**
      * The person's middle name
      */
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
     @PiiField
     @Size(max = 255)
     @NullOrNotBlankValidation
@@ -80,7 +84,8 @@ public class PersonDto {
     /**
      * The person's last (family) name
      */
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
     @PiiField
     @Size(max = 255)
     @NullOrNotBlankValidation
@@ -92,7 +97,8 @@ public class PersonDto {
      * The title of a person, as in how they should be addressed.
      * Examples: Mr., Ms., Dr., SSgt, PFC, PO2, LCpl
      */
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
     @Size(max = 255)
     @NullOrNotBlankValidation
     @Getter
@@ -104,7 +110,9 @@ public class PersonDto {
      */
     @PiiField
     @Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
+    @NullOrNotBlankValidation
     @Getter
     @Setter
     private String email;
@@ -136,7 +144,9 @@ public class PersonDto {
     /**
      * The person's phone number
      */
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
+    @NullOrNotBlankValidation
     @PiiField
     @Getter
     @Setter
@@ -146,7 +156,8 @@ public class PersonDto {
     /**
      * The person's address
      */
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
     @Size(max = 255)
     @NullOrNotBlankValidation
     @Getter
@@ -156,7 +167,9 @@ public class PersonDto {
     /**
      * The person's duty (work) phone number
      */
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
+    @NullOrNotBlankValidation
     @Getter
     @Setter
     @ValidPhoneNumber
@@ -165,7 +178,8 @@ public class PersonDto {
     /**
      * The person's official job title
      */
-    @Schema(nullable = true)
+    @Schema(nullable = true,
+    		description = NULL_OR_NOT_BLANK_DESCRIPTION)
     @Size(max = 255)
     @NullOrNotBlankValidation
     @Getter

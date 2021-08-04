@@ -8,7 +8,8 @@ import mil.tron.commonapi.dto.mapper.DtoMapper;
 
 import org.springframework.validation.FieldError;
 
-import java.util.HashMap;
+import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,6 +38,10 @@ public class TronCommonAppError {
     @Getter
     @Setter
     private List<FieldError> errors;
+    
+    @Getter
+    @Setter
+    private Date timestamp;
 
     public static TronCommonAppError fromDefaultAttributeMap(Map<String, Object> defaultErrorAttributes) {
 
@@ -70,15 +75,17 @@ public class TronCommonAppError {
                 reason,
                 (String) defaultErrorAttributes.getOrDefault("path", ""),
                 (String) defaultErrorAttributes.getOrDefault("error", ""),
-                objectErrors);
+                objectErrors,
+                (Date) defaultErrorAttributes.getOrDefault("timestamp", new Date()));
     }
 
     public Map<String, Object> toAttributeMap() {
-    	Map<String, Object> errorResponse = new HashMap<>();
+    	Map<String, Object> errorResponse = new LinkedHashMap<>();
+    	errorResponse.put("timestamp", this.timestamp);
     	errorResponse.put("status", this.status);
+    	errorResponse.put("error", this.error);
     	errorResponse.put("reason", this.reason);
     	errorResponse.put("path", this.path);
-    	errorResponse.put("error", this.error);
     	
     	if (this.errors != null && !this.errors.isEmpty()) {
     		List<ValidationError> validationErrors = this.errors.stream()
