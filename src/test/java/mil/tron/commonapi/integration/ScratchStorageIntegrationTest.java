@@ -7,10 +7,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jayway.jsonpath.JsonPath;
 import mil.tron.commonapi.dto.*;
+import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import org.apache.http.auth.AUTH;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -1793,5 +1795,171 @@ public class ScratchStorageIntegrationTest {
                 .andExpect(status().isForbidden());
 
 
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testDigitizeAppResourceAccess() throws Exception {
+
+        // Test that scratch apps, when a "digitize-<scratch-app-name>" app client is
+        //   made that it can access the stuff its supposed to
+
+        ScratchStorageUserDto jon = ScratchStorageUserDto
+                .builder()
+                .email("jon@test.com")
+                .build();
+
+        ScratchStorageUserDto bill = ScratchStorageUserDto
+                .builder()
+                .email("bill@test.com")
+                .build();
+
+        // make the apps
+        UUID app1Id;
+        UUID app2Id;
+        MvcResult app1Result = mockMvc.perform(post(ENDPOINT_V2 + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(ScratchStorageAppRegistryDto.builder()
+                                .appName("App1")
+                                .aclMode(false)
+                                .appHasImplicitRead(false)
+                                .userPrivs(new ArrayList<>())
+                                .build())))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        app1Id = UUID.fromString(JsonPath.read(app1Result.getResponse().getContentAsString(), "$.id"));
+
+        MvcResult app2Result = mockMvc.perform(post(ENDPOINT_V2 + "apps")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER
+                        .writeValueAsString(ScratchStorageAppRegistryDto.builder()
+                                .appName("App2")
+                                .aclMode(true)
+                                .appHasImplicitRead(false)
+                                .userPrivs(new ArrayList<>())
+                                .build())))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        app2Id = UUID.fromString(JsonPath.read(app2Result.getResponse().getContentAsString(), "$.id"));
+
+        // set up scratch admins
+        mockMvc.perform(patch(ENDPOINT_V2 + "apps/{appId}/user", app1Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageAppUserPrivDto.builder()
+                        .email(jon.getEmail())
+                        .privilegeId(scratchAdminPrivId)
+                        .build())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch(ENDPOINT_V2 + "apps/{appId}/user", app2Id)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageAppUserPrivDto.builder()
+                        .email(bill.getEmail())
+                        .privilegeId(scratchAdminPrivId)
+                        .build())))
+                .andExpect(status().isOk());
+
+        // now try to access /person on the API - fails since digitize itself isn't even an app client!
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize")))
+                .andExpect(status().isForbidden());
+
+        AppClientUserDto app1 = AppClientUserDto.builder()
+                .id(UUID.randomUUID())
+                .name("digitize")
+                .build();
+
+        // add digitize-proper as an app client, with no permissions itself
+        mockMvc.perform(post("/v2/app-client")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isCreated());
+
+        // try access /person again now - should still be denied
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize")))
+                .andExpect(status().isForbidden());
+
+        // now make an app client named "digitize-App1" with Person Read privs
+        AppClientUserDto digitizeApp = AppClientUserDto.builder()
+                .id(UUID.randomUUID())
+                .name("digitize-App1")
+                .build();
+
+        // add it as an app client, with no permissions itself
+        MvcResult result = mockMvc.perform(post("/v2/app-client")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(digitizeApp)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID digitizeAppId = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+
+        // try access /person again now - should still be denied - no "digitize-id" header
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize")))
+                .andExpect(status().isForbidden());
+
+        // try access /person again now - should still be denied - even with "digitize-id" header
+        //  the app client needs person access
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize"))
+                .header("digitize-id", app1Id))
+                .andExpect(status().isForbidden());
+
+        digitizeApp.setId(digitizeAppId);
+        digitizeApp.setPrivileges(Lists.newArrayList(privs
+                .stream()
+                .filter(item -> item.getName().equals("PERSON_READ"))
+                .findFirst()
+                .orElseThrow()));
+
+        // add the PERSON_READ priv
+        mockMvc.perform(put("/v2/app-client/{id}", digitizeAppId)
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(digitizeApp)))
+                .andExpect(status().isOk());
+
+        // try access /person again now - should be OK!
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize"))
+                .header("digitize-id", app1Id))
+                .andExpect(status().isOk());
+
+    }
+
+    String generateXfccHeader(String namespace) {
+        String XFCC_BY = "By=spiffe://cluster/ns/" + namespace + "/sa/default";
+        String XFCC_H = "FAKE_H=12345";
+        String XFCC_SUBJECT = "Subject=\\\"\\\";";
+        return new StringBuilder()
+                .append(XFCC_BY)
+                .append(XFCC_H)
+                .append(XFCC_SUBJECT)
+                .append("URI=spiffe://cluster.local/ns/" + namespace + "/sa/default")
+                .toString();
     }
 }
