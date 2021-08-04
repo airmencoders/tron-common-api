@@ -156,26 +156,37 @@ public class PersonServiceImpl implements PersonService {
 		personDto.setDodid(dto.getDodId());
 
 		// now convert branch
-		if ("US Air Force".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USAF);
-		}
-		else if ("US Army".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USA);
-		}
-		else if ("US Marine Corps".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USMC);
-		}
-		else if ("US Navy".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USN);
-		}
-		else if ("US Coast Guard".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USCG);
-		}
-		else if ("US Space Force".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USSF);
-		}
-		else if ("Contractor".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.OTHER);
+		if (dto.getAffiliation() != null) {
+			switch (dto.getAffiliation()) {
+				case "US Air Force":
+				case "US Air Force Reserve":
+				case "US Air National Guard":
+					personDto.setBranch(Branch.USAF);
+					break;
+				case "US Army":
+				case "US Army Reserve":
+				case "US Army National Guard":
+					personDto.setBranch(Branch.USA);
+					break;
+				case "US Marine Corps":
+				case "US Marine Corps Reserve":
+					personDto.setBranch(Branch.USMC);
+					break;
+				case "US Coast Guard":
+				case "US Coast Guard Reserve":
+					personDto.setBranch(Branch.USCG);
+					break;
+				case "US Navy":
+				case "US Navy Reserve":
+					personDto.setBranch(Branch.USN);
+					break;
+				case "US Space Force":
+					personDto.setBranch(Branch.USSF);
+					break;
+				default:
+					personDto.setBranch(Branch.OTHER);
+					break;
+			}
 		}
 		else {
 			personDto.setBranch(Branch.OTHER);
