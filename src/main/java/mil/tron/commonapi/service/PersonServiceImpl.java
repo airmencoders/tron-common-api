@@ -196,9 +196,9 @@ public class PersonServiceImpl implements PersonService {
 	@Override
 	public PersonDto updatePerson(UUID id, PersonDto dto) {
 		Person entity = convertToEntity(dto);
-		// Ensure the id given matches the id of the object given
-		if (!id.equals(entity.getId()))
-			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, entity.getId()));
+		
+		// Set the correct id
+		entity.setId(id);
 
 		Optional<Person> dbPerson = repository.findById(id);
 
