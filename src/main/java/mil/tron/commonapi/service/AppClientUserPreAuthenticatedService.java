@@ -132,7 +132,7 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 					// if this scratch space has IMPLICIT_READ enabled -or- the requester's
 					//   p1 email address (from JWT) is authorized for this scratch space in any
 					//   form then proceed to the app client entity lookup
-					//   for (DIGITIZE_APP_PREFIX + scratch-space-name)
+					//   DIGITIZE_APP_PREFIX + scratch-space-name
 					if (dto.isAppHasImplicitRead() || dto
 							.getUserPrivs()
 							.stream()
