@@ -12,7 +12,6 @@ import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
-import org.apache.http.auth.AUTH;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -1815,6 +1814,13 @@ public class ScratchStorageIntegrationTest {
                 .email("bill@test.com")
                 .build();
 
+        ScratchStorageAppRegistryDto app1Dto = ScratchStorageAppRegistryDto.builder()
+                .appName("App1")
+                .aclMode(false)
+                .appHasImplicitRead(false)
+                .userPrivs(new ArrayList<>())
+                .build();
+
         // make the apps
         UUID app1Id;
         UUID app2Id;
@@ -1823,12 +1829,7 @@ public class ScratchStorageIntegrationTest {
                 .header(XFCC_HEADER_NAME, XFCC_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER
-                        .writeValueAsString(ScratchStorageAppRegistryDto.builder()
-                                .appName("App1")
-                                .aclMode(false)
-                                .appHasImplicitRead(false)
-                                .userPrivs(new ArrayList<>())
-                                .build())))
+                        .writeValueAsString(app1Dto)))
                 .andExpect(status().isCreated())
                 .andReturn();
 
@@ -1949,6 +1950,57 @@ public class ScratchStorageIntegrationTest {
                 .header("digitize-id", app1Id))
                 .andExpect(status().isOk());
 
+        // just make sure this didn't effect all digitize apps - try using app2 to access /person
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize"))
+                .header("digitize-id", app2Id))
+                .andExpect(status().isForbidden());
+
+        // make sure someone not affiliated with the app1 privs, can't access acting as App1
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize"))
+                .header("digitize-id", app1Id))
+                .andExpect(status().isForbidden());
+
+        // even a dashboard admin is denied going through this digitize path
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize"))
+                .header("digitize-id", app1Id))
+                .andExpect(status().isForbidden());
+
+        // now switch app1 to have implicit read - now all going thru this app can access
+        mockMvc.perform(patch(ENDPOINT_V2 + "apps/{id}/implicitRead?value={value}", app1Id, true)
+                .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // others can access now with app1's creds
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize"))
+                .header("digitize-id", app1Id))
+                .andExpect(status().isOk());
+
+        // turn off implicit read and enable ACL Mode
+        mockMvc.perform(patch(ENDPOINT_V2 + "apps/{id}/implicitRead?value={value}", app1Id, false)
+                .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch(ENDPOINT_V2 + "apps/{id}/aclMode?aclMode={value}", app1Id, true)
+                .header(AUTH_HEADER_NAME, createToken(jon.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk());
+
+        // should be back to needing explicit rights
+        mockMvc.perform(get("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(bill.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeader("digitize"))
+                .header("digitize-id", app1Id))
+                .andExpect(status().isForbidden());
     }
 
     String generateXfccHeader(String namespace) {
