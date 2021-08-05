@@ -223,13 +223,6 @@ class PersonServiceImplTest {
 	@Nested
 	class UpdatePersonTest {
 		@Test
-		void idsNotMatching() {
-			// Test id not matching person id
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
-	    	assertThrows(InvalidRecordUpdateRequest.class, () -> personService.updatePerson(UUID.randomUUID(), testDto));
-		}
-		
-		@Test
 		void idNotExist() {
 			// Test id not exist
 			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
