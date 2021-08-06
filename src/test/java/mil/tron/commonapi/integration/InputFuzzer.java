@@ -392,7 +392,7 @@ public class InputFuzzer {
                     .andExpect(status().isBadRequest());
 
             // organization POST only accepts names under 255 chars
-            assertThrows(Exception.class, () -> mockMvc.perform(post(ENDPOINT)
+            mockMvc.perform(post(ENDPOINT)
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -400,7 +400,32 @@ public class InputFuzzer {
                             "    \"name\":\"" + StringUtils.repeat('J', 256) + "\",\n" +
                             "    \"branchType\": \"USAF\",\n" +
                             "    \"orgType\": \"Squadron\"\n" +
-                            "}")));
+                            "}"))
+                    .andExpect(status().isBadRequest());
+
+            // org name cant be NULL
+            mockMvc.perform(post(ENDPOINT)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\n" +
+                            "    \"name\": null,\n" +
+                            "    \"branchType\": \"USAF\",\n" +
+                            "    \"orgType\": \"Squadron\"\n" +
+                            "}"))
+                    .andExpect(status().isBadRequest());
+
+            // org name cant be blank
+            mockMvc.perform(post(ENDPOINT)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\n" +
+                            "    \"name\": \"\",\n" +
+                            "    \"branchType\": \"USAF\",\n" +
+                            "    \"orgType\": \"Squadron\"\n" +
+                            "}"))
+                    .andExpect(status().isBadRequest());
 
             MvcResult result = mockMvc.perform(post(ENDPOINT)
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
@@ -417,7 +442,7 @@ public class InputFuzzer {
             UUID id = new ObjectMapper().readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getId();
 
             // organization PUT only accepts names under 255 chars (same as POST contraints)
-            assertThrows(Exception.class, () -> mockMvc.perform(put(ENDPOINT + "/{id}", id)
+            mockMvc.perform(put(ENDPOINT + "/{id}", id)
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -426,7 +451,8 @@ public class InputFuzzer {
                             "    \"name\":\"" + StringUtils.repeat('J', 256) + "\",\n" +
                             "    \"branchType\": \"USAF\",\n" +
                             "    \"orgType\": \"Squadron\"\n" +
-                            "}")));
+                            "}"))
+                    .andExpect(status().isBadRequest());
 
             // organization PATCH subject to same constraints - needs valid UUID field
             mockMvc.perform(patch(ENDPOINT + "/{id}", id)
