@@ -21,6 +21,7 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
+import mil.tron.commonapi.service.pubsub.SubscriberServiceImpl;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.modelmapper.Converter;
@@ -379,13 +380,23 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	public boolean userIsAppClientDeveloperForAppSubscription(UUID subscriptionId, String user) {
 		SubscriberDto sub = subscriberService.getSubscriberById(subscriptionId);
 
-		// if the user from request is the app itself that owns this id then return true,
-		if (user.equalsIgnoreCase(sub.getAppClientUser())) return true;
-
 		// otherwise see if this user is an email associated with a developer for this app client
 		AppClientUser app = appClientRepository
 				.findByNameIgnoreCase(sub.getAppClientUser())
 				.orElseThrow(() -> new RecordNotFoundException(String.format("No app with name %s found", sub.getAppClientUser())));
+
+		// if the subscription has an appclient for which does not have READ access for the type
+		//  of entity its subscribed to then return false... so  its not even seen to be edited
+		String entityType = SubscriberServiceImpl.getTargetEntityType(sub.getSubscribedEvent());
+		if (!app
+				.getPrivileges()
+				.stream()
+				.map(Privilege::getName)
+				.collect(Collectors.toList())
+				.contains(entityType + "_READ")) return false;
+
+		// if the user from request is the app itself that owns this id then return true,
+		if (user.equalsIgnoreCase(sub.getAppClientUser())) return true;
 
 		return userIsAppClientDeveloperForApp(app.getId(), user);
 

@@ -2,10 +2,13 @@ package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.BadRequestException;
+import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.assertj.core.util.Lists;
@@ -82,6 +85,10 @@ public class SubscriberServiceImpl implements SubscriberService {
         Optional<Subscriber> existing = subscriberRepository.findById(subscriber.getId());
 
         if (existing.isPresent()) {
+
+            // check no existing subs for this event type
+            checkNoDuplicateSubscriptionForApp(subscriber.getSubscribedEvent(), appClientUser);
+
             // edit an existing
             Subscriber sub = existing.get();
             sub.setSecret(sub.getSecret());  // dont allow change secret on an update,
@@ -89,10 +96,14 @@ public class SubscriberServiceImpl implements SubscriberService {
             sub.setSubscribedEvent(subscriber.getSubscribedEvent());
             sub.setSubscriberAddress(subscriber.getSubscriberAddress());
             sub.setAppClientUser(appClientUser);
+            checkAppHasReadAccessToEntity(mapToDto(sub), appClientUser);
             return mapToDto(subscriberRepository.save(sub));
 
         } else {
-            // make new subscription
+            checkAppHasReadAccessToEntity(subscriber, appClientUser);
+
+            // check no existing subs for this event type
+            checkNoDuplicateSubscriptionForApp(subscriber.getSubscribedEvent(), appClientUser);
             Subscriber sub = subscriberRepository.save(Subscriber.builder()
                     .secret(subscriber.getSecret())
                     .subscribedEvent(subscriber.getSubscribedEvent())
@@ -102,6 +113,54 @@ public class SubscriberServiceImpl implements SubscriberService {
 
             return mapToDto(sub);
         }
+    }
+
+    /**
+     * Helper to check if a given app client has READ privs to the entity type they're trying to subscribe to
+     * @param subscriber
+     * @param appClientUser
+     */
+    private void checkAppHasReadAccessToEntity(SubscriberDto subscriber, AppClientUser appClientUser) {
+        // make new subscription, but need to make sure requester has READ access to target entity
+        String entityType = SubscriberServiceImpl.getTargetEntityType(subscriber.getSubscribedEvent());
+        if (!appClientUser
+                .getPrivileges()
+                .stream()
+                .map(Privilege::getName)
+                .collect(Collectors.toSet())
+                .contains(entityType + "_READ")) {
+
+            throw new InvalidAppSourcePermissions("Cannot subscribe to entity " + entityType + " without READ access");
+        }
+    }
+
+    /**
+     * Helper to check that a proposed create/edit won't result in a duplicate subscription for a given appclient
+     * @param proposedEvent
+     * @param appClientUser
+     */
+    private void checkNoDuplicateSubscriptionForApp(EventType proposedEvent, AppClientUser appClientUser) {
+        List<Subscriber> subs = Lists.newArrayList(subscriberRepository.findByAppClientUser(appClientUser));
+        if (subs.stream()
+                .map(Subscriber::getSubscribedEvent)
+                .collect(Collectors.toList())
+                .contains(proposedEvent)) {
+            throw new ResourceAlreadyExistsException("Subscription already exists for this app client for this event");
+        }
+    }
+
+    /**
+     * Helper to return string representation of the Event's target entity,
+     * we can easily get this from the prefix of the event name
+     * @param event
+     * @return
+     */
+    public static String getTargetEntityType(EventType event) {
+        String type = event.toString().split("_")[0];
+
+        // account for "SUB_ORG_*" which are really ORGANIZATION type
+        if (type.equals("SUB")) return "ORGANIZATION";
+        else return type;
     }
 
     @Override
