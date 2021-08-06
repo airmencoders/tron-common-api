@@ -13,7 +13,11 @@ import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.validations.NullOrNotBlankValidation;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Size;
 import java.util.*;
 
 /**
@@ -74,6 +78,8 @@ public class OrganizationDto {
 
     @Getter
     @Setter
+    @Size(max = 255)
+    @NotBlank
     private String name;
 
     @Getter
