@@ -47,6 +47,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 
+import javax.transaction.Transactional;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -414,7 +415,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * broken out for pub-sub purposes.  This helper does NOT invoke a pub-sub message
 	 * @param organization OrganizationDto entity to persist
 	 */
-	private OrganizationDto persistOrganization(OrganizationDto organization) {
+	public OrganizationDto persistOrganization(OrganizationDto organization) {
 		Organization org = this.convertToEntity(organization);
 
 		if (repository.existsById(org.getId()))
@@ -422,6 +423,13 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", org.getName()));
+
+		// go ahead and save the org's name so its at least in the db, should anything fail later on it will get rolled back out
+		repository.save(Organization
+				.builder()
+				.id(organization.getId())
+				.name(organization.getName())
+				.build());
 
 		performOrganizationParentChildLogic(org);
 
@@ -446,6 +454,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return The new organization in DTO form
 	 */
 	@Override
+	@Transactional
 	public OrganizationDto createOrganization(OrganizationDto organization) {
 		OrganizationDto result = this.persistOrganization(organization);
 

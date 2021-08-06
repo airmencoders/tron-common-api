@@ -5,10 +5,12 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
@@ -27,12 +29,15 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,6 +82,9 @@ public class OrgRelationshipIntegrationTest {
 
     @Autowired
     private DashboardUserRepository dashRepo;
+
+    @Autowired
+    private OrganizationRepository organizationRepository;
 
     private DashboardUser admin;
 
@@ -272,6 +280,69 @@ public class OrgRelationshipIntegrationTest {
                     .content(OBJECT_MAPPER.writeValueAsString(child4)))
                     .andExpect(status().isBadRequest());
         }
+
+        @Transactional
+        @Rollback
+        @Test
+        void testCreateOrganizationWithAlreadyExistsSubOrg() throws Exception {
+
+            // test can create a new org with a suborg (that exists) already specified
+            OrganizationDto child1 = OrganizationDto
+                    .builder()
+                    .branchType(Branch.USAF)
+                    .orgType(Unit.SQUADRON)
+                    .name("SubOrgSquadron")
+                    .build();
+
+            MvcResult result = mockMvc.perform(post(ENDPOINT_V2)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(child1)))
+                    .andExpect(status().isCreated())
+                    .andReturn();
+
+            UUID childId = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getId();
+
+            OrganizationDto newParent = OrganizationDto
+                    .builder()
+                    .branchType(Branch.USAF)
+                    .orgType(Unit.WING)
+                    .name("NewWing")
+                    .subordinateOrganizations(Lists.newArrayList(childId))
+                    .build();
+
+            mockMvc.perform(post(ENDPOINT_V2)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(newParent)))
+                    .andExpect(status().isCreated());
+
+            // Test that a bad request will rollback the new org from persisting
+            OrganizationDto failedParent = OrganizationDto
+                    .builder()
+                    .branchType(Branch.USAF)
+                    .orgType(Unit.WING)
+                    .name("FailedParent")
+                    .subordinateOrganizations(Lists.newArrayList(UUID.randomUUID()))
+                    .build();
+
+            mockMvc.perform(post(ENDPOINT_V2)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(failedParent)))
+                    .andExpect(status().isNotFound());
+
+            // verify change was rolled back
+            assertFalse(organizationRepository.findAll()
+                    .stream()
+                    .map(Organization::getName)
+                    .collect(Collectors.toList())
+                    .contains("FailedParent"));
+        }
+
     }
 
     /**
