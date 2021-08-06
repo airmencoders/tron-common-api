@@ -5,11 +5,13 @@ import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.logging.CommonApiLogger;
 import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
+import mil.tron.commonapi.service.pubsub.SubscriberServiceImpl;
 import mil.tron.commonapi.service.utility.IstioHeaderUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static mil.tron.commonapi.security.Utility.hmac;
 
@@ -150,6 +153,13 @@ public class EventPublisher {
                 continue;
             }
 
+            // make sure the target subscriber has at least READ access to the type of entity the event describes the change for
+            //  otherwise ignore them - since there's no use to send the change
+            if (!checkSubscriberHasReadPrivsForEvent(s)) {
+                publisherLog.info(String.format("[PUBLISH WARNING] - Subscription ID %s does not have READ access to the entity type of the event", s.getId()));
+                continue;
+            }
+
             String subscriberUrl = buildSubscriberFullUrl(s);
 
             if (!IstioHeaderUtils.extractSubscriberNamespace(subscriberUrl).equals(requesterNamespace)) {
@@ -170,6 +180,25 @@ public class EventPublisher {
         }
 
         publisherLog.info("[PUBLISH BROADCAST COMPLETE]");
+    }
+
+    /**
+     * Helper to check if a given subscriber has read access for the type of entity that they're about
+     * to send a message event to... if they don't have that entity's type of READ permission then its
+     * no use sending them the event
+     * @param subscriber
+     * @return
+     */
+    private boolean checkSubscriberHasReadPrivsForEvent(Subscriber subscriber) {
+        String type = SubscriberServiceImpl.getTargetEntityType(subscriber.getSubscribedEvent());
+        return subscriber
+                .getAppClientUser()
+                .getPrivileges()
+                .stream()
+                .map(Privilege::getName)
+                .collect(Collectors.toList())
+                .contains(type + "_READ");
+
     }
 
     /**

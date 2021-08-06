@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
@@ -19,6 +20,7 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.AppClientUserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -382,11 +384,18 @@ public class AppClientIntegrationTest {
 
         // test that subscriptions for a given app client are purged when
         //  that app client is deleted
+        ModelMapper mapper = new ModelMapper();
 
         AppClientUserDto app1 = AppClientUserDto.builder()
                 .id(UUID.randomUUID())
                 .name("App1")
                 .appClientDeveloperEmails(Lists.newArrayList(admin.getEmail()))
+                .privileges(Lists.newArrayList(
+                        mapper.map(privRepo.findAll()
+                                .stream()
+                                .filter(item -> item.getName().equals("PERSON_READ"))
+                                .findFirst()
+                                .get(), PrivilegeDto.class)))
                 .build();
 
         MvcResult result = mockMvc.perform(post(ENDPOINT)
