@@ -96,11 +96,11 @@ public class SubscriberServiceImpl implements SubscriberService {
             sub.setSubscribedEvent(subscriber.getSubscribedEvent());
             sub.setSubscriberAddress(subscriber.getSubscriberAddress());
             sub.setAppClientUser(appClientUser);
-            checkAppHasReadAcessToEntity(mapToDto(sub), appClientUser);
+            checkAppHasReadAccessToEntity(mapToDto(sub), appClientUser);
             return mapToDto(subscriberRepository.save(sub));
 
         } else {
-            checkAppHasReadAcessToEntity(subscriber, appClientUser);
+            checkAppHasReadAccessToEntity(subscriber, appClientUser);
 
             // check no existing subs for this event type
             checkNoDuplicateSubscriptionForApp(subscriber.getSubscribedEvent(), appClientUser);
@@ -115,7 +115,12 @@ public class SubscriberServiceImpl implements SubscriberService {
         }
     }
 
-    private void checkAppHasReadAcessToEntity(SubscriberDto subscriber, AppClientUser appClientUser) {
+    /**
+     * Helper to check if a given app client has READ privs to the entity type they're trying to subscribe to
+     * @param subscriber
+     * @param appClientUser
+     */
+    private void checkAppHasReadAccessToEntity(SubscriberDto subscriber, AppClientUser appClientUser) {
         // make new subscription, but need to make sure requester has READ access to target entity
         String entityType = SubscriberServiceImpl.getTargetEntityType(subscriber.getSubscribedEvent());
         if (!appClientUser
@@ -129,9 +134,13 @@ public class SubscriberServiceImpl implements SubscriberService {
         }
     }
 
+    /**
+     * Helper to check that a proposed create/edit won't result in a duplicate subscription for a given appclient
+     * @param proposedEvent
+     * @param appClientUser
+     */
     private void checkNoDuplicateSubscriptionForApp(EventType proposedEvent, AppClientUser appClientUser) {
         List<Subscriber> subs = Lists.newArrayList(subscriberRepository.findByAppClientUser(appClientUser));
-        System.out.println(subs.stream().map(item -> item.getSubscribedEvent().toString()).collect(Collectors.joining(",")));
         if (subs.stream()
                 .map(Subscriber::getSubscribedEvent)
                 .collect(Collectors.toList())
