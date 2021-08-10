@@ -533,7 +533,7 @@ public class OrganizationController {
 					description = "Bad Request / One of the supplied organizations contained a UUID that already exists or other duplicate data",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeOrganizationEdit
+	@PreAuthorizeOrganizationCreate
 	@Deprecated(since = "v2")
 	@PostMapping({"${api-prefix.v1}/organization/organizations"})
 	public ResponseEntity<Object> addNewOrganizations(
@@ -564,7 +564,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@WrappedEnvelopeResponse
-	@PreAuthorizeOrganizationEdit
+	@PreAuthorizeOrganizationCreate
 	@PostMapping({"${api-prefix.v2}/organization/organizations"})
 	public ResponseEntity<Object> addNewOrganizationsWrapped(
 			HttpServletResponse response,
