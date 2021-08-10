@@ -19,6 +19,8 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.io.IOException;
 import java.util.*;
@@ -63,6 +66,9 @@ class OrganizationServiceImplTest {
 
 	@Mock
 	private EntityFieldAuthService entityFieldAuthService;
+	
+	@Mock
+	private ValidatorService validatorService;
 
 	@Mock
 	OrganizationUniqueChecksServiceImpl uniqueService;
@@ -956,7 +962,7 @@ class OrganizationServiceImplTest {
 	}
 
 	@Test
-	public void testPatchRequest() throws JSONException, IOException {
+	public void testPatchRequest() throws JSONException, IOException, MethodArgumentNotValidException {
 		UUID orgId = UUID.randomUUID();
 		ObjectMapper objectMapper = new ObjectMapper();
 		JSONArray contentArray = new JSONArray();
@@ -981,5 +987,27 @@ class OrganizationServiceImplTest {
 		OrganizationDto capturedOrg = this.organizationService.patchOrganization(orgId, newPatch);
 		assertThat(capturedOrg.getName()).isEqualTo("Org Name");
 	}
+	
+	@Test
+	void patchRequest_shouldThrow_whenValidationFails() throws JSONException, IOException, MethodArgumentNotValidException {
+		UUID orgId = UUID.randomUUID();
+		ObjectMapper objectMapper = new ObjectMapper();
+		JSONArray contentArray = new JSONArray();
+		JSONObject content = new JSONObject();
+		content.put("op", "replace");
+		content.put("path", "/name");
+		content.put("value", "Org Name");
+		contentArray.put(content);
+		JsonPatch newPatch = JsonPatch.fromJson(
+				objectMapper.readTree(contentArray.toString())
+		);
+		Organization organizationDb = Organization.builder()
+				.id(orgId)
+				.name("Old New Name")
+				.build();
+		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(organizationDb));
 
+		Mockito.when(validatorService.isValid(Mockito.any(), Mockito.any())).thenThrow(MethodArgumentNotValidException.class);
+		assertThrows(MethodArgumentNotValidException.class, () -> this.organizationService.patchOrganization(orgId, newPatch));
+	}
 }

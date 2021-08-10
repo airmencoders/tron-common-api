@@ -29,6 +29,8 @@ import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
 import org.assertj.core.util.Lists;
 import org.modelmapper.Conditions;
 import org.springframework.context.annotation.Lazy;
@@ -39,6 +41,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -56,6 +59,7 @@ public class PersonServiceImpl implements PersonService {
 	private final DtoMapper modelMapper;
 	private final ObjectMapper objMapper;
 	private EntityFieldAuthService entityFieldAuthService;
+	private ValidatorService validatorService;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
 			Branch.USAF, fields(Airman.class),
 			Branch.USCG, fields(CoastGuardsman.class),
@@ -74,7 +78,8 @@ public class PersonServiceImpl implements PersonService {
 							 PersonMetadataRepository personMetadataRepository,
 							 EventManagerService eventManagerService,
 							 EntityFieldAuthService entityFieldAuthService,
-							 @Lazy OrganizationService organizationService) {
+							 @Lazy OrganizationService organizationService,
+							 ValidatorService validatorService) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
@@ -82,6 +87,7 @@ public class PersonServiceImpl implements PersonService {
 		this.eventManagerService = eventManagerService;
 		this.organizationService = organizationService;
 		this.entityFieldAuthService = entityFieldAuthService;
+		this.validatorService = validatorService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -293,7 +299,7 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto patchPerson(UUID id, JsonPatch patch) {
+	public PersonDto patchPerson(UUID id, JsonPatch patch) throws MethodArgumentNotValidException {
 		Optional<Person> dbPerson = repository.findById(id);
 
 		if (dbPerson.isEmpty()) {
@@ -302,6 +308,10 @@ public class PersonServiceImpl implements PersonService {
 		// patch must be done using a DTO
 		PersonDto dbPersonDto = convertToDto(dbPerson.get(),null);
 		PersonDto patchedPersonDto = applyPatchToPerson(patch, dbPersonDto);
+		
+		// Validate the patched person
+		validatorService.isValid(patchedPersonDto, PersonDto.class);
+
 		Person patchedPerson = convertToEntity(patchedPersonDto);
 
 		if (!personChecksService.personEmailIsUnique(patchedPerson)) {

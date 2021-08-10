@@ -34,6 +34,8 @@ import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
@@ -46,8 +48,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import javax.transaction.Transactional;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -66,6 +70,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final EventManagerService eventManagerService;
 	private final DtoMapper modelMapper;
 	private final EntityFieldAuthService entityFieldAuthService;
+	private final ValidatorService validatorService;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
 	private static final String ORG_IS_ALREADY_SUBORG_ELSEWHERE = "Organization %s is already a subordinate to another organization.";
@@ -91,7 +96,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 			OrganizationUniqueChecksService orgChecksService,
 			OrganizationMetadataRepository organizationMetadataRepository,
 			EventManagerService eventManagerService,
-			EntityFieldAuthService entityFieldAuthService) {
+			EntityFieldAuthService entityFieldAuthService,
+			ValidatorService validatorService) {
 
 		this.repository = repository;
 		this.personRepository = personRepository;
@@ -100,6 +106,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		this.organizationMetadataRepository = organizationMetadataRepository;
 		this.eventManagerService = eventManagerService;
 		this.entityFieldAuthService = entityFieldAuthService;
+		this.validatorService = validatorService;
 		this.modelMapper = new DtoMapper();
 		this.objMapper = new ObjectMapper();
 	}
@@ -346,7 +353,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	@Override
-	public OrganizationDto patchOrganization(UUID id, JsonPatch patch) {
+	public OrganizationDto patchOrganization(UUID id, JsonPatch patch) throws MethodArgumentNotValidException {
 		Optional<Organization> dbOrganization = this.repository.findById(id);
 
 		if (dbOrganization.isEmpty()) {
@@ -355,6 +362,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		OrganizationDto dbOrgDto = convertToDto(dbOrganization.get());
 		OrganizationDto patchedOrgDto = applyPatchToOrganization(patch, dbOrgDto);
+		
+		// Validate the dto with the changes applied to it
+		validatorService.isValid(patchedOrgDto, OrganizationDto.class);
+		
 		Organization patchedOrg = convertToEntity(patchedOrgDto);
 
 		// If patch changes name and the new name is not unique throw error
