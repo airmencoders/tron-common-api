@@ -89,6 +89,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	private final ObjectMapper objMapper;
 
+	@SuppressWarnings("squid:S00107")
 	public OrganizationServiceImpl(
 			OrganizationRepository repository,
 			PersonRepository personRepository,

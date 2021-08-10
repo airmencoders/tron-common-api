@@ -72,6 +72,7 @@ public class PersonServiceImpl implements PersonService {
 
 	private static final String DODID_ALREADY_EXISTS_ERROR = "Person resource with the dodid: %s already exists";
 
+	@SuppressWarnings("squid:S00107")
 	public PersonServiceImpl(PersonRepository repository,
 							 PersonUniqueChecksService personChecksService,
 							 RankRepository rankRepository,
