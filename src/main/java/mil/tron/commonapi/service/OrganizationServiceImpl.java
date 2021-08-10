@@ -636,12 +636,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Adds a list of Org DTOs as new entities in the database.  Only fires one pub-sub event
+	 * Adds a list of Org DTOs as new entities in the database. If any creates fail,
+	 * the entire operation is rolled back.
+	 *
+	 * Only fires one pub-sub event
 	 * containing the UUIDs of the newly created Organizations.
 	 *
 	 * @param newOrgs List of Organization DTOs to add
 	 * @return Same list of input Org DTOs (if they were all successfully created)
 	 */
+	@Transactional
 	@Override
 	public List<OrganizationDto> bulkAddOrgs(List<OrganizationDto> newOrgs) {
 		List<OrganizationDto> addedOrgs = new ArrayList<>();

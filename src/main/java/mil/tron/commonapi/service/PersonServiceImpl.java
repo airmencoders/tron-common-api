@@ -40,6 +40,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -393,14 +394,18 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	/**
-	 * Bulk creates new persons.  Only fires one pub-sub event containing all new Person UUIDs
+	 * Bulk creates new persons.
+	 * If any fail, then all of the prior successful inserts are rolled back, and non-successful status is returned
+	 * Only fires one pub-sub event containing all new Person UUIDs
 	 *
 	 * @param dtos new Persons to create
 	 * @return new Person dtos created
 	 */
+	@Transactional
 	@Override
 	public List<PersonDto> bulkAddPeople(List<PersonDto> dtos) {
-		List<PersonDto> added = new ArrayList<>();
+		List<PersonDto> added = new ArrayList<>();  // list of UUIDs that get successfully added for pubsub broadcast
+
 		for (PersonDto dto : dtos) {
 			added.add(this.persistPerson(dto));
 		}
