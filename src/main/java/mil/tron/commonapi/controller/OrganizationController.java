@@ -516,8 +516,7 @@ public class OrganizationController {
 	 */
 	@Operation(summary = "Adds one or more organization entities",
 			description = "Adds one or more organization entities - returns that same array of input organizations with their assigned UUIDs. " +
-					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
-					"any new organizations up to that organization that caused the failure will have been committed (but none thereafter)" +
+					"If the request does NOT return 201 (Created) because of an error the entire operation is rolled back having persisted nothing. " +
 					"The return error message will list the offending UUID or other data that caused the error.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "203",
