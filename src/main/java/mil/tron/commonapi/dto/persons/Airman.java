@@ -10,6 +10,23 @@ import mil.tron.commonapi.dto.PersonDto;
 import java.util.Date;
 
 public class Airman extends PersonDto {
+
+    /**
+     * An aircrew assigned HARM Code in the ARMS system
+     */
+    @Schema(nullable = true)
+    @Getter
+    @Setter
+    private String armsUnitCode;
+
+    /**
+     * An aircrew assigned HARM Code in the ARMS system
+     */
+    @Schema(nullable = true)
+    @Getter
+    @Setter
+    private String armsHarmCode;
+
     /**
      * An airman's Air Force Specialty Code.
      * e.g. "17D" is cyber warfare officer.
