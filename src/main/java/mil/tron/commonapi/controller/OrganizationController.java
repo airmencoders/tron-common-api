@@ -35,6 +35,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
@@ -516,8 +517,7 @@ public class OrganizationController {
 	 */
 	@Operation(summary = "Adds one or more organization entities",
 			description = "Adds one or more organization entities - returns that same array of input organizations with their assigned UUIDs. " +
-					"If the request does NOT return 201 (Created) because of an error (see other return codes), then " +
-					"any new organizations up to that organization that caused the failure will have been committed (but none thereafter)" +
+					"If the request does NOT return 201 (Created) because of an error the entire operation is rolled back having persisted nothing. " +
 					"The return error message will list the offending UUID or other data that caused the error.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "203",
@@ -533,7 +533,7 @@ public class OrganizationController {
 					description = "Bad Request / One of the supplied organizations contained a UUID that already exists or other duplicate data",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorizeOrganizationEdit
+	@PreAuthorizeOrganizationCreate
 	@Deprecated(since = "v2")
 	@PostMapping({"${api-prefix.v1}/organization/organizations"})
 	public ResponseEntity<Object> addNewOrganizations(
@@ -564,7 +564,7 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@WrappedEnvelopeResponse
-	@PreAuthorizeOrganizationEdit
+	@PreAuthorizeOrganizationCreate
 	@PostMapping({"${api-prefix.v2}/organization/organizations"})
 	public ResponseEntity<Object> addNewOrganizationsWrapped(
 			HttpServletResponse response,
@@ -600,7 +600,7 @@ public class OrganizationController {
 									anyOf = {JsonPatchStringArrayValue.class, JsonPatchStringValue.class,
 											JsonPatchObjectValue.class, JsonPatchObjectArrayValue.class}))), 
 					required = true)
-			@RequestBody JsonPatch patch) {
+			@RequestBody JsonPatch patch) throws MethodArgumentNotValidException {
 		OrganizationDto organizationDto = organizationService.patchOrganization(orgId, patch);
 		return new ResponseEntity<>(organizationDto, HttpStatus.valueOf(response.getStatus()));
 	}

@@ -30,6 +30,8 @@ import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import mil.tron.commonapi.service.utility.ReflectionUtils;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
 import org.assertj.core.util.Lists;
 import org.modelmapper.Conditions;
 import org.springframework.context.annotation.Lazy;
@@ -40,7 +42,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -57,6 +61,7 @@ public class PersonServiceImpl implements PersonService {
 	private final DtoMapper modelMapper;
 	private final ObjectMapper objMapper;
 	private EntityFieldAuthService entityFieldAuthService;
+	private ValidatorService validatorService;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
 			Branch.USAF, fields(Airman.class),
 			Branch.USCG, fields(CoastGuardsman.class),
@@ -69,13 +74,15 @@ public class PersonServiceImpl implements PersonService {
 
 	private static final String DODID_ALREADY_EXISTS_ERROR = "Person resource with the dodid: %s already exists";
 
+	@SuppressWarnings("squid:S00107")
 	public PersonServiceImpl(PersonRepository repository,
 							 PersonUniqueChecksService personChecksService,
 							 RankRepository rankRepository,
 							 PersonMetadataRepository personMetadataRepository,
 							 EventManagerService eventManagerService,
 							 EntityFieldAuthService entityFieldAuthService,
-							 @Lazy OrganizationService organizationService) {
+							 @Lazy OrganizationService organizationService,
+							 ValidatorService validatorService) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
@@ -83,6 +90,7 @@ public class PersonServiceImpl implements PersonService {
 		this.eventManagerService = eventManagerService;
 		this.organizationService = organizationService;
 		this.entityFieldAuthService = entityFieldAuthService;
+		this.validatorService = validatorService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -294,7 +302,7 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto patchPerson(UUID id, JsonPatch patch) {
+	public PersonDto patchPerson(UUID id, JsonPatch patch) throws MethodArgumentNotValidException {
 		Optional<Person> dbPerson = repository.findById(id);
 
 		if (dbPerson.isEmpty()) {
@@ -312,6 +320,9 @@ public class PersonServiceImpl implements PersonService {
 
 		// check we didnt change anything on any NonPatchableFields
 		ReflectionUtils.checkNonPatchableFieldsUntouched(dbPersonDto, patchedPersonDto);
+
+		// Validate the patched person
+		validatorService.isValid(patchedPersonDto, PersonDto.class);
 
 		Person patchedPerson = convertToEntity(patchedPersonDto);
 
@@ -404,14 +415,18 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	/**
-	 * Bulk creates new persons.  Only fires one pub-sub event containing all new Person UUIDs
+	 * Bulk creates new persons.
+	 * If any fail, then all of the prior successful inserts are rolled back, and non-successful status is returned
+	 * Only fires one pub-sub event containing all new Person UUIDs
 	 *
 	 * @param dtos new Persons to create
 	 * @return new Person dtos created
 	 */
+	@Transactional
 	@Override
 	public List<PersonDto> bulkAddPeople(List<PersonDto> dtos) {
-		List<PersonDto> added = new ArrayList<>();
+		List<PersonDto> added = new ArrayList<>();  // list of UUIDs that get successfully added for pubsub broadcast
+
 		for (PersonDto dto : dtos) {
 			added.add(this.persistPerson(dto));
 		}

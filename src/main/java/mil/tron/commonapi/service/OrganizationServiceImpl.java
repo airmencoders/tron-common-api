@@ -34,6 +34,8 @@ import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
@@ -46,8 +48,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import javax.transaction.Transactional;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -66,6 +70,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final EventManagerService eventManagerService;
 	private final DtoMapper modelMapper;
 	private final EntityFieldAuthService entityFieldAuthService;
+	private final ValidatorService validatorService;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
 	private static final String ORG_IS_ALREADY_SUBORG_ELSEWHERE = "Organization %s is already a subordinate to another organization.";
@@ -84,6 +89,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	private final ObjectMapper objMapper;
 
+	@SuppressWarnings("squid:S00107")
 	public OrganizationServiceImpl(
 			OrganizationRepository repository,
 			PersonRepository personRepository,
@@ -91,7 +97,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 			OrganizationUniqueChecksService orgChecksService,
 			OrganizationMetadataRepository organizationMetadataRepository,
 			EventManagerService eventManagerService,
-			EntityFieldAuthService entityFieldAuthService) {
+			EntityFieldAuthService entityFieldAuthService,
+			ValidatorService validatorService) {
 
 		this.repository = repository;
 		this.personRepository = personRepository;
@@ -100,6 +107,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		this.organizationMetadataRepository = organizationMetadataRepository;
 		this.eventManagerService = eventManagerService;
 		this.entityFieldAuthService = entityFieldAuthService;
+		this.validatorService = validatorService;
 		this.modelMapper = new DtoMapper();
 		this.objMapper = new ObjectMapper();
 	}
@@ -346,7 +354,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	@Override
-	public OrganizationDto patchOrganization(UUID id, JsonPatch patch) {
+	public OrganizationDto patchOrganization(UUID id, JsonPatch patch) throws MethodArgumentNotValidException {
 		Optional<Organization> dbOrganization = this.repository.findById(id);
 
 		if (dbOrganization.isEmpty()) {
@@ -358,6 +366,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		// check we didnt change anything on any NonPatchableFields
 		mil.tron.commonapi.service.utility.ReflectionUtils.checkNonPatchableFieldsUntouched(dbOrgDto, patchedOrgDto);
+
+		// Validate the dto with the changes applied to it
+		validatorService.isValid(patchedOrgDto, OrganizationDto.class);
 
 		Organization patchedOrg = convertToEntity(patchedOrgDto);
 
@@ -640,12 +651,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Adds a list of Org DTOs as new entities in the database.  Only fires one pub-sub event
+	 * Adds a list of Org DTOs as new entities in the database. If any creates fail,
+	 * the entire operation is rolled back.
+	 *
+	 * Only fires one pub-sub event
 	 * containing the UUIDs of the newly created Organizations.
 	 *
 	 * @param newOrgs List of Organization DTOs to add
 	 * @return Same list of input Org DTOs (if they were all successfully created)
 	 */
+	@Transactional
 	@Override
 	public List<OrganizationDto> bulkAddOrgs(List<OrganizationDto> newOrgs) {
 		List<OrganizationDto> addedOrgs = new ArrayList<>();
