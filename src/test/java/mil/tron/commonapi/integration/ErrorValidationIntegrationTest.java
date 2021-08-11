@@ -2,14 +2,17 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
-import mil.tron.commonapi.exception.custom.ValidationError;
-
+import mil.tron.commonapi.repository.OrganizationRepository;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -20,11 +23,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration test that launches the FULL server and Spring error handlers so we can
@@ -41,6 +43,10 @@ public class ErrorValidationIntegrationTest {
     int randomServerPort;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private final HttpClient client = HttpClient.newHttpClient();
+
+    @Autowired
+    private OrganizationRepository organizationRepository;
 
     @Transactional
     @Rollback
@@ -57,7 +63,6 @@ public class ErrorValidationIntegrationTest {
         person.setRank("Capt");
         person.setBranch(Branch.USAF);
 
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(new URI(String.format("http://localhost:%d/api/v2/person", randomServerPort)))
                 .POST(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
@@ -92,5 +97,110 @@ public class ErrorValidationIntegrationTest {
         response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(400, response.statusCode());
         assertTrue(JsonPath.read(response.body(), "$.reason").toString().contains("check format of the request"));
+    }
+
+    @Rollback
+    @Transactional
+    @Test
+    void testCantPatchPersonOrgFields() throws Exception {
+
+        // test that person's organizationMemberships and organizationLeaderships fields
+        //  cannot be PUT, POST, or JSON PATCH'd thru the Person API
+        PersonDto person = PersonDto.builder()
+                .id(UUID.randomUUID())
+                .firstName("test")
+                .lastName("member")
+                .email("dude@member.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .organizationMemberships(Set.of(UUID.randomUUID()))
+                .dodid("12345")
+                .build();
+
+        // test can't POST - can't POST for organizationMemberships/organizationLeaderships since those are validated to be null always
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person", randomServerPort)))
+                .POST(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
+                .header("content-type", "application/json")
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
+        assertTrue(response.body().contains("field is readonly"));
+
+        // actually persist it this time so we can do a PUT next
+        person.setOrganizationMemberships(null);
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person", randomServerPort)))
+                .POST(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
+                .header("content-type", "application/json")
+                .build();
+
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.CREATED.value(), response.statusCode());
+
+        // check PUT fails, can't PUT for organizationMemberships/organizationLeaderships since those are validated to be null always
+        person.setOrganizationMemberships(Set.of(UUID.randomUUID()));
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId())))
+                .PUT(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
+                .header("content-type", "application/json")
+                .build();
+
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
+        assertTrue(response.body().contains("field is readonly"));
+
+        person.setOrganizationMemberships(null);
+        person.setOrganizationLeaderships(Set.of(UUID.randomUUID()));
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId())))
+                .PUT(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
+                .header("content-type", "application/json")
+                .build();
+
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
+        assertTrue(response.body().contains("field is readonly"));
+
+        // add a real org now with the person we just created in it
+        OrganizationDto org = OrganizationDto
+                .builder()
+                .id(UUID.randomUUID())
+                .name("ORG")
+                .members(Lists.newArrayList(person.getId()))
+                .build();
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/organization", randomServerPort)))
+                .method("POST", HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(org)))
+                .header("content-type", "application/json")
+                .build();
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.CREATED.value(), response.statusCode());
+
+        // check JSON PATCH fails--
+        // test you can't patch the organizationMemberships field since its annotated as NonPatchable
+        String patchSpec = "[ {\"op\" : \"add\", \"path\": \"/organizationMemberships/-\", \"value\": \"" + UUID.randomUUID() + "\"}]";
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId())))
+                .method("PATCH", HttpRequest.BodyPublishers.ofString(patchSpec))
+                .header("content-type", "application/json-patch+json")
+                .build();
+
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
+        assertTrue(response.body().contains("Cannot JSON Patch the field"));
+
+        // test you can't patch the organizationLeaderships field since its annotated as NonPatchable
+        patchSpec = "[ {\"op\" : \"add\", \"path\": \"/organizationLeaderships/-\", \"value\": \"" + UUID.randomUUID() + "\"}]";
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId())))
+                .method("PATCH", HttpRequest.BodyPublishers.ofString(patchSpec))
+                .header("content-type", "application/json-patch+json")
+                .build();
+
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
+        assertTrue(response.body().contains("Cannot JSON Patch the field"));
     }
 }

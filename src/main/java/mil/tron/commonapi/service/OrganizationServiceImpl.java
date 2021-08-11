@@ -355,6 +355,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		OrganizationDto dbOrgDto = convertToDto(dbOrganization.get());
 		OrganizationDto patchedOrgDto = applyPatchToOrganization(patch, dbOrgDto);
+
+		// check we didnt change anything on any NonPatchableFields
+		mil.tron.commonapi.service.utility.ReflectionUtils.checkNonPatchableFieldsUntouched(dbOrgDto, patchedOrgDto);
+
 		Organization patchedOrg = convertToEntity(patchedOrgDto);
 
 		// If patch changes name and the new name is not unique throw error

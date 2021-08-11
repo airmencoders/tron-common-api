@@ -29,6 +29,7 @@ import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
+import mil.tron.commonapi.service.utility.ReflectionUtils;
 import org.assertj.core.util.Lists;
 import org.modelmapper.Conditions;
 import org.springframework.context.annotation.Lazy;
@@ -300,8 +301,18 @@ public class PersonServiceImpl implements PersonService {
 			throw this.buildRecordNotFoundForPerson(id);
 		}
 		// patch must be done using a DTO
-		PersonDto dbPersonDto = convertToDto(dbPerson.get(),null);
+		PersonDto dbPersonDto = convertToDto(dbPerson.get(), PersonConversionOptions
+				.builder()
+				.membershipsIncluded(true)
+				.metadataIncluded(true)
+				.leadershipsIncluded(true)
+				.build());
+
 		PersonDto patchedPersonDto = applyPatchToPerson(patch, dbPersonDto);
+
+		// check we didnt change anything on any NonPatchableFields
+		ReflectionUtils.checkNonPatchableFieldsUntouched(dbPersonDto, patchedPersonDto);
+
 		Person patchedPerson = convertToEntity(patchedPersonDto);
 
 		if (!personChecksService.personEmailIsUnique(patchedPerson)) {
@@ -429,13 +440,13 @@ public class PersonServiceImpl implements PersonService {
         if (entity.getPrimaryOrganization() != null) {
             dto.setPrimaryOrganizationId(entity.getPrimaryOrganization().getId());
         }
-        if (options.isMetadataIncluded()) {
+        if (options.isMetadataIncluded() && entity.getMetadata() != null) {
 		    entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
         }
-        if (options.isLeadershipsIncluded()) {
+        if (options.isLeadershipsIncluded() && entity.getOrganizationLeaderships() != null) {
             dto.setOrganizationLeaderships(entity.getOrganizationLeaderships().stream().map(x -> x.getId()).collect(Collectors.toSet()));
         }
-        if (options.isMembershipsIncluded()) {
+        if (options.isMembershipsIncluded() && entity.getOrganizationMemberships() != null) {
             dto.setOrganizationMemberships(entity.getOrganizationMemberships().stream().map(x -> x.getId()).collect(Collectors.toSet()));
         }
 		return dto;
