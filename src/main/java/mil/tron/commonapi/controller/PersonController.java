@@ -32,6 +32,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -355,7 +356,7 @@ public class PersonController {
 					schema = @Schema(example="[ {'op':'add','path':'/hello','value':'world'} ]",
 							oneOf = {JsonPatchStringArrayValue.class, JsonPatchStringValue.class,
 									JsonPatchObjectValue.class, JsonPatchObjectArrayValue.class}))
-			@RequestBody JsonPatch patch) {
+			@RequestBody JsonPatch patch) throws MethodArgumentNotValidException {
 		PersonDto updatedPerson = personService.patchPerson(personId, patch);
 		return new ResponseEntity<>(updatedPerson, HttpStatus.valueOf(response.getStatus()));
 	}

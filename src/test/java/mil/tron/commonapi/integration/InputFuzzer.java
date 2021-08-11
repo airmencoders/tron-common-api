@@ -287,15 +287,14 @@ public class InputFuzzer {
             UUID id = new ObjectMapper().readValue(result.getResponse().getContentAsString(), PersonDto.class).getId();
 
             // person PATCH only accepts application/json-patch+json with same contraints
-            assertThrows(Exception.class, () ->
-                    mockMvc.perform(patch(ENDPOINT + "/{id}", id.toString())
-                            .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                            .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                            .contentType("application/json-patch+json")
-                            .content("[\n" +
-                                    "  { \"op\": \"replace\", \"path\": \"/firstName\", \"value\": \"" + StringUtils.repeat('J', 256) + "\" }" +
-                                    "]\n"))
-            );
+            mockMvc.perform(patch(ENDPOINT + "/{id}", id.toString())
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType("application/json-patch+json")
+                    .content("[\n" +
+                            "  { \"op\": \"replace\", \"path\": \"/firstName\", \"value\": \"" + StringUtils.repeat('J', 256) + "\" }" +
+                            "]\n"))
+            	.andExpect(status().isBadRequest());
         }
     }
 

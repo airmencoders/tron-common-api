@@ -35,6 +35,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
@@ -599,7 +600,7 @@ public class OrganizationController {
 									anyOf = {JsonPatchStringArrayValue.class, JsonPatchStringValue.class,
 											JsonPatchObjectValue.class, JsonPatchObjectArrayValue.class}))), 
 					required = true)
-			@RequestBody JsonPatch patch) {
+			@RequestBody JsonPatch patch) throws MethodArgumentNotValidException {
 		OrganizationDto organizationDto = organizationService.patchOrganization(orgId, patch);
 		return new ResponseEntity<>(organizationDto, HttpStatus.valueOf(response.getStatus()));
 	}

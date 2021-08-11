@@ -21,6 +21,9 @@ import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
+import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -39,6 +42,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -74,6 +78,9 @@ class PersonServiceImplTest {
 
 	@Mock
 	private EntityFieldAuthService entityFieldAuthService;
+	
+	@Mock
+	private ValidatorService validatorService;
 	
 	@InjectMocks
 	private PersonServiceImpl personService;
@@ -298,7 +305,7 @@ class PersonServiceImplTest {
 		}
 
 		@Test
-		void successfulPatch() throws JSONException, IOException {
+		void successfulPatch() throws JSONException, IOException, MethodArgumentNotValidException {
 			// replace op
 			content = new JSONObject();
 			content.put("op","replace");
@@ -348,6 +355,27 @@ class PersonServiceImplTest {
 
 			PersonDto patchedPerson = personService.patchPerson(testPerson.getId(), patch);
 			assertThat(patchedPerson.getId()).isEqualTo(testPerson.getId());
+		}
+		
+		@Test
+		void requestPatch_shouldThrow_whenValidationFails() throws JSONException, IOException, MethodArgumentNotValidException {
+			// replace op
+			content = new JSONObject();
+			content.put("op","replace");
+			content.put("path","/firstName");
+			content.put("value", StringUtils.repeat('D', 256));
+
+			JsonNode newNode = objectMapper.readTree(contentArr.toString());
+			patch = JsonPatch.fromJson(newNode);
+
+			// create a different test person that has a changed name
+			Person tempTestPerson = testPerson;
+			tempTestPerson.setFirstName("patchFirst");
+
+			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(tempTestPerson));
+			Mockito.when(validatorService.isValid(Mockito.any(), Mockito.any())).thenThrow(MethodArgumentNotValidException.class);
+			
+			assertThrows(MethodArgumentNotValidException.class, () -> personService.patchPerson(testPerson.getId(), patch));
 		}
 
 		@Test
