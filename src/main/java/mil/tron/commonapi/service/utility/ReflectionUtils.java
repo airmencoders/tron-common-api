@@ -43,7 +43,6 @@ public class ReflectionUtils {
             }
         }
         catch (IllegalAccessException e) {
-            System.out.println(e.getMessage());
             throw new BadRequestException("Unknown exception occurred trying validate a JSON Patch operation");
         }
     }
