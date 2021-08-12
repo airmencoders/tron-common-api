@@ -8,7 +8,9 @@ import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.repository.OrganizationRepository;
+import mil.tron.commonapi.repository.PersonRepository;
 import org.assertj.core.util.Lists;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,8 +52,9 @@ public class ErrorValidationIntegrationTest {
     @Autowired
     private OrganizationRepository organizationRepository;
 
-    @Transactional
-    @Rollback
+    @Autowired
+    private PersonRepository personRepository;
+
     @Test
     void testValidationErrorField() throws Exception {
 
@@ -101,8 +104,17 @@ public class ErrorValidationIntegrationTest {
         assertTrue(JsonPath.read(response.body(), "$.reason").toString().contains("check format of the request"));
     }
 
-    @Rollback
-    @Transactional
+
+    @AfterEach
+    public void cleanup() {
+
+        // we have to manually cleanup since running the full server container
+        //  the rollback stuff doesn't work per Spring Docs.
+
+        personRepository.deleteAllInBatch();
+        organizationRepository.deleteAllInBatch();
+    }
+
     @Test
     void testCantPatchPersonOrgFields() throws Exception {
 
@@ -195,4 +207,5 @@ public class ErrorValidationIntegrationTest {
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
         assertTrue(response.body().contains("Cannot JSON Patch the field"));
     }
+
 }
