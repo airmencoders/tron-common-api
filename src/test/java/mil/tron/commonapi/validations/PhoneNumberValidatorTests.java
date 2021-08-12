@@ -21,6 +21,8 @@ public class PhoneNumberValidatorTests {
     @Test
     public void shouldReturnFalseWhenInvalidPhoneNumber(){
         assertFalse(validator.isValid("(111) 167-1309", null));
+        assertFalse(validator.isValid("(291) 267-1309", null));
+        assertFalse(validator.isValid("2912671309", null));
         assertFalse(validator.isValid("Phone Number", null));
         assertFalse(validator.isValid("000-000-0000", null));
     }

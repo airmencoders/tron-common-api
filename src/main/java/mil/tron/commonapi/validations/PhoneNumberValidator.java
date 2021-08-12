@@ -15,7 +15,7 @@ public class PhoneNumberValidator implements ConstraintValidator<ValidPhoneNumbe
 
     public boolean isValid(String phoneNumber, ConstraintValidatorContext context) {//NOSONAR
 
-        String regex = "^(?:\\([2-9]\\d{2}\\) ?|[2-9]\\d{2}(?:-?| ?))[2-9]\\d{2}[- ]?\\d{4}$";//NOSONAR
+        String regex = "^(?:\\([2-9][0-8]\\d\\) ?|[2-9][0-8]\\d(?:-?| ?))[2-9]\\d{2}[- ]?\\d{4}$";//NOSONAR
         Pattern p = Pattern.compile(regex);
         return phoneNumber == null || phoneNumber.isEmpty() || p.matcher(phoneNumber).matches();
     }
