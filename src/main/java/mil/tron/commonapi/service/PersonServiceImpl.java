@@ -117,7 +117,6 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personDodidIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
 
-
 		checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
 		Person resultEntity = repository.save(entity);
 		PersonDto result = convertToDto(resultEntity, null);

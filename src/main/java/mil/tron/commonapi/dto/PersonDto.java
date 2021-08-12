@@ -13,9 +13,7 @@ import mil.tron.commonapi.validations.ValidDodId;
 import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.validation.constraints.Email;
-import javax.validation.constraints.Null;
 import javax.validation.constraints.Size;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -204,12 +202,15 @@ public class PersonDto {
      * To change, must go thru the Organization API
      */
     @NonPatchableField
-    @Null(message = PersonDto.FIELD_IS_READONLY_MSG)
     @Getter
     @Setter
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private Set<UUID> organizationMemberships;
+
+    @JsonIgnore
+    @JsonSetter(PersonDto.ORG_MEMBERSHIPS_FIELD)
+    public void setOrgMemberships(Set<UUID> orgMemberships) { }  //NOSONAR
 
     /**
      * The organizations this person is the leader of, this
@@ -217,12 +218,15 @@ public class PersonDto {
      * To change, must go thru the Organization API
      */
     @NonPatchableField
-    @Null(message = PersonDto.FIELD_IS_READONLY_MSG)
     @Getter
     @Setter
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private Set<UUID> organizationLeaderships;
+
+    @JsonIgnore
+    @JsonSetter(PersonDto.ORG_LEADERSHIPS_FIELD)
+    public void setOrgLeaderships(Set<UUID> orgLeaderships) {}  //NOSONAR
 
     @JsonIgnore
     private Map<String, String> meta;

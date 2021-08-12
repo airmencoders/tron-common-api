@@ -1,7 +1,9 @@
 package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -117,7 +119,7 @@ public class ErrorValidationIntegrationTest {
                 .dodid("12345")
                 .build();
 
-        // test can't POST - can't POST for organizationMemberships/organizationLeaderships since those are validated to be null always
+        // test POST
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(new URI(String.format("http://localhost:%d/api/v2/person", randomServerPort)))
                 .POST(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
@@ -125,21 +127,16 @@ public class ErrorValidationIntegrationTest {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
-        assertTrue(response.body().contains("field is readonly"));
-
-        // actually persist it this time so we can do a PUT next
-        person.setOrganizationMemberships(null);
-        request = HttpRequest.newBuilder()
-                .uri(new URI(String.format("http://localhost:%d/api/v2/person", randomServerPort)))
-                .POST(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
-                .header("content-type", "application/json")
-                .build();
-
-        response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(HttpStatus.CREATED.value(), response.statusCode());
 
-        // check PUT fails, can't PUT for organizationMemberships/organizationLeaderships since those are validated to be null always
+        // verify that field was ignored
+        Set<UUID> orgMemberships = JsonPath.using(Configuration.builder().options(Option.SUPPRESS_EXCEPTIONS).build())
+                .parse(response.body())
+                .read("$.organizationMemberships");
+
+        assertTrue(orgMemberships == null || orgMemberships.isEmpty());
+
+        // test PUT
         person.setOrganizationMemberships(Set.of(UUID.randomUUID()));
         request = HttpRequest.newBuilder()
                 .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId())))
@@ -148,20 +145,12 @@ public class ErrorValidationIntegrationTest {
                 .build();
 
         response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
-        assertTrue(response.body().contains("field is readonly"));
+        assertEquals(HttpStatus.OK.value(), response.statusCode());
 
-        person.setOrganizationMemberships(null);
-        person.setOrganizationLeaderships(Set.of(UUID.randomUUID()));
-        request = HttpRequest.newBuilder()
-                .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId())))
-                .PUT(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
-                .header("content-type", "application/json")
-                .build();
-
-        response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
-        assertTrue(response.body().contains("field is readonly"));
+        Set<UUID> orgLeaderships = JsonPath.using(Configuration.builder().options(Option.SUPPRESS_EXCEPTIONS).build())
+                .parse(response.body())
+                .read("$.organizationLeaderships");
+        assertTrue(orgLeaderships == null || orgLeaderships.isEmpty());
 
         // add a real org now with the person we just created in it
         OrganizationDto org = OrganizationDto
@@ -178,8 +167,11 @@ public class ErrorValidationIntegrationTest {
         response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(HttpStatus.CREATED.value(), response.statusCode());
 
+        List<UUID> members = JsonPath.parse(response.body()).read("$.members");
+        assertFalse(members.isEmpty());
+
         // check JSON PATCH fails--
-        // test you can't patch the organizationMemberships field since its annotated as NonPatchable
+        // test you can't patch the organizationMemberships field since its annotated as @NonPatchableField
         String patchSpec = "[ {\"op\" : \"add\", \"path\": \"/organizationMemberships/-\", \"value\": \"" + UUID.randomUUID() + "\"}]";
         request = HttpRequest.newBuilder()
                 .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId())))
@@ -191,7 +183,7 @@ public class ErrorValidationIntegrationTest {
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
         assertTrue(response.body().contains("Cannot JSON Patch the field"));
 
-        // test you can't patch the organizationLeaderships field since its annotated as NonPatchable
+        // test you can't patch the organizationLeaderships field since its annotated as @NonPatchableField
         patchSpec = "[ {\"op\" : \"add\", \"path\": \"/organizationLeaderships/-\", \"value\": \"" + UUID.randomUUID() + "\"}]";
         request = HttpRequest.newBuilder()
                 .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId())))
