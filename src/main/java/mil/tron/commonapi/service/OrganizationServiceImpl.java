@@ -58,6 +58,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static mil.tron.commonapi.service.utility.ReflectionUtils.checkNonPatchableFieldsUntouched;
 import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
 @Service
@@ -365,7 +366,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		OrganizationDto patchedOrgDto = applyPatchToOrganization(patch, dbOrgDto);
 
 		// check we didnt change anything on any NonPatchableFields
-		mil.tron.commonapi.service.utility.ReflectionUtils.checkNonPatchableFieldsUntouched(dbOrgDto, patchedOrgDto);
+		checkNonPatchableFieldsUntouched(dbOrgDto, patchedOrgDto);
 
 		// Validate the dto with the changes applied to it
 		validatorService.isValid(patchedOrgDto, OrganizationDto.class);

@@ -48,6 +48,7 @@ import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static mil.tron.commonapi.service.utility.ReflectionUtils.checkNonPatchableFieldsUntouched;
 import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
 @Service
@@ -318,7 +319,7 @@ public class PersonServiceImpl implements PersonService {
 		PersonDto patchedPersonDto = applyPatchToPerson(patch, dbPersonDto);
 
 		// check we didnt change anything on any NonPatchableFields
-		ReflectionUtils.checkNonPatchableFieldsUntouched(dbPersonDto, patchedPersonDto);
+		checkNonPatchableFieldsUntouched(dbPersonDto, patchedPersonDto);
 
 		// Validate the patched person
 		validatorService.isValid(patchedPersonDto, PersonDto.class);
