@@ -1236,7 +1236,8 @@ public class AppSourceIntegrationTest {
                 .andExpect(jsonPath("$.components.appsource_Name.status", equalTo("APPSOURCE_UNKNOWN")))
                 .andExpect(jsonPath("$.components.appsource_Name.details.error", equalTo("Health check has not run yet")));
 
-        Thread.sleep(1000);
+        int delayTime = 2000;
+        Thread.sleep(delayTime);
 
         mockMvc.perform(get("/actuator/health")
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
@@ -1251,7 +1252,7 @@ public class AppSourceIntegrationTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        Thread.sleep(1000);
+        Thread.sleep(delayTime);
         mockMvc.perform(get("/actuator/health")
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
@@ -1264,7 +1265,7 @@ public class AppSourceIntegrationTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
 
-        Thread.sleep(1000);
+        Thread.sleep(delayTime);
 
         mockMvc.perform(get("/actuator/health")
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
@@ -1278,7 +1279,7 @@ public class AppSourceIntegrationTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
 
-        Thread.sleep(1000);
+        Thread.sleep(delayTime);
 
         mockMvc.perform(get("/actuator/health")
                 .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))

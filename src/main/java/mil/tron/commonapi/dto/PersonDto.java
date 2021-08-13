@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.*;
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import mil.tron.commonapi.annotation.jsonpatch.NonPatchableField;
 import mil.tron.commonapi.annotation.security.PiiField;
 import mil.tron.commonapi.dto.persons.*;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -13,7 +14,6 @@ import mil.tron.commonapi.validations.ValidPhoneNumber;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.Size;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -49,6 +49,8 @@ public class PersonDto {
 	public static final String BRANCH_FIELD = "branch";
 	@JsonIgnore
 	private static final String NULL_OR_NOT_BLANK_DESCRIPTION = "Must be null or not blank";
+	@JsonIgnore
+    private static final String FIELD_IS_READONLY_MSG = "This field is readonly and cannot be set via HTTP request";
 
     @Getter
     @Setter
@@ -195,20 +197,36 @@ public class PersonDto {
     private UUID primaryOrganizationId;
 
     /**
-     * The organizations this person is a member of
+     * The organizations this person is a member of, this
+     * is read-only and cannot be set thru POST, PUT, or JSON PATCH.
+     * To change, must go thru the Organization API
      */
+    @NonPatchableField
     @Getter
     @Setter
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private Set<UUID> organizationMemberships;
 
+    @JsonIgnore
+    @JsonSetter(PersonDto.ORG_MEMBERSHIPS_FIELD)
+    public void setOrgMemberships(Set<UUID> orgMemberships) { }  //NOSONAR
+
     /**
-     * The organizations this person is the leader of
+     * The organizations this person is the leader of, this
+     * is read-only and cannot be set thru POST, PUT, or JSON PATCH.
+     * To change, must go thru the Organization API
      */
+    @NonPatchableField
     @Getter
     @Setter
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private Set<UUID> organizationLeaderships;
+
+    @JsonIgnore
+    @JsonSetter(PersonDto.ORG_LEADERSHIPS_FIELD)
+    public void setOrgLeaderships(Set<UUID> orgLeaderships) {}  //NOSONAR
 
     @JsonIgnore
     private Map<String, String> meta;
