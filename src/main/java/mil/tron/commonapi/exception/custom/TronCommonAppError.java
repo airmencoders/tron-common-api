@@ -84,6 +84,7 @@ public class TronCommonAppError {
     	errorResponse.put("timestamp", this.timestamp);
     	errorResponse.put("status", this.status);
     	errorResponse.put("error", this.error);
+    	errorResponse.put("errors", this.errors);
     	errorResponse.put("reason", this.reason);
     	errorResponse.put("path", this.path);
     	
