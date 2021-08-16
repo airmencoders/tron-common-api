@@ -19,6 +19,14 @@ import java.util.stream.Collectors;
 public class TronCommonAppError {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 
+	private static final String ERROR = "error";
+	public static final String ERRORS = "errors";
+	public static final String MESSAGE = "message";
+	public static final String PATH = "path";
+	public static final String REASON = "reason";
+	public static final String STATUS = "status";
+	public static final String TIMESTAMP = "timestamp";
+
     @Getter
     @Setter
     private int status;
@@ -50,8 +58,8 @@ public class TronCommonAppError {
 
         // see if we have binding errors and is able to cast them to an FieldError collection
         try {
-            List<FieldError> errors = (List<FieldError>) defaultErrorAttributes.get("errors");
-            reason = (String) defaultErrorAttributes.get("message");
+            List<FieldError> errors = (List<FieldError>) defaultErrorAttributes.get(ERRORS);
+            reason = (String) defaultErrorAttributes.get(MESSAGE);
             objectErrors = errors;
         }
         catch (Exception e) {
@@ -67,33 +75,33 @@ public class TronCommonAppError {
             }
             else {
                 // fall back is the raw message itself from spring
-                reason = (String) defaultErrorAttributes.getOrDefault("message", "");
+                reason = (String) defaultErrorAttributes.getOrDefault(MESSAGE, "");
             }
         }
 
-        return new TronCommonAppError(((Integer)defaultErrorAttributes.getOrDefault("status", "")),
+        return new TronCommonAppError(((Integer)defaultErrorAttributes.getOrDefault(STATUS, "")),
                 reason,
-                (String) defaultErrorAttributes.getOrDefault("path", ""),
-                (String) defaultErrorAttributes.getOrDefault("error", ""),
+                (String) defaultErrorAttributes.getOrDefault(PATH, ""),
+                (String) defaultErrorAttributes.getOrDefault(ERROR, ""),
                 objectErrors,
-                (Date) defaultErrorAttributes.getOrDefault("timestamp", new Date()));
+                (Date) defaultErrorAttributes.getOrDefault(TIMESTAMP, new Date()));
     }
 
     public Map<String, Object> toAttributeMap() {
     	Map<String, Object> errorResponse = new LinkedHashMap<>();
-    	errorResponse.put("timestamp", this.timestamp);
-    	errorResponse.put("status", this.status);
-    	errorResponse.put("error", this.error);
-    	errorResponse.put("errors", this.errors);
-    	errorResponse.put("reason", this.reason);
-    	errorResponse.put("path", this.path);
+    	errorResponse.put(TIMESTAMP, this.timestamp);
+    	errorResponse.put(STATUS, this.status);
+    	errorResponse.put(ERROR, this.error);
+    	errorResponse.put(ERRORS, this.errors);
+    	errorResponse.put(REASON, this.reason);
+    	errorResponse.put(PATH, this.path);
     	
     	if (this.errors != null && !this.errors.isEmpty()) {
     		List<ValidationError> validationErrors = this.errors.stream()
     				.map(fieldError -> MODEL_MAPPER.map(fieldError, ValidationError.class))
     				.collect(Collectors.toList());
     		
-    		errorResponse.put("errors", validationErrors);
+    		errorResponse.put(ERRORS, validationErrors);
     	}
 
     	return errorResponse;
