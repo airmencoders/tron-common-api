@@ -20,12 +20,12 @@ public class TronCommonAppError {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 
 	private static final String ERROR = "error";
-	public static final String ERRORS = "errors";
-	public static final String MESSAGE = "message";
-	public static final String PATH = "path";
-	public static final String REASON = "reason";
-	public static final String STATUS = "status";
-	public static final String TIMESTAMP = "timestamp";
+	private static final String ERRORS = "errors";
+    private static final String MESSAGE = "message";
+    private static final String PATH = "path";
+    private static final String REASON = "reason";
+    private static final String STATUS = "status";
+    private static final String TIMESTAMP = "timestamp";
 
     @Getter
     @Setter
