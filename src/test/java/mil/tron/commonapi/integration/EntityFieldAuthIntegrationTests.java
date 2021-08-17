@@ -481,7 +481,6 @@ public class EntityFieldAuthIntegrationTests {
         		.firstName("new dashboard")
         		.lastName("new user")
         		.email(dashboardUserOnly.getEmail())
-        		.dodid("11111")
         		.build();
         
         mockMvc.perform(put("/v2/person/self/{id}", newPerson.getId())
