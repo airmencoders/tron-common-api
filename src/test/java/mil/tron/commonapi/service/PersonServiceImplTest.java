@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -19,6 +20,7 @@ import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.ranks.RankRepository;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthResponse;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
 import mil.tron.commonapi.service.utility.ValidatorService;
@@ -268,7 +270,7 @@ class PersonServiceImplTest {
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 			Mockito.when(entityFieldAuthService.adjudicatePersonFields(Mockito.any(), Mockito.any()))
-					.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Person>builder().modifiedEntity(i.getArgument(0)).build());
 	    	PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
 	    	assertThat(updatedPerson.getId()).isEqualTo(testPerson.getId());
 		}
@@ -347,7 +349,7 @@ class PersonServiceImplTest {
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(entityFieldAuthService.adjudicatePersonFields(Mockito.any(), Mockito.any()))
-					.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Person>builder().modifiedEntity(i.getArgument(0)).build());
 
 			// pass through the patched entity
 			Mockito.when(repository.save(Mockito.any(Person.class))).thenAnswer(i -> i.getArguments()[0]);

@@ -4,45 +4,44 @@ import mil.tron.commonapi.annotation.efa.ProtectedField;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.PrivilegeService;
+
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
-
+	private static final SimpleGrantedAuthority DASHBOARD_ADMIN_AUTHORITY = new SimpleGrantedAuthority("DASHBOARD_ADMIN");
+	
     private final PrivilegeRepository privilegeRepository;
     private final OrganizationRepository organizationRepository;
     private final PersonRepository personRepository;
     private final PrivilegeService privilegeService;
+    
     private static final String PERSON_PREFIX = "Person-";
     private static final String ORG_PREFIX = "Organization-";
     private final List<Field> personFields = FieldUtils.getFieldsListWithAnnotation(Person.class, ProtectedField.class);
     private final List<Field> orgFields = FieldUtils.getFieldsListWithAnnotation(Organization.class, ProtectedField.class);
-
+    
     @Value("${efa-enabled}")
     private boolean efaEnabled;
 
@@ -126,40 +125,64 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             }
         }
     }
+    
+    private SimpleGrantedAuthority generateAuthorityFromFieldName(EntityFieldAuthType type, String fieldName) {
+    	switch (type) {
+	    	case ORGANIZATION: 
+	    		return new SimpleGrantedAuthority(String.format("%s%s", ORG_PREFIX, fieldName));
+	    	
+	    	case PERSON: 
+	    		return new SimpleGrantedAuthority(String.format("%s%s", PERSON_PREFIX, fieldName));
+	    	
+	    	default:
+	    		throw new UnsupportedOperationException(String.format("%s is not a supported Entity Field Auth object type", type));
+    	}
+    }
 
     /**
      * Determines which data "gets let through" on a person update/patch
      * @param incomingPerson the incoming data POJO from the request
      * @param requester the requester's Authentication object
-     * @return the (possibly) adjusted POJO for the fields that were changed and allowed to change
+     * @return the entity containing allowed modifications and a list containing any denied fields
+     * 
      */
     @Override
-    public Person adjudicatePersonFields(Person incomingPerson, Authentication requester) {
+    public EntityFieldAuthResponse<Person> adjudicatePersonFields(Person incomingPerson, Authentication requester) {
 
         // if EFA isn't even enabled, just return the new entity
-        if (!efaEnabled) return incomingPerson;
+        if (!efaEnabled) {
+        	return EntityFieldAuthResponse.<Person>builder()
+        		.modifiedEntity(incomingPerson)
+        		.build();
+        }
 
         List<String> deniedFields = new ArrayList<>();
-        HttpServletResponse response = getResponseObject();
 
         Person existingPerson = personRepository.findById(incomingPerson.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Person not found with id: " + incomingPerson.getId()));
 
         // if we can't get requester information, then don't let any change through, return the existing one.
         if (requester == null) {
-            return existingPerson;
+        	return EntityFieldAuthResponse.<Person>builder()
+    			.modifiedEntity(existingPerson)
+    			.build();
         }
 
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
-        if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
-            return incomingPerson;
+        if (requester.getAuthorities().contains(DASHBOARD_ADMIN_AUTHORITY)) {
+            return EntityFieldAuthResponse.<Person>builder()
+        			.modifiedEntity(incomingPerson)
+        			.build();
+        }
         
         boolean isOwnUser = existingPerson.getEmail().equalsIgnoreCase(requester.getName());
         
         // Must have EDIT privilege by this point to proceed
         // Or the authenticated user must be editing their own record
         if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("PERSON_EDIT")) && !isOwnUser) {
-        	return existingPerson;
+        	return EntityFieldAuthResponse.<Person>builder()
+        			.modifiedEntity(existingPerson)
+        			.build();
         }
         
         /**
@@ -193,10 +216,11 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             }
         }
 
-        this.affixHeaderEntityAuthInfo(response, deniedFields);
-
         // return the (possible modified) entity to the service
-        return incomingPerson;
+        return EntityFieldAuthResponse.<Person>builder()
+    			.modifiedEntity(incomingPerson)
+    			.deniedFields(deniedFields)
+    			.build();
     }
 
     /**
@@ -208,69 +232,58 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
      * @return true if the field is allowed to be changed
      */
     private boolean requesterHasPrivsOrIsOwner(Authentication requester, boolean isOwnUser, Field f) {
-        return (!requester.getAuthorities().contains(new SimpleGrantedAuthority(PERSON_PREFIX + f.getName())) && !isOwnUser) ||
+        return (!userHasAuthorizationToField(requester, EntityFieldAuthType.PERSON, f.getName()) && !isOwnUser) ||
                 (isOwnUser && (f.getName().equalsIgnoreCase(Person.DODID_FIELD) || f.getName().equalsIgnoreCase(Person.EMAIL_FIELD)));
     }
-
-    private void affixHeaderEntityAuthInfo(HttpServletResponse response, List<String> deniedFields) {
-        if (!deniedFields.isEmpty()) {
-            // some fields were not allowed a change...
-            // sets header information and warning code IAW RFC 7231 (IETF)
-            //  that the information was modified by proxy (in this case the Common API)
-            response.setStatus(HttpStatus.NON_AUTHORITATIVE_INFORMATION.value());
-            response.addHeader("Warning", "214 - Denied Entity Fields: " + String.join(",", deniedFields));
-        }
-    }
-
-    private HttpServletResponse getResponseObject() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            throw new BadRequestException("Unable to get request attributes for entity field auth");
-        }
-        HttpServletResponse response = ((ServletRequestAttributes)requestAttributes).getResponse();
-        if (response == null) {
-            throw new BadRequestException("Unable to get http response instance for entity field auth");
-        }
-
-        return response;
-    }
-
+    
     /**
      * Determines which data "gets let through" on a organization update/patch
      * @param incomingOrg the incoming data POJO from the request
      * @param requester the requester's Authentication object
-     * @return the (possibly) adjusted POJO for the fields that were changed and allowed to change
+     * @return the entity containing allowed modifications and a list containing any denied fields
+     * 
      */
     @Override
-    public Organization adjudicateOrganizationFields(Organization incomingOrg, Authentication requester) {
+    public EntityFieldAuthResponse<Organization> adjudicateOrganizationFields(Organization incomingOrg, Authentication requester) {
 
         // if EFA isn't even enabled, just return the new entity
-        if (!efaEnabled) return incomingOrg;
+        if (!efaEnabled) {
+        	return EntityFieldAuthResponse.<Organization>builder()
+        			.modifiedEntity(incomingOrg)
+        			.build();
+        }
 
         List<String> deniedFields = new ArrayList<>();
-        HttpServletResponse response = getResponseObject();
 
         Organization existingOrg = organizationRepository.findById(incomingOrg.getId())
                 .orElseThrow(() -> new RecordNotFoundException("Existing org not found with id: " + incomingOrg.getId()));
+        
 
         // if we can't get requester information, then don't let any change through, return the existing one.
         if (requester == null) {
-            return existingOrg;
+        	return EntityFieldAuthResponse.<Organization>builder()
+        			.modifiedEntity(existingOrg)
+        			.build();
         }
 
         // if we're a DASHBOARD_ADMIN, then accept full incoming object
-        if (requester.getAuthorities().contains(new SimpleGrantedAuthority("DASHBOARD_ADMIN")))
-            return incomingOrg;
+        if (requester.getAuthorities().contains(DASHBOARD_ADMIN_AUTHORITY)) {
+        	return EntityFieldAuthResponse.<Organization>builder()
+        			.modifiedEntity(incomingOrg)
+        			.build();        
+    	}
         
         // Must have EDIT privilege by this point to proceed
         if (!requester.getAuthorities().contains(new SimpleGrantedAuthority("ORGANIZATION_EDIT"))) {
-        	return existingOrg;
+        	return EntityFieldAuthResponse.<Organization>builder()
+        			.modifiedEntity(existingOrg)
+        			.build();
         }
 
         // for each protected field we need to decide whether to use the incoming value or leave the existing
         //  based on the privs of the app client
         for (Field f : orgFields) {
-            if (!requester.getAuthorities().contains(new SimpleGrantedAuthority(ORG_PREFIX + f.getName()))) {
+            if (!userHasAuthorizationToField(requester, EntityFieldAuthType.ORGANIZATION, f.getName())) {
 
                 try {
 
@@ -296,10 +309,25 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
             }
         }
 
-        this.affixHeaderEntityAuthInfo(response, deniedFields);
-
         // return the (possible modified) entity to the service
-        return incomingOrg;
+        return EntityFieldAuthResponse.<Organization>builder()
+    			.modifiedEntity(incomingOrg)
+    			.deniedFields(deniedFields)
+    			.build();
     }
+
+    /**
+     * Checks if the requesting user has necessary privileges to a field.
+     * 
+     * @param requester the requesting user to check for necessary privileges
+     * @param type the type of Entity to check
+     * @param fieldName the name of the field
+     * @returns true if EFA is disabled, user is DASHBOARD_ADMIN, or user has the privilege associated with {@link fieldName}.
+     */
+	@Override
+	public boolean userHasAuthorizationToField(Authentication requester, EntityFieldAuthType type, String fieldName) {
+		Set<SimpleGrantedAuthority> allowedAuthorities = Set.of(DASHBOARD_ADMIN_AUTHORITY, generateAuthorityFromFieldName(type, fieldName));
+		return !efaEnabled || requester.getAuthorities().stream().anyMatch(allowedAuthorities::contains);
+	}
 
 }

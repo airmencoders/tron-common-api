@@ -113,7 +113,7 @@ public class Organization {
     @Getter
     @Builder.Default
     @OneToMany(fetch = FetchType.EAGER)
-    @JoinColumn(name="organizationId")
+    @JoinColumn(name="organizationId", updatable = false, insertable = false)
     @ProtectedField
     private Set<OrganizationMetadata> metadata = new HashSet<>();
 
