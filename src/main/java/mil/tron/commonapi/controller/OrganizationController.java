@@ -392,7 +392,7 @@ public class OrganizationController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Provided organization UUID was invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
