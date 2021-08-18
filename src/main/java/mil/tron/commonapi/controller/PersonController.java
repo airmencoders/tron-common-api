@@ -10,10 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
-import mil.tron.commonapi.annotation.security.PreAuthorizePersonCreate;
-import mil.tron.commonapi.annotation.security.PreAuthorizePersonDelete;
-import mil.tron.commonapi.annotation.security.PreAuthorizePersonEdit;
-import mil.tron.commonapi.annotation.security.PreAuthorizePersonRead;
+import mil.tron.commonapi.annotation.security.*;
 import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
@@ -298,7 +295,7 @@ public class PersonController {
 
 	@Operation(summary = "Allows a Person to update their own existing record.", 
 			description = "The email from the updated Person record must match the email in the authenticated user's JWT,"
-					+ " otherwise this action will be rejected.")
+					+ " otherwise this action will be rejected.  Request must be from the web (SSO) and not an app client.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
@@ -307,9 +304,10 @@ public class PersonController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "403",
-					description = "Forbidden (Mismatch in email between updated Person record and user's JWT)",
+					description = "Forbidden (Mismatch in email between updated Person record and user's JWT or Request was from an app client)",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeOnlySSO
 	@PutMapping(value = {"${api-prefix.v1}/person/self/{id}", "${api-prefix.v2}/person/self/{id}"})
 	public ResponseEntity<Object> selfUpdatePerson(@RequestHeader Map<String, String> headers,
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,

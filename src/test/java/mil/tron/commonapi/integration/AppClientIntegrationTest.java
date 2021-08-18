@@ -1,21 +1,24 @@
 package mil.tron.commonapi.integration;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import mil.tron.commonapi.JwtUtils;
 import mil.tron.commonapi.dto.DashboardUserDto;
+import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.appsource.AppEndpointDto;
 import mil.tron.commonapi.dto.appsource.AppSourceDetailsDto;
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
+import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.service.AppClientUserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +35,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
-
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
@@ -45,41 +47,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = { "security.enabled=true" })
+@SpringBootTest(properties = { "security.enabled=true", "efa-enabled=false" })
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
 public class AppClientIntegrationTest {
-
-    private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
-    private static final String AUTH_HEADER_NAME = "authorization";
-    private static final String NAMESPACE = "istio-system";
-    private static final String XFCC_BY = "By=spiffe://cluster/ns/tron-common-api/sa/default";
-    private static final String XFCC_H = "FAKE_H=12345";
-    private static final String XFCC_SUBJECT = "Subject=\\\"\\\";";
-    private static final String XFCC_HEADER = new StringBuilder()
-            .append(XFCC_BY)
-            .append(XFCC_H)
-            .append(XFCC_SUBJECT)
-            .append("URI=spiffe://cluster.local/ns/" + NAMESPACE + "/sa/default")
-            .toString();
 
     private static final String ENDPOINT = "/v1/app-client/";
     private static final String APP_SOURCE_ENDPOINT = "/v1/app-source/";
     private static final String DASHBOARD_USERS_ENDPOINT = "/v1/dashboard-users/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    /**
-     * Private helper to create a JWT on the fly
-     * @param email email to embed with the "email" claim
-     * @return the bearer token
-     */
-    private String createToken(String email) {
-        Algorithm algorithm = Algorithm.HMAC256("secret");
-        return "Bearer " + JWT.create()
-                .withIssuer("istio")
-                .withClaim("email", email)
-                .sign(algorithm);
-    }
 
     @Autowired
     AppClientUserServiceImpl appClientService;
@@ -89,6 +66,9 @@ public class AppClientIntegrationTest {
 
     @Autowired
     PrivilegeRepository privRepo;
+    
+    @Autowired
+    PersonRepository personRepository;
 
     @Autowired
     private MockMvc mockMvc;
@@ -142,8 +122,8 @@ public class AppClientIntegrationTest {
                 .build();
 
         MvcResult app1Result = mockMvc.perform(post(ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app1)))
                 .andExpect(status().isCreated())
@@ -154,8 +134,8 @@ public class AppClientIntegrationTest {
 
         // verify admin user has the APP_CLIENT_DEVELOPER priv, and that user1@test.com exists now
         MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -192,8 +172,8 @@ public class AppClientIntegrationTest {
                 .build();
 
         MvcResult app2Result = mockMvc.perform(post(ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app2)))
                 .andExpect(status().isCreated())
@@ -203,23 +183,23 @@ public class AppClientIntegrationTest {
         app2.setId(app2Id);
 
         mockMvc.perform(get(ENDPOINT + "{id}", app2Id)
-                .header(AUTH_HEADER_NAME, createToken(USER2_EMAIL))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(USER2_EMAIL))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appClientDeveloperEmails[0]", equalTo(USER2_EMAIL)));
 
         // user1 can't see app2's details
         mockMvc.perform(get(ENDPOINT + "{id}", app2Id)
-                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(USER1_EMAIL))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isForbidden());
 
         // add user3 via PUT in app1 with user1's creds
         app1.getAppClientDeveloperEmails().add(USER3_EMAIL);
         app1.setId(app1Id);
         MvcResult modApp1 = mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken(USER1_EMAIL))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(USER1_EMAIL))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app1)))
                 .andExpect(status().isOk())
@@ -230,16 +210,16 @@ public class AppClientIntegrationTest {
 
         // try some random PUT as a non-app developer user - should get 403
         mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken("random@test.com"))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken("random@test.com"))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app1)))
                 .andExpect(status().isForbidden());
 
         app2.getAppClientDeveloperEmails().add(USER4_EMAIL);
         MvcResult modApp2 = mockMvc.perform(put(ENDPOINT + "{id}", app2Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app2)))
                 .andExpect(status().isOk())
@@ -252,8 +232,8 @@ public class AppClientIntegrationTest {
         // delete "user4@test.com" from App2 via the PUT endpoint
         app2.getAppClientDeveloperEmails().remove(USER4_EMAIL);
         mockMvc.perform(put(ENDPOINT + "{id}", app2Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app2)))
                 .andExpect(status().isOk());
@@ -262,8 +242,8 @@ public class AppClientIntegrationTest {
         //  with no other privs and wasn't a developer anywhere else anymore :(
         // verify user has the APP_CLIENT_DEVELOPER priv, and that user1@test.com exists now
         result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -284,14 +264,14 @@ public class AppClientIntegrationTest {
 
         // delete App1
         mockMvc.perform(delete(ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk());
 
         // check that "user3@test.com" and "user1@test.com" exist no where and that "admin@admin.com" still exists in the system
         result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -328,8 +308,8 @@ public class AppClientIntegrationTest {
         // re-create app1, and re-add users to app1 and then delete user1's dashboard user record, should delete them
         //  as an app client developer and a dashboard user
         app1Result = mockMvc.perform(post(ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app1)))
                 .andExpect(status().isCreated())
@@ -339,8 +319,8 @@ public class AppClientIntegrationTest {
         app1.setId(app1Id);
 
         mockMvc.perform(put(ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app1)))
                 .andExpect(status().isOk())
@@ -348,8 +328,8 @@ public class AppClientIntegrationTest {
 
         // find user1's dashboard user id
         result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -366,13 +346,13 @@ public class AppClientIntegrationTest {
 
         // delete user1 as a dashboard user, should take care of deleting them from app1 in the process
         mockMvc.perform(delete(DASHBOARD_USERS_ENDPOINT + "{id}", user1Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get(ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appClientDeveloperEmails[?(@ == '" + USER1_EMAIL + "')]", hasSize(0)));
     }
@@ -399,8 +379,8 @@ public class AppClientIntegrationTest {
                 .build();
 
         MvcResult result = mockMvc.perform(post(ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(app1)))
                 .andExpect(status().isCreated())
@@ -409,8 +389,8 @@ public class AppClientIntegrationTest {
         UUID id = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
 
         mockMvc.perform(post("/v2/subscriptions")
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(SubscriberDto
                     .builder()
@@ -422,19 +402,19 @@ public class AppClientIntegrationTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/v2/subscriptions")
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(1)));
 
         mockMvc.perform(delete(ENDPOINT + "{id}",id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/v2/subscriptions")
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(0)));
     }
@@ -459,8 +439,8 @@ public class AppClientIntegrationTest {
                 .build();
 
         MvcResult appSourceResult = mockMvc.perform(post(APP_SOURCE_ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(appSource)))
                 .andExpect(status().isCreated())
@@ -470,8 +450,8 @@ public class AppClientIntegrationTest {
         appSource.setId(app1Id);
 
         appSourceResult = mockMvc.perform(get(APP_SOURCE_ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -483,8 +463,8 @@ public class AppClientIntegrationTest {
                 .build();
 
         MvcResult clientResult = mockMvc.perform(post(ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(appClient)))
                 .andExpect(status().isCreated())
@@ -496,8 +476,8 @@ public class AppClientIntegrationTest {
 
         // verify data has been set
         MvcResult result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -506,14 +486,14 @@ public class AppClientIntegrationTest {
 
         // delete App1
         mockMvc.perform(delete(ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk());
 
         // check that "user3@test.com" and "user1@test.com" exist no where and that "admin@admin.com" still exists in the system
         result = mockMvc.perform(get(DASHBOARD_USERS_ENDPOINT)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -522,14 +502,61 @@ public class AppClientIntegrationTest {
 
         // check that the App Source still exists
         appSourceResult = mockMvc.perform(get(APP_SOURCE_ENDPOINT + "{id}", app1Id)
-                .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andReturn();
 
         AppSourceDetailsDto appSourceDetailsResult = OBJECT_MAPPER.readValue(appSourceResult.getResponse().getContentAsString(), AppSourceDetailsDto.class);
         assertEquals(appSource.getId(), appSourceDetailsResult.getId());
         assertEquals(appSource.getName(), appSourceDetailsResult.getName());
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testCantUpdateSelfThroughAppClient() throws Exception {
+
+        // test we can't do the /person/self PUT update when coming from an 
+        //  app client - even if request has a JWT that matches that person
+        //  they need to do it from the Dashboard
+
+        Person p = Person.builder()
+                .email("person@tron.mil")
+                .build();
+        
+        personRepository.save(p);
+
+        AppClientUser app2 = AppClientUser.builder()
+                .name("App2")
+                .privileges(Sets.newHashSet(privRepo.findByName("PERSON_READ").get(),
+                    privRepo.findByName("PERSON_CREATE").get()))
+                .build();
+
+        appClientUserRespository.save(app2);
+
+        PersonDto dto = PersonDto.builder()
+                .id(p.getId())
+                .email("person@tron.mil")
+                .build();
+        
+        // try to update firstname but from the App2 app client
+        dto.setFirstName("Bob");        
+        mockMvc.perform(put("/v2/person/self/{id}", dto.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken("person@tron.mil"))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("App2"))
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isForbidden());
+
+        // test the update from the SSO works
+        mockMvc.perform(put("/v2/person/self/{id}", dto.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken("person@tron.mil"))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName", equalTo("Bob")));
     }
 
 }
