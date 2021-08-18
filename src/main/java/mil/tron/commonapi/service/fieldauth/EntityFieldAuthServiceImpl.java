@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
+import javax.transaction.Transactional.TxType;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -240,10 +241,11 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
      * Determines which data "gets let through" on a organization update/patch
      * @param incomingOrg the incoming data POJO from the request
      * @param requester the requester's Authentication object
-     * @return the entity containing allowed modifications and a list containing any denied fields
      * 
+     * @return the entity containing allowed modifications and a list containing any denied fields
      */
     @Override
+    @Transactional(value=TxType.REQUIRES_NEW)
     public EntityFieldAuthResponse<Organization> adjudicateOrganizationFields(Organization incomingOrg, Authentication requester) {
 
         // if EFA isn't even enabled, just return the new entity

@@ -396,6 +396,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @throws IllegalOrganizationModification throws if EFA failed on some fields. The updated Organization will still be saved.
 	 */
 	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
 	public OrganizationDto patchOrganization(UUID id, JsonPatch patch) throws MethodArgumentNotValidException {
 		Optional<Organization> dbOrganization = this.repository.findById(id);
 
@@ -548,9 +549,19 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		if (!orgChecksService.orgNameIsUnique(entity))
 			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", entity.getName()));
-
+		
+		List<UUID> subOrgsToAdd = new ArrayList<>(organization.getSubordinateOrganizations());
+		subOrgsToAdd.removeAll(dbEntity.get().getSubordinateOrganizations().stream().map(Organization::getId).collect(Collectors.toList()));
+		
 		Organization result = updateMetadata(entity, dbEntity, organization.getMeta());
 		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(result);
+		
+		// If EFA failed on subordinateOrganizations, have to manually roll those changes back
+		// as relying on current implementations does not handle this well
+		if (efaResponse.getDeniedFields().contains(Organization.SUB_ORGS_FIELD)) {
+			this.removeOrg(organization.getId(), subOrgsToAdd);
+		}
+		
 		repository.save(efaResponse.getModifiedEntity());
 		
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
@@ -922,8 +933,6 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * Private helper to make sure prior to setting an orgs parent, that the proposed parent
 	 * is not already in the descendents of said organization.
 	 * 
-	 * Will not save {@link org}.
-	 * 
 	 * @param org the org we're modifying the parent for
 	 * @param parentUUIDCandidate the UUID of the proposed parent
 	 */
@@ -962,6 +971,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 			org.setParentOrganization(parentOrg);  // make sure we got the new parent locked in
 			parentOrg.addSubordinateOrganization(org);  // update new parent's sub orgs field to include this org
 			repository.save(parentOrg);  // now save the new parent org
+			repository.save(org); // finally save sub org that was modified
 		}
 		else {
 			throw new InvalidRecordUpdateRequest("Proposed Parent UUID is already a descendent of this organization");
