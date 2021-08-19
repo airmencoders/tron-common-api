@@ -29,9 +29,7 @@ import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.repository.ranks.RankRepository;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
-import mil.tron.commonapi.service.utility.ReflectionUtils;
 import mil.tron.commonapi.service.utility.ValidatorService;
-
 import org.assertj.core.util.Lists;
 import org.modelmapper.Conditions;
 import org.springframework.context.annotation.Lazy;
@@ -211,6 +209,22 @@ public class PersonServiceImpl implements PersonService {
 				.getAbbreviation());
 
 		return createPerson(personDto);
+	}
+
+	/**
+	 * Updates a person by keying off their email (used for the self update endpoint) where we
+	 * need to rely on the email from the JWT instead of a spoof-able UUID
+	 * @param email email of person to update
+	 * @param dto the data to commit to the db
+	 * @return the updated person record
+	 */
+	@Override
+	public PersonDto updatePersonByEmail(String email, PersonDto dto) {
+
+		Person entity = repository.findByEmailIgnoreCase(email)
+				.orElseThrow(() -> new RecordNotFoundException("Cannot find person with email " + email));
+
+		return updatePerson(entity.getId(), dto);
 	}
 
 	@Override

@@ -542,7 +542,7 @@ public class AppClientIntegrationTest {
         
         // try to update firstname but from the App2 app client
         dto.setFirstName("Bob");        
-        mockMvc.perform(put("/v2/person/self/{id}", dto.getId())
+        mockMvc.perform(put("/v2/person/self")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken("person@tron.mil"))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("App2"))
@@ -550,7 +550,7 @@ public class AppClientIntegrationTest {
                 .andExpect(status().isForbidden());
 
         // test the update from the SSO works
-        mockMvc.perform(put("/v2/person/self/{id}", dto.getId())
+        mockMvc.perform(put("/v2/person/self")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken("person@tron.mil"))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())

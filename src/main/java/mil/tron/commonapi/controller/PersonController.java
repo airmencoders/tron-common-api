@@ -29,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,7 +37,6 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -308,14 +308,21 @@ public class PersonController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeOnlySSO
-	@PutMapping(value = {"${api-prefix.v1}/person/self/{id}", "${api-prefix.v2}/person/self/{id}"})
-	public ResponseEntity<Object> selfUpdatePerson(@RequestHeader Map<String, String> headers,
-			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
-			@Parameter(description = "Updated person", 
-				required = true, 
-				schema = @Schema(implementation = PersonDto.class))
-				@Valid @RequestBody PersonDto person) {
-		return selfUpdate(headers.get("authorization"), personId, person);
+	@PutMapping(value = {"${api-prefix.v1}/person/self", "${api-prefix.v2}/person/self"})
+	public ResponseEntity<Object> selfUpdatePerson(Authentication authentication,
+			   @Parameter(description = "Updated person data object", required = true, schema = @Schema(implementation = PersonDto.class))
+			   @Valid @RequestBody PersonDto person) {
+
+		// make sure the embedded DTO's email matches the one in the JWT
+		if (authentication != null
+				&& authentication.getName() != null
+				&& authentication.getName().equalsIgnoreCase(person.getEmail())) {
+
+			return new ResponseEntity<>(personService.updatePersonByEmail(authentication.getName(), person), HttpStatus.OK);
+		}
+		else {
+			throw new BadRequestException("Email of requester not known or does not match updated data");
+		}
 	}
 
 	private ResponseEntity<Object> selfUpdate(String authHeader, UUID personId, PersonDto person) {

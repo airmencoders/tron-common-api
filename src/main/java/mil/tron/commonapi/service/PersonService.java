@@ -17,6 +17,7 @@ public interface PersonService {
 	PersonDto createPerson(PersonDto dto);
 	PersonDto createPersonFromJwt(PlatformJwtDto dto);
 	PersonDto updatePerson(UUID id, PersonDto dto);
+	PersonDto updatePersonByEmail(String email, PersonDto dto);
 	/**
 	 * 
 	 * @param id the id of the person to patch
