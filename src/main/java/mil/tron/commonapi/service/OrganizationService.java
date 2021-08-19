@@ -22,11 +22,13 @@ public interface OrganizationService {
 	// entity methods (service <--> persistence)
 	Organization findOrganization(UUID id);
 	Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch, Pageable page);
-	Organization removeMember(UUID organizationId, List<UUID> personIds);
-	Organization addMember(UUID organizationId, List<UUID> personIds, boolean primary);
-	Organization addOrg(UUID organizationId, List<UUID> orgIds);
-	Organization removeOrg(UUID organizationId, List<UUID> orgIds);
+	OrganizationDto removeMember(UUID organizationId, List<UUID> personIds);
+	OrganizationDto addMember(UUID organizationId, List<UUID> personIds, boolean primary);
+	OrganizationDto addOrg(UUID organizationId, List<UUID> orgIds);
+	OrganizationDto removeOrg(UUID organizationId, List<UUID> orgIds);
 	void removeLeaderByUuid(UUID leaderUuid);
+	OrganizationDto removeParentOrganization(UUID organizationId);
+	OrganizationDto removeLeader(UUID organizationId);
 
 	// methods dealing only with DTO (service <--> controller)
 	OrganizationDto createOrganization(OrganizationDto organization);

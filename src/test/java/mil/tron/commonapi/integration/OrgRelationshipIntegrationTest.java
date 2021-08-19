@@ -15,6 +15,7 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,14 +25,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import javax.transaction.Transactional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -190,6 +189,12 @@ public class OrgRelationshipIntegrationTest {
                 .getResponse()
                 .getContentAsString(), OrganizationDto.class);
     }
+    
+    @AfterEach
+    void cleanup() {
+    	dashRepo.deleteAll();
+    	organizationRepository.deleteAll();
+    }
 
     /**
      * These tests use the POST (create) endpoint
@@ -197,8 +202,6 @@ public class OrgRelationshipIntegrationTest {
     @Nested
     class CreateTests {
 
-        @Transactional
-        @Rollback
         @Test
         void testCreationFailsForSameParentAndSubOrg() throws Exception {
             OrganizationDto child4 = OrganizationDto
@@ -219,8 +222,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testCreationFailsForParentAsDeepRelative() throws Exception {
             OrganizationDto child4 = OrganizationDto
@@ -281,8 +282,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testCreateOrganizationWithAlreadyExistsSubOrg() throws Exception {
 
@@ -351,8 +350,6 @@ public class OrgRelationshipIntegrationTest {
     @Nested
     class UpdateTests {
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSameParentAndSubOrg() throws Exception {
 
@@ -368,8 +365,6 @@ public class OrgRelationshipIntegrationTest {
 
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSubOrgIsSubOrgElsewhere() throws Exception {
 
@@ -391,8 +386,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testValidParent() throws Exception {
 
@@ -423,8 +416,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isOk());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidParentForDeepSubOrg() throws Exception {
 
@@ -498,8 +489,6 @@ public class OrgRelationshipIntegrationTest {
         }
 
         @Test
-        @Transactional
-        @Rollback
         void testValidParentChange() throws Exception {
 
             // set up the chain: Parent->Child1->Child2
@@ -541,8 +530,6 @@ public class OrgRelationshipIntegrationTest {
     @Nested
     class PatchTests {
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSameParentAndSubOrg() throws Exception {
 
@@ -567,8 +554,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSubOrgIsSubOrgElsewhere() throws Exception {
 
@@ -598,8 +583,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testValidParent() throws Exception {
 
@@ -660,8 +643,6 @@ public class OrgRelationshipIntegrationTest {
     @Nested
     class AddRemoveTests {
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSameParentAndSubOrg() throws Exception {
 
@@ -680,8 +661,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testParentUpdatedOnSubOrgRemoval() throws Exception {
 

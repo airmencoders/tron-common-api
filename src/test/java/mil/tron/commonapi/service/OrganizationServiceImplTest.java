@@ -17,6 +17,7 @@ import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthResponse;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
 import mil.tron.commonapi.service.utility.ValidatorService;
@@ -181,7 +182,7 @@ class OrganizationServiceImplTest {
 			Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
 			Mockito.when(entityFieldAuthService
 					.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-					.then(returnsFirstArg());
+					.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	    	OrganizationDto updatedOrganization = organizationService.updateOrganization(testOrg.getId(), organizationService.convertToDto(testOrg));
 	    	assertThat(updatedOrganization.getName()).isEqualTo(testOrgDto.getName());
@@ -389,7 +390,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(personRepository.findById(leader.getId())).thenReturn(Optional.of(leader));
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getLeader()).isEqualTo(leader.getId());
 
@@ -414,7 +415,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getBranchType()).isEqualTo(Branch.USAF);
 		assertThat(savedOrg.getOrgType()).isEqualTo(Unit.OTHER_USAF);
@@ -429,7 +430,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getName()).isEqualTo("test org");
 	}
@@ -446,7 +447,7 @@ class OrganizationServiceImplTest {
 				.thenReturn(Optional.of(testOrg));
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 
 		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
 
@@ -494,7 +495,7 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		Mockito.when(repository.findById(newUnit.getId()))
 				.thenReturn(Optional.of(testOrg))
 				.thenThrow(new InvalidRecordUpdateRequest("Not Found"))
@@ -505,6 +506,8 @@ class OrganizationServiceImplTest {
 		Mockito.when(personRepository.findById(p.getId())).thenReturn(Optional.of(p));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(newUnit);
 
+		Mockito.when(entityFieldAuthService.userHasAuthorizationToField(Mockito.any(), Mockito.any(), Mockito.any()))
+			.thenReturn(true);
 		OrganizationDto savedOrg = organizationService.addOrganizationMember(testOrgDto.getId(), Lists.newArrayList(p.getId()), true);
         assertThat(savedOrg.getMembers().size()).isEqualTo(1);
         assertEquals(testOrgDto.getId(), p.getPrimaryOrganization().getId());
@@ -517,6 +520,9 @@ class OrganizationServiceImplTest {
 
 		// remove like normal
 		newUnit.removeMember(p);
+		
+		Mockito.when(entityFieldAuthService.userHasAuthorizationToField(Mockito.any(), Mockito.any(), Mockito.any()))
+			.thenReturn(true);
 		savedOrg = organizationService.removeOrganizationMember(newUnit.getId(), Lists.newArrayList(p.getId()));
         assertThat(savedOrg.getMembers().size()).isEqualTo(0);
         assertNull(p.getPrimaryOrganization());
@@ -535,7 +541,7 @@ class OrganizationServiceImplTest {
 		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		Mockito.when(repository.findById(Mockito.any(UUID.class)))
 				.thenReturn(Optional.of(newUnit))
 				.thenReturn(Optional.of(subOrg))
@@ -549,6 +555,8 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(newUnit);
 
+		Mockito.when(entityFieldAuthService.userHasAuthorizationToField(Mockito.any(), Mockito.any(), Mockito.any()))
+			.thenReturn(true);
 		OrganizationDto savedOrg = organizationService.addSubordinateOrg(testOrgDto.getId(), Lists.newArrayList(subOrg.getId()));
 		assertThat(savedOrg.getSubordinateOrganizations().size()).isEqualTo(1);
 
@@ -560,6 +568,9 @@ class OrganizationServiceImplTest {
 
 		// remove like normal
 		newUnit.removeSubordinateOrganization(subOrg);
+		
+		Mockito.when(entityFieldAuthService.userHasAuthorizationToField(Mockito.any(), Mockito.any(), Mockito.any()))
+			.thenReturn(true);
 		savedOrg = organizationService.removeSubordinateOrg(newUnit.getId(), Lists.newArrayList(subOrg.getId()));
 		assertThat(savedOrg.getMembers().size()).isEqualTo(0);
 
@@ -775,6 +786,10 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(child1, child2.getId()))
 				.thenReturn(Lists.newArrayList(parent));
+		
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 
 		child2.setSubOrgsUUID(Lists.newArrayList(child1.getId()));
 		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.updateOrganization(child2.getId(), child2));
@@ -983,7 +998,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		OrganizationDto capturedOrg = this.organizationService.patchOrganization(orgId, newPatch);
 		assertThat(capturedOrg.getName()).isEqualTo("Org Name");
 	}

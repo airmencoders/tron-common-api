@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import com.google.common.collect.Sets;
+
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PlatformJwtDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -19,6 +20,7 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.efa.IllegalPersonModification;
 import mil.tron.commonapi.pubsub.EventManagerService;
 import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
 import mil.tron.commonapi.pubsub.messages.PersonDeleteMessage;
@@ -27,6 +29,7 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.repository.ranks.RankRepository;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthResponse;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
 import mil.tron.commonapi.service.utility.ValidatorService;
@@ -228,6 +231,7 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
+	@Transactional(dontRollbackOn={IllegalPersonModification.class})
 	public PersonDto updatePerson(UUID id, PersonDto dto) {
 		Person entity = convertToEntity(dto);
 		
@@ -246,16 +250,28 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personDodidIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
 
-		PersonDto updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+		Person updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+		EntityFieldAuthResponse<Person> efaResponse = applyFieldAuthority(updatedPerson);
+		repository.save(efaResponse.getModifiedEntity());
 
 		PersonChangedMessage message = new PersonChangedMessage();
 		message.addPersonId(updatedPerson.getId());
 		eventManagerService.recordEventAndPublish(message);
 
-		return updatedPerson;
+		return checkEfaResponseForIllegalModification(efaResponse, null);
 	}
 
-	private PersonDto updateMetadata(Branch branch, Person updatedEntity, Optional<Person> dbEntity, Map<String, String> metadata) {
+	/**
+	 * Does not save or apply EFA to the entity
+	 * 
+	 * @param branch the branch of the person
+	 * @param updatedEntity the entity being updated
+	 * @param dbEntity the existing database entity
+	 * @param metadata metadata for this person
+	 * @return the updated entity
+	 * 
+	 */
+	private Person updateMetadata(Branch branch, Person updatedEntity, Optional<Person> dbEntity, Map<String, String> metadata) {
 		checkValidMetadataProperties(branch, metadata);
 		List<PersonMetadata> toDelete = new ArrayList<>();
 		if(dbEntity.isPresent()) {
@@ -268,7 +284,7 @@ public class PersonServiceImpl implements PersonService {
 		}
 		if (metadata != null) {
 			metadata.forEach((key, value) -> {
-				Optional<PersonMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
+				Optional<PersonMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey().equals(key)).findAny();
 				if (match.isPresent()) {
 					if (value == null) {
 						toDelete.add(match.get());
@@ -280,19 +296,15 @@ public class PersonServiceImpl implements PersonService {
 				}
 			});
 		}
-
-		Person adjudicatedEntity = this.applyFieldAuthority(updatedEntity);
-
-		// we have to save the person entity first, then try to delete metadata: hibernate seems to get confused
-		// if we try to remove metadata rows from the person's metadata property and it generates invalid SQL
-		PersonDto result = convertToDto(repository.save(adjudicatedEntity), null);
+		
 		personMetadataRepository.deleteAll(toDelete);
-		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
-		return result;
+		updatedEntity.getMetadata().removeAll(toDelete);
+		
+		return updatedEntity;
 	}
 
 	// helper that applies entity field authorization for us
-	private Person applyFieldAuthority(Person incomingEntity) {
+	private EntityFieldAuthResponse<Person> applyFieldAuthority(Person incomingEntity) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		return entityFieldAuthService.adjudicatePersonFields(incomingEntity, authentication);
 	}
@@ -316,6 +328,7 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
+	@Transactional(dontRollbackOn={IllegalPersonModification.class})
 	public PersonDto patchPerson(UUID id, JsonPatch patch) throws MethodArgumentNotValidException {
 		Optional<Person> dbPerson = repository.findById(id);
 
@@ -348,13 +361,15 @@ public class PersonServiceImpl implements PersonService {
 			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, patchedPerson.getDodid()));
 
 
-		PersonDto updatedPerson = updateMetadata(patchedPersonDto.getBranch(), patchedPerson, dbPerson, patchedPersonDto.getMeta());
-
+		Person updatedPerson = updateMetadata(patchedPersonDto.getBranch(), patchedPerson, dbPerson, patchedPersonDto.getMeta());
+		EntityFieldAuthResponse<Person> efaResponse = applyFieldAuthority(updatedPerson);
+		repository.save(efaResponse.getModifiedEntity());
+		
 		PersonChangedMessage message = new PersonChangedMessage();
 		message.addPersonId(updatedPerson.getId());
 		eventManagerService.recordEventAndPublish(message);
 
-		return updatedPerson;
+		return checkEfaResponseForIllegalModification(efaResponse, null);
 	}
 
 	@Override
@@ -549,5 +564,13 @@ public class PersonServiceImpl implements PersonService {
 		Page<Person> pagedResponse = repository.findAll(spec, page);
 		
 		return pagedResponse.map((Person entity) -> convertToDto(entity, options));
+	}
+
+	private PersonDto checkEfaResponseForIllegalModification(EntityFieldAuthResponse<Person> efaResponse, PersonConversionOptions options) {
+		if (efaResponse.getDeniedFields().isEmpty()) {
+			return this.convertToDto(efaResponse.getModifiedEntity(), options);
+		}
+		
+		throw new IllegalPersonModification(efaResponse);
 	}
 }
