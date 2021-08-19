@@ -42,11 +42,9 @@ import java.util.UUID;
 @RestController
 public class PersonController {
 	private PersonService personService;
-	private UserInfoService userInfoService;
 
-	public PersonController(PersonService personService, UserInfoService userInfoService) {
+	public PersonController(PersonService personService) {
 		this.personService = personService;
-		this.userInfoService = userInfoService;
 	}
 	
 	/**
