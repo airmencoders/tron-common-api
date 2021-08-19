@@ -325,17 +325,6 @@ public class PersonController {
 		}
 	}
 
-	private ResponseEntity<Object> selfUpdate(String authHeader, UUID personId, PersonDto person) {
-		UserInfoDto userInfo = userInfoService.extractUserInfoFromHeader(authHeader);
-
-		if (userInfo.getEmail().equalsIgnoreCase(person.getEmail())) {
-		  PersonDto updatedPerson = personService.updatePerson(personId, person);
-		  return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
-		} else {
-		  throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is forbidden from performing this action.");
-		}
-	}
-
 	@Operation(summary = "Patches an existing person", description = "Patches an existing person")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "203",
