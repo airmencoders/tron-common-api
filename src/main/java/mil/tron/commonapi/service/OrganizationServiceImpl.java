@@ -580,7 +580,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	/**
 	 * Appends any metadata from {@code dbEntity} to {@code updatedEntity}
 	 * along with any modifications that arise as a result of {@code metadata}.
-	 * Metadata will only be saved to {@link #organizationMetadataRepository}
+	 * Metadata changes will only be applied to {@link #organizationMetadataRepository}
 	 * if {@code allowedToEdit} is equal to {@code true}.
 	 * 
 	 * This action will not modify {@code dbEntity} in any manner.
@@ -600,13 +600,44 @@ public class OrganizationServiceImpl implements OrganizationService {
 		
 		// Metadata is null, so add everything to delete
 		if (metadata == null) {
-			if (dbEntity.isPresent()) {
-				toDelete.addAll(dbEntity.get().getMetadata());
-			}
+			dbEntity.ifPresent(entity -> toDelete.addAll(entity.getMetadata()));
 		} else {
-			processMetadataModifications(updatedEntity, dbEntity, metadata, toDelete, toSave);
+			if (dbEntity.isEmpty()) {
+				metadata.forEach((key, value) -> {
+					OrganizationMetadata meta = OrganizationMetadata.builder()
+							.organizationId(updatedEntity.getId())
+							.key(key)
+							.value(value)
+							.build();
+					
+					toSave.add(meta);
+				});
+			} else {
+				metadata.forEach((key, value) -> {
+					Optional<OrganizationMetadata> match = dbEntity.get().getMetadata().stream().filter(x -> x.getKey().equals(key)).findAny();
+					
+					// When this metadata value exist on the database entity
+					// and it's value is null, then this entry is up for deletion.
+					// Otherwise it is either a new entry or an update to an
+					// existing entry, so it's up for save.
+					if (match.isPresent() && value == null) {
+						toDelete.add(match.get());
+					} else {
+						OrganizationMetadata meta = OrganizationMetadata.builder()
+								.organizationId(updatedEntity.getId())
+								.key(key)
+								.value(value)
+								.build();
+						
+						toSave.add(meta);
+					}
+				});
+			}
 		}
 		
+		// Only send these changes to the database if the requesting
+		// user is allowed to edit. Otherwise metadata changes updated
+		// on updatedEntity are only appended to reflect a change.
 		if (allowedToEdit) {
 			organizationMetadataRepository.deleteAll(toDelete);
 			organizationMetadataRepository.saveAll(toSave);
@@ -615,74 +646,6 @@ public class OrganizationServiceImpl implements OrganizationService {
 		updatedEntity.getMetadata().addAll(toSave);
 		
 		return updatedEntity;
-	}
-	
-	/**
-	 * Does the actually processing when adding metadata to {@code updatedEntity}.
-	 * Should only be called as a result of 
-	 * {@link #appendAndUpdateMetadata(Organization, Optional, Map, boolean)}.
-	 * Will not modify {@code dbEntity} in any way.
-	 * 
-	 * @param updatedEntity the modified entity
-	 * @param dbEntity the database value of {@code updatedEntity}
-	 * @param metadata metadata to modify
-	 * @param toDelete list containing all metadata values up for deletion
-	 * @param toSave list containing all metadata values up for update
-	 */
-	private void processMetadataModifications(
-			@NonNull Organization updatedEntity, 
-			Optional<Organization> dbEntity, 
-			@NonNull Map<String, String> metadata, 
-			@NonNull List<OrganizationMetadata> toDelete, 
-			@NonNull List<OrganizationMetadata> toSave) {
-		
-		// When the database entity is null,
-		// just add every metadata value to updatedEntity
-		if (dbEntity.isEmpty()) {
-			metadata.forEach((key, value) -> {
-				OrganizationMetadata meta = OrganizationMetadata.builder()
-						.organizationId(updatedEntity.getId())
-						.key(key)
-						.value(value)
-						.build();
-				
-				toSave.add(meta);
-			});
-		} else {
-			metadata.forEach((key, value) -> {
-				Optional<OrganizationMetadata> match = dbEntity.get().getMetadata().stream().filter(x -> x.getKey().equals(key)).findAny();
-				
-				// This metadata value exists in database entity,
-				// check for deletions or updates.
-				// If metadata does not exist in database entity,
-				// it's up for a new save.
-				if (match.isPresent()) {
-					// If the value is null then this is up for deletion
-					// Else the value is up for update and should be added to updatedEntity
-					if (value == null) {
-						toDelete.add(match.get());
-					} else {
-						// Make a copy, do not edit the value from the database entity
-						OrganizationMetadata meta = OrganizationMetadata.builder()
-								.organizationId(updatedEntity.getId())
-								.key(key)
-								.value(value)
-								.build();
-						
-						meta.setValue(value);
-						toSave.add(meta);
-					}
-				} else {
-					OrganizationMetadata meta = OrganizationMetadata.builder()
-							.organizationId(updatedEntity.getId())
-							.key(key)
-							.value(value)
-							.build();
-					
-					toSave.add(meta);
-				}
-			});
-		}
 	}
 
 	/**
