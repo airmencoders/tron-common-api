@@ -135,7 +135,7 @@ public class Person {
     @Builder.Default
     @ProtectedField
     @OneToMany(fetch = FetchType.EAGER)
-    @JoinColumn(name="personId")
+    @JoinColumn(name="personId", updatable = false, insertable = false)
     private Set<PersonMetadata> metadata = new HashSet<>();
 
     /**

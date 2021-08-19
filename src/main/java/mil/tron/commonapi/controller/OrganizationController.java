@@ -357,15 +357,16 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Organization not found",
-					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Not Authorized - do not have privilege to edit this field",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 	})
 	@PreAuthorizeOrganizationEdit
 	@DeleteMapping({"${api-prefix.v1}/organization/{id}/leader", "${api-prefix.v2}/organization/{id}/leader"})
 	public ResponseEntity<Object> deleteOrgLeader(
 			@Parameter(description = "Organization ID to delete the leader from", required = true) @PathVariable("id") UUID organizationId) {
-		Map<String, String> noLeaderMap = new HashMap<>();
-		noLeaderMap.put("leader", null);
-		return new ResponseEntity<>(organizationService.modify(organizationId, noLeaderMap), HttpStatus.OK);
+		return new ResponseEntity<>(organizationService.removeLeader(organizationId), HttpStatus.OK);
 	}
 
 	@Operation(summary = "Deletes a parent from a subordinate organization", description = "Deletes/clears out the parent org with no org")
@@ -375,28 +376,32 @@ public class OrganizationController {
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Organization not found",
-					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Not Authorized - do not have privilege to edit this field",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 	})
 	@PreAuthorizeOrganizationEdit
 	@DeleteMapping({"${api-prefix.v1}/organization/{id}/parent", "${api-prefix.v2}/organization/{id}/parent"})
 	public ResponseEntity<Object> deleteOrgParent(
 			@Parameter(description = "Organization ID to delete the parent from", required = true) @PathVariable("id") UUID organizationId) {
-		Map<String, String> noParentMap = new HashMap<>();
-		noParentMap.put("parentOrganization", null);
-		return new ResponseEntity<>(organizationService.modify(organizationId, noParentMap), HttpStatus.OK);
+		return new ResponseEntity<>(organizationService.removeParentOrganization(organizationId), HttpStatus.OK);
 	}
 
 	@Operation(summary = "Deletes a member(s) from the organization", description = "Deletes a member(s) from an organization")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "204",
+			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Provided organization UUID was invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Provided person UUID(s) was/were invalid",
-					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+				description = "Not Authorized - do not have privilege to edit this field",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeOrganizationEdit
 	@DeleteMapping({"${api-prefix.v1}/organization/{id}/members", "${api-prefix.v2}/organization/{id}/members"})
@@ -408,9 +413,9 @@ public class OrganizationController {
 
 	@Operation(summary = "Add member(s) to an organization", description = "Adds member(s) to an organization")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "203",
-					description = "Successful - Entity Field Authority denied access to some fields",
-					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Not Authorized - do not have privilege to edit this field",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
@@ -435,9 +440,9 @@ public class OrganizationController {
 
 	@Operation(summary = "Add subordinate organizations to an organization", description = "Adds subordinate orgs to an organization")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "203",
-					description = "Successful - Entity Field Authority denied access to some fields",
-					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Not Authorized - do not have privilege to edit this field",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
@@ -460,14 +465,17 @@ public class OrganizationController {
 
 	@Operation(summary = "Remove subordinate organizations from an organization", description = "Removes subordinate orgs from an organization")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "204",
+			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content),
+					content = @Content(schema = @Schema(implementation = OrganizationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Host organization UUID was invalid",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "400",
 					description = "Provided org UUID(s) was/were invalid",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Not Authorized - do not have privilege to edit this field",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorizeOrganizationEdit

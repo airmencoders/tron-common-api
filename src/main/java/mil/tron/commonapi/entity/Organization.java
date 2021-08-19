@@ -40,6 +40,8 @@ public class Organization {
     public static final String MEMBERS_FIELD = "members";
 	@JsonIgnore
     public static final String LEADER_FIELD = "leader";
+	@JsonIgnore
+	public static final String METADATA_FIELD = "metadata";
 	
     @Id
     @Getter
@@ -113,7 +115,7 @@ public class Organization {
     @Getter
     @Builder.Default
     @OneToMany(fetch = FetchType.EAGER)
-    @JoinColumn(name="organizationId")
+    @JoinColumn(name="organizationId", updatable = false, insertable = false)
     @ProtectedField
     private Set<OrganizationMetadata> metadata = new HashSet<>();
 
