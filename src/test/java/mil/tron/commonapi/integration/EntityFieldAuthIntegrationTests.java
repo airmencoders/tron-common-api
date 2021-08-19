@@ -18,6 +18,7 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.json.JSONArray;
@@ -29,13 +30,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import javax.transaction.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -50,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties")
 @ActiveProfiles(value = { "development", "test" })
 @AutoConfigureMockMvc
-public class EntityFieldAuthIntegrationTests {
+class EntityFieldAuthIntegrationTests {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";
@@ -73,23 +72,29 @@ public class EntityFieldAuthIntegrationTests {
 
     @Autowired
     private PersonRepository personRepository;
+    
+    @Autowired
+    private OrganizationRepository orgRepository;
 
-    private PersonDto personDto = PersonDto
-            .builder()
-            .firstName("Homer")
-            .lastName("Simpson")
-            .id(UUID.randomUUID())
-            .email("test@test.com")
-            .build();
+    private PersonDto personDto;
 
-    private OrganizationDto organizationDto = OrganizationDto
-            .builder()
-            .id(UUID.randomUUID())
-            .name("TestOrg")
-            .build();
+    private OrganizationDto organizationDto;
 
     @BeforeEach
     void setup() {
+    	personDto = PersonDto
+                .builder()
+                .firstName("Homer")
+                .lastName("Simpson")
+                .id(UUID.randomUUID())
+                .email("test@test.com")
+                .build();
+    	
+    	organizationDto = OrganizationDto
+                .builder()
+                .id(UUID.randomUUID())
+                .name("TestOrg")
+                .build();
 
         // add the dashboard admin
         // create the admin
@@ -120,11 +125,12 @@ public class EntityFieldAuthIntegrationTests {
 
         // clean up users
         dashboardUserRepository.deleteById(adminId);
+        
+        orgRepository.deleteAll();
+        personRepository.deleteAll();
     }
 
     @Test
-    @Transactional
-    @Rollback
     void testPrivsRead() throws Exception {
 
         // NewApp doesn't have PERSON_READ rights
@@ -142,13 +148,9 @@ public class EntityFieldAuthIntegrationTests {
                 .header(AUTH_HEADER_NAME, createToken(adminUser.getEmail()))
                 .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk());
-
-
     }
 
     @Test
-    @Transactional
-    @Rollback
     void testPrivsCreate() throws Exception {
 
         // NewApp doesn't have PERSON_CREATE rights
@@ -193,8 +195,6 @@ public class EntityFieldAuthIntegrationTests {
     }
 
     @Test
-    @Transactional
-    @Rollback
     void testPrivsDelete() throws Exception {
 
         mockMvc.perform(post("/v2/person")
@@ -246,8 +246,6 @@ public class EntityFieldAuthIntegrationTests {
     }
 
     @Test
-    @Transactional
-    @Rollback
     void testPrivsEdit() throws Exception {
 
         mockMvc.perform(post("/v2/person")
@@ -448,8 +446,6 @@ public class EntityFieldAuthIntegrationTests {
     }
     
     @Test
-    @Transactional
-    @Rollback
     void testUserCanEditOwnData() throws Exception {
     	var dashboardUserOnly = DashboardUser.builder()
                 .id(UUID.randomUUID())

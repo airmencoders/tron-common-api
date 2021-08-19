@@ -68,6 +68,7 @@ public class OrganizationDto {
     private UUID leader;
 
     @Getter
+    @Builder.Default
     private List<UUID> members = new ArrayList<>();
 
     @Schema(nullable = true)
@@ -75,6 +76,7 @@ public class OrganizationDto {
     private UUID parentOrganization;
 
     @Getter
+    @Builder.Default
     private List<UUID> subordinateOrganizations = new ArrayList<>();
 
     @Getter
@@ -84,9 +86,11 @@ public class OrganizationDto {
     private String name;
 
     @Getter
+    @Builder.Default
     private Unit orgType = Unit.ORGANIZATION;
 
     @Getter
+    @Builder.Default
     private Branch branchType = Branch.OTHER;
 
     @JsonSetter(OrganizationDto.ORG_TYPE_FIELD)
