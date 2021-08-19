@@ -48,6 +48,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -195,14 +196,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 		}
 
 		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(organization);
-		repository.save(efaResponse.getModifiedEntity());
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 
 		SubOrgAddMessage message = new SubOrgAddMessage();
 		message.setParentOrgId(organizationId);
 		message.setSubOrgsAdded(Sets.newHashSet(orgIds));
 		eventManagerService.recordEventAndPublish(message);
 
-		return checkEfaResponseForIllegalModification(efaResponse);
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
@@ -234,14 +235,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 		}
 
 		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(organization);
-		repository.save(efaResponse.getModifiedEntity());
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 
 		SubOrgRemoveMessage message = new SubOrgRemoveMessage();
 		message.setParentOrgId(organizationId);
 		message.setSubOrgsRemoved(Sets.newHashSet(orgIds));
 		eventManagerService.recordEventAndPublish(message);
 
-		return checkEfaResponseForIllegalModification(efaResponse);
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
@@ -273,7 +274,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		}
 
 		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(organization);
-		repository.save(efaResponse.getModifiedEntity());
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 
         if (!updatedPersons.isEmpty()) {
             personRepository.saveAll(updatedPersons);
@@ -284,7 +285,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		message.setMembersRemoved(Sets.newHashSet(personIds));
 		eventManagerService.recordEventAndPublish(message);
 
-		return checkEfaResponseForIllegalModification(efaResponse);
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
@@ -317,7 +318,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         }).collect(Collectors.toList());
 
         EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(organization);
-		repository.save(efaResponse.getModifiedEntity());
+		Organization result = repository.save(efaResponse.getModifiedEntity());
         
         if (primary) {
             personRepository.saveAll(updatedPersons);
@@ -328,7 +329,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		message.setMembersAdded(Sets.newHashSet(personIds));
 		eventManagerService.recordEventAndPublish(message);
 
-		return checkEfaResponseForIllegalModification(efaResponse);
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
@@ -384,10 +385,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 			}
 		});
 
-		Organization result = updateMetadata(organization, Optional.empty(), metadata);
+		Organization result = appendAndUpdateMetadata(organization, Optional.empty(), metadata, isUserAuthorizedForFieldEdit(Organization.METADATA_FIELD));
+		
 		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(result);
-		repository.save(efaResponse.getModifiedEntity());
-		return checkEfaResponseForIllegalModification(efaResponse);
+		
+		performOrganizationParentChildLogic(result);
+		performParentChecks(result);
+		
+		Organization savedResult = repository.save(efaResponse.getModifiedEntity());
+		return checkEfaResponseForIllegalModification(savedResult, efaResponse.getDeniedFields());
 	}
 
 	/**
@@ -422,15 +428,20 @@ public class OrganizationServiceImpl implements OrganizationService {
 					patchedOrg.getName()));
 		}
 
-		Organization result = updateMetadata(patchedOrg, dbOrganization, patchedOrgDto.getMeta());
-		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(result);
-		repository.save(efaResponse.getModifiedEntity());
+		appendAndUpdateMetadata(patchedOrg, dbOrganization, patchedOrgDto.getMeta(), isUserAuthorizedForFieldEdit(Organization.METADATA_FIELD));
+		
+		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(patchedOrg);
+		
+		performOrganizationParentChildLogic(efaResponse.getModifiedEntity());
+		performParentChecks(efaResponse.getModifiedEntity());
+		
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.addOrgId(id);
 		eventManagerService.recordEventAndPublish(message);
 
-		return checkEfaResponseForIllegalModification(efaResponse);
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
@@ -550,58 +561,128 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (!orgChecksService.orgNameIsUnique(entity))
 			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", entity.getName()));
 		
-		List<UUID> subOrgsToAdd = new ArrayList<>(organization.getSubordinateOrganizations());
-		subOrgsToAdd.removeAll(dbEntity.get().getSubordinateOrganizations().stream().map(Organization::getId).collect(Collectors.toList()));
+		appendAndUpdateMetadata(entity, dbEntity, organization.getMeta(), isUserAuthorizedForFieldEdit(Organization.METADATA_FIELD));
 		
-		Organization result = updateMetadata(entity, dbEntity, organization.getMeta());
-		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(result);
+		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(entity);
 		
-		// If EFA failed on subordinateOrganizations, have to manually roll those changes back
-		// as relying on current implementations does not handle this well
-		if (efaResponse.getDeniedFields().contains(Organization.SUB_ORGS_FIELD)) {
-			this.removeOrg(organization.getId(), subOrgsToAdd);
-		}
+		performOrganizationParentChildLogic(efaResponse.getModifiedEntity());
+		performParentChecks(efaResponse.getModifiedEntity());
 		
-		repository.save(efaResponse.getModifiedEntity());
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 		
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.setOrgIds(Sets.newHashSet(result.getId()));
 		eventManagerService.recordEventAndPublish(message);
 		
-		return checkEfaResponseForIllegalModification(efaResponse);
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
-
-	private Organization updateMetadata(Organization updatedEntity, Optional<Organization> dbEntity, Map<String, String> metadata) {
+	
+	/**
+	 * Appends any metadata from {@code dbEntity} to {@code updatedEntity}
+	 * along with any modifications that arise as a result of {@code metadata}.
+	 * Metadata will only be saved to {@link #organizationMetadataRepository}
+	 * if {@code allowedToEdit} is equal to {@code true}.
+	 * 
+	 * This action will not modify {@code dbEntity} in any manner.
+	 * 
+	 * @param updatedEntity the modified entity
+	 * @param dbEntity the database value of {@code updatedEntity}
+	 * @param metadata metadata to modify
+	 * @param allowedToEdit if requesting user is allowed to edit metadata
+	 * @return {@code updatedEntity} with metadata modifications applied
+	 */
+	private Organization appendAndUpdateMetadata(Organization updatedEntity, Optional<Organization> dbEntity, Map<String, String> metadata, boolean allowedToEdit) {
 		checkValidMetadataProperties(updatedEntity.getOrgType(), metadata);
 		List<OrganizationMetadata> toDelete = new ArrayList<>();
-		if (dbEntity.isPresent()) {
-			dbEntity.get().getMetadata().forEach(m -> {
-				updatedEntity.getMetadata().add(m);
-				if (metadata == null || metadata.containsKey(m.getKey())) {
-					toDelete.add(m);
-				}
-			});
+		List<OrganizationMetadata> toSave = new ArrayList<>();
+		
+		updatedEntity.getMetadata().clear();
+		
+		// Metadata is null, so add everything to delete
+		if (metadata == null) {
+			if (dbEntity.isPresent()) {
+				toDelete.addAll(dbEntity.get().getMetadata());
+			}
+		} else {
+			processMetadataModifications(updatedEntity, dbEntity, metadata, toDelete, toSave);
 		}
-		if (metadata != null) {
+		
+		if (allowedToEdit) {
+			organizationMetadataRepository.deleteAll(toDelete);
+			organizationMetadataRepository.saveAll(toSave);
+		}
+		
+		updatedEntity.getMetadata().addAll(toSave);
+		
+		return updatedEntity;
+	}
+	
+	/**
+	 * Does the actually processing when adding metadata to {@code updatedEntity}.
+	 * Should only be called as a result of 
+	 * {@link #appendAndUpdateMetadata(Organization, Optional, Map, boolean)}.
+	 * Will not modify {@code dbEntity} in any way.
+	 * 
+	 * @param updatedEntity the modified entity
+	 * @param dbEntity the database value of {@code updatedEntity}
+	 * @param metadata metadata to modify
+	 * @param toDelete list containing all metadata values up for deletion
+	 * @param toSave list containing all metadata values up for update
+	 */
+	private void processMetadataModifications(
+			@NonNull Organization updatedEntity, 
+			Optional<Organization> dbEntity, 
+			@NonNull Map<String, String> metadata, 
+			@NonNull List<OrganizationMetadata> toDelete, 
+			@NonNull List<OrganizationMetadata> toSave) {
+		
+		// When the database entity is null,
+		// just add every metadata value to updatedEntity
+		if (dbEntity.isEmpty()) {
 			metadata.forEach((key, value) -> {
-				Optional<OrganizationMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey().equals(key)).findAny();
+				OrganizationMetadata meta = OrganizationMetadata.builder()
+						.organizationId(updatedEntity.getId())
+						.key(key)
+						.value(value)
+						.build();
+				
+				toSave.add(meta);
+			});
+		} else {
+			metadata.forEach((key, value) -> {
+				Optional<OrganizationMetadata> match = dbEntity.get().getMetadata().stream().filter(x -> x.getKey().equals(key)).findAny();
+				
+				// This metadata value exists in database entity,
+				// check for deletions or updates.
+				// If metadata does not exist in database entity,
+				// it's up for a new save.
 				if (match.isPresent()) {
+					// If the value is null then this is up for deletion
+					// Else the value is up for update and should be added to updatedEntity
 					if (value == null) {
 						toDelete.add(match.get());
 					} else {
-						match.get().setValue(value);
+						// Make a copy, do not edit the value from the database entity
+						OrganizationMetadata meta = OrganizationMetadata.builder()
+								.organizationId(updatedEntity.getId())
+								.key(key)
+								.value(value)
+								.build();
+						
+						meta.setValue(value);
+						toSave.add(meta);
 					}
-				} else if (value != null) {
-					updatedEntity.getMetadata().add(organizationMetadataRepository.save(new OrganizationMetadata(updatedEntity.getId(), key, value)));
+				} else {
+					OrganizationMetadata meta = OrganizationMetadata.builder()
+							.organizationId(updatedEntity.getId())
+							.key(key)
+							.value(value)
+							.build();
+					
+					toSave.add(meta);
 				}
 			});
 		}
-		
-		performOrganizationParentChildLogic(updatedEntity);
-		performParentChecks(updatedEntity);
-		organizationMetadataRepository.deleteAll(toDelete);
-		updatedEntity.getMetadata().removeAll(toDelete);
-		return updatedEntity;
 	}
 
 	/**
@@ -1283,5 +1364,13 @@ public class OrganizationServiceImpl implements OrganizationService {
 		}
 		
 		throw new IllegalOrganizationModification(efaResponse);
+	}
+	
+	private OrganizationDto checkEfaResponseForIllegalModification(Organization entity, List<String> deniedFields) {
+		return checkEfaResponseForIllegalModification(
+				EntityFieldAuthResponse.<Organization>builder()
+					.deniedFields(deniedFields)
+					.modifiedEntity(entity)
+					.build());
 	}
 }

@@ -786,6 +786,10 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(child1, child2.getId()))
 				.thenReturn(Lists.newArrayList(parent));
+		
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 
 		child2.setSubOrgsUUID(Lists.newArrayList(child1.getId()));
 		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.updateOrganization(child2.getId(), child2));

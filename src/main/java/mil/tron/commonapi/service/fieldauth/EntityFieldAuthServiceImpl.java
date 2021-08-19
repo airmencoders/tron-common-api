@@ -245,7 +245,6 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
      * @return the entity containing allowed modifications and a list containing any denied fields
      */
     @Override
-    @Transactional(value=TxType.REQUIRES_NEW)
     public EntityFieldAuthResponse<Organization> adjudicateOrganizationFields(Organization incomingOrg, Authentication requester) {
 
         // if EFA isn't even enabled, just return the new entity

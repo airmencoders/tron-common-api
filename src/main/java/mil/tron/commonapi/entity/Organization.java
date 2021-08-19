@@ -40,6 +40,8 @@ public class Organization {
     public static final String MEMBERS_FIELD = "members";
 	@JsonIgnore
     public static final String LEADER_FIELD = "leader";
+	@JsonIgnore
+	public static final String METADATA_FIELD = "metadata";
 	
     @Id
     @Getter
