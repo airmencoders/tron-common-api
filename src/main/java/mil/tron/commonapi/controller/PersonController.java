@@ -22,7 +22,6 @@ import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
-import mil.tron.commonapi.service.UserInfoService;
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,9 +31,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -228,13 +225,10 @@ public class PersonController {
 	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v1}/person", "${api-prefix.v2}/person"})
 	public ResponseEntity<PersonDto> createPerson(
-			HttpServletResponse response,
 			@Parameter(description = "Person to create",
 				required = true,
 				schema = @Schema(implementation = PersonDto.class)) @Valid @RequestBody PersonDto person) {
-		return new ResponseEntity<>(personService.createPerson(person),
-				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
-						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
+		return new ResponseEntity<>(personService.createPerson(person), HttpStatus.CREATED);
 	}
 
 	@Operation(summary = "Adds a person using info from P1 JWT")
@@ -255,13 +249,10 @@ public class PersonController {
 	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v1}/person/person-jwt", "${api-prefix.v2}/person/person-jwt"})
 	public ResponseEntity<PersonDto> createPersonFromJwt(
-			HttpServletResponse response,
 			@Parameter(description = "Person to create",
 				required = true,
 				schema = @Schema(implementation = PlatformJwtDto.class)) @Valid @RequestBody PlatformJwtDto person) {
-		return new ResponseEntity<>(personService.createPersonFromJwt(person),
-				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
-						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
+		return new ResponseEntity<>(personService.createPersonFromJwt(person), HttpStatus.CREATED);
 	}
 
 
@@ -280,7 +271,6 @@ public class PersonController {
 	@PreAuthorizePersonEdit
 	@PutMapping(value = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"})
 	public ResponseEntity<Object> updatePerson(
-			HttpServletResponse response,
 			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
 			@Parameter(description = "Updated person", 
 				required = true, 
@@ -288,7 +278,7 @@ public class PersonController {
 				@Valid @RequestBody PersonDto person) {
 
 		PersonDto updatedPerson = personService.updatePerson(personId, person);
-		return new ResponseEntity<>(updatedPerson, HttpStatus.valueOf(response.getStatus()));
+		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 	}
 
 	@Operation(summary = "Allows a Person to update their own existing record.", 
@@ -341,7 +331,6 @@ public class PersonController {
 	@PreAuthorizePersonEdit
 	@PatchMapping(path = {"${api-prefix.v1}/person/{id}", "${api-prefix.v2}/person/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<PersonDto> patchPerson(
-			HttpServletResponse response,
 			@Parameter(description = "Person ID to patch", required = true) @PathVariable("id") UUID personId,
 			@Parameter(description = "Patched person",
 					required = true,
@@ -350,7 +339,7 @@ public class PersonController {
 									JsonPatchObjectValue.class, JsonPatchObjectArrayValue.class}))
 			@RequestBody JsonPatch patch) throws MethodArgumentNotValidException {
 		PersonDto updatedPerson = personService.patchPerson(personId, patch);
-		return new ResponseEntity<>(updatedPerson, HttpStatus.valueOf(response.getStatus()));
+		return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
 	}
 
 
@@ -399,12 +388,9 @@ public class PersonController {
 	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v1}/person/persons"})
 	public ResponseEntity<Object> addPersons(
-			HttpServletResponse response,
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
-		return new ResponseEntity<>(personService.bulkAddPeople(people),
-				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
-						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
+		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Add one or more members to the database",
@@ -430,12 +416,9 @@ public class PersonController {
 	@PreAuthorizePersonCreate
 	@PostMapping({"${api-prefix.v2}/person/persons"})
 	public ResponseEntity<Object> addPersonsWrapped(
-			HttpServletResponse response,
 			@Parameter(description = "Array of persons to add", required = true) @RequestBody List<PersonDto> people) {
 
-		return new ResponseEntity<>(personService.bulkAddPeople(people),
-				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
-						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
+		return new ResponseEntity<>(personService.bulkAddPeople(people), HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Retrieves persons filtered", description = "Retrieves filtered list of persons")
