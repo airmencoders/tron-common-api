@@ -38,7 +38,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.*;
 
@@ -290,14 +289,11 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationCreate
 	@PostMapping({"${api-prefix.v1}/organization", "${api-prefix.v2}/organization"})
 	public ResponseEntity<OrganizationDto> createOrganization(
-			HttpServletResponse response,
 			@Parameter(description = "Organization to create",
 				required = true,
 				schema = @Schema(implementation = OrganizationDto.class)) @Valid @RequestBody OrganizationDto organization) {
 
-		return new ResponseEntity<>(organizationService.createOrganization(organization),
-				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
-						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
+		return new ResponseEntity<>(organizationService.createOrganization(organization), HttpStatus.CREATED);
 	}
 
 	@Operation(summary = "Updates an existing organization", description = "Updates an existing organization")
@@ -318,7 +314,6 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PutMapping({"${api-prefix.v1}/organization/{id}", "${api-prefix.v2}/organization/{id}"})
 	public ResponseEntity<OrganizationDto> updateOrganization(
-			HttpServletResponse response,
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Updated organization",
 				required = true,
@@ -328,7 +323,7 @@ public class OrganizationController {
 		OrganizationDto org = organizationService.updateOrganization(organizationId, organization);
 		
 		if (org != null)
-			return new ResponseEntity<>(org, HttpStatus.valueOf(response.getStatus()));
+			return new ResponseEntity<>(org, HttpStatus.OK);
 		else
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
@@ -429,13 +424,12 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping({"${api-prefix.v1}/organization/{id}/members", "${api-prefix.v2}/organization/{id}/members"})
 	public ResponseEntity<Object> addOrganizationMember(
-		HttpServletResponse response,
         @Parameter(description = "UUID of the organization record", required = true) @PathVariable UUID id,
         @Parameter(description = "UUID(s) of the member(s) to add", required = true) @RequestBody List<UUID> personId,
 		@Parameter(description = "Whether to make the organization the primary organization for the user", required = false)
 				@RequestParam(name = "primary", required = false, defaultValue = "true") boolean primary) {
 
-		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId, primary), HttpStatus.valueOf(response.getStatus()));
+		return new ResponseEntity<>(organizationService.addOrganizationMember(id, personId, primary), HttpStatus.OK);
 	}
 
 	@Operation(summary = "Add subordinate organizations to an organization", description = "Adds subordinate orgs to an organization")
@@ -456,11 +450,10 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping({"${api-prefix.v1}/organization/{id}/subordinates", "${api-prefix.v2}/organization/{id}/subordinates"})
 	public ResponseEntity<Object> addSubordinateOrganization(
-			HttpServletResponse response,
 			@Parameter(description = "UUID of the host organization record", required = true) @PathVariable UUID id,
 		 	@Parameter(description = "UUID(s) of subordinate organizations", required = true) @RequestBody List<UUID> orgIds) {
 
-		return new ResponseEntity<>(organizationService.addSubordinateOrg(id, orgIds), HttpStatus.valueOf(response.getStatus()));
+		return new ResponseEntity<>(organizationService.addSubordinateOrg(id, orgIds), HttpStatus.OK);
 	}
 
 	@Operation(summary = "Remove subordinate organizations from an organization", description = "Removes subordinate orgs from an organization")
@@ -511,11 +504,10 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping({"${api-prefix.v1}/organization/{id}"})
 	public ResponseEntity<OrganizationDto> patchOrganization(
-			HttpServletResponse response,
 			@Parameter(description = "Organization ID to update", required = true) @PathVariable("id") UUID organizationId,
 			@Parameter(description = "Object hash containing the keys to modify (set fields to null to clear that field)", required = true) @RequestBody Map<String, String> attribs) {
 
-			return new ResponseEntity<>(organizationService.modify(organizationId, attribs), HttpStatus.valueOf(response.getStatus()));
+			return new ResponseEntity<>(organizationService.modify(organizationId, attribs), HttpStatus.OK);
 	}
 
 	/**
@@ -545,11 +537,8 @@ public class OrganizationController {
 	@Deprecated(since = "v2")
 	@PostMapping({"${api-prefix.v1}/organization/organizations"})
 	public ResponseEntity<Object> addNewOrganizations(
-			HttpServletResponse response,
 			@RequestBody List<OrganizationDto> orgs) {
-		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs),
-				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
-						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
+		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
 	}
 	
 	@Operation(summary = "Adds one or more organization entities",
@@ -575,11 +564,8 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationCreate
 	@PostMapping({"${api-prefix.v2}/organization/organizations"})
 	public ResponseEntity<Object> addNewOrganizationsWrapped(
-			HttpServletResponse response,
 			@RequestBody List<OrganizationDto> orgs) {
-		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs),
-				(HttpStatus.valueOf(response.getStatus()) == HttpStatus.NON_AUTHORITATIVE_INFORMATION) ?
-						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
+		return new ResponseEntity<>(organizationService.bulkAddOrgs(orgs), HttpStatus.CREATED);
 	}
 
 	@Operation(summary = "Patches an existing organization", description = "Patches an existing organization")
@@ -600,7 +586,6 @@ public class OrganizationController {
 	@PreAuthorizeOrganizationEdit
 	@PatchMapping(value = {"${api-prefix.v2}/organization/{id}"}, consumes = "application/json-patch+json")
 	public ResponseEntity<OrganizationDto> jsonPatchOrganization(
-			HttpServletResponse response,
 			@Parameter(description = "Organization ID to patch", required = true) @PathVariable("id") UUID orgId,
 			@io.swagger.v3.oas.annotations.parameters.RequestBody(
 					content = @Content(array = @ArraySchema(
@@ -610,7 +595,7 @@ public class OrganizationController {
 					required = true)
 			@RequestBody JsonPatch patch) throws MethodArgumentNotValidException {
 		OrganizationDto organizationDto = organizationService.patchOrganization(orgId, patch);
-		return new ResponseEntity<>(organizationDto, HttpStatus.valueOf(response.getStatus()));
+		return new ResponseEntity<>(organizationDto, HttpStatus.OK);
 	}
 
 	// helper to build the options map for customization of return DTOs
