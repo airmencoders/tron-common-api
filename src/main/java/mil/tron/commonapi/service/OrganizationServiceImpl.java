@@ -503,6 +503,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 				.build());
 
 		performOrganizationParentChildLogic(org);
+		performParentChecks(org);
 
 		checkValidMetadataProperties(organization.getOrgType(), organization.getMeta());
 		Organization resultEntity = repository.save(org);
