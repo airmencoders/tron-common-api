@@ -31,6 +31,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -556,76 +557,49 @@ public class OrgRelationshipIntegrationTest {
 
         @Test
         void testInvalidSubOrgIsSubOrgElsewhere() throws Exception {
-
-            JSONObject content = new JSONObject();
-            content.put("op","add");
-            content.put("path","/subordinateOrganizations/-");
-            content.put("value", child1.getId());
-
-            JSONArray patch = new JSONArray();
-            patch.put(content);
-
-
-            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", parent.getId())
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}" + "/subordinates", parent.getId())
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType("application/json-patch+json")
+                    .contentType("application/json")
                     .accept(MediaType.APPLICATION_JSON)
-                    .content(patch.toString()))
+                    .content(OBJECT_MAPPER.writeValueAsString(List.of(child1.getId()))))
                     .andExpect(status().isOk());
 
-            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", child2.getId())
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}" + "/subordinates", child2.getId())
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType("application/json-patch+json")
+                    .contentType("application/json")
                     .accept(MediaType.APPLICATION_JSON)
-                    .content(patch.toString()))
+                    .content(OBJECT_MAPPER.writeValueAsString(List.of(child1.getId()))))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
         void testValidParent() throws Exception {
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}" + "/subordinates", parent.getId())
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType("application/json")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(List.of(child1.getId()))))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}" + "/subordinates", child2.getId())
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType("application/json")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(List.of(child3.getId()))))
+                    .andExpect(status().isOk());
 
             JSONObject content = new JSONObject();
-            content.put("op","add");
-            content.put("path","/subordinateOrganizations/-");
-            content.put("value", child1.getId());
-
-            JSONArray patch = new JSONArray();
-            patch.put(content);
-
-            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", parent.getId())
-                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType("application/json-patch+json")
-                    .accept(MediaType.APPLICATION_JSON)
-                    .content(patch.toString()))
-                    .andExpect(status().isOk());
-
-            content = new JSONObject();
-            content.put("op","add");
-            content.put("path","/subordinateOrganizations/-");
-            content.put("value", child3.getId());
-
-            patch = new JSONArray();
-            patch.put(content);
-
-            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", child2.getId())
-                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType("application/json-patch+json")
-                    .accept(MediaType.APPLICATION_JSON)
-                    .content(patch.toString()))
-                    .andExpect(status().isOk());
-
-            content = new JSONObject();
             content.put("op","replace");
             content.put("path","/parentOrganization");
             content.put("value", child3.getId());
 
-            patch = new JSONArray();
+            JSONArray patch = new JSONArray();
             patch.put(content);
-
+            
             parent.setParentOrganizationUUID(child3.getId());
             mockMvc.perform(patch(ENDPOINT_V2 + "{id}", parent.getId())
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))

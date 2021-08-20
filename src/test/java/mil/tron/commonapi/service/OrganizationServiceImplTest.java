@@ -1,9 +1,12 @@
 package mil.tron.commonapi.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
+import mil.tron.commonapi.dto.annotation.helper.PatchOp;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -50,6 +53,7 @@ import static org.mockito.AdditionalAnswers.returnsFirstArg;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceImplTest {
+
 	@Mock
 	private OrganizationRepository repository;
 
@@ -186,6 +190,38 @@ class OrganizationServiceImplTest {
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	    	OrganizationDto updatedOrganization = organizationService.updateOrganization(testOrg.getId(), organizationService.convertToDto(testOrg));
 	    	assertThat(updatedOrganization.getName()).isEqualTo(testOrgDto.getName());
+		}
+		
+		@Test
+		void jsonPatch_shouldFail_whenModifyingNonPatchableFields() throws JsonProcessingException {
+			ObjectMapper objectMapper = new ObjectMapper();
+			
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
+			JsonPatchStringValue patchMembers = JsonPatchStringValue.builder()
+					.op(PatchOp.ADD)
+					.path(String.format("/%s/-", OrganizationDto.MEMBERS_FIELD))
+					.value(UUID.randomUUID().toString())
+					.build();
+			
+			JsonPatchStringValue patchSubordinateOrganizations = JsonPatchStringValue.builder()
+					.op(PatchOp.ADD)
+					.path(String.format("/%s/-", OrganizationDto.SUB_ORGS_FIELD))
+					.value(UUID.randomUUID().toString())
+					.build();
+			
+			List<JsonPatchStringValue> jsonPatchOps = List.of(patchMembers);
+			
+			String jsonPatchOpsAsString = objectMapper.writeValueAsString(jsonPatchOps);
+			JsonPatch jsonPatchMembers = objectMapper.readValue(jsonPatchOpsAsString, JsonPatch.class);
+			
+			// Try members field
+			assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.patchOrganization(testOrg.getId(), jsonPatchMembers));
+			
+			// Try subordinateOrganizations field
+			jsonPatchOps = List.of(patchSubordinateOrganizations);
+			jsonPatchOpsAsString = objectMapper.writeValueAsString(jsonPatchOps);
+			JsonPatch jsonPatchSubordinateOrganizations = objectMapper.readValue(jsonPatchOpsAsString, JsonPatch.class);
+			assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.patchOrganization(testOrg.getId(), jsonPatchSubordinateOrganizations));
 		}
 	}
 	

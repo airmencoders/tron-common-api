@@ -436,31 +436,36 @@ public class OrganizationIntegrationTest {
 
         @Test
         @Transactional
-        void testPatchAddOrgMembers() throws Exception {
-
-            UUID newMemberId = UUID.randomUUID();
-            PersonDto newMember = personService.convertToDto(Person.builder()
-                    .id(newMemberId)
-                    .build(), new PersonConversionOptions());
-            newMember.setRank("Capt");
-            newMember.setBranch(Branch.USAF);
-            personService.createPerson(newMember);
-
+        void testPatchOrgMembersField() throws Exception {
             JSONArray contentArray = new JSONArray();
             JSONObject content = new JSONObject();
             content.put("op", "add");
             content.put("path", "/members/-");
-            content.put("value", newMemberId);
+            content.put("value", UUID.randomUUID());
             contentArray.put(content);
-            MvcResult result = mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
+            
+            // Should fail because members field is non-patchable
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
                     .contentType("application/json-patch+json")
                     .content(contentArray.toString()))
-                    .andExpect(status().isOk())
-                    .andReturn();
-            Optional<Organization> updatedOrg = organizationRepository.findById(this.existingOrgDto.getId());
-            Set<Person> orgMembers = updatedOrg.get().getMembers();
-            int numberOfMembers = orgMembers.size();
-            assertEquals(2, numberOfMembers);
+                    .andExpect(status().isBadRequest());
+        }
+        
+        @Test
+        @Transactional
+        void testPatchOrgSubordinateOrganizationsField() throws Exception {
+            JSONArray contentArray = new JSONArray();
+            JSONObject content = new JSONObject();
+            content.put("op", "add");
+            content.put("path", "/subordinateOrganizations/-");
+            content.put("value", UUID.randomUUID());
+            contentArray.put(content);
+            
+            // Should fail because subordinateOrganizations field is non-patchable
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
+                    .contentType("application/json-patch+json")
+                    .content(contentArray.toString()))
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
