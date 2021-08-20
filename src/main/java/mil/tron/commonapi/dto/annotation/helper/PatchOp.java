@@ -1,5 +1,7 @@
 package mil.tron.commonapi.dto.annotation.helper;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum PatchOp {
     ADD("add"),
     REMOVE("remove"),
@@ -23,5 +25,10 @@ public enum PatchOp {
     @Override
     public String toString() {
         return text;
+    }
+    
+    @JsonValue
+    public String getText() {
+    	return text;
     }
 }

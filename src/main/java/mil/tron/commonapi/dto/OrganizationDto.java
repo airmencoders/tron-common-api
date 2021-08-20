@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import mil.tron.commonapi.annotation.jsonpatch.NonPatchableField;
 import mil.tron.commonapi.dto.organizations.*;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
@@ -69,6 +70,8 @@ public class OrganizationDto {
 
     @Getter
     @Builder.Default
+    @NonPatchableField
+    @Schema(description = "Field cannot be modified through JSON Patch")
     private List<UUID> members = new ArrayList<>();
 
     @Schema(nullable = true)
@@ -77,6 +80,8 @@ public class OrganizationDto {
 
     @Getter
     @Builder.Default
+    @NonPatchableField
+    @Schema(description = "Field cannot be modified through JSON Patch")
     private List<UUID> subordinateOrganizations = new ArrayList<>();
 
     @Getter

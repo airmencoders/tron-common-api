@@ -582,7 +582,10 @@ public class OrganizationController {
 						HttpStatus.NON_AUTHORITATIVE_INFORMATION : HttpStatus.CREATED);
 	}
 
-	@Operation(summary = "Patches an existing organization", description = "Patches an existing organization")
+	@Operation(
+			summary = "Patches an existing organization", 
+			description = "Patches an existing organization. Fields (subordinateOrganizations and members) cannot be modified through this operation."
+	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "203",
 					description = "Successful - Entity Field Authority denied access to some fields",
