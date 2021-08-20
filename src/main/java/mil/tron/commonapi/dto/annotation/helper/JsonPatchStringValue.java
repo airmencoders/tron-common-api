@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class JsonPatchStringValue extends JsonPatchAnnotated {
-
 	@Builder
 	public JsonPatchStringValue(PatchOp op, String path, String value) {
 		super(op, path);
