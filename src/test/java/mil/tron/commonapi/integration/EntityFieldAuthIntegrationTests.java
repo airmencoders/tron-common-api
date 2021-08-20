@@ -479,7 +479,7 @@ class EntityFieldAuthIntegrationTests {
         		.email(dashboardUserOnly.getEmail())
         		.build();
         
-        mockMvc.perform(put("/v2/person/self/{id}", newPerson.getId())
+        mockMvc.perform(put("/v2/person/self")
                 .header(AUTH_HEADER_NAME, createToken(dashboardUserOnly.getEmail()))
                 .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)

@@ -5,9 +5,12 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -18,18 +21,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import javax.transaction.Transactional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(SpringExtension.class)
@@ -72,6 +81,9 @@ public class InputFuzzer {
 
     @Autowired
     PrivilegeRepository privRepo;
+
+    @Autowired
+    PersonRepository personRepository;
 
     @Autowired
     DashboardUserRepository dashRepo;
@@ -295,6 +307,70 @@ public class InputFuzzer {
                             "  { \"op\": \"replace\", \"path\": \"/firstName\", \"value\": \"" + StringUtils.repeat('J', 256) + "\" }" +
                             "]\n"))
             	.andExpect(status().isBadRequest());
+        }
+
+        @Rollback
+        @Transactional
+        @Test
+        void testCannotSpoofSelfUpdate() throws Exception {
+
+            Person person = personRepository.save(Person.builder()
+                    .firstName("Jon")
+                    .lastName("User")
+                    .email("jon@af.mil")
+                    .title("SUpervisor")
+                    .build());
+
+            Person otherPerson = personRepository.save(Person.builder()
+                    .firstName("Jill")
+                    .lastName("User")
+                    .email("jill@af.mil")
+                    .title("Administrator")
+                    .build());
+
+            // now try to modify Jill's record as Jon by using Jill's ID in the path parameter
+            DtoMapper mapper = new DtoMapper();
+            PersonDto jonDto = mapper.map(person, PersonDto.class);
+            PersonDto jillDto = mapper.map(otherPerson, PersonDto.class);
+
+            // modify Jill's title, but embed jon's email in the Dto -- should fail
+            jillDto.setTitle("No One");
+            jillDto.setEmail(jonDto.getEmail());
+            mockMvc.perform(put(ENDPOINT + "/self")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(jillDto))
+                    .header(AUTH_HEADER_NAME, createToken(jonDto.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                    .andExpect(status().is(not(HttpStatus.OK)));
+
+            // change payload ID to jon's, should fail
+            jillDto.setId(jonDto.getId());
+            mockMvc.perform(put(ENDPOINT + "/self")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(jillDto))
+                    .header(AUTH_HEADER_NAME, createToken(jonDto.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                    .andExpect(status().is(not(HttpStatus.OK)));
+
+            // change payload email back to jill's, keep jon's id -- should still fail
+            jillDto.setEmail(otherPerson.getEmail());
+            mockMvc.perform(put(ENDPOINT + "/self")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(jillDto))
+                    .header(AUTH_HEADER_NAME, createToken(jonDto.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                    .andExpect(status().is(not(HttpStatus.OK)));
+
+            // finally lets make sure self update works when everything is correct
+            jillDto = mapper.map(otherPerson, PersonDto.class);
+            jillDto.setTitle("Commander");
+            mockMvc.perform(put(ENDPOINT + "/self")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(jillDto))
+                    .header(AUTH_HEADER_NAME, createToken(jillDto.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.title", equalTo("Commander")));
         }
     }
 

@@ -10,10 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
-import mil.tron.commonapi.annotation.security.PreAuthorizePersonCreate;
-import mil.tron.commonapi.annotation.security.PreAuthorizePersonDelete;
-import mil.tron.commonapi.annotation.security.PreAuthorizePersonEdit;
-import mil.tron.commonapi.annotation.security.PreAuthorizePersonRead;
+import mil.tron.commonapi.annotation.security.*;
 import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectArrayValue;
 import mil.tron.commonapi.dto.annotation.helper.JsonPatchObjectValue;
@@ -32,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,17 +37,14 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
 public class PersonController {
 	private PersonService personService;
-	private UserInfoService userInfoService;
 
-	public PersonController(PersonService personService, UserInfoService userInfoService) {
+	public PersonController(PersonService personService) {
 		this.personService = personService;
-		this.userInfoService = userInfoService;
 	}
 	
 	/**
@@ -298,7 +293,7 @@ public class PersonController {
 
 	@Operation(summary = "Allows a Person to update their own existing record.", 
 			description = "The email from the updated Person record must match the email in the authenticated user's JWT,"
-					+ " otherwise this action will be rejected.")
+					+ " otherwise this action will be rejected.  Request must be from the web (SSO) and not an app client.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
@@ -307,27 +302,24 @@ public class PersonController {
 					description = "Resource not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "403",
-					description = "Forbidden (Mismatch in email between updated Person record and user's JWT)",
+					description = "Forbidden (Mismatch in email between updated Person record and user's JWT or Request was from an app client)",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PutMapping(value = {"${api-prefix.v1}/person/self/{id}", "${api-prefix.v2}/person/self/{id}"})
-	public ResponseEntity<Object> selfUpdatePerson(@RequestHeader Map<String, String> headers,
-			@Parameter(description = "Person ID to update", required = true) @PathVariable("id") UUID personId,
-			@Parameter(description = "Updated person", 
-				required = true, 
-				schema = @Schema(implementation = PersonDto.class))
-				@Valid @RequestBody PersonDto person) {
-		return selfUpdate(headers.get("authorization"), personId, person);
-	}
+	@PreAuthorizeOnlySSO
+	@PutMapping(value = {"${api-prefix.v1}/person/self", "${api-prefix.v2}/person/self"})
+	public ResponseEntity<Object> selfUpdatePerson(Authentication authentication,
+			   @Parameter(description = "Updated person data object", required = true, schema = @Schema(implementation = PersonDto.class))
+			   @Valid @RequestBody PersonDto person) {
 
-	private ResponseEntity<Object> selfUpdate(String authHeader, UUID personId, PersonDto person) {
-		UserInfoDto userInfo = userInfoService.extractUserInfoFromHeader(authHeader);
+		// make sure the embedded DTO's email matches the one in the JWT
+		if (authentication != null
+				&& authentication.getName() != null
+				&& authentication.getName().equalsIgnoreCase(person.getEmail())) {
 
-		if (userInfo.getEmail().equalsIgnoreCase(person.getEmail())) {
-		  PersonDto updatedPerson = personService.updatePerson(personId, person);
-		  return new ResponseEntity<>(updatedPerson, HttpStatus.OK);
-		} else {
-		  throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is forbidden from performing this action.");
+			return new ResponseEntity<>(personService.updatePersonByEmail(authentication.getName(), person), HttpStatus.OK);
+		}
+		else {
+			throw new BadRequestException("Email of requester not known or does not match updated data");
 		}
 	}
 
