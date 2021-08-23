@@ -34,4 +34,41 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
     		+ " FROM HttpLogEntry h"
     		+ " WHERE h.statusCode >= 200 AND h.statusCode < 300 AND h.requestTimestamp BETWEEN :startDate and :endDate")
     Optional<Double> getAverageLatencyForSuccessfulResponse(Date startDate, Date endDate);
+    
+    /**
+     * Gets all Users (includes app clients and dashboard users) that 
+     * have made a request like '%/api%/organization%'.
+     * Will only retrieve Users that have made requests between {@code startDate} and 
+     * {@code endDate} with an http status code between 200 and 300.
+     * 
+     * @param startDate date to start search from
+     * @param endDate date to end search at
+     * @return a list of user names
+     */
+    @Query(value = "SELECT DISTINCT(h.userName)"
+   		+ " FROM"
+   		+ " HttpLogEntry h"
+   		+ " WHERE"
+   		+ " h.requestedUrl LIKE '%/api%/organization%'"
+   		+ " AND h.requestTimestamp BETWEEN :startDate and :endDate"
+   		+ " AND h.statusCode BETWEEN 200 and 300")
+    List<String> getUsersAccessingOrgRecords(Date startDate, Date endDate);
+    
+    @Query(value = "SELECT h"
+       		+ " FROM"
+       		+ " HttpLogEntry h"
+       		+ " WHERE"
+       		+ " h.requestedUrl LIKE '%/api%/app/%'"
+       		+ " AND h.requestTimestamp BETWEEN :startDate and :endDate"
+       		+ " AND h.statusCode BETWEEN 200 and 300")
+    List<HttpLogEntry> getAppSourceUsage(Date startDate, Date endDate);
+    
+    @Query(value = "SELECT h"
+       		+ " FROM"
+       		+ " HttpLogEntry h"
+       		+ " WHERE"
+       		+ " h.requestedUrl LIKE '%/api%/app/%'"
+       		+ " AND h.requestTimestamp BETWEEN :startDate and :endDate"
+       		+ " AND h.statusCode BETWEEN 400 and 599")
+    List<HttpLogEntry> getAppSourceErrorUsage(Date startDate, Date endDate);
 }
