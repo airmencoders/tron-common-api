@@ -1,7 +1,6 @@
 package mil.tron.commonapi.controller.dashboard;
 
 import java.util.Date;
-import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -17,11 +16,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.dashboard.AppSourceErrorRequestCountDto;
-import mil.tron.commonapi.dto.dashboard.AppSourceRequestCountDto;
-import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
+import mil.tron.commonapi.dto.dashboard.AppSourceErrorResponseDto;
+import mil.tron.commonapi.dto.dashboard.AppSourceUsageResponseDto;
+import mil.tron.commonapi.dto.dashboard.EntityAccessorResponseDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.dashboard.DashboardService;
 
@@ -36,12 +34,12 @@ public class DashboardController {
 	}
 	
 	@Operation(summary = "Get a list of App Clients that have accessed organization records", 
-			description = "Get a list of App Clients that have accessed organization records between two dates."
+			description = "Get a list of App Clients that have accessed organization records between two dates with their request count."
 					+ " Will only include App Clients that have made successful requests to access organization records (http status between 200 and 300.)")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-							content = @Content(schema = @Schema(implementation = KpiSummaryDto.class))),
+							content = @Content(schema = @Schema(implementation = EntityAccessorResponseDto.class))),
             @ApiResponse(responseCode = "403",
                 description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -52,15 +50,14 @@ public class DashboardController {
             			+ "Start date cannot be in the future (there would be no data).",
                 	content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@WrappedEnvelopeResponse
     @GetMapping("/app-client-organization-accessors")
-    public ResponseEntity<List<String>> getAppClientsAccessingOrganizations (
+    public ResponseEntity<EntityAccessorResponseDto> getAppClientsAccessingOrganizations (
     		@Parameter(description = "Earliest date to include in UTC.",
-    				schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
-		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
+    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000-00:00")) 
+		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startDate,
 		    @Parameter(description = "Latest date to include in UTC. Will default to the current date if not provided.",
-		    		schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
-		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
+		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000-00:00")) 
+		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
 	) {
         return new ResponseEntity<>(dashboardService.getAppClientsAccessingOrgRecords(startDate, endDate), HttpStatus.OK);
     }
@@ -71,7 +68,7 @@ public class DashboardController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-							content = @Content(schema = @Schema(implementation = KpiSummaryDto.class))),
+							content = @Content(schema = @Schema(implementation = AppSourceUsageResponseDto.class))),
             @ApiResponse(responseCode = "403",
                 description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -82,26 +79,25 @@ public class DashboardController {
             			+ "Start date cannot be in the future (there would be no data).",
                 	content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@WrappedEnvelopeResponse
     @GetMapping("/app-source-usage")
-    public ResponseEntity<List<AppSourceRequestCountDto>> getAppSourceUsageCount (
+    public ResponseEntity<AppSourceUsageResponseDto> getAppSourceUsageCount (
     		@Parameter(description = "Earliest date to include in UTC.",
-    				schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
-		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
+    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000-00:00")) 
+		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startDate,
 		    @Parameter(description = "Latest date to include in UTC. Will default to the current date if not provided.",
-		    		schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
-		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
+		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000-00:00")) 
+		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
 	) {
         return new ResponseEntity<>(dashboardService.getAppSourceUsage(startDate, endDate, true, 10), HttpStatus.OK);
     }
 	
-	@Operation(summary = "Get a list of App Sources along with their respective request count.", 
-			description = "Get a list of App Sources along with their respective request counts between two dates."
+	@Operation(summary = "Get a list of App Sources along with their respective error request count.", 
+			description = "Get a list of App Sources along with their respective error request counts between two dates."
 					+ " Will only include successful requests (http status between 200 and 300)")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
-							content = @Content(schema = @Schema(implementation = KpiSummaryDto.class))),
+							content = @Content(schema = @Schema(implementation = AppSourceErrorResponseDto.class))),
             @ApiResponse(responseCode = "403",
                 description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -112,15 +108,14 @@ public class DashboardController {
             			+ "Start date cannot be in the future (there would be no data).",
                 	content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@WrappedEnvelopeResponse
     @GetMapping("/app-source-error-usage")
-    public ResponseEntity<List<AppSourceErrorRequestCountDto>> getAppSourceErrorUsageCount (
+    public ResponseEntity<AppSourceErrorResponseDto> getAppSourceErrorUsageCount (
     		@Parameter(description = "Earliest date to include in UTC.",
-    				schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
-		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
+    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000-00:00")) 
+		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startDate,
 		    @Parameter(description = "Latest date to include in UTC. Will default to the current date if not provided.",
-		    		schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
-		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
+		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000-00:00")) 
+		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
 	) {
         return new ResponseEntity<>(dashboardService.getAppSourceErrorUsage(startDate, endDate), HttpStatus.OK);
     }

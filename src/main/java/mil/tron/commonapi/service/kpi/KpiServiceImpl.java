@@ -9,7 +9,6 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 import org.springframework.scheduling.annotation.Scheduled;
@@ -37,7 +36,7 @@ public class KpiServiceImpl implements KpiService {
 	private AppSourceRepository appSourceRepo;
 	private MeterValueRepository meterValueRepo;
 	private KpiRepository kpiRepo;
-	private HttpLogsUtilService httpLogsService;
+	private HttpLogsUtilService httpLogsUtilService;
 	private Clock systemUtcClock;
 	
 	public KpiServiceImpl(
@@ -50,7 +49,7 @@ public class KpiServiceImpl implements KpiService {
 		this.httpLogsRepo = httpLogsRepo;
 		this.appSourceRepo = appSourceRepo;
 		this.meterValueRepo = meterValueRepo;
-		this.httpLogsService = httpLogsService;
+		this.httpLogsUtilService = httpLogsService;
 		this.kpiRepo = kpiRepo;
 		
 		this.systemUtcClock = systemUtcClock;
@@ -88,10 +87,10 @@ public class KpiServiceImpl implements KpiService {
         }
     	
 		// Ensure endDate gets 23:59:59 to be inclusive of the day
-		endDate = httpLogsService.getDateAtEndOfDay(endDate);
+		endDate = httpLogsUtilService.getDateAtEndOfDay(endDate);
 		
 		// Ensure startDate gets 00:00:00
-		startDate = httpLogsService.getDateAtStartOfDay(startDate);
+		startDate = httpLogsUtilService.getDateAtStartOfDay(startDate);
 		
 		List<UserWithRequestCount> userRequestCounts = this.getUsersWithRequestCount(startDate, endDate);
 		List<UserWithRequestCount> dashboardUsers = new ArrayList<>();
@@ -100,8 +99,7 @@ public class KpiServiceImpl implements KpiService {
 		// If the name includes a domain, consider it a Dashboard user (eg: contains @something.test)
 		// and everything else will be an App Client.
 		userRequestCounts.forEach(userRequestCount -> {
-			Matcher emailMatcher = httpLogsService.getEmailDomainPattern().matcher(userRequestCount.getName());
-			if (emailMatcher.find()) {
+			if (!httpLogsUtilService.isUsernameAnAppClient(userRequestCount.getName())) {
 				dashboardUsers.add(userRequestCount);
 			} else {
 				appClients.add(userRequestCount);

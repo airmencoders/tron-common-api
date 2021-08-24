@@ -1,7 +1,7 @@
 package mil.tron.commonapi.dto.dashboard;
 
 import java.util.Date;
-import java.util.List;
+import java.util.LinkedList;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -13,7 +13,7 @@ import lombok.Setter;
 
 @Data
 @Builder
-public class AppSourceErrorResponseDto {
+public class AppSourceUsageResponseDto {
 	@Getter
 	@Setter
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
@@ -28,5 +28,5 @@ public class AppSourceErrorResponseDto {
 	
 	@Getter
 	@Setter
-	List<AppSourceErrorUsageDto> appSourceUsage;
+	LinkedList<AppSourceUsageDto> appSourceUsage;
 }

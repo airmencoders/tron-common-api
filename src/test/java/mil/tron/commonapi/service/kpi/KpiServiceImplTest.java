@@ -35,6 +35,7 @@ import mil.tron.commonapi.repository.HttpLogsRepository;
 import mil.tron.commonapi.repository.MeterValueRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.repository.kpi.KpiRepository;
+import mil.tron.commonapi.service.utility.HttpLogsUtilService;
 
 @ExtendWith(MockitoExtension.class)
 class KpiServiceImplTest {
@@ -49,7 +50,11 @@ class KpiServiceImplTest {
 	@Mock
 	private MeterValueRepository meterValueRepo;
 	
-	@Mock KpiRepository kpiRepo;
+	@Mock
+	private HttpLogsUtilService httpLogsUtilService;
+	
+	@Mock 
+	private KpiRepository kpiRepo;
 	
 	@Mock
 	private Clock systemUtcClock;
@@ -57,7 +62,8 @@ class KpiServiceImplTest {
 	@InjectMocks
 	private KpiServiceImpl kpiService;
 	
-	
+	private UserWithRequestCount dashboardUserRequestCount;
+	private UserWithRequestCount appClientUserRequestCount;
 	private List<UserWithRequestCount> userRequestCount;
 	private List<UniqueVisitorCountDto> uniqueVisitorCount;
 	private KpiSummaryDto dto;
@@ -66,13 +72,13 @@ class KpiServiceImplTest {
 	@BeforeEach
 	void setup() {
 		userRequestCount = new ArrayList<>();
-		UserWithRequestCount dashboardUserRequestCount = UserWithRequestCountDto.builder()
+		dashboardUserRequestCount = UserWithRequestCountDto.builder()
 				.name("test@user.com")
 				.requestCount(100L)
 				.build();
 		userRequestCount.add(dashboardUserRequestCount);
 		
-		UserWithRequestCount appClientUserRequestCount = UserWithRequestCountDto.builder()
+		appClientUserRequestCount = UserWithRequestCountDto.builder()
 				.name("App Client User")
 				.requestCount(50L)
 				.build();
@@ -130,21 +136,6 @@ class KpiServiceImplTest {
 	
 	@Test
 	void aggregateKpisTest() {
-		Mockito.when(httpLogsRepo.getUsersWithRequestCount(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(userRequestCount);
-		
-		Mockito.when(appSourceRepo.countByAvailableAsAppSourceTrue()).thenReturn(Optional.of(dto.getAppSourceCount()));
-		Mockito.when(httpLogsRepo.getAverageLatencyForSuccessfulResponse(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(Optional.of(dto.getAverageLatencyForSuccessfulRequests()));
-		
-		List<AppSourceMetricSummary> appSourceMetricSummary = new ArrayList<>();
-		AppSourceMetricSummary appSourceMetric = AppSourceMetricSummaryDto.builder()
-				.appClientName("guardianangel")
-				.appSourceName("puckboard")
-				.requestCount(1L)
-				.build();
-		appSourceMetricSummary.add(appSourceMetric);
-		
-		Mockito.when(meterValueRepo.getAllAppSourceMetricsSummary(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(appSourceMetricSummary);
-		
 		// Wednesday, July 21, 2021 0:00:00
 		Clock fixedClock = Clock.fixed(Instant.ofEpochMilli(1626825600000L), ZoneId.of("UTC"));
 		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
@@ -160,6 +151,26 @@ class KpiServiceImplTest {
 		
 		dto.setStartDate(startAsDate);
 		dto.setEndDate(endAsDate);
+		
+		Mockito.when(httpLogsUtilService.getDateAtStartOfDay(Mockito.any())).thenReturn(startAsDate);
+		Mockito.when(httpLogsUtilService.getDateAtEndOfDay(Mockito.any())).thenReturn(endAsDate);
+		
+		Mockito.when(httpLogsRepo.getUsersWithRequestCount(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(userRequestCount);
+		Mockito.when(httpLogsUtilService.isUsernameAnAppClient(dashboardUserRequestCount.getName())).thenReturn(false);
+		Mockito.when(httpLogsUtilService.isUsernameAnAppClient(appClientUserRequestCount.getName())).thenReturn(true);
+		
+		Mockito.when(appSourceRepo.countByAvailableAsAppSourceTrue()).thenReturn(Optional.of(dto.getAppSourceCount()));
+		Mockito.when(httpLogsRepo.getAverageLatencyForSuccessfulResponse(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(Optional.of(dto.getAverageLatencyForSuccessfulRequests()));
+		
+		List<AppSourceMetricSummary> appSourceMetricSummary = new ArrayList<>();
+		AppSourceMetricSummary appSourceMetric = AppSourceMetricSummaryDto.builder()
+				.appClientName("guardianangel")
+				.appSourceName("puckboard")
+				.requestCount(1L)
+				.build();
+		appSourceMetricSummary.add(appSourceMetric);
+		
+		Mockito.when(meterValueRepo.getAllAppSourceMetricsSummary(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(appSourceMetricSummary);
 		
 		assertThat(kpiService.aggregateKpis(startAsDate, endAsDate)).usingRecursiveComparison().ignoringFieldsOfTypes(UUID.class).isEqualTo(dto);
 	}

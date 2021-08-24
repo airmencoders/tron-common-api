@@ -1,6 +1,7 @@
 package mil.tron.commonapi.repository;
 
 import mil.tron.commonapi.entity.HttpLogEntry;
+import mil.tron.commonapi.entity.dashboard.EntityAccessor;
 import mil.tron.commonapi.entity.kpi.UserWithRequestCount;
 
 import org.springframework.data.domain.Page;
@@ -45,14 +46,15 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
      * @param endDate date to end search at
      * @return a list of user names
      */
-    @Query(value = "SELECT DISTINCT(h.userName)"
+    @Query(value = "SELECT h.userName as name, COUNT(*) as recordAccessCount"
    		+ " FROM"
    		+ " HttpLogEntry h"
    		+ " WHERE"
    		+ " h.requestedUrl LIKE '%/api%/organization%'"
    		+ " AND h.requestTimestamp BETWEEN :startDate and :endDate"
-   		+ " AND h.statusCode BETWEEN 200 and 300")
-    List<String> getUsersAccessingOrgRecords(Date startDate, Date endDate);
+   		+ " AND h.statusCode BETWEEN 200 and 300"
+   		+ " GROUP BY h.userName")
+    List<EntityAccessor> getUsersAccessingOrgRecords(Date startDate, Date endDate);
     
     @Query(value = "SELECT h"
        		+ " FROM"

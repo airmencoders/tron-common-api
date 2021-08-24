@@ -3,6 +3,7 @@ package mil.tron.commonapi.service.utility;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
@@ -12,12 +13,17 @@ public class HttpLogsUtilServiceImpl implements HttpLogsUtilService {
 	private final Pattern emailDomainPattern = Pattern.compile("[@].+[.].+");
 
 	@Override
-	public Pattern getEmailDomainPattern() {
-		return emailDomainPattern;
+	public Date getDateAtStartOfDay(Date date) {
+		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+		now.setTime(date);
+		now.set(Calendar.HOUR_OF_DAY, 0);
+		now.set(Calendar.MINUTE, 0);
+		now.set(Calendar.SECOND, 0);
+		return now.getTime();
 	}
 
 	@Override
-	public Date getDateAtStartOfDay(Date date) {
+	public Date getDateAtEndOfDay(Date date) {
 		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 		now.setTime(date);
 		now.set(Calendar.HOUR_OF_DAY, 23);
@@ -27,13 +33,10 @@ public class HttpLogsUtilServiceImpl implements HttpLogsUtilService {
 	}
 
 	@Override
-	public Date getDateAtEndOfDay(Date date) {
-		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		now.setTime(date);
-		now.set(Calendar.HOUR_OF_DAY, 0);
-		now.set(Calendar.MINUTE, 0);
-		now.set(Calendar.SECOND, 0);
-		return now.getTime();
+	public boolean isUsernameAnAppClient(String username) {
+		Matcher emailMatcher = emailDomainPattern.matcher(username);
+		
+		return !emailMatcher.find();
 	}
 
 }

@@ -13,7 +13,7 @@ import lombok.Setter;
 
 @Data
 @Builder
-public class AppSourceErrorResponseDto {
+public class EntityAccessorResponseDto {
 	@Getter
 	@Setter
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
@@ -28,5 +28,5 @@ public class AppSourceErrorResponseDto {
 	
 	@Getter
 	@Setter
-	List<AppSourceErrorUsageDto> appSourceUsage;
+	List<EntityAccessorDto> entityAccessors;
 }
