@@ -53,10 +53,10 @@ public class DashboardController {
     @GetMapping("/app-client-organization-accessors")
     public ResponseEntity<EntityAccessorResponseDto> getAppClientsAccessingOrganizations (
     		@Parameter(description = "Earliest date to include in UTC.",
-    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000-00:00")) 
+    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000Z")) 
 		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startDate,
 		    @Parameter(description = "Latest date to include in UTC. Will default to the current date if not provided.",
-		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000-00:00")) 
+		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000Z")) 
 		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
 	) {
         return new ResponseEntity<>(dashboardService.getAppClientsAccessingOrgRecords(startDate, endDate), HttpStatus.OK);
@@ -82,10 +82,10 @@ public class DashboardController {
     @GetMapping("/app-source-usage")
     public ResponseEntity<AppSourceUsageResponseDto> getAppSourceUsageCount (
     		@Parameter(description = "Earliest date to include in UTC.",
-    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000-00:00")) 
+    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000Z")) 
 		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startDate,
 		    @Parameter(description = "Latest date to include in UTC. Will default to the current date if not provided.",
-		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000-00:00")) 
+		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000Z")) 
 		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
 	) {
         return new ResponseEntity<>(dashboardService.getAppSourceUsage(startDate, endDate, true, 10), HttpStatus.OK);
@@ -111,10 +111,10 @@ public class DashboardController {
     @GetMapping("/app-source-error-usage")
     public ResponseEntity<AppSourceErrorResponseDto> getAppSourceErrorUsageCount (
     		@Parameter(description = "Earliest date to include in UTC.",
-    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000-00:00")) 
+    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000Z")) 
 		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startDate,
 		    @Parameter(description = "Latest date to include in UTC. Will default to the current date if not provided.",
-		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000-00:00")) 
+		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000Z")) 
 		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
 	) {
         return new ResponseEntity<>(dashboardService.getAppSourceErrorUsage(startDate, endDate), HttpStatus.OK);
