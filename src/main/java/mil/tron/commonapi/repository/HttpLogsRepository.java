@@ -52,7 +52,7 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
    		+ " WHERE"
    		+ " h.requestedUrl LIKE '%/api%/organization%'"
    		+ " AND h.requestTimestamp BETWEEN :startDate and :endDate"
-   		+ " AND h.statusCode BETWEEN 200 and 300"
+   		+ " AND h.statusCode BETWEEN 200 and 299"
    		+ " GROUP BY h.userName")
     List<EntityAccessor> getUsersAccessingOrgRecords(Date startDate, Date endDate);
     
@@ -62,7 +62,7 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
        		+ " WHERE"
        		+ " h.requestedUrl LIKE '%/api%/app/%'"
        		+ " AND h.requestTimestamp BETWEEN :startDate and :endDate"
-       		+ " AND h.statusCode BETWEEN 200 and 300")
+       		+ " AND h.statusCode BETWEEN 200 and 299")
     List<HttpLogEntry> getAppSourceUsage(Date startDate, Date endDate);
     
     @Query(value = "SELECT h"
