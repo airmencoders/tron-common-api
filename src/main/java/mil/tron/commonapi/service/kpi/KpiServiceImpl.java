@@ -7,12 +7,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,23 +26,30 @@ import mil.tron.commonapi.repository.HttpLogsRepository;
 import mil.tron.commonapi.repository.MeterValueRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.repository.kpi.KpiRepository;
+import mil.tron.commonapi.service.utility.HttpLogsUtilService;
 
 @Service
 public class KpiServiceImpl implements KpiService {
-	private static final Pattern EMAIL_DOMAIN_PATTERN = Pattern.compile("[@].+[.].+");
-
 	private final DtoMapper modelMapper;
 	
 	private HttpLogsRepository httpLogsRepo;
 	private AppSourceRepository appSourceRepo;
 	private MeterValueRepository meterValueRepo;
 	private KpiRepository kpiRepo;
+	private HttpLogsUtilService httpLogsUtilService;
 	private Clock systemUtcClock;
 	
-	public KpiServiceImpl(HttpLogsRepository httpLogsRepo, AppSourceRepository appSourceRepo, MeterValueRepository meterValueRepo, KpiRepository kpiRepo, Clock systemUtcClock) {
+	public KpiServiceImpl(
+			HttpLogsRepository httpLogsRepo, 
+			AppSourceRepository appSourceRepo, 
+			MeterValueRepository meterValueRepo, 
+			KpiRepository kpiRepo,
+			HttpLogsUtilService httpLogsService,
+			Clock systemUtcClock) {
 		this.httpLogsRepo = httpLogsRepo;
 		this.appSourceRepo = appSourceRepo;
 		this.meterValueRepo = meterValueRepo;
+		this.httpLogsUtilService = httpLogsService;
 		this.kpiRepo = kpiRepo;
 		
 		this.systemUtcClock = systemUtcClock;
@@ -83,19 +86,11 @@ public class KpiServiceImpl implements KpiService {
             throw new BadRequestException("Start date must be before or equal to End Date");
         }
     	
-		// Set end date to 23:59:59 time to ensure it is inclusive
-    	Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		now.setTime(endDate);
-		now.set(Calendar.HOUR_OF_DAY, 23);
-		now.set(Calendar.MINUTE, 59);
-		now.set(Calendar.SECOND, 59);
-		endDate = now.getTime();
+		// Ensure endDate gets 23:59:59 to be inclusive of the day
+		endDate = httpLogsUtilService.getDateAtEndOfDay(endDate);
 		
-		now.setTime(startDate);
-		now.set(Calendar.HOUR_OF_DAY, 0);
-		now.set(Calendar.MINUTE, 0);
-		now.set(Calendar.SECOND, 0);
-		startDate = now.getTime();
+		// Ensure startDate gets 00:00:00
+		startDate = httpLogsUtilService.getDateAtStartOfDay(startDate);
 		
 		List<UserWithRequestCount> userRequestCounts = this.getUsersWithRequestCount(startDate, endDate);
 		List<UserWithRequestCount> dashboardUsers = new ArrayList<>();
@@ -104,8 +99,7 @@ public class KpiServiceImpl implements KpiService {
 		// If the name includes a domain, consider it a Dashboard user (eg: contains @something.test)
 		// and everything else will be an App Client.
 		userRequestCounts.forEach(userRequestCount -> {
-			Matcher emailMatcher = EMAIL_DOMAIN_PATTERN.matcher(userRequestCount.getName());
-			if (emailMatcher.find()) {
+			if (!httpLogsUtilService.isUsernameAnAppClient(userRequestCount.getName())) {
 				dashboardUsers.add(userRequestCount);
 			} else {
 				appClients.add(userRequestCount);
