@@ -15,10 +15,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
+import mil.tron.commonapi.dto.kpi.ServiceMetricDto;
 import mil.tron.commonapi.dto.kpi.UniqueVisitorCountDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.kpi.AppSourceMetricSummary;
 import mil.tron.commonapi.entity.kpi.KpiSummary;
+import mil.tron.commonapi.entity.kpi.ServiceMetric;
 import mil.tron.commonapi.entity.kpi.UserWithRequestCount;
 import mil.tron.commonapi.entity.kpi.VisitorType;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -208,5 +210,29 @@ public class KpiServiceImpl implements KpiService {
 		KpiSummaryDto aggregatedKpis = aggregateKpis(startDate, endDate);
 		
 		saveAggregatedKpis(aggregatedKpis);
+	}
+
+	@Override
+	public List<ServiceMetricDto> getServiceMetrics(Date startDate, Date endDate) {
+		if (startDate.after(Date.from(Instant.now(systemUtcClock)))) {
+			throw new BadRequestException("Start Date cannot be in the future");
+		}
+		
+		if (endDate == null) {
+    		endDate = Date.from(Instant.now(systemUtcClock));
+    	}
+    	
+    	if (startDate.compareTo(endDate) > 0) {
+            throw new BadRequestException("Start date must be before or equal to End Date");
+        }
+    	
+		// Ensure endDate gets 23:59:59 to be inclusive of the day
+		endDate = httpLogsUtilService.getDateAtEndOfDay(endDate);
+		
+		// Ensure startDate gets 00:00:00
+		startDate = httpLogsUtilService.getDateAtStartOfDay(startDate);
+		
+		List<ServiceMetric> serviceMetrics = httpLogsRepo.getMetricsForSuccessfulResponsesByService(startDate, endDate);
+		return serviceMetrics.stream().map(metric -> modelMapper.map(metric, ServiceMetricDto.class)).collect(Collectors.toList());
 	}
 }
