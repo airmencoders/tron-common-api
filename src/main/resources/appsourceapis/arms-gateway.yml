@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:9000/
+- url: http://localhost:9000
   description: Generated server url
 paths:
   /training-svc/training-requirement:
@@ -59,6 +59,12 @@ paths:
               $ref: '#/components/schemas/ProfileAssignmentDataRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -67,12 +73,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PROFILEASSIGNMENTOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/current-training:
     post:
       tags:
@@ -99,6 +99,12 @@ paths:
               $ref: '#/components/schemas/TrainingDataRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -107,12 +113,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/CURRENTTRAININGOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/archive-training:
     post:
       tags:
@@ -153,12 +153,6 @@ paths:
               $ref: '#/components/schemas/AddTrainingDataRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -167,6 +161,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ADDTRAININGOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /metadata/training-program:
     post:
       tags:
@@ -243,6 +243,12 @@ paths:
               $ref: '#/components/schemas/FlyerSearchInfo'
         required: true
       responses:
+        "404":
+          description: No such person found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordNotFoundException'
         "200":
           description: Successful operation
           content:
@@ -251,12 +257,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FlyerIdInfo'
-        "404":
-          description: No such person found
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/RecordNotFoundException'
   /metadata/current-training:
     post:
       tags:
@@ -365,11 +365,11 @@ paths:
         "200":
           description: Successful operation
           content:
-            application/json:
+            '*/*':
               schema:
                 type: array
                 items:
-                  type: string
+                  $ref: '#/components/schemas/ADDFLIGHTOBJIntType'
         "400":
           description: Bad Request
           content:
@@ -443,6 +443,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -451,12 +457,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PQIDATAOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/personnel-info:
     post:
       tags:
@@ -510,6 +510,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -518,12 +524,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PERSONLISTVWOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/pcs-man-month:
     post:
       tags:
@@ -537,6 +537,12 @@ paths:
               $ref: '#/components/schemas/ManMonthRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -545,12 +551,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PCSMANMONTHDATAOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/passport-data:
     post:
       tags:
@@ -564,12 +564,6 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -578,6 +572,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PASSPORTDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/max-min-ratings:
     post:
       tags:
@@ -618,6 +618,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -626,12 +632,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MAXINCENTIVEPAYOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/max-badge:
     post:
       tags:
@@ -672,6 +672,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -680,12 +686,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MAXAVIATIONOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/man-month:
     post:
       tags:
@@ -753,6 +753,12 @@ paths:
               $ref: '#/components/schemas/JumpTotalRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -761,12 +767,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/JUMPDATATOTALOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/jump-audit:
     post:
       tags:
@@ -861,6 +861,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -869,12 +875,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FORMALTRAININGOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/enlisted-personnel:
     post:
       tags:
@@ -888,6 +888,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -896,12 +902,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ENLISTEDPERSONNELOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/badge-award:
     post:
       tags:
@@ -915,6 +915,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -923,12 +929,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/BADGEAWARDOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/access-zone:
     post:
       tags:
@@ -969,6 +969,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequestXorg'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -977,12 +983,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/OFDAWAIVEROBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/flyer-current-status:
     post:
       tags:
@@ -1144,12 +1144,6 @@ paths:
               $ref: '#/components/schemas/AircrewPositionTotalsRequest'
         required: true
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1158,6 +1152,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AIRCREWPOSITIONTOTALSOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/aircrew-personnel:
     post:
       tags:
@@ -1184,6 +1184,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1192,12 +1198,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AIRCREWPERSONNELOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/training-task:
     get:
       tags:
@@ -1260,6 +1260,12 @@ paths:
           type: boolean
           default: false
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1268,12 +1274,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TRAININGTASKDATAOutput'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/training-program:
     get:
       tags:
@@ -1427,12 +1427,6 @@ paths:
           type: boolean
           default: false
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1441,6 +1435,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TRAININGPROFILEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/waiver:
     get:
       tags:
@@ -1466,6 +1466,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1474,12 +1480,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/WAIVERCODEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/training-ref-date:
     get:
       tags:
@@ -1583,12 +1583,6 @@ paths:
           minLength: 0
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1597,6 +1591,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/RATINGCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/pti:
     get:
       tags:
@@ -1622,6 +1622,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1630,12 +1636,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PTICODEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/pqi:
     get:
       tags:
@@ -1661,6 +1661,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1669,12 +1675,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PQICODEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/physical-availability:
     get:
       tags:
@@ -1739,12 +1739,6 @@ paths:
           minLength: 0
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1753,6 +1747,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ORGREFERENCEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/mds:
     get:
       tags:
@@ -1921,12 +1921,6 @@ paths:
           minLength: 0
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1935,6 +1929,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/IRANBROBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/horis:
     get:
       tags:
@@ -2015,12 +2015,6 @@ paths:
           type: boolean
           default: false
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -2029,6 +2023,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/HARMCODEOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/flying-act:
     get:
       tags:
@@ -2182,6 +2182,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -2190,12 +2196,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLYERGRADEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/entitlement-status:
     get:
       tags:
@@ -2446,12 +2446,6 @@ paths:
         schema:
           type: string
       responses:
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -2460,6 +2454,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/SONICBOOMDATAOBJIntType'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/organization-data:
     get:
       tags:
@@ -2594,6 +2594,12 @@ paths:
         schema:
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -2602,12 +2608,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/JUMPDATAOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/crew-table:
     get:
       tags:
@@ -3659,24 +3659,6 @@ components:
           maxLength: 4
           minLength: 4
           type: string
-    FlyerIdInfo:
-      type: object
-      properties:
-        firstName:
-          type: string
-        middleInitial:
-          type: string
-        lastName:
-          type: string
-        flyerUniqueId:
-          type: string
-        flyerOrganizationId:
-          type: string
-        harmCode:
-          type: string
-        lastServerUpdateTime:
-          type: string
-          format: date-time
     RecordNotFoundException:
       type: object
       properties:
@@ -3797,6 +3779,24 @@ components:
                 type: string
         localizedMessage:
           type: string
+    FlyerIdInfo:
+      type: object
+      properties:
+        firstName:
+          type: string
+        middleInitial:
+          type: string
+        lastName:
+          type: string
+        flyerUniqueId:
+          type: string
+        flyerOrganizationId:
+          type: string
+        harmCode:
+          type: string
+        lastServerUpdateTime:
+          type: string
+          format: date-time
     CodeLookUpResponse:
       type: object
       properties:
@@ -4383,6 +4383,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FlightActRecord'
+    ADDFLIGHTOBJIntType:
+      required:
+      - fltrecnum
+      - message
+      - recstatus
+      type: object
+      properties:
+        fltrecnum:
+          type: string
+          xml:
+            name: FLT_REC_NUM
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+        message:
+          type: string
+          xml:
+            name: MESSAGE
     DefaultArmsRequest:
       required:
       - harmCode
