@@ -11,6 +11,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +22,6 @@ import mil.tron.commonapi.dto.kpi.UniqueVisitorCountDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.kpi.AppSourceMetricSummary;
 import mil.tron.commonapi.entity.kpi.KpiSummary;
-import mil.tron.commonapi.entity.kpi.ServiceMetric;
 import mil.tron.commonapi.entity.kpi.UserWithRequestCount;
 import mil.tron.commonapi.entity.kpi.VisitorType;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -33,13 +34,13 @@ import mil.tron.commonapi.service.utility.HttpLogsUtilService;
 @Service
 public class KpiServiceImpl implements KpiService {
 	private final DtoMapper modelMapper;
-	
-	private HttpLogsRepository httpLogsRepo;
-	private AppSourceRepository appSourceRepo;
-	private MeterValueRepository meterValueRepo;
-	private KpiRepository kpiRepo;
-	private HttpLogsUtilService httpLogsUtilService;
-	private Clock systemUtcClock;
+	private final HttpLogsRepository httpLogsRepo;
+	private final AppSourceRepository appSourceRepo;
+	private final MeterValueRepository meterValueRepo;
+	private final KpiRepository kpiRepo;
+	private final HttpLogsUtilService httpLogsUtilService;
+	private final Clock systemUtcClock;
+	private final String appGatewayPrefix;
 	
 	public KpiServiceImpl(
 			HttpLogsRepository httpLogsRepo, 
@@ -47,7 +48,8 @@ public class KpiServiceImpl implements KpiService {
 			MeterValueRepository meterValueRepo, 
 			KpiRepository kpiRepo,
 			HttpLogsUtilService httpLogsService,
-			Clock systemUtcClock) {
+			Clock systemUtcClock,
+			@Value("${app-sources-prefix}") String appGatewayPrefix) {
 		this.httpLogsRepo = httpLogsRepo;
 		this.appSourceRepo = appSourceRepo;
 		this.meterValueRepo = meterValueRepo;
@@ -55,6 +57,8 @@ public class KpiServiceImpl implements KpiService {
 		this.kpiRepo = kpiRepo;
 		
 		this.systemUtcClock = systemUtcClock;
+		
+		this.appGatewayPrefix = appGatewayPrefix;
 		
 		this.modelMapper = new DtoMapper();
 	}
@@ -75,18 +79,15 @@ public class KpiServiceImpl implements KpiService {
 	}
 
 	@Override
-	public KpiSummaryDto aggregateKpis(Date startDate, Date endDate) {
-		if (startDate.after(Date.from(Instant.now(systemUtcClock)))) {
-			throw new BadRequestException("Start Date cannot be in the future");
-		}
+	public KpiSummaryDto aggregateKpis(Date startDate, @Nullable Date endDate) {
+		Date now = Date.from(Instant.now(systemUtcClock));
 		
 		if (endDate == null) {
-    		endDate = Date.from(Instant.now(systemUtcClock));
+    		endDate = now;
     	}
     	
-    	if (startDate.compareTo(endDate) > 0) {
-            throw new BadRequestException("Start date must be before or equal to End Date");
-        }
+		httpLogsUtilService.isDateInThePast(startDate, now, true);
+		httpLogsUtilService.isDateBeforeOrEqualTo(startDate, endDate, true);
     	
 		// Ensure endDate gets 23:59:59 to be inclusive of the day
 		endDate = httpLogsUtilService.getDateAtEndOfDay(endDate);
@@ -128,6 +129,8 @@ public class KpiServiceImpl implements KpiService {
 				.requestCount(appClientUserRequestCount)
 				.build());
 		
+		List<ServiceMetricDto> serviceMetrics = this.getServiceMetrics(startDate, endDate);
+		
 		return KpiSummaryDto.builder()
 				.startDate(startDate)
 				.endDate(endDate)
@@ -135,6 +138,7 @@ public class KpiServiceImpl implements KpiService {
 				.averageLatencyForSuccessfulRequests(this.getAverageLatencyForSuccessResponse(startDate, endDate))
 				.appClientToAppSourceRequestCount(appClientToAppSourceRequestCount)
 				.uniqueVisitorCounts(uniqueVisitorCount)
+				.serviceMetrics(serviceMetrics)
 				.build();
 	}
 	
@@ -147,7 +151,7 @@ public class KpiServiceImpl implements KpiService {
 	}
 
 	@Override
-	public List<KpiSummaryDto> getKpisRangeOnStartDateBetween(Date startDate, Date endDate) {
+	public List<KpiSummaryDto> getKpisRangeOnStartDateBetween(Date startDate, @Nullable Date endDate) {
 		LocalDate thisWeekMonday = LocalDate.now(systemUtcClock).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 		Date thisWeekMondayAsDate = Date.from(thisWeekMonday.atStartOfDay(ZoneId.of("UTC")).toInstant());
 		
@@ -177,9 +181,7 @@ public class KpiServiceImpl implements KpiService {
     		endDate = Date.from(Instant.now(systemUtcClock));
     	}
     	
-    	if (startDate.compareTo(endDate) > 0) {
-            throw new BadRequestException("Start date must be before or equal to End Date");
-        }
+		httpLogsUtilService.isDateBeforeOrEqualTo(startDate, endDate, true);
     	
 		return kpiRepo.findByStartDateBetween(startDate, endDate)
 				.stream()
@@ -213,18 +215,15 @@ public class KpiServiceImpl implements KpiService {
 	}
 
 	@Override
-	public List<ServiceMetricDto> getServiceMetrics(Date startDate, Date endDate) {
-		if (startDate.after(Date.from(Instant.now(systemUtcClock)))) {
-			throw new BadRequestException("Start Date cannot be in the future");
-		}
+	public List<ServiceMetricDto> getServiceMetrics(Date startDate, @Nullable Date endDate) {
+		Date now = Date.from(Instant.now(systemUtcClock));
 		
 		if (endDate == null) {
-    		endDate = Date.from(Instant.now(systemUtcClock));
+    		endDate = now;
     	}
     	
-    	if (startDate.compareTo(endDate) > 0) {
-            throw new BadRequestException("Start date must be before or equal to End Date");
-        }
+		httpLogsUtilService.isDateInThePast(startDate, now, true);
+		httpLogsUtilService.isDateBeforeOrEqualTo(startDate, endDate, true);
     	
 		// Ensure endDate gets 23:59:59 to be inclusive of the day
 		endDate = httpLogsUtilService.getDateAtEndOfDay(endDate);
@@ -232,7 +231,6 @@ public class KpiServiceImpl implements KpiService {
 		// Ensure startDate gets 00:00:00
 		startDate = httpLogsUtilService.getDateAtStartOfDay(startDate);
 		
-		List<ServiceMetric> serviceMetrics = httpLogsRepo.getMetricsForSuccessfulResponsesByService(startDate, endDate);
-		return serviceMetrics.stream().map(metric -> modelMapper.map(metric, ServiceMetricDto.class)).collect(Collectors.toList());
+		return httpLogsRepo.getMetricsForSuccessfulResponsesByService(startDate, endDate, appGatewayPrefix);
 	}
 }

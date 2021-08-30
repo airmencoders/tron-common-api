@@ -21,8 +21,6 @@ import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
 import mil.tron.commonapi.dto.kpi.KpiSummaryDtoResponseWrapper;
-import mil.tron.commonapi.dto.kpi.ServiceMetricDto;
-import mil.tron.commonapi.dto.kpi.ServiceMetricDtoResponseWrapper;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.kpi.KpiService;
 
@@ -91,34 +89,5 @@ public class KpiController {
             	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
 	) {
         return new ResponseEntity<>(kpiService.getKpisRangeOnStartDateBetween(startDate, endDate), HttpStatus.OK);
-    }
-	
-	@Operation(summary = "Retrieves metrics per service", 
-			description = "Retrieves metrics per service. Response count, average successful response latency")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", 
-					description = "Successful operation", 
-							content = @Content(schema = @Schema(implementation = ServiceMetricDtoResponseWrapper.class))),
-            @ApiResponse(responseCode = "403",
-                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
-                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-            @ApiResponse(responseCode = "400",
-            	description = "Bad Request. Possible reasons include: \n\n"
-            			+ "Start Date required.\n\n"
-            			+ "Start date must be before or equal to End Date.\n\n"
-            			+ "Start date cannot be set to within the current week or in the future (there would be no data).",
-                	content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
-	})
-	@WrappedEnvelopeResponse
-    @GetMapping("/service-metric")
-    public ResponseEntity<List<ServiceMetricDto>> getServiceMetric (
-            @Parameter(description = "Earliest date to include in UTC.",
-            		schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
-            	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
-            @Parameter(description = "Latest date to include in UTC. Will default to the previous week from today if not provided.",
-            		schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
-            	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
-	) {
-        return new ResponseEntity<>(kpiService.getServiceMetrics(startDate, endDate), HttpStatus.OK);
     }
 }

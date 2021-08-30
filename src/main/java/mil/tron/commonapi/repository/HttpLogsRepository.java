@@ -1,8 +1,8 @@
 package mil.tron.commonapi.repository;
 
+import mil.tron.commonapi.dto.kpi.ServiceMetricDto;
 import mil.tron.commonapi.entity.HttpLogEntry;
 import mil.tron.commonapi.entity.dashboard.EntityAccessor;
-import mil.tron.commonapi.entity.kpi.ServiceMetric;
 import mil.tron.commonapi.entity.kpi.UserWithRequestCount;
 
 import org.springframework.data.domain.Page;
@@ -37,17 +37,17 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
     		+ " WHERE h.statusCode >= 200 AND h.statusCode < 300 AND h.requestTimestamp BETWEEN :startDate and :endDate")
     Optional<Double> getAverageLatencyForSuccessfulResponse(Date startDate, Date endDate);
     
-    @Query(value = "SELECT COUNT(*) as responseCount, AVG(h.timeTakenMs) as averageLatency,"
+    @Query(value = "SELECT new mil.tron.commonapi.dto.kpi.ServiceMetricDto("
     		+ " CASE"
-    		+ " WHEN h.requestedUrl LIKE '%/api/v%/app/%' THEN substring(substring(h.requestedUrl, locate('/app/', h.requestedUrl) + 5), 1, locate('/', substring(h.requestedUrl, locate('/app/', h.requestedUrl) + 5)) - 1)"
+    		+ " WHEN h.requestedUrl LIKE CONCAT('%/api/v%', :appGatewayPrefix, '/%') THEN substring(substring(h.requestedUrl, locate(:appGatewayPrefix, h.requestedUrl) + 5), 1, locate('/', substring(h.requestedUrl, locate(:appGatewayPrefix, h.requestedUrl) + 5)) - 1)"
     		+ " WHEN h.requestedUrl LIKE '%/api/v%/organization%' THEN 'Organization'"
     		+ " WHEN h.requestedUrl LIKE '%/api/v%/person%' THEN 'Person'"
     		+ " ELSE 'Other'"
-    		+ " END as name"
+    		+ " END as name, AVG(h.timeTakenMs) as averageLatency, COUNT(*) as responseCount)"
     		+ " FROM HttpLogEntry h"
     		+ " WHERE h.statusCode >= 200 AND h.statusCode < 300 AND h.requestTimestamp BETWEEN :startDate and :endDate"
     		+ " GROUP BY name")
-    List<ServiceMetric> getMetricsForSuccessfulResponsesByService(Date startDate, Date endDate);
+    List<ServiceMetricDto> getMetricsForSuccessfulResponsesByService(Date startDate, Date endDate, String appGatewayPrefix);
     
     /**
      * Gets all Users (includes app clients and dashboard users) that 

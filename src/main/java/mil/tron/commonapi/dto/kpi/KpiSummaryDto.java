@@ -59,5 +59,11 @@ public class KpiSummaryDto {
 	
 	@Getter
 	@Setter
+	@NotNull
 	private List<UniqueVisitorCountDto> uniqueVisitorCounts;
+	
+	@Getter
+	@Setter
+	@NotNull
+	private List<ServiceMetricDto> serviceMetrics;
 }
