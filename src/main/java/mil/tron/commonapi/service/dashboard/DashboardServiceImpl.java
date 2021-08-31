@@ -72,6 +72,29 @@ public class DashboardServiceImpl implements DashboardService {
 	}
 
 	@Override
+	public EntityAccessorResponseDto getAppClientsAccessingPrsnlRecords(@NonNull Date startDate, @Nullable Date endDate) {
+		Date now = Date.from(Instant.now(systemUtcClock));
+		if (endDate == null) {
+    		endDate = now;
+    	}
+		
+		validateDates(startDate, endDate, now);
+    	
+		List<EntityAccessor> organizationAccessors = this.httpLogsRepo.getUsersAccessingPrsnlRecords(startDate, endDate);
+
+		List<EntityAccessorDto> appClientAccessors = organizationAccessors.stream()
+				.filter(accessor -> httpLogsUtilService.isUsernameAnAppClient(accessor.getName()))
+				.map(accessor -> modelMapper.map(accessor, EntityAccessorDto.class))
+				.collect(Collectors.toList());
+		
+		return EntityAccessorResponseDto.builder()
+				.entityAccessors(appClientAccessors)
+				.startDate(startDate)
+				.endDate(endDate)
+				.build();
+	}
+
+	@Override
 	public AppSourceUsageResponseDto getAppSourceUsage(@NonNull Date startDate, @Nullable Date endDate, boolean descending, long limit) {
 		Date now = Date.from(Instant.now(systemUtcClock));
 		if (endDate == null) {

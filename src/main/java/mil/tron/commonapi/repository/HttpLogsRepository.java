@@ -56,6 +56,16 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
    		+ " GROUP BY h.userName")
     List<EntityAccessor> getUsersAccessingOrgRecords(Date startDate, Date endDate);
     
+    @Query(value = "SELECT h.userName as name, COUNT(*) as recordAccessCount"
+   		+ " FROM"
+   		+ " HttpLogEntry h"
+   		+ " WHERE"
+   		+ " h.requestedUrl LIKE '%/api%/person%'"
+   		+ " AND h.requestTimestamp BETWEEN :startDate and :endDate"
+   		+ " AND h.statusCode BETWEEN 200 and 299"
+   		+ " GROUP BY h.userName")
+    List<EntityAccessor> getUsersAccessingPrsnlRecords(Date startDate, Date endDate);
+
     @Query(value = "SELECT h"
        		+ " FROM"
        		+ " HttpLogEntry h"
