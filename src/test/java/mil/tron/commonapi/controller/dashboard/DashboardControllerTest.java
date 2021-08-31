@@ -59,6 +59,27 @@ class DashboardControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(response)));
     }
+
+	@Test
+    void getAppClientsAccessingPersonnel() throws Exception {
+    	EntityAccessorDto entityAccessor = EntityAccessorDto.builder()
+				.name("test accessor")
+				.recordAccessCount(100L)
+				.build();
+		
+		EntityAccessorResponseDto response = EntityAccessorResponseDto.builder()
+				.startDate(new Date(1626652800000L))
+				.endDate(new Date(1626739200000L))
+				.entityAccessors(List.of(entityAccessor))
+				.build();
+		
+        Mockito.when(dashboardService.getAppClientsAccessingPrsnlRecords(Mockito.any(), Mockito.any()))
+                .thenReturn(response);
+        
+        mockMvc.perform(get(ENDPOINT + "app-client-personnel-accessors?startDate=2021-07-19T00:00:00.000Z&endDate=2021-07-20T00:00:00.000Z"))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(response)));
+    }
     
     @Test
     void getAppSourceUsageCount() throws Exception {
