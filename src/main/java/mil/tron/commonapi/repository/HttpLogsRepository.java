@@ -56,6 +56,16 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
    		+ " GROUP BY h.userName")
     List<EntityAccessor> getUsersAccessingOrgRecords(Date startDate, Date endDate);
     
+	/**
+     * Gets all Users (includes app clients and dashboard users) that 
+     * have made a request like '%/api%/person%'.
+     * Will only retrieve Users that have made requests between {@code startDate} and 
+     * {@code endDate} with an http status code between 200 and 300.
+     * 
+     * @param startDate date to start search from
+     * @param endDate date to end search at
+     * @return a list of user names
+     */
     @Query(value = "SELECT h.userName as name, COUNT(*) as recordAccessCount"
    		+ " FROM"
    		+ " HttpLogEntry h"

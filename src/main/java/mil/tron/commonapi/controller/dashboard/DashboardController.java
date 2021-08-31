@@ -61,6 +61,35 @@ public class DashboardController {
 	) {
         return new ResponseEntity<>(dashboardService.getAppClientsAccessingOrgRecords(startDate, endDate), HttpStatus.OK);
     }
+		
+	@Operation(summary = "Get a list of App Clients that have accessed organization records", 
+			description = "Get a list of App Clients that have accessed organization records between two dates with their request count."
+					+ " Will only include App Clients that have made successful requests to access organization records (http status between 200 and 300.)")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+							content = @Content(schema = @Schema(implementation = EntityAccessorResponseDto.class))),
+            @ApiResponse(responseCode = "403",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "400",
+            	description = "Bad Request. Possible reasons include: \n\n"
+            			+ "Start Date required.\n\n"
+            			+ "Start date must be before or equal to End Date.\n\n"
+            			+ "Start date cannot be in the future (there would be no data).",
+                	content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @GetMapping("/app-client-personnel-accessors")
+    public ResponseEntity<EntityAccessorResponseDto> getAppClientsAccessingPersonnelRecords (
+    		@Parameter(description = "Earliest date to include in UTC.",
+    				schema = @Schema(type="string", format = "date", example = "2021-08-24T00:00:00.000Z")) 
+		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startDate,
+		    @Parameter(description = "Latest date to include in UTC. Will default to the current date if not provided.",
+		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000Z")) 
+		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
+	) {
+        return new ResponseEntity<>(dashboardService.getAppClientsAccessingPrsnlRecords(startDate, endDate), HttpStatus.OK);
+    }
 	
 	@Operation(summary = "Get a list of App Sources along with their respective request count.", 
 			description = "Get a list of App Sources along with their respective request counts between two dates."
