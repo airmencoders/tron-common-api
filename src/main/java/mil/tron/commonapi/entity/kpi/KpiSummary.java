@@ -59,7 +59,10 @@ public class KpiSummary {
 	private Long appClientToAppSourceRequestCount;
 	
 	@Getter
-	@Setter
 	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<UniqueVisitorCount> uniqueVisitorCounts;
+	
+	@Getter
+	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<ServiceMetric> serviceMetrics;
 }

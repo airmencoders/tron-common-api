@@ -16,13 +16,13 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import mil.tron.commonapi.dto.kpi.AppSourceMetricSummaryDto;
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
+import mil.tron.commonapi.dto.kpi.ServiceMetricDto;
 import mil.tron.commonapi.dto.kpi.UniqueVisitorCountDto;
 import mil.tron.commonapi.dto.kpi.UserWithRequestCountDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -37,7 +37,7 @@ import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.repository.kpi.KpiRepository;
 import mil.tron.commonapi.service.utility.HttpLogsUtilService;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class})
 class KpiServiceImplTest {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	
@@ -59,18 +59,27 @@ class KpiServiceImplTest {
 	@Mock
 	private Clock systemUtcClock;
 
-	@InjectMocks
 	private KpiServiceImpl kpiService;
 	
 	private UserWithRequestCount dashboardUserRequestCount;
 	private UserWithRequestCount appClientUserRequestCount;
 	private List<UserWithRequestCount> userRequestCount;
 	private List<UniqueVisitorCountDto> uniqueVisitorCount;
+	private List<ServiceMetricDto> serviceMetrics;
 	private KpiSummaryDto dto;
 
 	
 	@BeforeEach
 	void setup() {
+		kpiService = new KpiServiceImpl(
+				httpLogsRepo, 
+				appSourceRepo, 
+				meterValueRepo, 
+				kpiRepo, 
+				httpLogsUtilService, 
+				systemUtcClock, 
+				"/app");
+		
 		userRequestCount = new ArrayList<>();
 		dashboardUserRequestCount = UserWithRequestCountDto.builder()
 				.name("test@user.com")
@@ -97,12 +106,19 @@ class KpiServiceImplTest {
 				.requestCount(appClientUserRequestCount.getRequestCount())
 				.build());
 		
-
+		serviceMetrics = new ArrayList<>();
+		serviceMetrics.add(ServiceMetricDto.builder()
+				.averageLatency(10.0)
+				.name("test-app-source")
+				.responseCount(100L)
+				.build());
+		
 		dto = KpiSummaryDto.builder()
 				.appClientToAppSourceRequestCount(1L)
 				.appSourceCount(10L)
 				.averageLatencyForSuccessfulRequests(33d)
 				.uniqueVisitorCounts(uniqueVisitorCount)
+				.serviceMetrics(serviceMetrics)
 				.build();
 	}
 	
@@ -162,6 +178,9 @@ class KpiServiceImplTest {
 		Mockito.when(appSourceRepo.countByAvailableAsAppSourceTrue()).thenReturn(Optional.of(dto.getAppSourceCount()));
 		Mockito.when(httpLogsRepo.getAverageLatencyForSuccessfulResponse(Mockito.any(Date.class), Mockito.any(Date.class))).thenReturn(Optional.of(dto.getAverageLatencyForSuccessfulRequests()));
 		
+		Mockito.when(httpLogsRepo.getMetricsForSuccessfulResponsesByService(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyString()))
+			.thenReturn(dto.getServiceMetrics());
+		
 		List<AppSourceMetricSummary> appSourceMetricSummary = new ArrayList<>();
 		AppSourceMetricSummary appSourceMetric = AppSourceMetricSummaryDto.builder()
 				.appClientName("guardianangel")
@@ -186,11 +205,13 @@ class KpiServiceImplTest {
 		// Wednesday, August 4, 2021 0:00:00
 		Instant dateInFuture = Instant.ofEpochMilli(1628035200000L);
 		
+		Mockito.when(httpLogsUtilService.isDateInThePast(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> {
 			kpiService.aggregateKpis(Date.from(dateInFuture), null);
 		})
-		.isInstanceOf(BadRequestException.class)
-		.hasMessageContaining("Start Date cannot be in the future");
+		.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test
@@ -207,11 +228,13 @@ class KpiServiceImplTest {
 		// Wednesday, July 21, 2021 0:00:00
 		Instant endDate = Instant.ofEpochMilli(1626825600000L);
 		
+		Mockito.when(httpLogsUtilService.isDateBeforeOrEqualTo(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> {
 			kpiService.aggregateKpis(Date.from(startDate), Date.from(endDate));
 		})
-		.isInstanceOf(BadRequestException.class)
-		.hasMessageContaining("Start date must be before or equal to End Date");
+		.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test
@@ -267,11 +290,13 @@ class KpiServiceImplTest {
 		// Wednesday, July 21, 2021 0:00:00
 		Instant endDate = Instant.ofEpochMilli(1626825600000L);
 		
+		Mockito.when(httpLogsUtilService.isDateBeforeOrEqualTo(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> {
 			kpiService.getKpisRangeOnStartDateBetween(Date.from(startDate), Date.from(endDate));
 		})
-		.isInstanceOf(BadRequestException.class)
-		.hasMessageContaining("Start date must be before or equal to End Date");
+		.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test

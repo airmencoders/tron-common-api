@@ -158,13 +158,8 @@ public class DashboardServiceImpl implements DashboardService {
 	 * @throws BadRequestException if any of the rules are violated.
 	 */
 	private void validateDates(Date startDate, Date endDate, Date referenceDate) {
-		if (startDate.after(referenceDate)) {
-			throw new BadRequestException("Start Date cannot be in the future");
-		}
-		
-    	if (startDate.compareTo(endDate) > 0) {
-            throw new BadRequestException("Start Date must be before or equal to End Date");
-        }
+		httpLogsUtilService.isDateInThePast(startDate, referenceDate, true);
+		httpLogsUtilService.isDateBeforeOrEqualTo(startDate, endDate, true);
 	}
 	
 	/**
