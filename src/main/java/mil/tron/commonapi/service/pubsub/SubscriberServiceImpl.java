@@ -87,7 +87,6 @@ public class SubscriberServiceImpl implements SubscriberService {
         if (existing.isPresent()) {
 
             // check no existing subs for this event type
-            //checkNoDuplicateSubscriptionForApp(subscriber.getSubscribedEvent(), appClientUser);
 
             // edit an existing
             Subscriber sub = existing.get();
