@@ -27,4 +27,9 @@ public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
                                                      AppEndpointPrivRepository appEndpointPrivRepository) {
         return new AccessCheckAppSourceImpl(appSourceRepository, appClientUserRespository, appEndpointPrivRepository);
     }
+    
+    @Bean
+    public AccessCheckEventRequestLog accessCheckEventRequestLog(AppClientUserRespository appClientUserRespository) {
+        return new AccessCheckEventRequestLogImpl(appClientUserRespository);
+    }
 }

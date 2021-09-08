@@ -9,6 +9,7 @@ import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
 import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
+import mil.tron.commonapi.service.pubsub.log.EventRequestService;
 import mil.tron.commonapi.service.utility.IstioHeaderUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +45,9 @@ public class EventPublisherTest {
 
     @MockBean
     private SubscriberService subService;
-
+    
+    @MockBean
+    private EventRequestService eventRequestService;
 
     @MockBean(name="eventSender")
     private RestTemplate publisherSender;
