@@ -72,7 +72,7 @@ public class DashboardServiceImpl implements DashboardService {
 	}
 
 	@Override
-	public EntityAccessorResponseDto getAppClientsAccessingPrsnlRecords(@NonNull Date startDate, @Nullable Date endDate) {
+	public EntityAccessorResponseDto getAppClientsAccessingPersonnelRecords(@NonNull Date startDate, @Nullable Date endDate) {
 		Date now = Date.from(Instant.now(systemUtcClock));
 		if (endDate == null) {
     		endDate = now;
@@ -80,7 +80,7 @@ public class DashboardServiceImpl implements DashboardService {
 		
 		validateDates(startDate, endDate, now);
     	
-		List<EntityAccessor> organizationAccessors = this.httpLogsRepo.getUsersAccessingPrsnlRecords(startDate, endDate);
+		List<EntityAccessor> organizationAccessors = this.httpLogsRepo.getUsersAccessingPersonnelRecords(startDate, endDate);
 
 		List<EntityAccessorDto> appClientAccessors = organizationAccessors.stream()
 				.filter(accessor -> httpLogsUtilService.isUsernameAnAppClient(accessor.getName()))

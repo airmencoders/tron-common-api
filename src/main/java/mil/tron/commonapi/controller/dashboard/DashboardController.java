@@ -88,7 +88,7 @@ public class DashboardController {
 		    		schema = @Schema(type="string", format = "date", example = "2021-08-24T10:54:48.000Z")) 
 		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date endDate
 	) {
-        return new ResponseEntity<>(dashboardService.getAppClientsAccessingPrsnlRecords(startDate, endDate), HttpStatus.OK);
+        return new ResponseEntity<>(dashboardService.getAppClientsAccessingPersonnelRecords(startDate, endDate), HttpStatus.OK);
     }
 	
 	@Operation(summary = "Get a list of App Sources along with their respective request count.", 

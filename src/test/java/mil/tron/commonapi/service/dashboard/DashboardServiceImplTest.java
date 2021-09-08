@@ -103,7 +103,7 @@ class DashboardServiceImplTest {
 	}
 
 	@Test
-	void getAppClientsAccessingPrsnlRecords_shouldThrow_onStartDateInFuture() {
+	void getAppClientsAccessingPersonnelRecords_shouldThrow_onStartDateInFuture() {
 		// Wednesday, July 21, 2021 0:00:00
 		Clock fixedClock = Clock.fixed(Instant.ofEpochMilli(1626825600000L), ZoneId.of("UTC"));
 		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
@@ -111,12 +111,12 @@ class DashboardServiceImplTest {
 		// Wednesday, July 21, 2021 1:00:00
 		Date startDateInFuture = new Date(1626829200000L);
 		
-		assertThatThrownBy(() -> dashboardService.getAppClientsAccessingPrsnlRecords(startDateInFuture, null))
+		assertThatThrownBy(() -> dashboardService.getAppClientsAccessingPersonnelRecords(startDateInFuture, null))
 			.hasMessageContaining("Start Date cannot be in the future");
 	}
 	
 	@Test
-	void getAppClientsAccessingPrsnlRecords_shouldThrow_onStartDateAfterEndDate() {
+	void getAppClientsAccessingPersonnelRecords_shouldThrow_onStartDateAfterEndDate() {
 		// Wednesday, July 21, 2021 0:00:00
 		Clock fixedClock = Clock.fixed(Instant.ofEpochMilli(1626825600000L), ZoneId.of("UTC"));
 		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
@@ -127,12 +127,12 @@ class DashboardServiceImplTest {
 		// Saturday, July 17, 2021 0:00:00
 		Date endDate = new Date(1626480000000L);
 		
-		assertThatThrownBy(() -> dashboardService.getAppClientsAccessingPrsnlRecords(startDateAfterEndDate, endDate))
+		assertThatThrownBy(() -> dashboardService.getAppClientsAccessingPersonnelRecords(startDateAfterEndDate, endDate))
 			.hasMessageContaining("Start Date must be before or equal to End Date");
 	}
 	
 	@Test
-	void getAppClientsAccessingPrsnlRecords_shouldReturn_onValidRequest() {
+	void getAppClientsAccessingPersonnelRecords_shouldReturn_onValidRequest() {
 		// Wednesday, July 21, 2021 0:00:00
 		Clock fixedClock = Clock.fixed(Instant.ofEpochMilli(1626825600000L), ZoneId.of("UTC"));
 		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
@@ -149,7 +149,7 @@ class DashboardServiceImplTest {
 				.build();
 		List<EntityAccessor> entityAccessors = List.of(entityAccessor);
 		
-		Mockito.when(httpLogsRepo.getUsersAccessingPrsnlRecords(Mockito.any(), Mockito.any())).thenReturn(entityAccessors);
+		Mockito.when(httpLogsRepo.getUsersAccessingPersonnelRecords(Mockito.any(), Mockito.any())).thenReturn(entityAccessors);
 		Mockito.when(httpLogsUtilService.isUsernameAnAppClient(entityAccessor.getName())).thenReturn(true);
 		
 		EntityAccessorResponseDto response = EntityAccessorResponseDto.builder()
@@ -158,7 +158,7 @@ class DashboardServiceImplTest {
 				.entityAccessors(List.of(entityAccessor))
 				.build();
 		
-		assertThat(dashboardService.getAppClientsAccessingPrsnlRecords(startDate, endDate)).isEqualTo(response);
+		assertThat(dashboardService.getAppClientsAccessingPersonnelRecords(startDate, endDate)).isEqualTo(response);
 	}
 	
 	@Test

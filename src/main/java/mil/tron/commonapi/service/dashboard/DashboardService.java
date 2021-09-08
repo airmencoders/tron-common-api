@@ -8,7 +8,7 @@ import mil.tron.commonapi.dto.dashboard.EntityAccessorResponseDto;
 
 public interface DashboardService {
 	EntityAccessorResponseDto getAppClientsAccessingOrgRecords(Date startDate, Date endDate);
-	EntityAccessorResponseDto getAppClientsAccessingPrsnlRecords(Date startDate, Date endDate);
+	EntityAccessorResponseDto getAppClientsAccessingPersonnelRecords(Date startDate, Date endDate);
 	AppSourceUsageResponseDto getAppSourceUsage(Date startDate, Date endDate, boolean descending, long limit);
 	AppSourceErrorResponseDto getAppSourceErrorUsage(Date startDate, Date endDate);
 }

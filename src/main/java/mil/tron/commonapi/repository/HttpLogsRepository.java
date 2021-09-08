@@ -74,7 +74,7 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
    		+ " AND h.requestTimestamp BETWEEN :startDate and :endDate"
    		+ " AND h.statusCode BETWEEN 200 and 299"
    		+ " GROUP BY h.userName")
-    List<EntityAccessor> getUsersAccessingPrsnlRecords(Date startDate, Date endDate);
+    List<EntityAccessor> getUsersAccessingPersonnelRecords(Date startDate, Date endDate);
 
     @Query(value = "SELECT h"
        		+ " FROM"
