@@ -86,8 +86,8 @@ public class SpecificationBuilder {
 								(Date) castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
 					}
 					
-					Expression<Number> dbPathObjAsNumber = dbPathObj.as(Number.class);
-					return criteriaBuilder.gt(dbPathObjAsNumber,
+					Path<Number> dbPathObjNumber = getDbPathObject(root, joinAttribute, field);
+					return criteriaBuilder.gt(dbPathObjNumber,
 							(Number) castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
 				};
 	
@@ -104,8 +104,8 @@ public class SpecificationBuilder {
 								(Date) castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
 					}
 	
-					Expression<Number> dbPathObjAsNumber = dbPathObj.as(Number.class);
-					return criteriaBuilder.lt(dbPathObjAsNumber,
+					Path<Number> dbPathObjNumber = getDbPathObject(root, joinAttribute, field);
+					return criteriaBuilder.lt(dbPathObjNumber,
 							(Number) castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
 				};
 	
@@ -261,7 +261,9 @@ public class SpecificationBuilder {
 		switch (operator) {
 			case GREATER_THAN:
 			case LESS_THAN:
-				return Number.class.isAssignableFrom(inputTypeToCheck) || Date.class.isAssignableFrom(inputTypeToCheck);
+				return Number.class.isAssignableFrom(inputTypeToCheck) ||
+						long.class.isAssignableFrom(inputTypeToCheck) ||
+						Date.class.isAssignableFrom(inputTypeToCheck);
 	
 			case LIKE:
 			case NOT_LIKE:
@@ -308,6 +310,10 @@ public class SpecificationBuilder {
 			
 			if (fieldType.isAssignableFrom(Integer.class)) {
 				return Integer.valueOf(value);
+			}
+			
+			if (fieldType.isAssignableFrom(long.class)) {
+				return Long.valueOf(value);
 			}
 			
 			if (Enum.class.isAssignableFrom(fieldType)) {
