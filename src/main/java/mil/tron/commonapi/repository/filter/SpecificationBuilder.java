@@ -188,16 +188,7 @@ public class SpecificationBuilder {
 		
 		String[] pathToField = field.split("\\.");
 		if (pathToField.length > 1) {
-			// Only join up to but not including the last element.
-			for (int i = 0; i < pathToField.length - 1; i++) {
-				try {
-					joinedEntity = root.join(pathToField[i]);
-				} catch (IllegalArgumentException | BasicPathUsageException ex) {
-					throw new BadRequestException(
-							String.format("Field Path [%s] failed at [position: %d, value: %s]: path does not exist or is not a valid nested property", 
-									String.join(",", pathToField), i, pathToField[i]));
-				}
-			}
+			joinedEntity = createJoinForFieldPath(root, pathToField);
 			
 			// The last element in the array should be the field name.
 			field = pathToField[pathToField.length - 1];
@@ -226,6 +217,37 @@ public class SpecificationBuilder {
 		} catch (IllegalArgumentException ex) {
 			throw new BadRequestException(String.format("Field [%s] does not exist", field));
 		}
+	}
+	
+	/**
+	 * Creates the join for field paths.
+	 * @param root the root
+	 * @param pathToField the array containing the path to field. The last element should be the field name
+	 * @return the join or null if not valid
+	 */
+	private static Join<Object, Object> createJoinForFieldPath(Root<?> root, String[] pathToField) {
+		Join<Object, Object> joinedEntity = null;
+		
+		// Only join up to but not including the last element.
+		for (int i = 0; i < pathToField.length - 1; i++) {
+			try {
+				if (joinedEntity == null) {
+					joinedEntity = root.join(pathToField[i]);
+				} else {
+					joinedEntity = joinedEntity.join(pathToField[i]);
+				}
+			} catch (IllegalArgumentException ex) {
+				throw new BadRequestException(
+						String.format("Field Path [%s] failed at [position: %d, value: %s]: path does not exist", 
+								String.join(",", pathToField), i, pathToField[i]));
+			} catch (BasicPathUsageException ex) {
+				throw new BadRequestException(
+						String.format("Field Path [%s] failed at [position: %d, value: %s]: nested property is invalid", 
+								String.join(",", pathToField), i, pathToField[i]));
+			}
+		}
+		
+		return joinedEntity;
 	}
 
 	/**
