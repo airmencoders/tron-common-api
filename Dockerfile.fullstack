@@ -27,6 +27,10 @@ RUN printf $'<?xml version="1.1" encoding="UTF-8" standalone="no"?> \n\
     </changeSet>\n\
 </databaseChangeLog>\n' > src/main/resources/db/changelog/diff-changelog-1.00.999.xml
 
+# get rid of the ssl requirement for production mode database (unlike on P1 actual)
+RUN sed -i -e '/spring\.datasource\.url/d' src/main/resources/application-production.properties
+RUN cat src/main/resources/application-production.properties
+
 # clean and build
 RUN rm -rf target/
 RUN mvn clean

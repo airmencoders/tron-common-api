@@ -2,7 +2,6 @@ package mil.tron.commonapi.integration;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import mil.tron.commonapi.dto.OrganizationDto;
@@ -13,12 +12,17 @@ import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDtoResponseWrapped;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.OrganizationRepository;
+import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,13 +30,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import javax.transaction.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties")
 @ActiveProfiles(value = { "development", "test" })
 @AutoConfigureMockMvc
-public class EntityFieldAuthIntegrationTests {
+class EntityFieldAuthIntegrationTests {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";
@@ -68,20 +70,31 @@ public class EntityFieldAuthIntegrationTests {
     @Autowired
     private PrivilegeRepository privilegeRepository;
 
-    private PersonDto personDto = PersonDto
-            .builder()
-            .id(UUID.randomUUID())
-            .email("test@test.com")
-            .build();
+    @Autowired
+    private PersonRepository personRepository;
+    
+    @Autowired
+    private OrganizationRepository orgRepository;
 
-    private OrganizationDto organizationDto = OrganizationDto
-            .builder()
-            .id(UUID.randomUUID())
-            .name("TestOrg")
-            .build();
+    private PersonDto personDto;
+
+    private OrganizationDto organizationDto;
 
     @BeforeEach
     void setup() {
+    	personDto = PersonDto
+                .builder()
+                .firstName("Homer")
+                .lastName("Simpson")
+                .id(UUID.randomUUID())
+                .email("test@test.com")
+                .build();
+    	
+    	organizationDto = OrganizationDto
+                .builder()
+                .id(UUID.randomUUID())
+                .name("TestOrg")
+                .build();
 
         // add the dashboard admin
         // create the admin
@@ -112,11 +125,12 @@ public class EntityFieldAuthIntegrationTests {
 
         // clean up users
         dashboardUserRepository.deleteById(adminId);
+        
+        orgRepository.deleteAll();
+        personRepository.deleteAll();
     }
 
     @Test
-    @Transactional
-    @Rollback
     void testPrivsRead() throws Exception {
 
         // NewApp doesn't have PERSON_READ rights
@@ -134,13 +148,9 @@ public class EntityFieldAuthIntegrationTests {
                 .header(AUTH_HEADER_NAME, createToken(adminUser.getEmail()))
                 .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk());
-
-
     }
 
     @Test
-    @Transactional
-    @Rollback
     void testPrivsCreate() throws Exception {
 
         // NewApp doesn't have PERSON_CREATE rights
@@ -185,8 +195,6 @@ public class EntityFieldAuthIntegrationTests {
     }
 
     @Test
-    @Transactional
-    @Rollback
     void testPrivsDelete() throws Exception {
 
         mockMvc.perform(post("/v2/person")
@@ -238,8 +246,6 @@ public class EntityFieldAuthIntegrationTests {
     }
 
     @Test
-    @Transactional
-    @Rollback
     void testPrivsEdit() throws Exception {
 
         mockMvc.perform(post("/v2/person")
@@ -301,7 +307,7 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(organizationDto)))
-                .andExpect(status().isNonAuthoritativeInformation());
+                .andExpect(status().isOk());
 
         // add some field-level permissions, get the App Client record
         MvcResult appClient = mockMvc.perform(get("/v2/app-client")
@@ -344,6 +350,10 @@ public class EntityFieldAuthIntegrationTests {
                         .stream()
                         .filter(item -> item.getName().endsWith("-lastName"))
                         .findFirst().orElseThrow(() -> new RecordNotFoundException("NO lastName priv found")));
+        privs.add(clientPrivs
+                .stream()
+                .filter(item -> item.getName().endsWith("-leader"))
+                .findFirst().orElseThrow(() -> new RecordNotFoundException("NO leader priv found")));
 
         appRecord.setPrivileges(privs);
 
@@ -359,15 +369,84 @@ public class EntityFieldAuthIntegrationTests {
                 .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(personDto)))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Warning"));
+
+        // try to change the firstName thru json patch - should get a 203 with firstName
+        //  since we tried to change that and we didn't have the privileges
+        JSONObject content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/firstName");
+        content.put("value", "George");
+        JSONArray contentArr = new JSONArray();
+        contentArr.put(content);
+        mockMvc.perform(patch("/v2/person/{id}", personDto.getId())
+                .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
+                .contentType("application/json-patch+json")
+                .content(contentArr.toString()))
                 .andExpect(status().isNonAuthoritativeInformation())
-                .andExpect(header().string("Warning", not(containsString("rank"))))
-                .andExpect(jsonPath("$.rank", equalTo("Capt")));
+                .andExpect(header().string("Warning", endsWith("firstName")))
+                .andExpect(header().string("Warning", containsString("214")))
+                .andExpect(jsonPath("$.firstName", equalTo("Homer")));
+
+        // try to change the lastName thru json patch - should NOT get a 203
+        content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/lastName");
+        content.put("value", "Smithers");
+        contentArr = new JSONArray();
+        contentArr.put(content);
+        mockMvc.perform(patch("/v2/person/{id}", personDto.getId())
+                .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
+                .contentType("application/json-patch+json")
+                .content(contentArr.toString()))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Warning"))
+                .andExpect(jsonPath("$.lastName", equalTo("Smithers")));
+
+
+        UUID leaderId = UUID.randomUUID();
+        personRepository.save(Person
+                .builder()
+                .id(leaderId)
+                .firstName("Monty")
+                .lastName("Burns")
+                .email("mb@springfield.gov")
+                .build());
+
+        // try to change the leader of Org thru json patch - should NOT get a 203
+        content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/leader");
+        content.put("value", leaderId.toString());
+        contentArr = new JSONArray();
+        contentArr.put(content);
+        mockMvc.perform(patch("/v2/organization/{id}", organizationDto.getId())
+                .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
+                .contentType("application/json-patch+json")
+                .content(contentArr.toString()))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Warning"))
+                .andExpect(jsonPath("$.leader", equalTo(leaderId.toString())));
+
+        content = new JSONObject();
+        content.put("op","replace");
+        content.put("path","/name");
+        content.put("value", "Springfield Nuclear");
+        contentArr = new JSONArray();
+        contentArr.put(content);
+        mockMvc.perform(patch("/v2/organization/{id}", organizationDto.getId())
+                .header(XFCC_HEADER_NAME, generateXfccHeader("NewApp"))
+                .contentType("application/json-patch+json")
+                .content(contentArr.toString()))
+                .andExpect(status().isNonAuthoritativeInformation())
+                .andExpect(header().string("Warning", endsWith("name")))
+                .andExpect(header().string("Warning", containsString("214")))
+                .andExpect(jsonPath("$.name", equalTo(organizationDto.getName())));
     }
     
     @Test
-    @Transactional
-    @Rollback
-    void testUserCanEditOwnData() throws JsonProcessingException, Exception {
+    void testUserCanEditOwnData() throws Exception {
     	var dashboardUserOnly = DashboardUser.builder()
                 .id(UUID.randomUUID())
                 .email("dashboard@user.com")
@@ -398,10 +477,9 @@ public class EntityFieldAuthIntegrationTests {
         		.firstName("new dashboard")
         		.lastName("new user")
         		.email(dashboardUserOnly.getEmail())
-        		.dodid("11111")
         		.build();
         
-        mockMvc.perform(put("/v2/person/self/{id}", newPerson.getId())
+        mockMvc.perform(put("/v2/person/self")
                 .header(AUTH_HEADER_NAME, createToken(dashboardUserOnly.getEmail()))
                 .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)

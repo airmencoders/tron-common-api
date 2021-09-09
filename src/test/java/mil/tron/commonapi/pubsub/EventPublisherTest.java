@@ -3,6 +3,7 @@ package mil.tron.commonapi.pubsub;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.Person;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
@@ -27,6 +28,7 @@ import org.springframework.web.client.RestTemplate;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.net.URI;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -63,11 +65,13 @@ public class EventPublisherTest {
         AppClientUser user1 = AppClientUser.builder()
                 .name("Test")
                 .clusterUrl("http://some.svc.cluster.local")
+                .privileges(Set.of(Privilege.builder().id(1L).name("PERSON_READ").build()))
                 .build();
 
         AppClientUser user2 = AppClientUser.builder()
                 .name("Test")
                 .clusterUrl("http://puckboard-api-service.tron-puckboard.svc.cluster.local")
+                .privileges(Set.of(Privilege.builder().id(1L).name("PERSON_READ").build()))
                 .build();
 
         subscriber = Subscriber.builder()

@@ -2,7 +2,6 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
-
 import mil.tron.commonapi.dto.*;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
@@ -15,7 +14,6 @@ import mil.tron.commonapi.repository.filter.QueryOperator;
 import mil.tron.commonapi.repository.filter.RelationType;
 import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
-
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -24,12 +22,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.web.servlet.*;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
 import java.io.IOException;
@@ -122,6 +122,32 @@ public class PersonIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)));
     }
 
+    @Test
+    void testRollbackOnBulkFail() throws Exception {
+
+        // test that the rollback of a bad bulk insert is completed
+
+        List<PersonDto> peopleArray = Lists.newArrayList(PersonDto.builder()
+                .email("p1@test.com")
+                .build(), PersonDto.builder()
+                .email("p1@test.com")
+                .build(), PersonDto.builder()
+                .email("p3@test.com")
+                .build(), PersonDto.builder()
+                .email("p4test.com")
+                .build());
+
+        mockMvc.perform(post(ENDPOINT_V2 + "persons")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(peopleArray)))
+                .andExpect(status().is(not(HttpStatus.CREATED)));
+
+        mockMvc.perform(get(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
     @Transactional
     @Rollback
     @Test
@@ -168,6 +194,15 @@ public class PersonIntegrationTest {
                 .contentType("application/json-patch+json")
                 .content(array.toString()))
                 .andExpect(status().isOk());
+
+        array.remove(0);
+        obj.remove("path");
+        obj.remove("value");
+        array.put(obj);
+        mockMvc.perform(patch(ORGANIZATION_V2 + "{id}", dtoObj.getId())
+                .contentType("application/json-patch+json")
+                .content(array.toString()))
+                .andExpect(status().isBadRequest());
 
 
         mockMvc.perform(delete(ENDPOINT + "{id}", id))

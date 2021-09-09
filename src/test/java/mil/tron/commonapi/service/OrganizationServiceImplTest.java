@@ -1,9 +1,12 @@
 package mil.tron.commonapi.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import mil.tron.commonapi.dto.OrganizationDto;
+import mil.tron.commonapi.dto.annotation.helper.JsonPatchStringValue;
+import mil.tron.commonapi.dto.annotation.helper.PatchOp;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -17,8 +20,11 @@ import mil.tron.commonapi.repository.OrganizationMetadataRepository;
 import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthResponse;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksServiceImpl;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,6 +40,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.io.IOException;
 import java.util.*;
@@ -46,6 +53,7 @@ import static org.mockito.AdditionalAnswers.returnsFirstArg;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceImplTest {
+
 	@Mock
 	private OrganizationRepository repository;
 
@@ -63,6 +71,9 @@ class OrganizationServiceImplTest {
 
 	@Mock
 	private EntityFieldAuthService entityFieldAuthService;
+	
+	@Mock
+	private ValidatorService validatorService;
 
 	@Mock
 	OrganizationUniqueChecksServiceImpl uniqueService;
@@ -175,10 +186,42 @@ class OrganizationServiceImplTest {
 			Mockito.when(uniqueService.orgNameIsUnique(Mockito.any(Organization.class))).thenReturn(true);
 			Mockito.when(entityFieldAuthService
 					.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-					.then(returnsFirstArg());
+					.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 	    	OrganizationDto updatedOrganization = organizationService.updateOrganization(testOrg.getId(), organizationService.convertToDto(testOrg));
 	    	assertThat(updatedOrganization.getName()).isEqualTo(testOrgDto.getName());
+		}
+		
+		@Test
+		void jsonPatch_shouldFail_whenModifyingNonPatchableFields() throws JsonProcessingException {
+			ObjectMapper objectMapper = new ObjectMapper();
+			
+			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testOrg));
+			JsonPatchStringValue patchMembers = JsonPatchStringValue.builder()
+					.op(PatchOp.ADD)
+					.path(String.format("/%s/-", OrganizationDto.MEMBERS_FIELD))
+					.value(UUID.randomUUID().toString())
+					.build();
+			
+			JsonPatchStringValue patchSubordinateOrganizations = JsonPatchStringValue.builder()
+					.op(PatchOp.ADD)
+					.path(String.format("/%s/-", OrganizationDto.SUB_ORGS_FIELD))
+					.value(UUID.randomUUID().toString())
+					.build();
+			
+			List<JsonPatchStringValue> jsonPatchOps = List.of(patchMembers);
+			
+			String jsonPatchOpsAsString = objectMapper.writeValueAsString(jsonPatchOps);
+			JsonPatch jsonPatchMembers = objectMapper.readValue(jsonPatchOpsAsString, JsonPatch.class);
+			
+			// Try members field
+			assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.patchOrganization(testOrg.getId(), jsonPatchMembers));
+			
+			// Try subordinateOrganizations field
+			jsonPatchOps = List.of(patchSubordinateOrganizations);
+			jsonPatchOpsAsString = objectMapper.writeValueAsString(jsonPatchOps);
+			JsonPatch jsonPatchSubordinateOrganizations = objectMapper.readValue(jsonPatchOpsAsString, JsonPatch.class);
+			assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.patchOrganization(testOrg.getId(), jsonPatchSubordinateOrganizations));
 		}
 	}
 	
@@ -383,7 +426,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(personRepository.findById(leader.getId())).thenReturn(Optional.of(leader));
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getLeader()).isEqualTo(leader.getId());
 
@@ -408,7 +451,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getBranchType()).isEqualTo(Branch.USAF);
 		assertThat(savedOrg.getOrgType()).isEqualTo(Unit.OTHER_USAF);
@@ -423,7 +466,7 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(testOrg);
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		OrganizationDto savedOrg = organizationService.modify(testOrg.getId(), attribs);
 		assertThat(savedOrg.getName()).isEqualTo("test org");
 	}
@@ -440,7 +483,7 @@ class OrganizationServiceImplTest {
 				.thenReturn(Optional.of(testOrg));
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 
 		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
 
@@ -488,7 +531,7 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		Mockito.when(repository.findById(newUnit.getId()))
 				.thenReturn(Optional.of(testOrg))
 				.thenThrow(new InvalidRecordUpdateRequest("Not Found"))
@@ -499,6 +542,8 @@ class OrganizationServiceImplTest {
 		Mockito.when(personRepository.findById(p.getId())).thenReturn(Optional.of(p));
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(newUnit);
 
+		Mockito.when(entityFieldAuthService.userHasAuthorizationToField(Mockito.any(), Mockito.any(), Mockito.any()))
+			.thenReturn(true);
 		OrganizationDto savedOrg = organizationService.addOrganizationMember(testOrgDto.getId(), Lists.newArrayList(p.getId()), true);
         assertThat(savedOrg.getMembers().size()).isEqualTo(1);
         assertEquals(testOrgDto.getId(), p.getPrimaryOrganization().getId());
@@ -511,6 +556,9 @@ class OrganizationServiceImplTest {
 
 		// remove like normal
 		newUnit.removeMember(p);
+		
+		Mockito.when(entityFieldAuthService.userHasAuthorizationToField(Mockito.any(), Mockito.any(), Mockito.any()))
+			.thenReturn(true);
 		savedOrg = organizationService.removeOrganizationMember(newUnit.getId(), Lists.newArrayList(p.getId()));
         assertThat(savedOrg.getMembers().size()).isEqualTo(0);
         assertNull(p.getPrimaryOrganization());
@@ -529,7 +577,7 @@ class OrganizationServiceImplTest {
 		Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		Mockito.when(repository.findById(Mockito.any(UUID.class)))
 				.thenReturn(Optional.of(newUnit))
 				.thenReturn(Optional.of(subOrg))
@@ -543,6 +591,8 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.save(Mockito.any(Organization.class))).thenReturn(newUnit);
 
+		Mockito.when(entityFieldAuthService.userHasAuthorizationToField(Mockito.any(), Mockito.any(), Mockito.any()))
+			.thenReturn(true);
 		OrganizationDto savedOrg = organizationService.addSubordinateOrg(testOrgDto.getId(), Lists.newArrayList(subOrg.getId()));
 		assertThat(savedOrg.getSubordinateOrganizations().size()).isEqualTo(1);
 
@@ -554,6 +604,9 @@ class OrganizationServiceImplTest {
 
 		// remove like normal
 		newUnit.removeSubordinateOrganization(subOrg);
+		
+		Mockito.when(entityFieldAuthService.userHasAuthorizationToField(Mockito.any(), Mockito.any(), Mockito.any()))
+			.thenReturn(true);
 		savedOrg = organizationService.removeSubordinateOrg(newUnit.getId(), Lists.newArrayList(subOrg.getId()));
 		assertThat(savedOrg.getMembers().size()).isEqualTo(0);
 
@@ -769,6 +822,10 @@ class OrganizationServiceImplTest {
 
 		Mockito.when(repository.findOrganizationsBySubordinateOrganizationsContainingAndIdIsNot(child1, child2.getId()))
 				.thenReturn(Lists.newArrayList(parent));
+		
+		Mockito.when(entityFieldAuthService
+				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 
 		child2.setSubOrgsUUID(Lists.newArrayList(child1.getId()));
 		assertThrows(InvalidRecordUpdateRequest.class, () -> organizationService.updateOrganization(child2.getId(), child2));
@@ -956,7 +1013,7 @@ class OrganizationServiceImplTest {
 	}
 
 	@Test
-	public void testPatchRequest() throws JSONException, IOException {
+	public void testPatchRequest() throws JSONException, IOException, MethodArgumentNotValidException {
 		UUID orgId = UUID.randomUUID();
 		ObjectMapper objectMapper = new ObjectMapper();
 		JSONArray contentArray = new JSONArray();
@@ -977,9 +1034,31 @@ class OrganizationServiceImplTest {
 		Mockito.when(repository.save(Mockito.any(Organization.class))).then(returnsFirstArg());
 		Mockito.when(entityFieldAuthService
 				.adjudicateOrganizationFields(Mockito.any(), Mockito.any()))
-				.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Organization>builder().modifiedEntity(i.getArgument(0)).build());
 		OrganizationDto capturedOrg = this.organizationService.patchOrganization(orgId, newPatch);
 		assertThat(capturedOrg.getName()).isEqualTo("Org Name");
 	}
+	
+	@Test
+	void patchRequest_shouldThrow_whenValidationFails() throws JSONException, IOException, MethodArgumentNotValidException {
+		UUID orgId = UUID.randomUUID();
+		ObjectMapper objectMapper = new ObjectMapper();
+		JSONArray contentArray = new JSONArray();
+		JSONObject content = new JSONObject();
+		content.put("op", "replace");
+		content.put("path", "/name");
+		content.put("value", "Org Name");
+		contentArray.put(content);
+		JsonPatch newPatch = JsonPatch.fromJson(
+				objectMapper.readTree(contentArray.toString())
+		);
+		Organization organizationDb = Organization.builder()
+				.id(orgId)
+				.name("Old New Name")
+				.build();
+		Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(organizationDb));
 
+		Mockito.when(validatorService.isValid(Mockito.any(), Mockito.any())).thenThrow(MethodArgumentNotValidException.class);
+		assertThrows(MethodArgumentNotValidException.class, () -> this.organizationService.patchOrganization(orgId, newPatch));
+	}
 }

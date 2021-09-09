@@ -2,8 +2,10 @@ package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
+import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,6 +42,7 @@ public class SubscriberServiceImplTest {
     private AppClientUser user = AppClientUser.builder()
             .name("Test")
             .clusterUrl("http://a.a.svc.cluster.local/")
+            .privileges(Set.of(Privilege.builder().id(1L).name("PERSON_READ").build()))
             .build();
 
     @BeforeEach
@@ -50,8 +54,6 @@ public class SubscriberServiceImplTest {
                 .subscribedEvent(EventType.PERSON_CHANGE)
                 .secret("secret")
                 .build();
-
-
     }
 
     @Test
@@ -87,6 +89,11 @@ public class SubscriberServiceImplTest {
         assertEquals(subscriber.getSecret(), result.getSecret());
         assertEquals(subscriber.getSubscribedEvent(), result.getSubscribedEvent());
         assertEquals(subscriber.getSubscriberAddress(), result.getSubscriberAddress());
+
+        // should deny since no ORGANIZATION_READ privilege
+        SubscriberDto orgs = mapper.map(subscriber, SubscriberDto.class);
+        orgs.setSubscribedEvent(EventType.ORGANIZATION_CHANGE);
+        assertThrows(InvalidAppSourcePermissions.class, () -> subscriberService.upsertSubscription(orgs));
     }
 
     @Test

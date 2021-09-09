@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import com.google.common.collect.Sets;
+
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PlatformJwtDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -19,6 +20,7 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.efa.IllegalPersonModification;
 import mil.tron.commonapi.pubsub.EventManagerService;
 import mil.tron.commonapi.pubsub.messages.PersonChangedMessage;
 import mil.tron.commonapi.pubsub.messages.PersonDeleteMessage;
@@ -27,8 +29,10 @@ import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.filter.SpecificationBuilder;
 import mil.tron.commonapi.repository.ranks.RankRepository;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthResponse;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksService;
+import mil.tron.commonapi.service.utility.ValidatorService;
 import org.assertj.core.util.Lists;
 import org.modelmapper.Conditions;
 import org.springframework.context.annotation.Lazy;
@@ -39,10 +43,13 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import javax.transaction.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static mil.tron.commonapi.service.utility.ReflectionUtils.checkNonPatchableFieldsUntouched;
 import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
 @Service
@@ -56,6 +63,7 @@ public class PersonServiceImpl implements PersonService {
 	private final DtoMapper modelMapper;
 	private final ObjectMapper objMapper;
 	private EntityFieldAuthService entityFieldAuthService;
+	private ValidatorService validatorService;
 	private static final Map<Branch, Set<String>> validProperties = Map.of(
 			Branch.USAF, fields(Airman.class),
 			Branch.USCG, fields(CoastGuardsman.class),
@@ -68,13 +76,15 @@ public class PersonServiceImpl implements PersonService {
 
 	private static final String DODID_ALREADY_EXISTS_ERROR = "Person resource with the dodid: %s already exists";
 
+	@SuppressWarnings("squid:S00107")
 	public PersonServiceImpl(PersonRepository repository,
 							 PersonUniqueChecksService personChecksService,
 							 RankRepository rankRepository,
 							 PersonMetadataRepository personMetadataRepository,
 							 EventManagerService eventManagerService,
 							 EntityFieldAuthService entityFieldAuthService,
-							 @Lazy OrganizationService organizationService) {
+							 @Lazy OrganizationService organizationService,
+							 ValidatorService validatorService) {
 		this.repository = repository;
 		this.personChecksService = personChecksService;
 		this.rankRepository = rankRepository;
@@ -82,6 +92,7 @@ public class PersonServiceImpl implements PersonService {
 		this.eventManagerService = eventManagerService;
 		this.organizationService = organizationService;
 		this.entityFieldAuthService = entityFieldAuthService;
+		this.validatorService = validatorService;
 		this.modelMapper = new DtoMapper();
 		modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -107,7 +118,6 @@ public class PersonServiceImpl implements PersonService {
 
 		if (!personChecksService.personDodidIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
-
 
 		checkValidMetadataProperties(dto.getBranch(), dto.getMeta());
 		Person resultEntity = repository.save(entity);
@@ -156,26 +166,37 @@ public class PersonServiceImpl implements PersonService {
 		personDto.setDodid(dto.getDodId());
 
 		// now convert branch
-		if ("US Air Force".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USAF);
-		}
-		else if ("US Army".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USA);
-		}
-		else if ("US Marine Corps".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USMC);
-		}
-		else if ("US Navy".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USN);
-		}
-		else if ("US Coast Guard".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USCG);
-		}
-		else if ("US Space Force".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.USSF);
-		}
-		else if ("Contractor".equals(dto.getAffiliation())) {
-			personDto.setBranch(Branch.OTHER);
+		if (dto.getAffiliation() != null) {
+			switch (dto.getAffiliation()) {
+				case "US Air Force":
+				case "US Air Force Reserve":
+				case "US Air National Guard":
+					personDto.setBranch(Branch.USAF);
+					break;
+				case "US Army":
+				case "US Army Reserve":
+				case "US Army National Guard":
+					personDto.setBranch(Branch.USA);
+					break;
+				case "US Marine Corps":
+				case "US Marine Corps Reserve":
+					personDto.setBranch(Branch.USMC);
+					break;
+				case "US Coast Guard":
+				case "US Coast Guard Reserve":
+					personDto.setBranch(Branch.USCG);
+					break;
+				case "US Navy":
+				case "US Navy Reserve":
+					personDto.setBranch(Branch.USN);
+					break;
+				case "US Space Force":
+					personDto.setBranch(Branch.USSF);
+					break;
+				default:
+					personDto.setBranch(Branch.OTHER);
+					break;
+			}
 		}
 		else {
 			personDto.setBranch(Branch.OTHER);
@@ -193,12 +214,29 @@ public class PersonServiceImpl implements PersonService {
 		return createPerson(personDto);
 	}
 
+	/**
+	 * Updates a person by keying off their email (used for the self update endpoint) where we
+	 * need to rely on the email from the JWT instead of a spoof-able UUID
+	 * @param email email of person to update
+	 * @param dto the data to commit to the db
+	 * @return the updated person record
+	 */
 	@Override
+	public PersonDto updatePersonByEmail(String email, PersonDto dto) {
+
+		Person entity = repository.findByEmailIgnoreCase(email)
+				.orElseThrow(() -> new RecordNotFoundException("Cannot find person with email " + email));
+
+		return updatePerson(entity.getId(), dto);
+	}
+
+	@Override
+	@Transactional(dontRollbackOn={IllegalPersonModification.class})
 	public PersonDto updatePerson(UUID id, PersonDto dto) {
 		Person entity = convertToEntity(dto);
-		// Ensure the id given matches the id of the object given
-		if (!id.equals(entity.getId()))
-			throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, entity.getId()));
+		
+		// Set the correct id
+		entity.setId(id);
 
 		Optional<Person> dbPerson = repository.findById(id);
 
@@ -212,16 +250,28 @@ public class PersonServiceImpl implements PersonService {
 		if (!personChecksService.personDodidIsUnique(entity))
 			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, entity.getDodid()));
 
-		PersonDto updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+		Person updatedPerson = updateMetadata(dto.getBranch(), entity, dbPerson, dto.getMeta());
+		EntityFieldAuthResponse<Person> efaResponse = applyFieldAuthority(updatedPerson);
+		repository.save(efaResponse.getModifiedEntity());
 
 		PersonChangedMessage message = new PersonChangedMessage();
 		message.addPersonId(updatedPerson.getId());
 		eventManagerService.recordEventAndPublish(message);
 
-		return updatedPerson;
+		return checkEfaResponseForIllegalModification(efaResponse, null);
 	}
 
-	private PersonDto updateMetadata(Branch branch, Person updatedEntity, Optional<Person> dbEntity, Map<String, String> metadata) {
+	/**
+	 * Does not save or apply EFA to the entity
+	 * 
+	 * @param branch the branch of the person
+	 * @param updatedEntity the entity being updated
+	 * @param dbEntity the existing database entity
+	 * @param metadata metadata for this person
+	 * @return the updated entity
+	 * 
+	 */
+	private Person updateMetadata(Branch branch, Person updatedEntity, Optional<Person> dbEntity, Map<String, String> metadata) {
 		checkValidMetadataProperties(branch, metadata);
 		List<PersonMetadata> toDelete = new ArrayList<>();
 		if(dbEntity.isPresent()) {
@@ -234,7 +284,7 @@ public class PersonServiceImpl implements PersonService {
 		}
 		if (metadata != null) {
 			metadata.forEach((key, value) -> {
-				Optional<PersonMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
+				Optional<PersonMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey().equals(key)).findAny();
 				if (match.isPresent()) {
 					if (value == null) {
 						toDelete.add(match.get());
@@ -246,19 +296,15 @@ public class PersonServiceImpl implements PersonService {
 				}
 			});
 		}
-
-		Person adjudicatedEntity = this.applyFieldAuthority(updatedEntity);
-
-		// we have to save the person entity first, then try to delete metadata: hibernate seems to get confused
-		// if we try to remove metadata rows from the person's metadata property and it generates invalid SQL
-		PersonDto result = convertToDto(repository.save(adjudicatedEntity), null);
+		
 		personMetadataRepository.deleteAll(toDelete);
-		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
-		return result;
+		updatedEntity.getMetadata().removeAll(toDelete);
+		
+		return updatedEntity;
 	}
 
 	// helper that applies entity field authorization for us
-	private Person applyFieldAuthority(Person incomingEntity) {
+	private EntityFieldAuthResponse<Person> applyFieldAuthority(Person incomingEntity) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		return entityFieldAuthService.adjudicatePersonFields(incomingEntity, authentication);
 	}
@@ -282,15 +328,29 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	@Override
-	public PersonDto patchPerson(UUID id, JsonPatch patch) {
+	@Transactional(dontRollbackOn={IllegalPersonModification.class})
+	public PersonDto patchPerson(UUID id, JsonPatch patch) throws MethodArgumentNotValidException {
 		Optional<Person> dbPerson = repository.findById(id);
 
 		if (dbPerson.isEmpty()) {
 			throw this.buildRecordNotFoundForPerson(id);
 		}
 		// patch must be done using a DTO
-		PersonDto dbPersonDto = convertToDto(dbPerson.get(),null);
+		PersonDto dbPersonDto = convertToDto(dbPerson.get(), PersonConversionOptions
+				.builder()
+				.membershipsIncluded(true)
+				.metadataIncluded(true)
+				.leadershipsIncluded(true)
+				.build());
+
 		PersonDto patchedPersonDto = applyPatchToPerson(patch, dbPersonDto);
+
+		// check we didnt change anything on any NonPatchableFields
+		checkNonPatchableFieldsUntouched(dbPersonDto, patchedPersonDto);
+
+		// Validate the patched person
+		validatorService.isValid(patchedPersonDto, PersonDto.class);
+
 		Person patchedPerson = convertToEntity(patchedPersonDto);
 
 		if (!personChecksService.personEmailIsUnique(patchedPerson)) {
@@ -301,13 +361,15 @@ public class PersonServiceImpl implements PersonService {
 			throw new ResourceAlreadyExistsException(String.format(DODID_ALREADY_EXISTS_ERROR, patchedPerson.getDodid()));
 
 
-		PersonDto updatedPerson = updateMetadata(patchedPersonDto.getBranch(), patchedPerson, dbPerson, patchedPersonDto.getMeta());
-
+		Person updatedPerson = updateMetadata(patchedPersonDto.getBranch(), patchedPerson, dbPerson, patchedPersonDto.getMeta());
+		EntityFieldAuthResponse<Person> efaResponse = applyFieldAuthority(updatedPerson);
+		repository.save(efaResponse.getModifiedEntity());
+		
 		PersonChangedMessage message = new PersonChangedMessage();
 		message.addPersonId(updatedPerson.getId());
 		eventManagerService.recordEventAndPublish(message);
 
-		return updatedPerson;
+		return checkEfaResponseForIllegalModification(efaResponse, null);
 	}
 
 	@Override
@@ -382,14 +444,18 @@ public class PersonServiceImpl implements PersonService {
 	}
 
 	/**
-	 * Bulk creates new persons.  Only fires one pub-sub event containing all new Person UUIDs
+	 * Bulk creates new persons.
+	 * If any fail, then all of the prior successful inserts are rolled back, and non-successful status is returned
+	 * Only fires one pub-sub event containing all new Person UUIDs
 	 *
 	 * @param dtos new Persons to create
 	 * @return new Person dtos created
 	 */
+	@Transactional
 	@Override
 	public List<PersonDto> bulkAddPeople(List<PersonDto> dtos) {
-		List<PersonDto> added = new ArrayList<>();
+		List<PersonDto> added = new ArrayList<>();  // list of UUIDs that get successfully added for pubsub broadcast
+
 		for (PersonDto dto : dtos) {
 			added.add(this.persistPerson(dto));
 		}
@@ -418,13 +484,13 @@ public class PersonServiceImpl implements PersonService {
         if (entity.getPrimaryOrganization() != null) {
             dto.setPrimaryOrganizationId(entity.getPrimaryOrganization().getId());
         }
-        if (options.isMetadataIncluded()) {
+        if (options.isMetadataIncluded() && entity.getMetadata() != null) {
 		    entity.getMetadata().stream().forEach(m -> dto.setMetaProperty(m.getKey(), m.getValue()));
         }
-        if (options.isLeadershipsIncluded()) {
+        if (options.isLeadershipsIncluded() && entity.getOrganizationLeaderships() != null) {
             dto.setOrganizationLeaderships(entity.getOrganizationLeaderships().stream().map(x -> x.getId()).collect(Collectors.toSet()));
         }
-        if (options.isMembershipsIncluded()) {
+        if (options.isMembershipsIncluded() && entity.getOrganizationMemberships() != null) {
             dto.setOrganizationMemberships(entity.getOrganizationMemberships().stream().map(x -> x.getId()).collect(Collectors.toSet()));
         }
 		return dto;
@@ -444,6 +510,10 @@ public class PersonServiceImpl implements PersonService {
 		try {
 			JsonNode patched = patch.apply(objMapper.convertValue(personDto, JsonNode.class));
 			return objMapper.treeToValue(patched, PersonDto.class);
+		}
+		catch (NullPointerException e) {
+			// apparently JSONPatch lib throws a NullPointerException on a null path, instead of a nicer one
+			throw new InvalidRecordUpdateRequest("Json Patch cannot have a null path value");
 		}
 		catch (JsonPatchException | JsonProcessingException e) {
 			throw new InvalidRecordUpdateRequest(String.format("Error patching person with email %s.", personDto.getEmail()));
@@ -494,5 +564,13 @@ public class PersonServiceImpl implements PersonService {
 		Page<Person> pagedResponse = repository.findAll(spec, page);
 		
 		return pagedResponse.map((Person entity) -> convertToDto(entity, options));
+	}
+
+	private PersonDto checkEfaResponseForIllegalModification(EntityFieldAuthResponse<Person> efaResponse, PersonConversionOptions options) {
+		if (efaResponse.getDeniedFields().isEmpty()) {
+			return this.convertToDto(efaResponse.getModifiedEntity(), options);
+		}
+		
+		throw new IllegalPersonModification(efaResponse);
 	}
 }

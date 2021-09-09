@@ -11,6 +11,7 @@ import java.util.UUID;
 @Builder
 @Entity
 @IdClass(OrganizationMetadata.OrganizationMetadataPK.class)
+@EqualsAndHashCode
 public class OrganizationMetadata {
     @Id
     @Getter

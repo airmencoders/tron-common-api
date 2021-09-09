@@ -5,9 +5,11 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import mil.tron.commonapi.dto.EventInfoDto;
+import mil.tron.commonapi.dto.PrivilegeDto;
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -22,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.internal.hamcrest.HamcrestArgumentMatcher;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -78,6 +81,14 @@ public class PubSubPrivsTest {
     @Autowired
     private PrivilegeRepository privilegeRepository;
 
+    private Privilege getPersonRead() {
+        return privilegeRepository.findAll()
+                .stream()
+                .filter(item->item.getName().equals("PERSON_READ"))
+                .findFirst()
+                .get();
+    }
+
     @BeforeEach
     void setup() {
 
@@ -106,7 +117,10 @@ public class PubSubPrivsTest {
 
         // add them to GA
         AppClientUser guardianAngel = appClientUserRespository.findByNameIgnoreCase("guardianangel").get();
+        guardianAngel.setPrivileges(Set.of(this.getPersonRead()));
+        appClientUserRespository.save(guardianAngel);
         guardianAngel.setAppClientDevelopers(Set.of(devUser));
+
 
         // add the dashboard dev user for general use
         devUser2 = DashboardUser.builder()
@@ -174,7 +188,7 @@ public class PubSubPrivsTest {
         // make the "NewApp" app client
         appClientUserRespository.saveAndFlush(AppClientUser.builder()
             .name("NewApp")
-            .privileges(new HashSet<>())
+            .privileges(Set.of(this.getPersonRead()))
             .appClientDevelopers(new HashSet<>())
             .build());
 
@@ -275,7 +289,7 @@ public class PubSubPrivsTest {
         appClientUserRespository.saveAndFlush(AppClientUser
                 .builder()
                 .name("NewApp")
-                .privileges(new HashSet<>())
+                .privileges(Set.of(this.getPersonRead()))
                 .appClientDevelopers(Set.of(devUser2))
                 .build());
 
@@ -339,7 +353,7 @@ public class PubSubPrivsTest {
         appClientUserRespository.saveAndFlush(AppClientUser
                 .builder()
                 .name("NewApp")
-                .privileges(new HashSet<>())
+                .privileges(Set.of(this.getPersonRead()))
                 .appClientDevelopers(Set.of(devUser2))
                 .build());
 

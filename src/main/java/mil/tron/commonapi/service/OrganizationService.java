@@ -15,23 +15,33 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 public interface OrganizationService {
 
 	// entity methods (service <--> persistence)
 	Organization findOrganization(UUID id);
 	Iterable<Organization> findOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch, Pageable page);
-	Organization removeMember(UUID organizationId, List<UUID> personIds);
-	Organization addMember(UUID organizationId, List<UUID> personIds, boolean primary);
-	Organization addOrg(UUID organizationId, List<UUID> orgIds);
-	Organization removeOrg(UUID organizationId, List<UUID> orgIds);
+	OrganizationDto removeMember(UUID organizationId, List<UUID> personIds);
+	OrganizationDto addMember(UUID organizationId, List<UUID> personIds, boolean primary);
+	OrganizationDto addOrg(UUID organizationId, List<UUID> orgIds);
+	OrganizationDto removeOrg(UUID organizationId, List<UUID> orgIds);
 	void removeLeaderByUuid(UUID leaderUuid);
+	OrganizationDto removeParentOrganization(UUID organizationId);
+	OrganizationDto removeLeader(UUID organizationId);
 
 	// methods dealing only with DTO (service <--> controller)
 	OrganizationDto createOrganization(OrganizationDto organization);
 	OrganizationDto updateOrganization(UUID id, OrganizationDto organization);
 	OrganizationDto modify(UUID organizationId, Map<String, String> attribs);
-	OrganizationDto patchOrganization(UUID id, JsonPatch patch);
+	/**
+	 * 
+	 * @param id id of organization to patch
+	 * @param patch json patch
+	 * @return updated organization dto
+	 * @throws MethodArgumentNotValidException throws if validation failed on the patched organization dto
+	 */
+	OrganizationDto patchOrganization(UUID id, JsonPatch patch) throws MethodArgumentNotValidException;
 	void deleteOrganization(UUID id);
 	Iterable<OrganizationDto> getOrganizations(String searchQuery, Pageable page);
 	Iterable<OrganizationDto> getOrganizationsByTypeAndService(String searchQuery, Unit type, Branch branch, Pageable page);

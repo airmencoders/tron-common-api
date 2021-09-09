@@ -4,7 +4,6 @@ package mil.tron.commonapi.logging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.MockToken;
 import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.service.PersonService;
 
 import org.aspectj.lang.JoinPoint;

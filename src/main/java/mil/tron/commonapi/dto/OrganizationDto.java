@@ -8,12 +8,17 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import mil.tron.commonapi.annotation.jsonpatch.NonPatchableField;
 import mil.tron.commonapi.dto.organizations.*;
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
+import mil.tron.commonapi.validations.NullOrNotBlankValidation;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Size;
 import java.util.*;
 
 /**
@@ -55,6 +60,7 @@ public class OrganizationDto {
 
     @Getter
     @Setter
+    @Builder.Default
     @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private UUID id = UUID.randomUUID();
 
@@ -63,6 +69,9 @@ public class OrganizationDto {
     private UUID leader;
 
     @Getter
+    @Builder.Default
+    @NonPatchableField
+    @Schema(description = "Field cannot be modified through JSON Patch")
     private List<UUID> members = new ArrayList<>();
 
     @Schema(nullable = true)
@@ -70,16 +79,23 @@ public class OrganizationDto {
     private UUID parentOrganization;
 
     @Getter
+    @Builder.Default
+    @NonPatchableField
+    @Schema(description = "Field cannot be modified through JSON Patch")
     private List<UUID> subordinateOrganizations = new ArrayList<>();
 
     @Getter
     @Setter
+    @Size(max = 255)
+    @NotBlank
     private String name;
 
     @Getter
+    @Builder.Default
     private Unit orgType = Unit.ORGANIZATION;
 
     @Getter
+    @Builder.Default
     private Branch branchType = Branch.OTHER;
 
     @JsonSetter(OrganizationDto.ORG_TYPE_FIELD)

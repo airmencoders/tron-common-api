@@ -2,16 +2,20 @@ package mil.tron.commonapi.service.pubsub;
 
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.exception.BadRequestException;
+import mil.tron.commonapi.exception.InvalidAppSourcePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.assertj.core.util.Lists;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -64,6 +68,7 @@ public class SubscriberServiceImpl implements SubscriberService {
         return dto;
     }
 
+    @Transactional
     @Override
     public SubscriberDto upsertSubscription(SubscriberDto subscriber) {
         if (subscriber.getId() == null) {
@@ -82,26 +87,118 @@ public class SubscriberServiceImpl implements SubscriberService {
         Optional<Subscriber> existing = subscriberRepository.findById(subscriber.getId());
 
         if (existing.isPresent()) {
+
             // edit an existing
             Subscriber sub = existing.get();
-            sub.setSecret(sub.getSecret());  // dont allow change secret on an update,
-                                                // need to recreate a subscription if needed changed
+
+            // only change secret on an update IF one's supplied
+            sub.setSecret(subscriber.getSecret() == null || subscriber.getSecret().isBlank() ?
+                    sub.getSecret() : subscriber.getSecret());
             sub.setSubscribedEvent(subscriber.getSubscribedEvent());
             sub.setSubscriberAddress(subscriber.getSubscriberAddress());
             sub.setAppClientUser(appClientUser);
+            checkAppHasReadAccessToEntity(mapToDto(sub), appClientUser);
+            synchronizeSecretsAndUrl(sub);
             return mapToDto(subscriberRepository.save(sub));
 
         } else {
-            // make new subscription
-            Subscriber sub = subscriberRepository.save(Subscriber.builder()
+            checkAppHasReadAccessToEntity(subscriber, appClientUser);
+
+            // check no existing subs for this event type
+            checkNoDuplicateSubscriptionForApp(subscriber.getSubscribedEvent(), appClientUser);
+
+            Subscriber sub = Subscriber.builder()
                     .secret(subscriber.getSecret())
                     .subscribedEvent(subscriber.getSubscribedEvent())
                     .subscriberAddress(subscriber.getSubscriberAddress())
                     .appClientUser(appClientUser)
-                    .build());
+                    .build();
 
-            return mapToDto(sub);
+            synchronizeSecretsAndUrl(sub);
+            return mapToDto(subscriberRepository.save(sub));
         }
+    }
+
+    private void synchronizeSecretsAndUrl(Subscriber subscriber) {
+        // update all the secrets/pubsub url for given app client to what just came in
+        // so that we keep them in sync - IF the secret was not null or blank.
+        // If it was null, or blank, then steal the secret from an existing app client
+        // subscription item, and if none of those exist, then throw an error for
+        // no valid secrets on file
+
+        List<Subscriber> subscribers = Lists.newArrayList(subscriberRepository
+                .findByAppClientUser(subscriber.getAppClientUser()));
+
+        // no secrets anywhere to use...
+        if (subscribers.isEmpty() && (subscriber.getSecret() == null || subscriber.getSecret().isBlank())) {
+            throw new BadRequestException("Cannot create subscription with no given secret and no other secrets on file");
+        }
+        else if (!subscribers.isEmpty() && (subscriber.getSecret() == null || subscriber.getSecret().isBlank())) {
+            subscriber.setSecret(subscribers.get(0).getSecret());
+        }
+
+        // test that the url is not null (it can be blank) or steal from a sister subscription
+        if (subscribers.isEmpty() && subscriber.getSubscriberAddress() == null) {
+            throw new BadRequestException("Cannot create subscription with null url and no other urls on file");
+        }
+        else if (!subscribers.isEmpty() && subscriber.getSubscriberAddress() == null) {
+            subscriber.setSubscriberAddress(subscribers.get(0).getSubscriberAddress());
+        }
+
+        // update other sister subscriptions secrets/urls
+        for (Subscriber sub : subscribers) {
+            sub.setSubscriberAddress(subscriber.getSubscriberAddress());
+            sub.setSecret(subscriber.getSecret());
+            subscriberRepository.save(sub);
+        }
+    }
+
+    /**
+     * Helper to check if a given app client has READ privs to the entity type they're trying to subscribe to
+     * @param subscriber
+     * @param appClientUser
+     */
+    private void checkAppHasReadAccessToEntity(SubscriberDto subscriber, AppClientUser appClientUser) {
+        // make new subscription, but need to make sure requester has READ access to target entity
+        String entityType = SubscriberServiceImpl.getTargetEntityType(subscriber.getSubscribedEvent());
+        if (!appClientUser
+                .getPrivileges()
+                .stream()
+                .map(Privilege::getName)
+                .collect(Collectors.toSet())
+                .contains(entityType + "_READ")) {
+
+            throw new InvalidAppSourcePermissions("Cannot subscribe to entity " + entityType + " without READ access");
+        }
+    }
+
+    /**
+     * Helper to check that a proposed create/edit won't result in a duplicate subscription for a given appclient
+     * @param proposedEvent
+     * @param appClientUser
+     */
+    private void checkNoDuplicateSubscriptionForApp(EventType proposedEvent, AppClientUser appClientUser) {
+        List<Subscriber> subs = Lists.newArrayList(subscriberRepository.findByAppClientUser(appClientUser));
+        if (subs.stream()
+                .map(Subscriber::getSubscribedEvent)
+                .collect(Collectors.toList())
+                .contains(proposedEvent)) {
+            throw new ResourceAlreadyExistsException("Subscription already exists for this app client for this event");
+        }
+    }
+
+    /**
+     * Helper to return string representation of the Event's target entity,
+     * we can easily get this from the prefix of the event name
+     * @param event
+     * @return
+     */
+    public static String getTargetEntityType(EventType event) {
+        String type = event.toString().split("_")[0];
+
+        // account for "SUB_ORG_*" which are really ORGANIZATION type
+        if (type.equals("SUB")) return "ORGANIZATION";
+        else return type;
     }
 
     @Override

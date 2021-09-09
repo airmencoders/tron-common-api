@@ -3,12 +3,9 @@ package mil.tron.commonapi.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
-
-import mil.tron.commonapi.MockToken;
 import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.PersonFindDto;
-import mil.tron.commonapi.dto.UserInfoDto;
 import mil.tron.commonapi.dto.response.WrappedResponse;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -20,7 +17,6 @@ import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonFindType;
 import mil.tron.commonapi.service.PersonService;
 import mil.tron.commonapi.service.UserInfoService;
-
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -37,8 +33,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -49,6 +47,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
@@ -317,30 +316,27 @@ public class PersonControllerTest {
 		}
 
 		@Test
+		@WithMockUser(username = "test.person@mvc.com")
 		void testSelfPutValid() throws Exception {
-			Mockito.when(userInfoService.extractUserInfoFromHeader(Mockito.anyString())).thenReturn(UserInfoDto.builder().email("test.person@mvc.com").build());
 			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).thenReturn(testPerson);
 			
-			mockMvc.perform(put(ENDPOINT + "self/{id}", testPerson.getId())
+			mockMvc.perform(put(ENDPOINT + "self")
 					.accept(MediaType.APPLICATION_JSON)
-					.header("authorization", MockToken.token)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(testPersonJson))
-				.andExpect(status().isOk())
-				.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(testPersonJson));
+					.andExpect(status().isOk());
 		}
 
 		@Test
+		@WithMockUser(username = "sneaky.person@mvc.com")
 		void testSelfPutInvalid() throws Exception {
-			Mockito.when(userInfoService.extractUserInfoFromHeader(Mockito.anyString())).thenReturn(UserInfoDto.builder().email("test@test.com").build());
 			Mockito.when(personService.updatePerson(Mockito.any(UUID.class), Mockito.any(PersonDto.class))).thenReturn(testPerson);
 			
-			mockMvc.perform(put(ENDPOINT + "self/{id}", testPerson.getId())
+			mockMvc.perform(put(ENDPOINT + "self")
 					.accept(MediaType.APPLICATION_JSON)
-					.header("authorization", MockToken.token)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(testPersonJson))
-				.andExpect(status().isUnauthorized());
+					.andExpect(status().is(not(HttpStatus.OK)));
 		}
 	}
 

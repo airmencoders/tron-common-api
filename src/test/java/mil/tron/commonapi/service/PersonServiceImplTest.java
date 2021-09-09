@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 
 import mil.tron.commonapi.dto.PersonDto;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -19,8 +20,12 @@ import mil.tron.commonapi.repository.PersonMetadataRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.ranks.RankRepository;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthResponse;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
 import mil.tron.commonapi.service.utility.PersonUniqueChecksServiceImpl;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
+import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -39,6 +44,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -74,6 +80,9 @@ class PersonServiceImplTest {
 
 	@Mock
 	private EntityFieldAuthService entityFieldAuthService;
+	
+	@Mock
+	private ValidatorService validatorService;
 	
 	@InjectMocks
 	private PersonServiceImpl personService;
@@ -223,13 +232,6 @@ class PersonServiceImplTest {
 	@Nested
 	class UpdatePersonTest {
 		@Test
-		void idsNotMatching() {
-			// Test id not matching person id
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
-	    	assertThrows(InvalidRecordUpdateRequest.class, () -> personService.updatePerson(UUID.randomUUID(), testDto));
-		}
-		
-		@Test
 		void idNotExist() {
 			// Test id not exist
 			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
@@ -268,7 +270,7 @@ class PersonServiceImplTest {
 	    	Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 			Mockito.when(entityFieldAuthService.adjudicatePersonFields(Mockito.any(), Mockito.any()))
-					.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Person>builder().modifiedEntity(i.getArgument(0)).build());
 	    	PersonDto updatedPerson = personService.updatePerson(testPerson.getId(), testDto);
 	    	assertThat(updatedPerson.getId()).isEqualTo(testPerson.getId());
 		}
@@ -305,7 +307,7 @@ class PersonServiceImplTest {
 		}
 
 		@Test
-		void successfulPatch() throws JSONException, IOException {
+		void successfulPatch() throws JSONException, IOException, MethodArgumentNotValidException {
 			// replace op
 			content = new JSONObject();
 			content.put("op","replace");
@@ -347,7 +349,7 @@ class PersonServiceImplTest {
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(entityFieldAuthService.adjudicatePersonFields(Mockito.any(), Mockito.any()))
-					.then(returnsFirstArg());
+				.thenAnswer(i -> EntityFieldAuthResponse.<Person>builder().modifiedEntity(i.getArgument(0)).build());
 
 			// pass through the patched entity
 			Mockito.when(repository.save(Mockito.any(Person.class))).thenAnswer(i -> i.getArguments()[0]);
@@ -355,6 +357,27 @@ class PersonServiceImplTest {
 
 			PersonDto patchedPerson = personService.patchPerson(testPerson.getId(), patch);
 			assertThat(patchedPerson.getId()).isEqualTo(testPerson.getId());
+		}
+		
+		@Test
+		void requestPatch_shouldThrow_whenValidationFails() throws JSONException, IOException, MethodArgumentNotValidException {
+			// replace op
+			content = new JSONObject();
+			content.put("op","replace");
+			content.put("path","/firstName");
+			content.put("value", StringUtils.repeat('D', 256));
+
+			JsonNode newNode = objectMapper.readTree(contentArr.toString());
+			patch = JsonPatch.fromJson(newNode);
+
+			// create a different test person that has a changed name
+			Person tempTestPerson = testPerson;
+			tempTestPerson.setFirstName("patchFirst");
+
+			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(tempTestPerson));
+			Mockito.when(validatorService.isValid(Mockito.any(), Mockito.any())).thenThrow(MethodArgumentNotValidException.class);
+			
+			assertThrows(MethodArgumentNotValidException.class, () -> personService.patchPerson(testPerson.getId(), patch));
 		}
 
 		@Test

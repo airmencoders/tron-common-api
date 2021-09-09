@@ -5,14 +5,17 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,17 +25,19 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
-import javax.transaction.Transactional;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,6 +82,9 @@ public class OrgRelationshipIntegrationTest {
 
     @Autowired
     private DashboardUserRepository dashRepo;
+
+    @Autowired
+    private OrganizationRepository organizationRepository;
 
     private DashboardUser admin;
 
@@ -182,6 +190,12 @@ public class OrgRelationshipIntegrationTest {
                 .getResponse()
                 .getContentAsString(), OrganizationDto.class);
     }
+    
+    @AfterEach
+    void cleanup() {
+    	dashRepo.deleteAll();
+    	organizationRepository.deleteAll();
+    }
 
     /**
      * These tests use the POST (create) endpoint
@@ -189,8 +203,6 @@ public class OrgRelationshipIntegrationTest {
     @Nested
     class CreateTests {
 
-        @Transactional
-        @Rollback
         @Test
         void testCreationFailsForSameParentAndSubOrg() throws Exception {
             OrganizationDto child4 = OrganizationDto
@@ -211,8 +223,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testCreationFailsForParentAsDeepRelative() throws Exception {
             OrganizationDto child4 = OrganizationDto
@@ -272,6 +282,67 @@ public class OrgRelationshipIntegrationTest {
                     .content(OBJECT_MAPPER.writeValueAsString(child4)))
                     .andExpect(status().isBadRequest());
         }
+
+        @Test
+        void testCreateOrganizationWithAlreadyExistsSubOrg() throws Exception {
+
+            // test can create a new org with a suborg (that exists) already specified
+            OrganizationDto child1 = OrganizationDto
+                    .builder()
+                    .branchType(Branch.USAF)
+                    .orgType(Unit.SQUADRON)
+                    .name("SubOrgSquadron")
+                    .build();
+
+            MvcResult result = mockMvc.perform(post(ENDPOINT_V2)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(child1)))
+                    .andExpect(status().isCreated())
+                    .andReturn();
+
+            UUID childId = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getId();
+
+            OrganizationDto newParent = OrganizationDto
+                    .builder()
+                    .branchType(Branch.USAF)
+                    .orgType(Unit.WING)
+                    .name("NewWing")
+                    .subordinateOrganizations(Lists.newArrayList(childId))
+                    .build();
+
+            mockMvc.perform(post(ENDPOINT_V2)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(newParent)))
+                    .andExpect(status().isCreated());
+
+            // Test that a bad request will rollback the new org from persisting
+            OrganizationDto failedParent = OrganizationDto
+                    .builder()
+                    .branchType(Branch.USAF)
+                    .orgType(Unit.WING)
+                    .name("FailedParent")
+                    .subordinateOrganizations(Lists.newArrayList(UUID.randomUUID()))
+                    .build();
+
+            mockMvc.perform(post(ENDPOINT_V2)
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(failedParent)))
+                    .andExpect(status().isNotFound());
+
+            // verify change was rolled back
+            assertFalse(organizationRepository.findAll()
+                    .stream()
+                    .map(Organization::getName)
+                    .collect(Collectors.toList())
+                    .contains("FailedParent"));
+        }
+
     }
 
     /**
@@ -280,8 +351,6 @@ public class OrgRelationshipIntegrationTest {
     @Nested
     class UpdateTests {
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSameParentAndSubOrg() throws Exception {
 
@@ -297,8 +366,6 @@ public class OrgRelationshipIntegrationTest {
 
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSubOrgIsSubOrgElsewhere() throws Exception {
 
@@ -320,8 +387,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testValidParent() throws Exception {
 
@@ -352,8 +417,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isOk());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidParentForDeepSubOrg() throws Exception {
 
@@ -427,8 +490,6 @@ public class OrgRelationshipIntegrationTest {
         }
 
         @Test
-        @Transactional
-        @Rollback
         void testValidParentChange() throws Exception {
 
             // set up the chain: Parent->Child1->Child2
@@ -470,8 +531,6 @@ public class OrgRelationshipIntegrationTest {
     @Nested
     class PatchTests {
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSameParentAndSubOrg() throws Exception {
 
@@ -496,82 +555,51 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSubOrgIsSubOrgElsewhere() throws Exception {
-
-            JSONObject content = new JSONObject();
-            content.put("op","add");
-            content.put("path","/subordinateOrganizations/-");
-            content.put("value", child1.getId());
-
-            JSONArray patch = new JSONArray();
-            patch.put(content);
-
-
-            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", parent.getId())
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}" + "/subordinates", parent.getId())
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType("application/json-patch+json")
+                    .contentType("application/json")
                     .accept(MediaType.APPLICATION_JSON)
-                    .content(patch.toString()))
+                    .content(OBJECT_MAPPER.writeValueAsString(List.of(child1.getId()))))
                     .andExpect(status().isOk());
 
-            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", child2.getId())
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}" + "/subordinates", child2.getId())
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType("application/json-patch+json")
+                    .contentType("application/json")
                     .accept(MediaType.APPLICATION_JSON)
-                    .content(patch.toString()))
+                    .content(OBJECT_MAPPER.writeValueAsString(List.of(child1.getId()))))
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testValidParent() throws Exception {
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}" + "/subordinates", parent.getId())
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType("application/json")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(List.of(child1.getId()))))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}" + "/subordinates", child2.getId())
+                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
+                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                    .contentType("application/json")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .content(OBJECT_MAPPER.writeValueAsString(List.of(child3.getId()))))
+                    .andExpect(status().isOk());
 
             JSONObject content = new JSONObject();
-            content.put("op","add");
-            content.put("path","/subordinateOrganizations/-");
-            content.put("value", child1.getId());
-
-            JSONArray patch = new JSONArray();
-            patch.put(content);
-
-            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", parent.getId())
-                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType("application/json-patch+json")
-                    .accept(MediaType.APPLICATION_JSON)
-                    .content(patch.toString()))
-                    .andExpect(status().isOk());
-
-            content = new JSONObject();
-            content.put("op","add");
-            content.put("path","/subordinateOrganizations/-");
-            content.put("value", child3.getId());
-
-            patch = new JSONArray();
-            patch.put(content);
-
-            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", child2.getId())
-                    .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
-                    .header(XFCC_HEADER_NAME, XFCC_HEADER)
-                    .contentType("application/json-patch+json")
-                    .accept(MediaType.APPLICATION_JSON)
-                    .content(patch.toString()))
-                    .andExpect(status().isOk());
-
-            content = new JSONObject();
             content.put("op","replace");
             content.put("path","/parentOrganization");
             content.put("value", child3.getId());
 
-            patch = new JSONArray();
+            JSONArray patch = new JSONArray();
             patch.put(content);
-
+            
             parent.setParentOrganizationUUID(child3.getId());
             mockMvc.perform(patch(ENDPOINT_V2 + "{id}", parent.getId())
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
@@ -589,8 +617,6 @@ public class OrgRelationshipIntegrationTest {
     @Nested
     class AddRemoveTests {
 
-        @Transactional
-        @Rollback
         @Test
         void testInvalidSameParentAndSubOrg() throws Exception {
 
@@ -609,8 +635,6 @@ public class OrgRelationshipIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Transactional
-        @Rollback
         @Test
         void testParentUpdatedOnSubOrgRemoval() throws Exception {
 

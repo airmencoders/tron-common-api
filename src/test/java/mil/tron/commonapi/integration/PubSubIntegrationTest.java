@@ -1,13 +1,17 @@
 package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.pubsub.SubscriberDto;
 import mil.tron.commonapi.entity.AppClientUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.branches.Branch;
+import mil.tron.commonapi.entity.pubsub.Subscriber;
 import mil.tron.commonapi.entity.pubsub.events.EventType;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.PersonRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,17 +29,17 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
+import java.util.*;
 
 import static mil.tron.commonapi.security.Utility.hmac;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.client.ExpectedCount.never;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -74,6 +78,9 @@ public class PubSubIntegrationTest {
     @Autowired
     private SubscriberRepository subscriberRepository;
 
+    @Autowired
+    private PrivilegeRepository privilegeRepository;
+
     private MockRestServiceServer mockServer;
 
     private final static String SUB1_ADDRESS = "/changed";
@@ -85,8 +92,14 @@ public class PubSubIntegrationTest {
             .clusterUrl("http://localhost:5005/")
             .build();
 
+    private List<Privilege> privs = new ArrayList<>();
+
     @BeforeEach
     void setup() throws Exception {
+
+        privs.clear();
+        privs.addAll(privilegeRepository.findAll());
+        user.setPrivileges(Set.of(privs.stream().filter(item -> item.getName().equals("PERSON_READ")).findFirst().get()));
 
         if (!appClientUserRespository.existsById(user.getId()))
             appClientUserRespository.save(user);
@@ -167,6 +180,31 @@ public class PubSubIntegrationTest {
         // must sleep a little since the broadcast is an async event, 1000ms is overkill but ok for test
         try { Thread.sleep(1000); } catch (InterruptedException e) {}
 
+        mockServer.verify();
+        mockServer.reset();
+
+        // take away READ priv, the event publisher won't send to this address/subscriber for this event anymore
+        mockServer.expect(never(), requestTo(endsWith("/changed")));
+        user.setPrivileges(new HashSet<>());
+        appClientUserRespository.save(user);
+
+        PersonDto p2 = PersonDto
+                .builder()
+                .firstName("Homer")
+                .lastName("Simpson")
+                .email("hs@test.com")
+                .rank("Maj")
+                .branch(Branch.USAF)
+                .build();
+
+        mockMvc.perform(post("/v2/person")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(p2)))
+                .andExpect(status().isCreated());
+
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+
+        // verify nothing received
         mockServer.verify();
     }
 
@@ -279,4 +317,142 @@ public class PubSubIntegrationTest {
         mockServer.verify();
     }
 
+    @Test
+    void testHaveToHaveReadPrivToSubscribe() throws Exception {
+
+        // an app client cannot subscribe to an event if they don't have
+        //  READ priv on PERSON / ORG table are subscribing to
+        // attempt to do so will result in 403
+
+        // should already have PERSON_READ, now try to subscribe to ORGANIZATION_CHANGE -> should be 403
+        SubscriberDto orgSub = SubscriberDto
+                .builder()
+                .appClientUser(user.getName())
+                .subscribedEvent(EventType.ORGANIZATION_CHANGE)
+                .subscriberAddress(SUB1_ADDRESS)
+                .secret(secret)
+                .build();
+
+        // setup some bogus subscriber
+        //   that subscribes to PERSON messages
+        mockMvc.perform(post(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgSub)))
+                .andExpect(status().isForbidden());
+
+    }
+
+    @Test
+    void testCantMakeDuplicateSubscription() throws Exception {
+
+        // should already have PERSON_CHANGE
+        SubscriberDto orgSub = SubscriberDto
+                .builder()
+                .appClientUser(user.getName())
+                .subscribedEvent(EventType.PERSON_CHANGE)
+                .subscriberAddress(SUB1_ADDRESS)
+                .secret(secret)
+                .build();
+
+        // should be a 409 conflict
+        mockMvc.perform(post(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgSub)))
+                .andExpect(status().isConflict());
+
+    }
+
+    @Test
+    void testSecretAndUrlSynchronization() throws Exception {
+
+        AppClientUser testApp = AppClientUser.builder()
+                .id(UUID.randomUUID())
+                .name("Test6")
+                .privileges(Set.of(privs.stream()
+                                .filter(item -> item.getName().equals("PERSON_READ"))
+                                .findFirst()
+                                .get()))
+                .build();
+
+        appClientUserRespository.save(testApp);
+
+        SubscriberDto orgSub = SubscriberDto
+                .builder()
+                .appClientUser(testApp.getName())
+                .subscribedEvent(EventType.PERSON_CHANGE)
+                .subscriberAddress(SUB1_ADDRESS)
+                .secret("")
+                .build();
+
+        // should be a bad request
+        mockMvc.perform(post(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgSub)))
+                .andExpect(status().isBadRequest());
+
+        // should be a bad request
+        orgSub.setSecret(null);
+        mockMvc.perform(post(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgSub)))
+                .andExpect(status().isBadRequest());
+
+        orgSub.setSecret("secret");
+        orgSub.setSubscriberAddress(null);
+        mockMvc.perform(post(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgSub)))
+                .andExpect(status().isBadRequest());
+
+        // make it for real
+        orgSub.setSubscriberAddress(SUB1_ADDRESS);
+        mockMvc.perform(post(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgSub)))
+                .andExpect(status().isOk());
+
+        SubscriberDto orgSub2 = SubscriberDto
+                .builder()
+                .appClientUser(testApp.getName())
+                .subscribedEvent(EventType.PERSON_DELETE)
+                .subscriberAddress("/newurl")
+                .secret("new_secret")
+                .build();
+
+        mockMvc.perform(post(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(orgSub2)))
+                .andExpect(status().isOk());
+
+        // check both subscriptions now have same secret and url
+        subscriberRepository.findByAppClientUser(testApp).forEach(item -> {
+            assertEquals("new_secret", item.getSecret());
+            assertEquals("/newurl", item.getSubscriberAddress());
+        });
+
+        Subscriber sub = Lists.newArrayList(subscriberRepository.findByAppClientUser(testApp))
+                .stream()
+                .filter(item -> item.getSubscribedEvent().equals(EventType.PERSON_DELETE))
+                .findFirst()
+                .get();
+
+        MvcResult result = mockMvc.perform(get(ENDPOINT_V2 + "/{id}", sub.getId())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        SubscriberDto dto = OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), SubscriberDto.class);
+        dto.setSubscriberAddress("/correct_url");
+        mockMvc.perform(post(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+                .andExpect(status().isOk());
+
+        // check both subscriptions still have same secret and url
+        subscriberRepository.findByAppClientUser(testApp).forEach(item -> {
+            assertEquals("new_secret", item.getSecret());
+            assertEquals("/correct_url", item.getSubscriberAddress());
+        });
+
+    }
 }

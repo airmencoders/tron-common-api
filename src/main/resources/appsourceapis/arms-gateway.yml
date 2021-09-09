@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:8080
+- url: http://localhost:9000
   description: Generated server url
 paths:
   /training-svc/training-requirement:
@@ -12,6 +12,19 @@ paths:
       - training-svc-controller
       summary: Training Requirement Data
       operationId: getTrainingRequirementData
+      parameters:
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       requestBody:
         content:
           application/json:
@@ -19,6 +32,12 @@ paths:
               $ref: '#/components/schemas/TrainingRequirementDataRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -27,12 +46,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TRAININGREQUIREMENTOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/profile-assignment:
     post:
       tags:
@@ -46,6 +59,12 @@ paths:
               $ref: '#/components/schemas/ProfileAssignmentDataRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -54,18 +73,25 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PROFILEASSIGNMENTOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/current-training:
     post:
       tags:
       - training-svc-controller
       summary: Current Training Data
       operationId: getCurrentTraining
+      parameters:
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       requestBody:
         content:
           application/json:
@@ -73,6 +99,12 @@ paths:
               $ref: '#/components/schemas/TrainingDataRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -81,12 +113,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/CURRENTTRAININGOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/archive-training:
     post:
       tags:
@@ -141,6 +167,134 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExceptionResponse'
+  /metadata/training-program:
+    post:
+      tags:
+      - training-program-meta-data-controller
+      summary: Retrieves a flyer(s) required training data
+      description: "Retrieves a flyer(s) required training data - programs, profiles,\
+        \ and tasks respectively.  Required data is the flyer(s) HARM code and flyer\
+        \ Id.  Query reaches back one year from the current date/time."
+      operationId: getFlyerTrainingProgram
+      parameters:
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to true.  If set to false, then the lookup will come from ARMS itself.\
+          \  The various parts of the response that are made of up data from possibly\
+          \ cached sources will contain a field 'lastServerUpdateTime' showing the\
+          \ recency of the data."
+        required: false
+        schema:
+          type: boolean
+          default: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/FlyerAndHarmCode'
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrainingProgramDto'
+  /metadata/flyer-id:
+    post:
+      tags:
+      - current-training-meta-data-controller
+      summary: Retrieves a person's flyer id - possibly returning more than one person
+        match
+      description: "Since Flyer Id in ARMS is an SSN, Common API nor Puckboard persists\
+        \ it. So it must be looked up using this endpoint that requires person name,\
+        \ optionally last 4, the HARM, and optionally the organization ID string.\
+        \  This data is cached (in volatile memory) so subsequent calls should be\
+        \ faster.  Only required field is 'harmCode', the rest help narrow down the\
+        \ chance of getting one result back - e.g. omitting first and last name by\
+        \ setting them to null or blank are viewed as 'wildcards'.  In which case\
+        \ all flyers would be returned for that HARM code - which could be hundreds.\
+        \  Including the organization ID string within that HARM will also significantly\
+        \ narrow down results in addition to including first and last name. Note:\
+        \ the first and last name are treated case-insensitive, however the alpha\
+        \ characters in HARM and unit ID need to be uppercase."
+      operationId: getFlyerId
+      parameters:
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to true.  If set to false, then the lookup will come from ARMS itself.\
+          \  The various parts of the response that are made of up data from possibly\
+          \ cached sources will contain a field 'lastServerUpdateTime' showing the\
+          \ recency of the data."
+        required: false
+        schema:
+          type: boolean
+          default: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlyerSearchInfo'
+        required: true
+      responses:
+        "404":
+          description: No such person found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordNotFoundException'
+        "200":
+          description: Successful operation
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FlyerIdInfo'
+  /metadata/current-training:
+    post:
+      tags:
+      - current-training-meta-data-controller
+      summary: Retrieves a flyer(s) current training record
+      description: Retrieves a flyer or array of flyers (along with their HARM Codes)
+        training snapshot from now to one year back.  This endpoint makes several
+        calls to the ARMS system to create a summary of training.
+      operationId: getFlyerCurrentTraining
+      parameters:
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to true.  If set to false, then the lookup will come from ARMS itself.\
+          \  The various parts of the response that are made of up data from possibly\
+          \ cached sources will contain a field 'lastServerUpdateTime' showing the\
+          \ recency of the data."
+        required: false
+        schema:
+          type: boolean
+          default: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/FlyerAndHarmCode'
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CurrentTrainingDto'
   /flight-svc/flight-data:
     post:
       tags:
@@ -211,11 +365,11 @@ paths:
         "200":
           description: Successful operation
           content:
-            application/json:
+            '*/*':
               schema:
                 type: array
                 items:
-                  type: string
+                  $ref: '#/components/schemas/ADDFLIGHTOBJIntType'
         "400":
           description: Bad Request
           content:
@@ -289,6 +443,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -297,18 +457,25 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PQIDATAOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/personnel-info:
     post:
       tags:
       - arms-table-svc-controller
       summary: Requests Personnel Info
       operationId: getPersonnelInfo
+      parameters:
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       requestBody:
         content:
           application/json:
@@ -343,6 +510,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -351,12 +524,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PERSONLISTVWOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/pcs-man-month:
     post:
       tags:
@@ -370,6 +537,12 @@ paths:
               $ref: '#/components/schemas/ManMonthRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -378,12 +551,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PCSMANMONTHDATAOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/passport-data:
     post:
       tags:
@@ -451,6 +618,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -459,12 +632,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MAXINCENTIVEPAYOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/max-badge:
     post:
       tags:
@@ -505,6 +672,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -513,12 +686,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MAXAVIATIONOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/man-month:
     post:
       tags:
@@ -586,6 +753,12 @@ paths:
               $ref: '#/components/schemas/JumpTotalRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -594,12 +767,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/JUMPDATATOTALOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/jump-audit:
     post:
       tags:
@@ -694,6 +861,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -702,12 +875,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FORMALTRAININGOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/enlisted-personnel:
     post:
       tags:
@@ -721,6 +888,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -729,12 +902,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ENLISTEDPERSONNELOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/badge-award:
     post:
       tags:
@@ -748,6 +915,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -756,12 +929,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/BADGEAWARDOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/access-zone:
     post:
       tags:
@@ -802,6 +969,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequestXorg'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -810,12 +983,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/OFDAWAIVEROBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/flyer-current-status:
     post:
       tags:
@@ -849,6 +1016,19 @@ paths:
       - aircrew-svc-controller
       summary: Flyer Aircraft Total
       operationId: getFlyerAircraftTotal
+      parameters:
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       requestBody:
         content:
           application/json:
@@ -883,6 +1063,12 @@ paths:
               $ref: '#/components/schemas/Flyer7306090Request'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -891,12 +1077,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLYER7306090OBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /aircrew-svc/flight-pay:
     post:
       tags:
@@ -984,6 +1164,19 @@ paths:
       - aircrew-svc-controller
       summary: Requests Aircrew Personnel Data
       operationId: getAircrewPersonnel
+      parameters:
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       requestBody:
         content:
           application/json:
@@ -991,6 +1184,12 @@ paths:
               $ref: '#/components/schemas/DefaultArmsRequest'
         required: true
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -999,12 +1198,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AIRCREWPERSONNELOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/training-task:
     get:
       tags:
@@ -1054,7 +1247,25 @@ paths:
         required: true
         schema:
           type: string
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1063,12 +1274,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TRAININGTASKDATAOutput'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /training-svc/training-program:
     get:
       tags:
@@ -1128,6 +1333,12 @@ paths:
         required: true
         schema:
           type: string
+      - name: useCache
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
       responses:
         "200":
           description: Successful operation
@@ -1203,6 +1414,18 @@ paths:
         required: true
         schema:
           type: string
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       responses:
         "200":
           description: Successful operation
@@ -1243,6 +1466,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1251,12 +1480,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/WAIVERCODEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/training-ref-date:
     get:
       tags:
@@ -1399,6 +1622,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1407,12 +1636,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PTICODEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/pqi:
     get:
       tags:
@@ -1438,6 +1661,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1446,12 +1675,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PQICODEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/physical-availability:
     get:
       tags:
@@ -1655,6 +1878,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1663,12 +1892,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/LOOKUPCODEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/ira:
     get:
       tags:
@@ -1779,6 +2002,18 @@ paths:
           maxLength: 100
           minLength: 0
           type: string
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       responses:
         "200":
           description: Successful operation
@@ -1947,6 +2182,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1955,12 +2196,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FLYERGRADEOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/entitlement-status:
     get:
       tags:
@@ -1986,6 +2221,12 @@ paths:
           minLength: 0
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -1994,12 +2235,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ENTITLEMENTSTATUSOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /code-lookup-svc/crew-position:
     get:
       tags:
@@ -2024,6 +2259,18 @@ paths:
           maxLength: 100
           minLength: 0
           type: string
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       responses:
         "200":
           description: Successful operation
@@ -2102,6 +2349,18 @@ paths:
           maxLength: 100
           minLength: 0
           type: string
+      - name: useCache
+        in: query
+        description: "Optional.  Whether to attempt to use cache or not. Defaults\
+          \ to false.  If set to true, then the lookup will attempt to be sourced\
+          \ from the gateway cache.  If it cannot be found, then ARMS will be queried\
+          \ directly.  In either case, if this flag is true, the response header will\
+          \ contain an 'x-last-server-update-time' showing the recency of the data\
+          \ in UTC."
+        required: false
+        schema:
+          type: boolean
+          default: false
       responses:
         "200":
           description: Successful operation
@@ -2117,6 +2376,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExceptionResponse'
+  /cache/clear:
+    get:
+      tags:
+      - cache-controller
+      operationId: clearCache
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
   /arms-table-svc/sonic-boom:
     get:
       tags:
@@ -2323,6 +2594,12 @@ paths:
         schema:
           type: string
       responses:
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionResponse'
         "200":
           description: Successful operation
           content:
@@ -2331,12 +2608,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/JUMPDATAOBJIntType'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExceptionResponse'
   /arms-table-svc/crew-table:
     get:
       tags:
@@ -2505,6 +2776,19 @@ components:
         \ record status and has the folllowing options: D - Deleted, N - New, U -\
         \ Updated, A - New/Updated. OrgIds and FlyerIds are not required, and cannot\
         \ both be supplied at the same time."
+    ExceptionResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: string
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
     TRAININGREQUIREMENTOBJIntType:
       required:
       - annualvolumeaccomplishedtotal
@@ -2734,19 +3018,6 @@ components:
           type: string
           xml:
             name: RECSTATUS
-    ExceptionResponse:
-      type: object
-      properties:
-        timestamp:
-          type: string
-        status:
-          type: string
-        error:
-          type: string
-        message:
-          type: string
-        path:
-          type: string
     ProfileAssignmentDataRequest:
       required:
       - harmCode
@@ -3168,6 +3439,431 @@ components:
           type: string
           xml:
             name: MESSAGE
+    FlyerAndHarmCode:
+      type: object
+      properties:
+        flyerId:
+          type: number
+          format: double
+        harmCode:
+          type: string
+    MonthlyAccomplishedTotals:
+      type: object
+      properties:
+        january:
+          type: integer
+          format: int32
+        february:
+          type: integer
+          format: int32
+        march:
+          type: integer
+          format: int32
+        april:
+          type: integer
+          format: int32
+        may:
+          type: integer
+          format: int32
+        june:
+          type: integer
+          format: int32
+        july:
+          type: integer
+          format: int32
+        august:
+          type: integer
+          format: int32
+        september:
+          type: integer
+          format: int32
+        october:
+          type: integer
+          format: int32
+        november:
+          type: integer
+          format: int32
+        december:
+          type: integer
+          format: int32
+    TaskRequirements:
+      type: object
+      properties:
+        lastServerUpdateTime:
+          type: string
+          format: date-time
+        maximumRestriction:
+          type: integer
+          format: int32
+        proficiencyFactorRestriction:
+          type: integer
+          format: int32
+        prorationMinRestriction:
+          type: integer
+          format: int32
+        restrictionCode:
+          type: string
+        requirementsFrequencyNumber:
+          type: integer
+          format: int32
+        requirementsFrequencyType:
+          type: string
+        requirementsPhasePeriodNumber:
+          type: integer
+          format: int32
+        requirementsPhasePeriodType:
+          type: string
+        requirementsVolumeAnnual:
+          type: integer
+          format: int32
+        academicRestriction:
+          type: integer
+          format: int32
+        instructorRestriction:
+          type: integer
+          format: int32
+        simulatorRestriction:
+          type: integer
+          format: int32
+        requirementsDuration:
+          type: string
+        requirementsVolumeMonthly:
+          type: integer
+          format: int32
+        requirementsVolumeQuarterly:
+          type: integer
+          format: int32
+        requirementsVolumeSemiAnnual:
+          type: integer
+          format: int32
+        requirementsVol3MonLookback:
+          type: integer
+          format: int32
+        academicFlag:
+          type: string
+        instructorFlag:
+          type: string
+        simulatorFlag:
+          type: string
+        dualCreditTaskId:
+          type: string
+        dualCreditTypeCode:
+          type: string
+        prerequisiteTaskId:
+          type: string
+    TrainingProfile:
+      type: object
+      properties:
+        trainingProfileName:
+          type: string
+        trainingProfileCode:
+          type: string
+        trainingTasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingTask'
+    TrainingProgram:
+      type: object
+      properties:
+        lastServerUpdateTime:
+          type: string
+          format: date-time
+        trainingProgramName:
+          type: string
+        trainingProgramCode:
+          type: string
+        trainingProfiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingProfile'
+    TrainingProgramDto:
+      type: object
+      properties:
+        flyerId:
+          type: string
+        harmCode:
+          type: string
+        organizationId:
+          type: string
+        fromDate:
+          type: string
+          format: date-time
+        toDate:
+          type: string
+          format: date-time
+        trainingPrograms:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingProgram'
+    TrainingTask:
+      type: object
+      properties:
+        trainingTaskCode:
+          type: string
+        trainingTaskName:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        dateLastAccomplished:
+          type: string
+          format: date-time
+        methodAcademicTotal:
+          type: integer
+          format: int32
+        methodInstructorTotal:
+          type: integer
+          format: int32
+        methodSimulatorTotal:
+          type: integer
+          format: int32
+        methodMaximumTotal:
+          type: integer
+          format: int32
+        prorationMinimum:
+          type: integer
+          format: int32
+        monthsProrated:
+          type: integer
+          format: int32
+        waiverDate:
+          type: string
+          format: date-time
+        monthlyAccomplishedTotals:
+          $ref: '#/components/schemas/MonthlyAccomplishedTotals'
+        taskRequirements:
+          $ref: '#/components/schemas/TaskRequirements'
+    FlyerSearchInfo:
+      required:
+      - harmCode
+      type: object
+      properties:
+        people:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonInfo'
+        harmCode:
+          maxLength: 4
+          minLength: 4
+          type: string
+        orgId:
+          type: string
+    PersonInfo:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        lastFour:
+          maxLength: 4
+          minLength: 4
+          type: string
+    RecordNotFoundException:
+      type: object
+      properties:
+        cause:
+          type: object
+          properties:
+            stackTrace:
+              type: array
+              items:
+                type: object
+                properties:
+                  classLoaderName:
+                    type: string
+                  moduleName:
+                    type: string
+                  moduleVersion:
+                    type: string
+                  methodName:
+                    type: string
+                  fileName:
+                    type: string
+                  lineNumber:
+                    type: integer
+                    format: int32
+                  className:
+                    type: string
+                  nativeMethod:
+                    type: boolean
+            message:
+              type: string
+            suppressed:
+              type: array
+              items:
+                type: object
+                properties:
+                  stackTrace:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        classLoaderName:
+                          type: string
+                        moduleName:
+                          type: string
+                        moduleVersion:
+                          type: string
+                        methodName:
+                          type: string
+                        fileName:
+                          type: string
+                        lineNumber:
+                          type: integer
+                          format: int32
+                        className:
+                          type: string
+                        nativeMethod:
+                          type: boolean
+                  message:
+                    type: string
+                  localizedMessage:
+                    type: string
+            localizedMessage:
+              type: string
+        stackTrace:
+          type: array
+          items:
+            type: object
+            properties:
+              classLoaderName:
+                type: string
+              moduleName:
+                type: string
+              moduleVersion:
+                type: string
+              methodName:
+                type: string
+              fileName:
+                type: string
+              lineNumber:
+                type: integer
+                format: int32
+              className:
+                type: string
+              nativeMethod:
+                type: boolean
+        message:
+          type: string
+        suppressed:
+          type: array
+          items:
+            type: object
+            properties:
+              stackTrace:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    classLoaderName:
+                      type: string
+                    moduleName:
+                      type: string
+                    moduleVersion:
+                      type: string
+                    methodName:
+                      type: string
+                    fileName:
+                      type: string
+                    lineNumber:
+                      type: integer
+                      format: int32
+                    className:
+                      type: string
+                    nativeMethod:
+                      type: boolean
+              message:
+                type: string
+              localizedMessage:
+                type: string
+        localizedMessage:
+          type: string
+    FlyerIdInfo:
+      type: object
+      properties:
+        firstName:
+          type: string
+        middleInitial:
+          type: string
+        lastName:
+          type: string
+        flyerUniqueId:
+          type: string
+        flyerOrganizationId:
+          type: string
+        harmCode:
+          type: string
+        lastServerUpdateTime:
+          type: string
+          format: date-time
+    CodeLookUpResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        lastServerUpdateTime:
+          type: string
+          format: date-time
+    Currency:
+      type: object
+      properties:
+        accomplishedDate:
+          type: string
+          format: date-time
+        numberAccomplished:
+          type: integer
+          format: int32
+        trainingProgram:
+          $ref: '#/components/schemas/CodeLookUpResponse'
+        trainingTask:
+          $ref: '#/components/schemas/CodeLookUpResponse'
+        lastServerUpdateTime:
+          type: string
+          format: date-time
+    CurrentTrainingDto:
+      type: object
+      properties:
+        harmCode:
+          type: string
+        flyerId:
+          type: string
+        toDate:
+          type: string
+          format: date-time
+        fromDate:
+          type: string
+          format: date-time
+        trainingPrograms:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeLookUpResponse'
+        position:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeLookUpResponse'
+        quals:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlyerQualificationDto'
+        currencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Currency'
+    FlyerQualificationDto:
+      type: object
+      properties:
+        flyerAircraftMds:
+          type: string
+        flyerAircraftCertText:
+          type: string
+        flyerCertCode:
+          type: string
+        lastServerUpdateTime:
+          type: string
+          format: date-time
     FlightDataRequest:
       required:
       - flightFromDate
@@ -3687,6 +4383,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FlightActRecord'
+    ADDFLIGHTOBJIntType:
+      required:
+      - fltrecnum
+      - message
+      - recstatus
+      type: object
+      properties:
+        fltrecnum:
+          type: string
+          xml:
+            name: FLT_REC_NUM
+        recstatus:
+          type: string
+          xml:
+            name: RECSTATUS
+        message:
+          type: string
+          xml:
+            name: MESSAGE
     DefaultArmsRequest:
       required:
       - harmCode

@@ -2,7 +2,6 @@ package mil.tron.commonapi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
-
 import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.OrganizationDtoResponseWrapper;
@@ -24,7 +23,6 @@ import mil.tron.commonapi.repository.filter.QueryOperator;
 import mil.tron.commonapi.service.OrganizationService;
 import mil.tron.commonapi.service.PersonConversionOptions;
 import mil.tron.commonapi.service.PersonService;
-
 import org.assertj.core.util.Lists;
 import org.hamcrest.Matchers;
 import org.json.JSONArray;
@@ -37,6 +35,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
@@ -51,8 +50,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -131,6 +129,33 @@ public class OrganizationIntegrationTest {
 
         mockMvc.perform(get(ENDPOINT + "?page=1&size=2")).andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+
+    }
+
+    @Test
+    void testRollbackOnBulkFail() throws Exception {
+
+        // test that rollback on bulk insert happens
+
+        OrganizationDto s2 = new OrganizationDto();
+        s2.setName("TEST2");
+        s2.setMembers(null);
+
+        OrganizationDto s3 = new OrganizationDto();
+        s3.setName("TEST2");
+        s3.setMembers(null);
+
+        List<OrganizationDto> newOrganizations = Lists.newArrayList(s2, s3);
+
+        mockMvc.perform(post(ENDPOINT_V2 + "organizations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(newOrganizations)))
+                .andExpect(status().is(not(HttpStatus.CREATED)));
+
+        mockMvc.perform(get(ENDPOINT_V2)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
 
     }
 
@@ -405,37 +430,42 @@ public class OrganizationIntegrationTest {
             mockMvc.perform(get(ENDPOINT + "{id}", this.existingOrgDto.getId()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.leader", equalTo(null)))
-                    .andExpect(jsonPath("$.members", Matchers.not(Matchers.contains(newLeaderId.toString()))));
+                    .andExpect(jsonPath("$.members", not(Matchers.contains(newLeaderId.toString()))));
 
         }
 
         @Test
         @Transactional
-        void testPatchAddOrgMembers() throws Exception {
-
-            UUID newMemberId = UUID.randomUUID();
-            PersonDto newMember = personService.convertToDto(Person.builder()
-                    .id(newMemberId)
-                    .build(), new PersonConversionOptions());
-            newMember.setRank("Capt");
-            newMember.setBranch(Branch.USAF);
-            personService.createPerson(newMember);
-
+        void testPatchOrgMembersField() throws Exception {
             JSONArray contentArray = new JSONArray();
             JSONObject content = new JSONObject();
             content.put("op", "add");
             content.put("path", "/members/-");
-            content.put("value", newMemberId);
+            content.put("value", UUID.randomUUID());
             contentArray.put(content);
-            MvcResult result = mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
+            
+            // Should fail because members field is non-patchable
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
                     .contentType("application/json-patch+json")
                     .content(contentArray.toString()))
-                    .andExpect(status().isOk())
-                    .andReturn();
-            Optional<Organization> updatedOrg = organizationRepository.findById(this.existingOrgDto.getId());
-            Set<Person> orgMembers = updatedOrg.get().getMembers();
-            int numberOfMembers = orgMembers.size();
-            assertEquals(2, numberOfMembers);
+                    .andExpect(status().isBadRequest());
+        }
+        
+        @Test
+        @Transactional
+        void testPatchOrgSubordinateOrganizationsField() throws Exception {
+            JSONArray contentArray = new JSONArray();
+            JSONObject content = new JSONObject();
+            content.put("op", "add");
+            content.put("path", "/subordinateOrganizations/-");
+            content.put("value", UUID.randomUUID());
+            contentArray.put(content);
+            
+            // Should fail because subordinateOrganizations field is non-patchable
+            mockMvc.perform(patch(ENDPOINT_V2 + "{id}", this.existingOrgDto.getId())
+                    .contentType("application/json-patch+json")
+                    .content(contentArray.toString()))
+                    .andExpect(status().isBadRequest());
         }
 
         @Test

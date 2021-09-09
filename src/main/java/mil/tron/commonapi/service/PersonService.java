@@ -8,6 +8,7 @@ import mil.tron.commonapi.repository.filter.FilterCriteria;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.List;
 import java.util.UUID;
@@ -16,7 +17,15 @@ public interface PersonService {
 	PersonDto createPerson(PersonDto dto);
 	PersonDto createPersonFromJwt(PlatformJwtDto dto);
 	PersonDto updatePerson(UUID id, PersonDto dto);
-	PersonDto patchPerson(UUID id, JsonPatch patch);
+	PersonDto updatePersonByEmail(String email, PersonDto dto);
+	/**
+	 * 
+	 * @param id the id of the person to patch
+	 * @param patch the json patch
+	 * @return updated person dto
+	 * @throws MethodArgumentNotValidException throws if validation fails on patched person DTO
+	 */
+	PersonDto patchPerson(UUID id, JsonPatch patch) throws MethodArgumentNotValidException;
 
 	void deletePerson(UUID id);
 	Iterable<PersonDto> getPersons(PersonConversionOptions options, Pageable page);

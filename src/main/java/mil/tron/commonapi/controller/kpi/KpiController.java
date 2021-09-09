@@ -1,7 +1,7 @@
 package mil.tron.commonapi.controller.kpi;
 
-import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -17,9 +17,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
-import mil.tron.commonapi.exception.BadRequestException;
+import mil.tron.commonapi.dto.kpi.KpiSummaryDtoResponseWrapper;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.kpi.KpiService;
 
@@ -27,8 +28,6 @@ import mil.tron.commonapi.service.kpi.KpiService;
 @RequestMapping({"${api-prefix.v2}/kpi"})
 @PreAuthorizeDashboardAdmin
 public class KpiController {
-	private static final String DATE_MESSAGE = "Start date must be before End Date";
-	
 	private KpiService kpiService;
 
 	KpiController(KpiService kpiService) {
@@ -44,22 +43,51 @@ public class KpiController {
                 description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "400",
-            	description = "Bad Rquest (Start Date required. Start date must be before end date.)",
+            	description = "Bad Request. Possible reasons include: \n\n"
+            			+ "Start Date required.\n\n"
+            			+ "Start date must be before or equal to End Date.\n\n"
+            			+ "Start date cannot be in the future (there would be no data).",
                 	content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @GetMapping("/summary")
     public ResponseEntity<KpiSummaryDto> getKpiSummary (
-            @Parameter(description = "Earliest date to include", required = true) @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
-            @Parameter(description = "Latest date to include. Will default to today if not provided") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
+    		@Parameter(description = "Earliest date to include in UTC.",
+    				schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
+		    	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
+		    @Parameter(description = "Latest date to include in UTC. Will default to the current date if not provided.",
+		    		schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
+		    	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
 	) {
-    	if (endDate == null) {
-    		endDate = Date.from(Instant.now());
-    	}
-    	
-    	if(startDate.compareTo(endDate) >= 0) {
-            throw new BadRequestException(DATE_MESSAGE);
-        }
-    	
         return new ResponseEntity<>(kpiService.aggregateKpis(startDate, endDate), HttpStatus.OK);
+    }
+	
+	@Operation(summary = "Retrieves previously recorded KPIs.", 
+			description = "Retrieves previously recorded KPIs. The KPIs will be reported in weekly increments. "
+					+ "Monday is the start of the week and Sunday is the end of the week.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+					description = "Successful operation", 
+							content = @Content(schema = @Schema(implementation = KpiSummaryDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "403",
+                description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "400",
+            	description = "Bad Request. Possible reasons include: \n\n"
+            			+ "Start Date required.\n\n"
+            			+ "Start date must be before or equal to End Date.\n\n"
+            			+ "Start date cannot be set to within the current week or in the future (there would be no data).",
+                	content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+    @GetMapping("/series")
+    public ResponseEntity<List<KpiSummaryDto>> getKpiSeries (
+            @Parameter(description = "Earliest date to include in UTC.",
+            		schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
+            	@RequestParam(required = true) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
+            @Parameter(description = "Latest date to include in UTC. Will default to the previous week from today if not provided.",
+            		schema = @Schema(type="string", format = "date", example = "yyyy-MM-dd")) 
+            	@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate
+	) {
+        return new ResponseEntity<>(kpiService.getKpisRangeOnStartDateBetween(startDate, endDate), HttpStatus.OK);
     }
 }

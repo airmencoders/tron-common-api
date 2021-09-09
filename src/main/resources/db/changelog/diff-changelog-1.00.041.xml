@@ -1,0 +1,111 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="Dylan" id="1627379204797-1">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="kpi_summary"/>
+            </not> 
+        </preConditions>
+
+        <createTable tableName="kpi_summary">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="kpi_summaryPK"/>
+            </column>
+            <column name="app_client_to_app_source_request_count" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="app_source_count" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="average_latency_for_successful_requests" type="FLOAT8"/>
+            <column name="end_date" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="date">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1627379204797-2">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="kpi_summary_unique_visitor_counts"/>
+            </not> 
+        </preConditions>
+
+        <createTable tableName="kpi_summary_unique_visitor_counts">
+            <column name="kpi_summary_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unique_visitor_counts_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1627379204797-3">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="unique_visitor_count"/>
+            </not> 
+        </preConditions>
+
+        <createTable tableName="unique_visitor_count">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="unique_visitor_countPK"/>
+            </column>
+            <column name="request_count" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unique_count" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="visitor_type" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1627379204797-4">
+        <preConditions onFail="CONTINUE">
+            <tableExists tableName="kpi_summary"/>
+        </preConditions>
+
+        <addUniqueConstraint columnNames="end_date" constraintName="UC_KPI_SUMMARYEND_DATE_COL" tableName="kpi_summary"/>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1627379204797-5">
+        <preConditions onFail="CONTINUE">
+            <tableExists tableName="kpi_summary"/>
+        </preConditions>
+
+        <addUniqueConstraint columnNames="start_date" constraintName="UC_KPI_SUMMARYSTART_DATE_COL" tableName="kpi_summary"/>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1627379204797-6">
+        <preConditions onFail="CONTINUE">
+            <tableExists tableName="kpi_summary_unique_visitor_counts"/>
+        </preConditions>
+
+        <addUniqueConstraint columnNames="unique_visitor_counts_id" constraintName="UK_6arvnmqyy4g82uimauc91n2m8" tableName="kpi_summary_unique_visitor_counts"/>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1627379204797-7">
+        <preConditions onFail="CONTINUE">
+            <tableExists tableName="kpi_summary_unique_visitor_counts"/>
+            <tableExists tableName="kpi_summary"/>
+        </preConditions>
+
+        <addForeignKeyConstraint baseColumnNames="kpi_summary_id" baseTableName="kpi_summary_unique_visitor_counts" constraintName="FK2l0flkhmlsrs2wi97mlwee9px" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="kpi_summary" validate="true"/>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1627379204797-8">
+        <preConditions onFail="CONTINUE">
+            <tableExists tableName="kpi_summary_unique_visitor_counts"/>
+            <tableExists tableName="unique_visitor_count"/>
+        </preConditions>
+
+        <addForeignKeyConstraint baseColumnNames="unique_visitor_counts_id" baseTableName="kpi_summary_unique_visitor_counts" constraintName="FKpgoiedg827wf7qps39i7a4xrp" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="unique_visitor_count" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

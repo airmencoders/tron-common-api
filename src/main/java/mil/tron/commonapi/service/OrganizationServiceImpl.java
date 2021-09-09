@@ -23,8 +23,10 @@ import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.orgtypes.Unit;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.NotAuthorizedException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.efa.IllegalOrganizationModification;
 import mil.tron.commonapi.pubsub.EventManagerService;
 import mil.tron.commonapi.pubsub.messages.*;
 import mil.tron.commonapi.repository.OrganizationMetadataRepository;
@@ -32,8 +34,12 @@ import mil.tron.commonapi.repository.OrganizationRepository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.filter.FilterCriteria;
 import mil.tron.commonapi.repository.filter.SpecificationBuilder;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthResponse;
 import mil.tron.commonapi.service.fieldauth.EntityFieldAuthService;
+import mil.tron.commonapi.service.fieldauth.EntityFieldAuthType;
 import mil.tron.commonapi.service.utility.OrganizationUniqueChecksService;
+import mil.tron.commonapi.service.utility.ValidatorService;
+
 import org.modelmapper.AbstractConverter;
 import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
@@ -46,6 +52,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+
+import javax.transaction.Transactional;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -53,6 +62,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static mil.tron.commonapi.service.utility.ReflectionUtils.checkNonPatchableFieldsUntouched;
 import static mil.tron.commonapi.service.utility.ReflectionUtils.fields;
 
 @Service
@@ -65,9 +75,11 @@ public class OrganizationServiceImpl implements OrganizationService {
 	private final EventManagerService eventManagerService;
 	private final DtoMapper modelMapper;
 	private final EntityFieldAuthService entityFieldAuthService;
+	private final ValidatorService validatorService;
 	private static final String RESOURCE_NOT_FOUND_MSG = "Resource with the ID: %s does not exist.";
 	private static final String ORG_IS_IN_ANCESTRY_MSG = "Organization %s is already an ancestor to this organization.";
 	private static final String ORG_IS_ALREADY_SUBORG_ELSEWHERE = "Organization %s is already a subordinate to another organization.";
+	private static final String USER_NOT_AUTHORIZED_FIELD_EDIT_MSG = "Do not have the necessary privileges to edit the field [%s]";
 
 	@Value("${efa-enabled}")
 	private boolean efaEnabled;
@@ -83,6 +95,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	private final ObjectMapper objMapper;
 
+	@SuppressWarnings("squid:S00107")
 	public OrganizationServiceImpl(
 			OrganizationRepository repository,
 			PersonRepository personRepository,
@@ -90,7 +103,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 			OrganizationUniqueChecksService orgChecksService,
 			OrganizationMetadataRepository organizationMetadataRepository,
 			EventManagerService eventManagerService,
-			EntityFieldAuthService entityFieldAuthService) {
+			EntityFieldAuthService entityFieldAuthService,
+			ValidatorService validatorService) {
 
 		this.repository = repository;
 		this.personRepository = personRepository;
@@ -99,14 +113,20 @@ public class OrganizationServiceImpl implements OrganizationService {
 		this.organizationMetadataRepository = organizationMetadataRepository;
 		this.eventManagerService = eventManagerService;
 		this.entityFieldAuthService = entityFieldAuthService;
+		this.validatorService = validatorService;
 		this.modelMapper = new DtoMapper();
 		this.objMapper = new ObjectMapper();
 	}
 
 	// helper that applies entity field authorization for us
-	private Organization applyFieldAuthority(Organization incomingEntity) {
+	private EntityFieldAuthResponse<Organization> applyFieldAuthority(Organization incomingEntity) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		return entityFieldAuthService.adjudicateOrganizationFields(incomingEntity, authentication);
+	}
+	
+	private boolean isUserAuthorizedForFieldEdit(String fieldName) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		return entityFieldAuthService.userHasAuthorizationToField(authentication, EntityFieldAuthType.ORGANIZATION, fieldName);
 	}
 
 	private void performOrganizationParentChildLogic(Organization org) {
@@ -137,7 +157,6 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		// modify the suborg's parent
 		setOrgParentConditionally(subOrg, org.getId().toString());
-		repository.save(applyFieldAuthority(subOrg));
 	}
 
 	/**
@@ -153,13 +172,17 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 	/**
 	 * Adds a list of organizations as subordinate orgs to provided organization
+	 * Will perform EFA check.
 	 *
 	 * @param organizationId organization ID to modify
 	 * @param orgIds         list of orgs by their UUIDs to add as subordinate organizations
 	 * @return the persisted, modified organization
+	 * 
+	 * @throws IllegalOrganizationModification throws if EFA denied fields. Will still save Organization.
 	 */
 	@Override
-	public Organization addOrg(UUID organizationId, List<UUID> orgIds) {
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
+	public OrganizationDto addOrg(UUID organizationId, List<UUID> orgIds) {
 		Organization organization = repository.findById(organizationId)
 				.orElseThrow(() -> new RecordNotFoundException(
 						String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
@@ -171,25 +194,30 @@ public class OrganizationServiceImpl implements OrganizationService {
 			performFamilyTreeChecks(organization, subordinate);
 		}
 
-		Organization result = repository.save(applyFieldAuthority(organization));
+		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(organization);
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 
 		SubOrgAddMessage message = new SubOrgAddMessage();
 		message.setParentOrgId(organizationId);
 		message.setSubOrgsAdded(Sets.newHashSet(orgIds));
 		eventManagerService.recordEventAndPublish(message);
 
-		return result;
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
-	 * Removes a list of organizations as subordinate orgs from provided organization
+	 * Removes a list of organizations as subordinate orgs from provided organization.
+	 * Will perform EFA check.
 	 *
 	 * @param organizationId organization ID to modify
 	 * @param orgIds         list of orgs by their UUIDs to remove from subordinate organizations
 	 * @return the persisted, modified organization
+	 * 
+	 * @throws IllegalOrganizationModification throws if EFA denied fields. Will still save Organization.
 	 */
 	@Override
-	public Organization removeOrg(UUID organizationId, List<UUID> orgIds) {
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
+	public OrganizationDto removeOrg(UUID organizationId, List<UUID> orgIds) {
 		Organization organization = repository.findById(organizationId)
 				.orElseThrow(() -> new RecordNotFoundException(
 						String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
@@ -202,28 +230,33 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 			// modify this suborg's parent - they were removed from being a suborg of some parent, so null out parent
 			setOrgParentConditionally(subordinate, null);
-			repository.save(applyFieldAuthority(subordinate));
+			repository.save(subordinate);
 		}
 
-		Organization result = repository.save(applyFieldAuthority(organization));
+		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(organization);
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 
 		SubOrgRemoveMessage message = new SubOrgRemoveMessage();
 		message.setParentOrgId(organizationId);
 		message.setSubOrgsRemoved(Sets.newHashSet(orgIds));
 		eventManagerService.recordEventAndPublish(message);
 
-		return result;
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
 	 * Removes members from an organization and re-persists it to db.
+	 * Will perform EFA check.
 	 *
 	 * @param organizationId UUID of the organization
 	 * @param personIds      List of Person UUIDs to remove
 	 * @return Organization entity object
+	 * 
+	 * @throws IllegalOrganizationModification throws if EFA denied fields. Will still save Organization.
 	 */
 	@Override
-	public Organization removeMember(UUID organizationId, List<UUID> personIds) {
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
+	public OrganizationDto removeMember(UUID organizationId, List<UUID> personIds) {
 		Organization organization = repository.findById(organizationId).orElseThrow(
 				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
 
@@ -239,9 +272,10 @@ public class OrganizationServiceImpl implements OrganizationService {
             }
 		}
 
-        Organization result = repository.save(applyFieldAuthority(organization));
+		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(organization);
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 
-        if (updatedPersons.size() > 0) {
+        if (!updatedPersons.isEmpty()) {
             personRepository.saveAll(updatedPersons);
         }
 
@@ -250,7 +284,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		message.setMembersRemoved(Sets.newHashSet(personIds));
 		eventManagerService.recordEventAndPublish(message);
 
-		return result;
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
@@ -260,9 +294,13 @@ public class OrganizationServiceImpl implements OrganizationService {
      * @param personIds      List of Person UUIDs to remove
      * @param primary        Whether to set the org as the persons' primary org
      * @return Organization entity object
+     * 
+     * @throws IllegalOrganizationModification throws if EFA has denied fields. Will still saved the updated organization.
+     * 
      */
 	@Override
-	public Organization addMember(UUID organizationId, List<UUID> personIds, boolean primary) {
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
+	public OrganizationDto addMember(UUID organizationId, List<UUID> personIds, boolean primary) {
 		Organization organization = repository.findById(organizationId)
 				.orElseThrow(() -> new RecordNotFoundException(
                         String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
@@ -278,7 +316,8 @@ public class OrganizationServiceImpl implements OrganizationService {
             return person;
         }).collect(Collectors.toList());
 
-        Organization result = repository.save(applyFieldAuthority(organization));
+        EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(organization);
+		Organization result = repository.save(efaResponse.getModifiedEntity());
         
         if (primary) {
             personRepository.saveAll(updatedPersons);
@@ -289,17 +328,21 @@ public class OrganizationServiceImpl implements OrganizationService {
 		message.setMembersAdded(Sets.newHashSet(personIds));
 		eventManagerService.recordEventAndPublish(message);
 
-		return result;
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
-	 * Modifies non collection type attributes of the organization
+	 * Modifies non collection type attributes of the organization.
+	 * EFA will be applied to the modified organization.
 	 *
 	 * @param organizationId The UUID of the organization to modify
 	 * @param attribs        A map of string key-values where keys are named of fields and values are the value to set to
 	 * @return The modified Organization entity object
+	 * 
+	 * @throws IllegalOrganizationModification throws if EFA has denied some fields. Organization will still be saved with fields that were not denied.
 	 */
 	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
 	public OrganizationDto modify(UUID organizationId, Map<String, String> attribs) {  //NOSONAR
 		Organization organization = repository.findById(organizationId).orElseThrow(
 				() -> new RecordNotFoundException(String.format(RESOURCE_NOT_FOUND_MSG, organizationId.toString())));
@@ -341,11 +384,25 @@ public class OrganizationServiceImpl implements OrganizationService {
 			}
 		});
 
-		return updateMetadata(organization, Optional.empty(), metadata);
+		Organization result = appendAndUpdateMetadata(organization, Optional.empty(), metadata, isUserAuthorizedForFieldEdit(Organization.METADATA_FIELD));
+		
+		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(result);
+		
+		performOrganizationParentChildLogic(result);
+		performParentChecks(result);
+		
+		Organization savedResult = repository.save(efaResponse.getModifiedEntity());
+		return checkEfaResponseForIllegalModification(savedResult, efaResponse.getDeniedFields());
 	}
 
+	/**
+	 * Patched Organization will have EFA applied.
+	 * 
+	 * @throws IllegalOrganizationModification throws if EFA failed on some fields. The updated Organization will still be saved.
+	 */
 	@Override
-	public OrganizationDto patchOrganization(UUID id, JsonPatch patch) {
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
+	public OrganizationDto patchOrganization(UUID id, JsonPatch patch) throws MethodArgumentNotValidException {
 		Optional<Organization> dbOrganization = this.repository.findById(id);
 
 		if (dbOrganization.isEmpty()) {
@@ -354,6 +411,13 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		OrganizationDto dbOrgDto = convertToDto(dbOrganization.get());
 		OrganizationDto patchedOrgDto = applyPatchToOrganization(patch, dbOrgDto);
+
+		// check we didnt change anything on any NonPatchableFields
+		checkNonPatchableFieldsUntouched(dbOrgDto, patchedOrgDto);
+
+		// Validate the dto with the changes applied to it
+		validatorService.isValid(patchedOrgDto, OrganizationDto.class);
+
 		Organization patchedOrg = convertToEntity(patchedOrgDto);
 
 		// If patch changes name and the new name is not unique throw error
@@ -363,13 +427,20 @@ public class OrganizationServiceImpl implements OrganizationService {
 					patchedOrg.getName()));
 		}
 
-		OrganizationDto updateOrganization = updateMetadata(patchedOrg, dbOrganization, patchedOrgDto.getMeta());
+		appendAndUpdateMetadata(patchedOrg, dbOrganization, patchedOrgDto.getMeta(), isUserAuthorizedForFieldEdit(Organization.METADATA_FIELD));
+		
+		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(patchedOrg);
+		
+		performOrganizationParentChildLogic(efaResponse.getModifiedEntity());
+		performParentChecks(efaResponse.getModifiedEntity());
+		
+		Organization result = repository.save(efaResponse.getModifiedEntity());
 
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.addOrgId(id);
 		eventManagerService.recordEventAndPublish(message);
 
-		return updateOrganization;
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
 
 	/**
@@ -414,7 +485,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * broken out for pub-sub purposes.  This helper does NOT invoke a pub-sub message
 	 * @param organization OrganizationDto entity to persist
 	 */
-	private OrganizationDto persistOrganization(OrganizationDto organization) {
+	public OrganizationDto persistOrganization(OrganizationDto organization) {
 		Organization org = this.convertToEntity(organization);
 
 		if (repository.existsById(org.getId()))
@@ -423,7 +494,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 		if (!orgChecksService.orgNameIsUnique(org))
 			throw new ResourceAlreadyExistsException(String.format("Resource with the Name: %s already exists.", org.getName()));
 
+		// go ahead and save the org's name so its at least in the db, should anything fail later on it will get rolled back out
+		repository.save(Organization
+				.builder()
+				.id(organization.getId())
+				.name(organization.getName())
+				.build());
+
 		performOrganizationParentChildLogic(org);
+		performParentChecks(org);
 
 		checkValidMetadataProperties(organization.getOrgType(), organization.getMeta());
 		Organization resultEntity = repository.save(org);
@@ -446,6 +525,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @return The new organization in DTO form
 	 */
 	@Override
+	@Transactional
 	public OrganizationDto createOrganization(OrganizationDto organization) {
 		OrganizationDto result = this.persistOrganization(organization);
 
@@ -457,13 +537,16 @@ public class OrganizationServiceImpl implements OrganizationService {
 	}
 
 	/**
-	 * Updates an existing organization
+	 * Updates an existing organization. EFA will be performed on the updated Organization.
 	 *
 	 * @param id           UUID of the existing organization
 	 * @param organization The organization information to overwrite the existing with (in DTO form)
 	 * @return The modified organization re-wrapped in a DTO object
+	 * 
+	 * @throws IllegalOrganizationModification throws if EFA failed on some fields. The updated Organization will be saved even if EFA has failed
 	 */
 	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
 	public OrganizationDto updateOrganization(UUID id, OrganizationDto organization) {
 		Organization entity = this.convertToEntity(organization);
 
@@ -477,46 +560,92 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 		if (!orgChecksService.orgNameIsUnique(entity))
 			throw new InvalidRecordUpdateRequest(String.format("Name: %s is already in use.", entity.getName()));
-
-		OrganizationDto result = updateMetadata(entity, dbEntity, organization.getMeta());
+		
+		appendAndUpdateMetadata(entity, dbEntity, organization.getMeta(), isUserAuthorizedForFieldEdit(Organization.METADATA_FIELD));
+		
+		EntityFieldAuthResponse<Organization> efaResponse = applyFieldAuthority(entity);
+		
+		performOrganizationParentChildLogic(efaResponse.getModifiedEntity());
+		performParentChecks(efaResponse.getModifiedEntity());
+		
+		Organization result = repository.save(efaResponse.getModifiedEntity());
+		
 		OrganizationChangedMessage message = new OrganizationChangedMessage();
 		message.setOrgIds(Sets.newHashSet(result.getId()));
 		eventManagerService.recordEventAndPublish(message);
-
-		return result;
+		
+		return checkEfaResponseForIllegalModification(result, efaResponse.getDeniedFields());
 	}
-
-	private OrganizationDto updateMetadata(Organization updatedEntity, Optional<Organization> dbEntity, Map<String, String> metadata) {
+	
+	/**
+	 * Appends any metadata from {@code dbEntity} to {@code updatedEntity}
+	 * along with any modifications that arise as a result of {@code metadata}.
+	 * Metadata changes will only be applied to {@link #organizationMetadataRepository}
+	 * if {@code allowedToEdit} is equal to {@code true}.
+	 * 
+	 * This action will not modify {@code dbEntity} in any manner.
+	 * 
+	 * @param updatedEntity the modified entity
+	 * @param dbEntity the database value of {@code updatedEntity}
+	 * @param metadata metadata to modify
+	 * @param allowedToEdit if requesting user is allowed to edit metadata
+	 * @return {@code updatedEntity} with metadata modifications applied
+	 */
+	private Organization appendAndUpdateMetadata(Organization updatedEntity, Optional<Organization> dbEntity, Map<String, String> metadata, boolean allowedToEdit) {
 		checkValidMetadataProperties(updatedEntity.getOrgType(), metadata);
 		List<OrganizationMetadata> toDelete = new ArrayList<>();
-		if (dbEntity.isPresent()) {
-			dbEntity.get().getMetadata().forEach(m -> {
-				updatedEntity.getMetadata().add(m);
-				if (metadata == null || metadata.containsKey(m.getKey())) {
-					toDelete.add(m);
-				}
-			});
-		}
-		if (metadata != null) {
-			metadata.forEach((key, value) -> {
-				Optional<OrganizationMetadata> match = updatedEntity.getMetadata().stream().filter(x -> x.getKey() == key).findAny();
-				if (match.isPresent()) {
-					if (value == null) {
+		List<OrganizationMetadata> toSave = new ArrayList<>();
+		
+		updatedEntity.getMetadata().clear();
+		
+		// Metadata is null, so add everything to delete
+		if (metadata == null) {
+			dbEntity.ifPresent(entity -> toDelete.addAll(entity.getMetadata()));
+		} else {
+			if (dbEntity.isEmpty()) {
+				metadata.forEach((key, value) -> {
+					OrganizationMetadata meta = OrganizationMetadata.builder()
+							.organizationId(updatedEntity.getId())
+							.key(key)
+							.value(value)
+							.build();
+					
+					toSave.add(meta);
+				});
+			} else {
+				metadata.forEach((key, value) -> {
+					Optional<OrganizationMetadata> match = dbEntity.get().getMetadata().stream().filter(x -> x.getKey().equals(key)).findAny();
+					
+					// When this metadata value exist on the database entity
+					// and it's value is null, then this entry is up for deletion.
+					// Otherwise it is either a new entry or an update to an
+					// existing entry, so it's up for save.
+					if (match.isPresent() && value == null) {
 						toDelete.add(match.get());
 					} else {
-						match.get().setValue(value);
+						OrganizationMetadata meta = OrganizationMetadata.builder()
+								.organizationId(updatedEntity.getId())
+								.key(key)
+								.value(value)
+								.build();
+						
+						toSave.add(meta);
 					}
-				} else if (value != null) {
-					updatedEntity.getMetadata().add(organizationMetadataRepository.save(new OrganizationMetadata(updatedEntity.getId(), key, value)));
-				}
-			});
+				});
+			}
 		}
-		performOrganizationParentChildLogic(updatedEntity);
-		performParentChecks(updatedEntity);
-		OrganizationDto result = convertToDto(repository.save(applyFieldAuthority(updatedEntity)));
-		organizationMetadataRepository.deleteAll(toDelete);
-		toDelete.forEach(m -> result.removeMetaProperty(m.getKey()));
-		return result;
+		
+		// Only send these changes to the database if the requesting
+		// user is allowed to edit. Otherwise metadata changes updated
+		// on updatedEntity are only appended to reflect a change.
+		if (allowedToEdit) {
+			organizationMetadataRepository.deleteAll(toDelete);
+			organizationMetadataRepository.saveAll(toSave);
+		}
+		
+		updatedEntity.getMetadata().addAll(toSave);
+		
+		return updatedEntity;
 	}
 
 	/**
@@ -584,10 +713,17 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @param organizationId The UUID of the organization to perform the operation on
 	 * @param personIds      The list of UUIDs of type Person to add
 	 * @return The updated OrganizationDTO object
+	 * 
+	 * @throws NotAuthorizedException throws if requesting user does not have privilege to edit field
 	 */
 	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
 	public OrganizationDto addOrganizationMember(UUID organizationId, List<UUID> personIds, boolean primary) {
-		return this.convertToDto(this.addMember(organizationId, personIds, primary));
+		if (!this.isUserAuthorizedForFieldEdit(Organization.MEMBERS_FIELD)) {
+			throw new NotAuthorizedException(String.format(USER_NOT_AUTHORIZED_FIELD_EDIT_MSG, Organization.MEMBERS_FIELD));
+		}
+		
+		return this.addMember(organizationId, personIds, primary);
 	}
 
 	/**
@@ -596,10 +732,17 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @param organizationId The UUID of the organization to perform the operation on
 	 * @param personIds      The list of UUIDs of type Person to remove
 	 * @return The updated OrganizationDTO object
+	 * 
+	 * @throws NotAuthorizedException throws if requesting user does not have privilege to edit field
 	 */
 	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
 	public OrganizationDto removeOrganizationMember(UUID organizationId, List<UUID> personIds) {
-		return this.convertToDto(this.removeMember(organizationId, personIds));
+		if (!this.isUserAuthorizedForFieldEdit(Organization.MEMBERS_FIELD)) {
+			throw new NotAuthorizedException(String.format(USER_NOT_AUTHORIZED_FIELD_EDIT_MSG, Organization.MEMBERS_FIELD));
+		}
+		
+		return this.removeMember(organizationId, personIds);
 	}
 
 	/**
@@ -608,10 +751,17 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @param organizationId The UUID of the organization to perform the operation on
 	 * @param orgIds         The list of UUIDs of type Organization to add as subordinates
 	 * @return The updated OrganizationDTO object
+	 * 
+	 * @throws NotAuthorizedException throws if requesting user does not have privilege to edit field
 	 */
 	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
 	public OrganizationDto addSubordinateOrg(UUID organizationId, List<UUID> orgIds) {
-		return this.convertToDto(this.addOrg(organizationId, orgIds));
+		if (!this.isUserAuthorizedForFieldEdit(Organization.SUB_ORGS_FIELD)) {
+			throw new NotAuthorizedException(String.format(USER_NOT_AUTHORIZED_FIELD_EDIT_MSG, Organization.SUB_ORGS_FIELD));
+		}
+		
+		return this.addOrg(organizationId, orgIds);
 	}
 
 	/**
@@ -620,19 +770,30 @@ public class OrganizationServiceImpl implements OrganizationService {
 	 * @param organizationId The UUID of the organization to perform the operation on
 	 * @param orgIds         The list of UUIDs of type Organization to removes from subordinates
 	 * @return The updated OrganizationDTO object
+	 * 
+	 * @throws NotAuthorizedException throws if requesting user does not have privilege to edit field
 	 */
 	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
 	public OrganizationDto removeSubordinateOrg(UUID organizationId, List<UUID> orgIds) {
-		return this.convertToDto(this.removeOrg(organizationId, orgIds));
+		if (!this.isUserAuthorizedForFieldEdit(Organization.SUB_ORGS_FIELD)) {
+			throw new NotAuthorizedException(String.format(USER_NOT_AUTHORIZED_FIELD_EDIT_MSG, Organization.SUB_ORGS_FIELD));
+		}
+		
+		return this.removeOrg(organizationId, orgIds);
 	}
 
 	/**
-	 * Adds a list of Org DTOs as new entities in the database.  Only fires one pub-sub event
+	 * Adds a list of Org DTOs as new entities in the database. If any creates fail,
+	 * the entire operation is rolled back.
+	 *
+	 * Only fires one pub-sub event
 	 * containing the UUIDs of the newly created Organizations.
 	 *
 	 * @param newOrgs List of Organization DTOs to add
 	 * @return Same list of input Org DTOs (if they were all successfully created)
 	 */
+	@Transactional
 	@Override
 	public List<OrganizationDto> bulkAddOrgs(List<OrganizationDto> newOrgs) {
 		List<OrganizationDto> addedOrgs = new ArrayList<>();
@@ -815,6 +976,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 	/**
 	 * Private helper to make sure prior to setting an orgs parent, that the proposed parent
 	 * is not already in the descendents of said organization.
+	 * 
 	 * @param org the org we're modifying the parent for
 	 * @param parentUUIDCandidate the UUID of the proposed parent
 	 */
@@ -830,10 +992,9 @@ public class OrganizationServiceImpl implements OrganizationService {
 			List<Organization> parentOrgs = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
 			for (Organization parent : parentOrgs) {
 				parent.removeSubordinateOrganization(org);
-				repository.saveAndFlush(applyFieldAuthority(parent));
+				repository.saveAndFlush(parent);
 			}
 
-			repository.save(applyFieldAuthority(org));
 			return;
 		}
 
@@ -848,13 +1009,13 @@ public class OrganizationServiceImpl implements OrganizationService {
 			List<Organization> parentOrgs = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
 			for (Organization parent : parentOrgs) {
 				parent.removeSubordinateOrganization(org);
-				repository.saveAndFlush(applyFieldAuthority(parent));
+				repository.saveAndFlush(parent);
 			}
 
 			org.setParentOrganization(parentOrg);  // make sure we got the new parent locked in
 			parentOrg.addSubordinateOrganization(org);  // update new parent's sub orgs field to include this org
-			repository.save(applyFieldAuthority(parentOrg));  // now save the new parent org
-			repository.save(applyFieldAuthority(org));  // finally save sub org that was modified
+			repository.save(parentOrg);  // now save the new parent org
+			repository.save(org); // finally save sub org that was modified
 		}
 		else {
 			throw new InvalidRecordUpdateRequest("Proposed Parent UUID is already a descendent of this organization");
@@ -952,6 +1113,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 			JsonNode patched = patch.apply(this.objMapper.convertValue(organizationDto, JsonNode.class));
 			return this.objMapper.treeToValue(patched, OrganizationDto.class);
 		}
+		catch (NullPointerException e) {
+			// apparently JSONPatch lib throws a NullPointerException on a null path, instead of a nicer one
+			throw new InvalidRecordUpdateRequest("Json Patch cannot have a null path value");
+		}
 		catch (JsonPatchException | JsonProcessingException e) {
 			throw new InvalidRecordUpdateRequest(String.format("Error patching organization %s.",
 					organizationDto.getId()));
@@ -987,19 +1152,22 @@ public class OrganizationServiceImpl implements OrganizationService {
 		List<Organization> parentalOrgs = repository.findOrganizationsByParentOrganization(org);
 		for (Organization child: parentalOrgs) {
 			child.setParentOrganization(null);
-			repository.save(applyFieldAuthority(child));
+			repository.save(child);
 		}
 
 		List<Organization> orgsThatOwnThisOrg = repository.findOrganizationsBySubordinateOrganizationsContaining(org);
 		for (Organization parent: orgsThatOwnThisOrg) {
 			parent.removeSubordinateOrganization(org);
-			repository.save(applyFieldAuthority(parent));
+			repository.save(parent);
 		}
 	}
 
 	/**
 	 * Searches all organizations that have a leader by given UUID and removes them.
 	 * Used by the Person service to remove hard links to a Person entity before deletion.
+	 * 
+	 * Will not perform EFA on Organizations updated through this method.
+	 * 
 	 * @param leaderUuid id of the leader to remove from leader position(s)
 	 */
 	public void removeLeaderByUuid(UUID leaderUuid) {
@@ -1009,7 +1177,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 		List<Organization> modifiedOrgs = repository.findOrganizationsByLeader(leaderPerson);
 		for (Organization org : modifiedOrgs) {
 			org.setLeaderAndUpdateMembers(null);
-			repository.save(applyFieldAuthority(org));
+			repository.save(org);
 		}
 
 		List<UUID> modifiedIds = modifiedOrgs.stream().map(Organization::getId).collect(Collectors.toList());
@@ -1119,5 +1287,53 @@ public class OrganizationServiceImpl implements OrganizationService {
 		Page<Organization> pagedResponse = repository.findAll(spec, page);
 		
 		return pagedResponse.map(this::convertToDto);
+	}
+
+	/**
+	 * @throws NotAuthorizedException throws if requesting user does not have privilege to edit field
+	 */
+	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
+	public OrganizationDto removeParentOrganization(UUID organizationId) {
+		if (!this.isUserAuthorizedForFieldEdit(Organization.PARENT_ORG_FIELD)) {
+			throw new NotAuthorizedException(String.format(USER_NOT_AUTHORIZED_FIELD_EDIT_MSG, Organization.PARENT_ORG_FIELD));
+		}
+		
+		Map<String, String> noParentMap = new HashMap<>();
+		noParentMap.put("parentOrganization", null);
+		
+		return this.modify(organizationId, noParentMap);
+	}
+
+	/**
+	 * @throws NotAuthorizedException throws if requesting user does not have privilege to edit field
+	 */
+	@Override
+	@Transactional(dontRollbackOn={IllegalOrganizationModification.class})
+	public OrganizationDto removeLeader(UUID organizationId) {
+		if (!this.isUserAuthorizedForFieldEdit(Organization.LEADER_FIELD)) {
+			throw new NotAuthorizedException(String.format(USER_NOT_AUTHORIZED_FIELD_EDIT_MSG, Organization.LEADER_FIELD));
+		}
+		
+		Map<String, String> noLeaderMap = new HashMap<>();
+		noLeaderMap.put("leader", null);
+		
+		return this.modify(organizationId, noLeaderMap);
+	}
+	
+	private OrganizationDto checkEfaResponseForIllegalModification(EntityFieldAuthResponse<Organization> efaResponse) {
+		if (efaResponse.getDeniedFields().isEmpty()) {
+			return this.convertToDto(efaResponse.getModifiedEntity());
+		}
+		
+		throw new IllegalOrganizationModification(efaResponse);
+	}
+	
+	private OrganizationDto checkEfaResponseForIllegalModification(Organization entity, List<String> deniedFields) {
+		return checkEfaResponseForIllegalModification(
+				EntityFieldAuthResponse.<Organization>builder()
+					.deniedFields(deniedFields)
+					.modifiedEntity(entity)
+					.build());
 	}
 }
