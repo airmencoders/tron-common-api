@@ -60,6 +60,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	@Value("${app-sources-prefix}")
 	private String appSourcePrefix;
 
+	@SuppressWarnings("squid:S00107")
 	public AppClientUserServiceImpl(AppClientUserRespository appClientRepository,
 									AppSourceRepository appSourceRepository,
 									DashboardUserService dashboardUserService,
