@@ -80,9 +80,9 @@ public class DashboardServiceImpl implements DashboardService {
 		
 		validateDates(startDate, endDate, now);
     	
-		List<EntityAccessor> organizationAccessors = this.httpLogsRepo.getUsersAccessingPersonnelRecords(startDate, endDate);
+		List<EntityAccessor> personnelAccessors = this.httpLogsRepo.getUsersAccessingPersonnelRecords(startDate, endDate);
 
-		List<EntityAccessorDto> appClientAccessors = organizationAccessors.stream()
+		List<EntityAccessorDto> appClientAccessors = personnelAccessors.stream()
 				.filter(accessor -> httpLogsUtilService.isUsernameAnAppClient(accessor.getName()))
 				.map(accessor -> modelMapper.map(accessor, EntityAccessorDto.class))
 				.collect(Collectors.toList());
@@ -181,13 +181,8 @@ public class DashboardServiceImpl implements DashboardService {
 	 * @throws BadRequestException if any of the rules are violated.
 	 */
 	private void validateDates(Date startDate, Date endDate, Date referenceDate) {
-		if (startDate.after(referenceDate)) {
-			throw new BadRequestException("Start Date cannot be in the future");
-		}
-		
-    	if (startDate.compareTo(endDate) > 0) {
-            throw new BadRequestException("Start Date must be before or equal to End Date");
-        }
+		httpLogsUtilService.isDateInThePast(startDate, referenceDate, true);
+		httpLogsUtilService.isDateBeforeOrEqualTo(startDate, endDate, true);
 	}
 	
 	/**

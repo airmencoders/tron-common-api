@@ -15,6 +15,7 @@ import org.assertj.core.util.Lists;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -67,6 +68,7 @@ public class SubscriberServiceImpl implements SubscriberService {
         return dto;
     }
 
+    @Transactional
     @Override
     public SubscriberDto upsertSubscription(SubscriberDto subscriber) {
         if (subscriber.getId() == null) {
@@ -86,17 +88,17 @@ public class SubscriberServiceImpl implements SubscriberService {
 
         if (existing.isPresent()) {
 
-            // check no existing subs for this event type
-            checkNoDuplicateSubscriptionForApp(subscriber.getSubscribedEvent(), appClientUser);
-
             // edit an existing
             Subscriber sub = existing.get();
-            sub.setSecret(sub.getSecret());  // dont allow change secret on an update,
-                                                // need to recreate a subscription if needed changed
+
+            // only change secret on an update IF one's supplied
+            sub.setSecret(subscriber.getSecret() == null || subscriber.getSecret().isBlank() ?
+                    sub.getSecret() : subscriber.getSecret());
             sub.setSubscribedEvent(subscriber.getSubscribedEvent());
             sub.setSubscriberAddress(subscriber.getSubscriberAddress());
             sub.setAppClientUser(appClientUser);
             checkAppHasReadAccessToEntity(mapToDto(sub), appClientUser);
+            synchronizeSecretsAndUrl(sub);
             return mapToDto(subscriberRepository.save(sub));
 
         } else {
@@ -104,14 +106,50 @@ public class SubscriberServiceImpl implements SubscriberService {
 
             // check no existing subs for this event type
             checkNoDuplicateSubscriptionForApp(subscriber.getSubscribedEvent(), appClientUser);
-            Subscriber sub = subscriberRepository.save(Subscriber.builder()
+
+            Subscriber sub = Subscriber.builder()
                     .secret(subscriber.getSecret())
                     .subscribedEvent(subscriber.getSubscribedEvent())
                     .subscriberAddress(subscriber.getSubscriberAddress())
                     .appClientUser(appClientUser)
-                    .build());
+                    .build();
 
-            return mapToDto(sub);
+            synchronizeSecretsAndUrl(sub);
+            return mapToDto(subscriberRepository.save(sub));
+        }
+    }
+
+    private void synchronizeSecretsAndUrl(Subscriber subscriber) {
+        // update all the secrets/pubsub url for given app client to what just came in
+        // so that we keep them in sync - IF the secret was not null or blank.
+        // If it was null, or blank, then steal the secret from an existing app client
+        // subscription item, and if none of those exist, then throw an error for
+        // no valid secrets on file
+
+        List<Subscriber> subscribers = Lists.newArrayList(subscriberRepository
+                .findByAppClientUser(subscriber.getAppClientUser()));
+
+        // no secrets anywhere to use...
+        if (subscribers.isEmpty() && (subscriber.getSecret() == null || subscriber.getSecret().isBlank())) {
+            throw new BadRequestException("Cannot create subscription with no given secret and no other secrets on file");
+        }
+        else if (!subscribers.isEmpty() && (subscriber.getSecret() == null || subscriber.getSecret().isBlank())) {
+            subscriber.setSecret(subscribers.get(0).getSecret());
+        }
+
+        // test that the url is not null (it can be blank) or steal from a sister subscription
+        if (subscribers.isEmpty() && subscriber.getSubscriberAddress() == null) {
+            throw new BadRequestException("Cannot create subscription with null url and no other urls on file");
+        }
+        else if (!subscribers.isEmpty() && subscriber.getSubscriberAddress() == null) {
+            subscriber.setSubscriberAddress(subscribers.get(0).getSubscriberAddress());
+        }
+
+        // update other sister subscriptions secrets/urls
+        for (Subscriber sub : subscribers) {
+            sub.setSubscriberAddress(subscriber.getSubscriberAddress());
+            sub.setSecret(subscriber.getSecret());
+            subscriberRepository.save(sub);
         }
     }
 

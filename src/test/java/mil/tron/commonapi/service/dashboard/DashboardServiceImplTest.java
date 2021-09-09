@@ -26,6 +26,7 @@ import mil.tron.commonapi.dto.dashboard.EntityAccessorResponseDto;
 import mil.tron.commonapi.dto.dashboard.ResponseDto;
 import mil.tron.commonapi.entity.HttpLogEntry;
 import mil.tron.commonapi.entity.dashboard.EntityAccessor;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.repository.HttpLogsRepository;
 import mil.tron.commonapi.service.utility.HttpLogsUtilService;
 
@@ -52,8 +53,11 @@ class DashboardServiceImplTest {
 		// Wednesday, July 21, 2021 1:00:00
 		Date startDateInFuture = new Date(1626829200000L);
 		
+		Mockito.when(httpLogsUtilService.isDateInThePast(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> dashboardService.getAppClientsAccessingOrgRecords(startDateInFuture, null))
-			.hasMessageContaining("Start Date cannot be in the future");
+			.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test
@@ -68,8 +72,11 @@ class DashboardServiceImplTest {
 		// Saturday, July 17, 2021 0:00:00
 		Date endDate = new Date(1626480000000L);
 		
+		Mockito.when(httpLogsUtilService.isDateBeforeOrEqualTo(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> dashboardService.getAppClientsAccessingOrgRecords(startDateAfterEndDate, endDate))
-			.hasMessageContaining("Start Date must be before or equal to End Date");
+			.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test
@@ -170,8 +177,11 @@ class DashboardServiceImplTest {
 		// Wednesday, July 21, 2021 1:00:00
 		Date startDateInFuture = new Date(1626829200000L);
 		
+		Mockito.when(httpLogsUtilService.isDateInThePast(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> dashboardService.getAppSourceUsage(startDateInFuture, null, true, 2))
-			.hasMessageContaining("Start Date cannot be in the future");
+			.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test
@@ -186,8 +196,11 @@ class DashboardServiceImplTest {
 		// Saturday, July 17, 2021 0:00:00
 		Date endDate = new Date(1626480000000L);
 		
+		Mockito.when(httpLogsUtilService.isDateBeforeOrEqualTo(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> dashboardService.getAppSourceUsage(startDateAfterEndDate, endDate, true, 2))
-			.hasMessageContaining("Start Date must be before or equal to End Date");
+			.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test
@@ -258,8 +271,11 @@ class DashboardServiceImplTest {
 		// Wednesday, July 21, 2021 1:00:00
 		Date startDateInFuture = new Date(1626829200000L);
 		
+		Mockito.when(httpLogsUtilService.isDateInThePast(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> dashboardService.getAppSourceErrorUsage(startDateInFuture, null))
-			.hasMessageContaining("Start Date cannot be in the future");
+			.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test
@@ -274,8 +290,11 @@ class DashboardServiceImplTest {
 		// Saturday, July 17, 2021 0:00:00
 		Date endDate = new Date(1626480000000L);
 		
+		Mockito.when(httpLogsUtilService.isDateBeforeOrEqualTo(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
 		assertThatThrownBy(() -> dashboardService.getAppSourceErrorUsage(startDateAfterEndDate, endDate))
-			.hasMessageContaining("Start Date must be before or equal to End Date");
+			.isInstanceOf(BadRequestException.class);
 	}
 	
 	@Test

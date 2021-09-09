@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mil.tron.commonapi.dto.kpi.KpiSummaryDto;
 import mil.tron.commonapi.dto.kpi.KpiSummaryDtoResponseWrapper;
+import mil.tron.commonapi.dto.kpi.ServiceMetricDto;
 import mil.tron.commonapi.dto.kpi.UniqueVisitorCountDto;
 import mil.tron.commonapi.entity.kpi.VisitorType;
 import mil.tron.commonapi.service.kpi.KpiService;
@@ -37,8 +38,9 @@ class KpiControllerTest {
     @MockBean
     private KpiService kpiService;
     
-    List<UniqueVisitorCountDto> uniqueVisitorCount;
-    KpiSummaryDto kpiSummaryDto;
+    private List<UniqueVisitorCountDto> uniqueVisitorCount;
+    private List<ServiceMetricDto> serviceMetrics;
+    private KpiSummaryDto kpiSummaryDto;
     
     @BeforeEach
     void setup() {
@@ -54,12 +56,20 @@ class KpiControllerTest {
 				.uniqueCount(2L)
 				.requestCount(10L)
 				.build());
+		
+		serviceMetrics = new ArrayList<>();
+		serviceMetrics.add(ServiceMetricDto.builder()
+				.averageLatency(10.0)
+				.name("test-app-source")
+				.responseCount(100L)
+				.build());
     	
     	kpiSummaryDto = KpiSummaryDto.builder()
         		.appClientToAppSourceRequestCount(10L)
         		.appSourceCount(1L)
         		.averageLatencyForSuccessfulRequests(33d)
         		.uniqueVisitorCounts(uniqueVisitorCount)
+        		.serviceMetrics(serviceMetrics)
         		.build();
     }
 
