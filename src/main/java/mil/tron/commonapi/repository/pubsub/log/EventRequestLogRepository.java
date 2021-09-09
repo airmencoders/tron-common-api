@@ -19,4 +19,6 @@ public interface EventRequestLogRepository extends CrudRepository<EventRequestLo
 	
 	Page<EventRequestLog> findAllByAppClientUser_Id(Pageable page, UUID id);
 	Page<EventRequestLog> findAllByAppClientUser_NameAsLower(Pageable page, String appClientName);
+	
+	void deleteByAppClientUser_Id(UUID id);
 }

@@ -20,6 +20,7 @@ import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import mil.tron.commonapi.repository.pubsub.log.EventRequestLogRepository;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import mil.tron.commonapi.service.pubsub.SubscriberServiceImpl;
 import org.assertj.core.util.Lists;
@@ -35,12 +36,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import javax.transaction.Transactional;
+
 @Service
 public class AppClientUserServiceImpl implements AppClientUserService {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
 	private static final String APP_CLIENT_NOT_FOUND_MSG = "No App Client found with id %s.";
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
 
+	private final EventRequestLogRepository eventRequestLogRepo;
 	private AppClientUserRespository appClientRepository;
 	private AppSourceRepository appSourceRepository;
 	private DashboardUserService dashboardUserService;
@@ -62,7 +66,8 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 									DashboardUserRepository dashboardUserRepository,
 									PrivilegeRepository privilegeRepository,
 									AppEndpointPrivRepository appEndpointPrivRepository,
-									SubscriberService subscriberService) {
+									SubscriberService subscriberService,
+									EventRequestLogRepository eventRequestLogRepo) {
 
 		this.appClientRepository = appClientRepository;
 		this.appSourceRepository = appSourceRepository;
@@ -71,7 +76,8 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		this.privilegeRepository = privilegeRepository;
 		this.appEndpointPrivRepository = appEndpointPrivRepository;
 		this.subscriberService = subscriberService;
-
+		this.eventRequestLogRepo = eventRequestLogRepo;
+		
 		Converter<List<Privilege>, Set<Privilege>> convertPrivilegesToSet = 
 				((MappingContext<List<Privilege>, Set<Privilege>> context) -> new HashSet<>(context.getSource()));
 		
@@ -259,6 +265,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		return entity;
 	}
 
+	@Transactional
 	@Override
     public AppClientUserDto deleteAppClientUser(UUID id) {
 		AppClientUser dbUser = appClientRepository
@@ -286,6 +293,9 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 			dbUser.setPrivileges(null);
 			appClientRepository.saveAndFlush(dbUser);
 		} else {
+			// Remove EventRequestLog entries tied to this App Client User
+			eventRequestLogRepo.deleteByAppClientUser_Id(id);
+			
 			appClientRepository.deleteById(id);
 		}
 
