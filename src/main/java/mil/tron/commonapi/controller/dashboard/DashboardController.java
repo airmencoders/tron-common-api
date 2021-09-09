@@ -62,9 +62,9 @@ public class DashboardController {
         return new ResponseEntity<>(dashboardService.getAppClientsAccessingOrgRecords(startDate, endDate), HttpStatus.OK);
     }
 		
-	@Operation(summary = "Get a list of App Clients that have accessed organization records", 
-			description = "Get a list of App Clients that have accessed organization records between two dates with their request count."
-					+ " Will only include App Clients that have made successful requests to access organization records (http status between 200 and 300.)")
+	@Operation(summary = "Get a list of App Clients that have accessed personnel records", 
+			description = "Get a list of App Clients that have accessed personnel records between two dates with their request count."
+					+ " Will only include App Clients that have made successful requests to access personnel records (http status between 200 and 300.)")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 					description = "Successful operation", 
