@@ -874,6 +874,7 @@ public class ScratchStorageController {
     @Deprecated(since = "v2")
     @GetMapping({"${api-prefix.v1}/scratch/users/privs"})
     public ResponseEntity<Object> getScratchPrivs() {
+        List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
                 .stream()
                 .filter(item -> item.getName().startsWith("SCRATCH_"))
                 .collect(Collectors.toList());
