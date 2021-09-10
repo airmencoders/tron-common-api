@@ -242,7 +242,7 @@ public class JsonDbServiceImpl implements JsonDbService {
 
         synchronized (lockObj) {
             ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                    .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+                    .orElseThrow(() -> new RecordNotFoundException(KEY_TABLE_NOT_FOUND));
 
             DocumentContext cxt;
             Object retVal;
@@ -288,7 +288,7 @@ public class JsonDbServiceImpl implements JsonDbService {
 
         synchronized (lockObj) {
             ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                    .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+                    .orElseThrow(() -> new RecordNotFoundException(KEY_TABLE_NOT_FOUND));
 
             DocumentContext cxt;
 
@@ -334,7 +334,7 @@ public class JsonDbServiceImpl implements JsonDbService {
 
         synchronized (lockObj) {
             ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                    .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+                    .orElseThrow(() -> new RecordNotFoundException(KEY_TABLE_NOT_FOUND));
 
             DocumentContext cxt;
             Object retVal = null;
@@ -394,7 +394,7 @@ public class JsonDbServiceImpl implements JsonDbService {
 
         synchronized (lockObj) {
             ScratchStorageEntry entry = repository.findByAppIdAndKey(appId, tableName)
-                    .orElseThrow(() -> new RecordNotFoundException("Cant find key/table with that name"));
+                    .orElseThrow(() -> new RecordNotFoundException(KEY_TABLE_NOT_FOUND));
 
             DocumentContext cxt;
 
