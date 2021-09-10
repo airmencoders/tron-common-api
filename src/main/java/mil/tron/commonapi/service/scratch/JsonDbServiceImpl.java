@@ -22,6 +22,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * A simple, database-like service that allows a JSON Array String to behave almost
+ * like a relational database so long as the elements are "flat" Json (no nested objects).
+ *
+ * Support simple schema where ID's are UUIDs only (currently).
+ */
 @Service
 public class JsonDbServiceImpl implements JsonDbService {
     private ScratchStorageRepository repository;
@@ -35,6 +41,11 @@ public class JsonDbServiceImpl implements JsonDbService {
     private static final String REQUIRED_IDENTIFIER = "!";
     private static final String ID_FIELD_NAME = "id";
     private static final String UUID_REGEX = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
+
+    private static final String KEY_TABLE_NOT_FOUND = "Cannot find key/table with that name";
+    private static final String FIELD_ERROR_PREFIX = "Field - ";
+    private static final String JSON_TABLE_PARSE_ERROR = "Cannot parse JSON in the table - %s";
+    private static final String SERIALIZE_TABLE_ERROR = "Error serializing table contents";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Configuration configuration = Configuration.builder()
@@ -82,7 +93,7 @@ public class JsonDbServiceImpl implements JsonDbService {
 
         // if a schema field has an exclamation in its data type - then its required field
         if (fieldValue.contains(REQUIRED_IDENTIFIER)) {
-            throw new InvalidDataTypeException("Field - " + fieldName + " - was specified as required, but was not given");
+            throw new InvalidDataTypeException(FIELD_ERROR_PREFIX + fieldName + " - was specified as required, but was not given");
         }
 
         if (fieldValue.contains(STRING_TYPE)) {
@@ -123,16 +134,16 @@ public class JsonDbServiceImpl implements JsonDbService {
                                       boolean updateOperation) {
 
         if (schemaType.contains(STRING_TYPE) && !fieldValue.isTextual()) {
-            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a string but wasnt");
+            throw new InvalidDataTypeException(FIELD_ERROR_PREFIX + fieldName + " - was supposed to be a string but wasnt");
         }
         if (schemaType.contains(EMAIL_TYPE) && (!fieldValue.isTextual() && EmailValidator.getInstance().isValid(fieldValue.asText()))) {
-            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be an email but wasnt");
+            throw new InvalidDataTypeException(FIELD_ERROR_PREFIX + fieldName + " - was supposed to be an email but wasnt");
         }
         if (schemaType.contains(NUMBER_TYPE) && !fieldValue.isNumber()) {
-            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a number but wasnt");
+            throw new InvalidDataTypeException(FIELD_ERROR_PREFIX + fieldName + " - was supposed to be a number but wasnt");
         }
         if (schemaType.contains(BOOLEAN_TYPE) && !fieldValue.isBoolean()) {
-            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a boolean but wasnt");
+            throw new InvalidDataTypeException(FIELD_ERROR_PREFIX + fieldName + " - was supposed to be a boolean but wasnt");
         }
         if (schemaType.contains(UUID_TYPE) &&
                 (!fieldValue.isTextual()
@@ -141,7 +152,7 @@ public class JsonDbServiceImpl implements JsonDbService {
                         .asText()
                         .matches(UUID_REGEX))) {
 
-            throw new InvalidDataTypeException("Field - " + fieldName + " - was supposed to be a uuid but wasnt");
+            throw new InvalidDataTypeException(FIELD_ERROR_PREFIX + fieldName + " - was supposed to be a uuid but wasnt");
         }
 
         // do any unique checks
@@ -239,7 +250,7 @@ public class JsonDbServiceImpl implements JsonDbService {
             try {
                 cxt = JsonPath.using(configuration).parse(entry.getValue());
             } catch (Exception e) {
-                throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+                throw new InvalidJsonPathQueryException(String.format(JSON_TABLE_PARSE_ERROR, tableName));
             }
 
             try {
@@ -257,7 +268,7 @@ public class JsonDbServiceImpl implements JsonDbService {
                 entry.setValue(cxt.jsonString());
                 repository.save(entry);
             } catch (Exception e) {
-                throw new InvalidRecordUpdateRequest("Error serializing table contents");
+                throw new InvalidRecordUpdateRequest(SERIALIZE_TABLE_ERROR);
             }
 
             return retVal;
@@ -284,7 +295,7 @@ public class JsonDbServiceImpl implements JsonDbService {
             try {
                 cxt = JsonPath.using(configuration).parse(entry.getValue());
             } catch (Exception e) {
-                throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+                throw new InvalidJsonPathQueryException(String.format(JSON_TABLE_PARSE_ERROR, tableName));
             }
 
             if (cxt.read(path) != null) {
@@ -302,7 +313,7 @@ public class JsonDbServiceImpl implements JsonDbService {
                 entry.setValue(cxt.jsonString());
                 repository.save(entry);
             } catch (Exception e) {
-                throw new InvalidRecordUpdateRequest("Error serializing table contents");
+                throw new InvalidRecordUpdateRequest(SERIALIZE_TABLE_ERROR);
             }
         }
     }
@@ -331,7 +342,7 @@ public class JsonDbServiceImpl implements JsonDbService {
             try {
                 cxt = JsonPath.using(configuration).parse(entry.getValue());
             } catch (Exception e) {
-                throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+                throw new InvalidJsonPathQueryException(String.format(JSON_TABLE_PARSE_ERROR, tableName));
             }
 
             try {
@@ -363,7 +374,7 @@ public class JsonDbServiceImpl implements JsonDbService {
                 entry.setValue(cxt.jsonString());
                 repository.save(entry);
             } catch (Exception e) {
-                throw new InvalidRecordUpdateRequest("Error serializing table contents");
+                throw new InvalidRecordUpdateRequest(SERIALIZE_TABLE_ERROR);
             }
 
             return retVal;
@@ -390,7 +401,7 @@ public class JsonDbServiceImpl implements JsonDbService {
             try {
                 cxt = JsonPath.using(configuration).parse(entry.getValue());
             } catch (Exception e) {
-                throw new InvalidJsonPathQueryException("Can't parse JSON in the table - " + tableName);
+                throw new InvalidJsonPathQueryException(String.format(JSON_TABLE_PARSE_ERROR, tableName));
             }
 
             return cxt.read(path);

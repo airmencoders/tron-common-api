@@ -43,6 +43,7 @@ public class ScratchStorageController {
     private JsonDbService jsonDbService;
     private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
     private static final String INVALID_PERMS = "Invalid User Permissions";
+    private static final String JSONPATH_ID_QUERY = "$[?(@.id == '%s')]";
 
     public ScratchStorageController(ScratchStorageService scratchStorageService, PrivilegeService privilegeService, JsonDbService jsonDbService) {
         this.scratchStorageService = scratchStorageService;
@@ -873,7 +874,6 @@ public class ScratchStorageController {
     @Deprecated(since = "v2")
     @GetMapping({"${api-prefix.v1}/scratch/users/privs"})
     public ResponseEntity<Object> getScratchPrivs() {
-        List<PrivilegeDto> scratchPrivs = Lists.newArrayList(privilegeService.getPrivileges())
                 .stream()
                 .filter(item -> item.getName().startsWith("SCRATCH_"))
                 .collect(Collectors.toList());
@@ -908,7 +908,7 @@ public class ScratchStorageController {
         validateScratchReadAccessForUser(appId, table);
         String error = "No matches for that given ID";
         try {
-            JsonNode results = new ObjectMapper().readTree(jsonDbService.queryJson(appId, table, String.format("$[?(@.id == '%s')]", id)).toString());
+            JsonNode results = new ObjectMapper().readTree(jsonDbService.queryJson(appId, table, String.format(JSONPATH_ID_QUERY, id)).toString());
             if (results != null && results.size() > 0) {
                 return new ResponseEntity<>(results.get(0), HttpStatus.OK);
             }
@@ -954,7 +954,7 @@ public class ScratchStorageController {
 
         validateScratchWriteAccessForUser(appId, table);
         return new ResponseEntity<>(
-                jsonDbService.updateElement(appId, table, id, json, String.format("$[?(@.id == '%s')]", id)),
+                jsonDbService.updateElement(appId, table, id, json, String.format(JSONPATH_ID_QUERY, id)),
                 HttpStatus.OK);
     }
 
@@ -964,7 +964,7 @@ public class ScratchStorageController {
                                              @PathVariable(name = "id" ) @NotNull @NotBlank String id) {
 
         validateScratchWriteAccessForUser(appId, table);
-        jsonDbService.removeElement(appId, table, String.format("$[?(@.id == '%s')]", id));
+        jsonDbService.removeElement(appId, table, String.format(JSONPATH_ID_QUERY, id));
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

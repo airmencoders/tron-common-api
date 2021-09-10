@@ -593,11 +593,11 @@ public class ScratchStorageControllerTest {
     }
 
     @Test
-    @WithMockUser(username="user@test.com", password = "user@test.com")
+    @WithMockUser(username="user@test.com")
     void testGetAllAppKeysUserCanRead() throws Exception {
 
         UUID id = UUID.randomUUID();
-        Mockito.when(service.getKeysUserCanReadFrom(id, "user@test.com"))
+        Mockito.when(service.getKeysUserCanReadFrom(Mockito.any(UUID.class), Mockito.anyString()))
                 .thenReturn(Lists.newArrayList("test", "test1"));
 
         mockMvc.perform(get(ENDPOINT_V2 + "/apps/{appId}/read", id))
