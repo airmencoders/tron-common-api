@@ -13,6 +13,8 @@ import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.PersonRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.pubsub.SubscriberRepository;
+import mil.tron.commonapi.repository.pubsub.log.EventRequestLogRepository;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,6 +82,9 @@ public class PubSubIntegrationTest {
 
     @Autowired
     private PrivilegeRepository privilegeRepository;
+    
+    @Autowired
+    private EventRequestLogRepository eventRequestLogRepo;
 
     private MockRestServiceServer mockServer;
 
@@ -136,6 +141,7 @@ public class PubSubIntegrationTest {
 
     @AfterEach
     void tearDown() {
+    	eventRequestLogRepo.deleteAll();
         subscriberRepository.deleteAll();
         appClientUserRespository.delete(user);
         personRepo.deleteAllInBatch();

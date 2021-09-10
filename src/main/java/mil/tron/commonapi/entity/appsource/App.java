@@ -22,6 +22,9 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @MappedSuperclass
 public abstract class App {
+	public static final String NAME_FIELD = "name";
+	public static final String ID_FIELD = "id";
+	
     @Id
     @Getter
     @Setter

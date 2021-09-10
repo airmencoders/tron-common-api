@@ -1,0 +1,37 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="Dylan" id="1630673598911-1">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="event_request_log"/>
+            </not> 
+        </preConditions>
+
+        <createTable tableName="event_request_log">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="event_request_logPK"/>
+            </column>
+            <column name="event_count" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_type" type="VARCHAR(255)"/>
+            <column name="last_attempted" type="TIMESTAMP WITHOUT TIME ZONE"/>
+            <column name="reason" type="VARCHAR(255)"/>
+            <column name="was_successful" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="app_client_user_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1630673598911-2">
+        <preConditions onFail="WARN">
+            <tableExists tableName="event_request_log"/>
+            <columnExists tableName="event_request_log" columnName="app_client_user_id" />
+
+            <tableExists tableName="app"/>
+        </preConditions>
+
+        <addForeignKeyConstraint baseColumnNames="app_client_user_id" baseTableName="event_request_log" constraintName="FK8yq5fn5iu5frx78xtwqbpt0ra" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

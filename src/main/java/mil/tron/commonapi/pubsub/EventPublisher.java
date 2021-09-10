@@ -12,6 +12,7 @@ import mil.tron.commonapi.pubsub.messages.PubSubMessage;
 import mil.tron.commonapi.security.AppClientPreAuthFilter;
 import mil.tron.commonapi.service.pubsub.SubscriberService;
 import mil.tron.commonapi.service.pubsub.SubscriberServiceImpl;
+import mil.tron.commonapi.service.pubsub.log.EventRequestService;
 import mil.tron.commonapi.service.utility.IstioHeaderUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,6 +25,9 @@ import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -42,7 +46,11 @@ import static mil.tron.commonapi.security.Utility.hmac;
  */
 @Service
 public class EventPublisher {
+	private static final String PUBLISH_ERROR_PREFIX = "[PUBLISH ERROR] - Subscriber: ";
+	
     private final Log publisherLog = LogFactory.getLog(CommonApiLogger.class);
+    
+    private final EventRequestService eventRequestService;
 
     @Value("${signature-header}")
     private String signatureHeader;
@@ -73,8 +81,9 @@ public class EventPublisher {
         private String xfccHeader;
     }
 
-    public EventPublisher(SubscriberService subService) {
+    public EventPublisher(SubscriberService subService, EventRequestService eventRequestService) {
         this.subService = subService;
+        this.eventRequestService = eventRequestService;
     }
 
     /**
@@ -90,6 +99,13 @@ public class EventPublisher {
         //  we cap it ourselves to 'webhookQueueSize'
         if (queuedEvents.size() >= webhookQueueSize) {
             publisherLog.error("MAX QUEUE SIZE reached - dropping pubsub message");
+            
+            // Log the failure for all subscribers when events are dropped
+            List<Subscriber> subscribers = Lists.newArrayList(subService.getSubscriptionsByEventType(message.getEventType()));
+            for (Subscriber subscriber : subscribers) {
+            	eventRequestService.createAndSaveEventRequestLogEntry(subscriber, message, false, "Event dropped due to queue overload");
+            }
+            
             return;
         }
 
@@ -127,9 +143,6 @@ public class EventPublisher {
      */
     @Scheduled(fixedDelayString = "${webhook-delay-ms}")
     public void queueConsumer() {
-
-        if (queuedEvents.isEmpty()) return;
-
         EnqueuedEvent event = queuedEvents.poll();
         if (event == null) return;
 
@@ -147,39 +160,77 @@ public class EventPublisher {
 
         // start publish loop - only push to everyone but the requester (...if the requester is a subscriber)
         for (Subscriber s : subscribers) {
-
-            if (!subscriberUrlValid(s)) {
-                publisherLog.info(String.format("[PUBLISH WARNING] - Subscription ID %s does not have an app-client or cluster url, skipping", s.getId()));
-                continue;
+            if (isInvalidSubscriptionAndHandle(s, message)) {
+            	continue;
             }
 
-            // make sure the target subscriber has at least READ access to the type of entity the event describes the change for
-            //  otherwise ignore them - since there's no use to send the change
-            if (!checkSubscriberHasReadPrivsForEvent(s)) {
-                publisherLog.info(String.format("[PUBLISH WARNING] - Subscription ID %s does not have READ access to the entity type of the event", s.getId()));
-                continue;
-            }
-
-            String subscriberUrl = buildSubscriberFullUrl(s);
-
-            if (!IstioHeaderUtils.extractSubscriberNamespace(subscriberUrl).equals(requesterNamespace)) {
-                publisherLog.info("[PUBLISH BROADCAST] - Event: " + message.getEventType().toString() + " to Subscriber: " + subscriberUrl);
-                try {
-                    String json = OBJECT_MAPPER.writeValueAsString(message);
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.setContentType(MediaType.APPLICATION_JSON);
-                    if (s.getSecret() != null) {
-                        headers.set(signatureHeader, hmac(s.getSecret(), json));
-                    }
-                    publisherSender.postForLocation(subscriberUrl, new HttpEntity<>(json, headers));
-                    publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + subscriberUrl);
-                } catch (Exception e) {
-                    publisherLog.warn("[PUBLISH ERROR] - Subscriber: " + subscriberUrl + " failed.  Exception: " + e.getMessage());
-                }
-            }
+            sendWebhookRequest(s, message, requesterNamespace);
         }
 
         publisherLog.info("[PUBLISH BROADCAST COMPLETE]");
+    }
+    
+    /**
+     * Checks and handles an invalid subscriber.
+     * For an invalid subscription: the event will be logged and an appropriate {@link EventRequestService} will be created and saved.
+     * 
+     * @param subscriber the subscriber
+     * @param message the pub sub message
+     * @return true if subscription is invalid, false otherwise
+     */
+    private boolean isInvalidSubscriptionAndHandle(Subscriber subscriber, PubSubMessage message) {
+    	if (!subscriberUrlValid(subscriber)) {
+            publisherLog.info(String.format("[PUBLISH WARNING] - Subscription ID %s does not have an app-client or cluster url, skipping", subscriber.getId()));
+            eventRequestService.createAndSaveEventRequestLogEntry(subscriber, message, false, "Subscription missing App Client or Cluster URL");
+            return true;
+        }
+    	
+        // make sure the target subscriber has at least READ access to the type of entity the event describes the change for
+        // otherwise ignore them - since there's no use to send the change
+    	if (!checkSubscriberHasReadPrivsForEvent(subscriber)) {
+            publisherLog.info(String.format("[PUBLISH WARNING] - Subscription ID %s does not have READ access to the entity type of the event", subscriber.getId()));
+            eventRequestService.createAndSaveEventRequestLogEntry(subscriber, message, false, "Subscriber does not have READ access to event entity type");
+            return true;
+        }
+        
+    	return false;
+    }
+    
+    /**
+     * Sends and handles the webhook request to the subscriber.
+     * 
+     * @param s the subscriber
+     * @param message the pub sub message
+     * @param requesterNamespace the namespace of the App Client that this event originated from
+     */
+    private void sendWebhookRequest(Subscriber s, PubSubMessage message, String requesterNamespace) {
+    	String subscriberUrl = buildSubscriberFullUrl(s);
+
+        if (!IstioHeaderUtils.extractSubscriberNamespace(subscriberUrl).equals(requesterNamespace)) {
+            publisherLog.info("[PUBLISH BROADCAST] - Event: " + message.getEventType().toString() + " to Subscriber: " + subscriberUrl);
+            try {
+                String json = OBJECT_MAPPER.writeValueAsString(message);
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                if (s.getSecret() != null) {
+                    headers.set(signatureHeader, hmac(s.getSecret(), json));
+                }
+                publisherSender.postForLocation(subscriberUrl, new HttpEntity<>(json, headers));
+                publisherLog.info("[PUBLISH SUCCESS] - Subscriber: " + subscriberUrl);
+                
+                eventRequestService.createAndSaveEventRequestLogEntry(s, message, true, "Success");
+                
+            } catch (ResourceAccessException resourceAccessExceptionException) {
+            	publisherLog.warn(PUBLISH_ERROR_PREFIX + subscriberUrl + " failed.  Exception: " + resourceAccessExceptionException.getMessage());
+            	eventRequestService.createAndSaveEventRequestLogEntry(s, message, false, "Event request to recipient failed: IO error to request URL");
+            } catch (HttpClientErrorException | HttpServerErrorException httpException) {
+        		publisherLog.warn(PUBLISH_ERROR_PREFIX + subscriberUrl + " failed.  Exception: " + httpException.getMessage());
+            	eventRequestService.createAndSaveEventRequestLogEntry(s, message, false, "Event request to recipient failed: " + httpException.getStatusCode().toString());
+            }  catch (Exception e) {
+            	publisherLog.warn(PUBLISH_ERROR_PREFIX + subscriberUrl + " failed internally.  Exception: " + e.getMessage());
+            	eventRequestService.createAndSaveEventRequestLogEntry(s, message, false, "Unknown error occurred attempting to send request");
+            }
+        }
     }
 
     /**
