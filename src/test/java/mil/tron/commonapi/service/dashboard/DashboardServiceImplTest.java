@@ -108,6 +108,71 @@ class DashboardServiceImplTest {
 		
 		assertThat(dashboardService.getAppClientsAccessingOrgRecords(startDate, endDate)).isEqualTo(response);
 	}
+
+	@Test
+	void getAppClientsAccessingPersonnelRecords_shouldThrow_onStartDateInFuture() {
+		// Wednesday, July 21, 2021 0:00:00
+		Clock fixedClock = Clock.fixed(Instant.ofEpochMilli(1626825600000L), ZoneId.of("UTC"));
+		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
+		
+		// Wednesday, July 21, 2021 1:00:00
+		Date startDateInFuture = new Date(1626829200000L);
+		
+		Mockito.when(httpLogsUtilService.isDateInThePast(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
+		assertThatThrownBy(() -> dashboardService.getAppClientsAccessingPersonnelRecords(startDateInFuture, null))
+			.isInstanceOf(BadRequestException.class);
+	}
+	
+	@Test
+	void getAppClientsAccessingPersonnelRecords_shouldThrow_onStartDateAfterEndDate() {
+		// Wednesday, July 21, 2021 0:00:00
+		Clock fixedClock = Clock.fixed(Instant.ofEpochMilli(1626825600000L), ZoneId.of("UTC"));
+		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
+		
+		// Monday, July 19, 2021 0:00:00
+		Date startDateAfterEndDate = new Date(1626652800000L);
+		
+		// Saturday, July 17, 2021 0:00:00
+		Date endDate = new Date(1626480000000L);
+		
+		Mockito.when(httpLogsUtilService.isDateBeforeOrEqualTo(Mockito.any(Date.class), Mockito.any(Date.class), Mockito.anyBoolean()))
+			.thenThrow(BadRequestException.class);
+		
+		assertThatThrownBy(() -> dashboardService.getAppClientsAccessingPersonnelRecords(startDateAfterEndDate, endDate))
+			.isInstanceOf(BadRequestException.class);
+	}
+	
+	@Test
+	void getAppClientsAccessingPersonnelRecords_shouldReturn_onValidRequest() {
+		// Wednesday, July 21, 2021 0:00:00
+		Clock fixedClock = Clock.fixed(Instant.ofEpochMilli(1626825600000L), ZoneId.of("UTC"));
+		Mockito.when(systemUtcClock.instant()).thenReturn(fixedClock.instant());
+		
+		// Monday, July 19, 2021 0:00:00
+		Date startDate = new Date(1626652800000L);
+		
+		// Tuesday, July 20, 2021 0:00:00
+		Date endDate = new Date(1626739200000L);
+		
+		EntityAccessorDto entityAccessor = EntityAccessorDto.builder()
+				.name("test accessor")
+				.recordAccessCount(100L)
+				.build();
+		List<EntityAccessor> entityAccessors = List.of(entityAccessor);
+		
+		Mockito.when(httpLogsRepo.getUsersAccessingPersonnelRecords(Mockito.any(), Mockito.any())).thenReturn(entityAccessors);
+		Mockito.when(httpLogsUtilService.isUsernameAnAppClient(entityAccessor.getName())).thenReturn(true);
+		
+		EntityAccessorResponseDto response = EntityAccessorResponseDto.builder()
+				.startDate(startDate)
+				.endDate(endDate)
+				.entityAccessors(List.of(entityAccessor))
+				.build();
+		
+		assertThat(dashboardService.getAppClientsAccessingPersonnelRecords(startDate, endDate)).isEqualTo(response);
+	}
 	
 	@Test
 	void getAppSourceUsage_shouldThrow_onStartDateInFuture() {
