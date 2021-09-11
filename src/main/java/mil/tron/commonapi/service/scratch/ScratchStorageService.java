@@ -6,6 +6,7 @@ import mil.tron.commonapi.dto.ScratchStorageEntryDto;
 import mil.tron.commonapi.dto.ScratchStorageUserDto;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface ScratchStorageService {
@@ -47,6 +48,7 @@ public interface ScratchStorageService {
     boolean userHasAdminWithAppId(UUID appId, String email);
     boolean userCanDeleteKeyForAppId(UUID appId, String email, String keyName);
     boolean aclLookup(ScratchStorageAppRegistryEntry appEntry, String email, String keyName, String desiredRole);
+    List<String> getKeysUserCanReadFrom(UUID appId, String email);
 
     // JSON methods to treating values of specified keys like JSON
     String getKeyValueJson(UUID appId, String keyName, String jsonPathSpec);

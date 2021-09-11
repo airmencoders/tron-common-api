@@ -103,7 +103,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         validateAppId(appId);
         return dtoMapper.map(repository
                 .findByAppIdAndKey(appId, keyName)
-                .orElseThrow(() -> new RecordNotFoundException("Cannot find record with that AppId/Key Name")), ScratchStorageEntryDto.class);
+                .orElseThrow(() -> new RecordNotFoundException(String.format("Cannot find record with that AppId/Key Name: %s / %s", appId, keyName))), ScratchStorageEntryDto.class);
     }
 
     /**
@@ -585,6 +585,23 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             throw new InvalidFieldValueException(String.format("Could not parse the ACL json for keyName - %s", keyName));
         }
 
+    }
+
+    /**
+     * Check to see what keys a requesting user can READ from in a given app id
+     * @param appId UUID of the app
+     * @param email requesters SSO email
+     * @return list of key names that user can read from
+     */
+    @Override
+    public List<String> getKeysUserCanReadFrom(UUID appId, String email) {
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+        return Lists.newArrayList(repository.findAllKeysForAppId(appEntry.getId())).stream()
+                .filter(item -> {
+                    try { return this.userCanReadFromAppId(appEntry.getId(), email, item); }
+                    catch (RecordNotFoundException e) { return false; }
+                })
+                .collect(Collectors.toList());
     }
 
     private boolean validateAclAccessLevel(String email, String keyName, String desiredRole, JsonNode aclNodes) {
