@@ -58,7 +58,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 			.and()
 				.addFilterBefore(traceRequestFilter, ExceptionTranslationFilter.class)
 			.headers()
-			.contentSecurityPolicy("default-src 'self'; connect-src 'self'; form-action 'self';");
+			.contentSecurityPolicy("default-src 'self' 'unsafe-inline' 'unsafe-eval' *.dso.mil data:");
     }
     
 	public AppClientPreAuthFilter appClientPreAuthFilter() throws AuthManagerException {
