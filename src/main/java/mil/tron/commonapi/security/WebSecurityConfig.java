@@ -56,7 +56,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         	.sessionManagement()
 	        	.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			.and()
-				.addFilterBefore(traceRequestFilter, ExceptionTranslationFilter.class);
+				.addFilterBefore(traceRequestFilter, ExceptionTranslationFilter.class)
+			.headers()
+			.contentSecurityPolicy("default-src 'self'; connect-src 'self'; form-action 'self';");
     }
     
 	public AppClientPreAuthFilter appClientPreAuthFilter() throws AuthManagerException {
