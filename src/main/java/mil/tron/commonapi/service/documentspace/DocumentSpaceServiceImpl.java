@@ -263,8 +263,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		try {
 			Upload upload = transferManager.upload(bucketName, space + "/" + file.getOriginalFilename(), file.getInputStream(), metaData);
 			upload.waitForCompletion();
-			//			documentSpaceClient.putObject(bucketName, file.getOriginalFilename(), file.getInputStream(), metaData);
-		} catch (IOException | InterruptedException e) {
+		} catch (IOException | InterruptedException e) {  //NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
 		}
     }
