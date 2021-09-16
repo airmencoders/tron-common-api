@@ -147,11 +147,19 @@ public class HttpTraceService implements HttpTraceRepository {
     public void sanitizeBodies(HttpTrace trace, ContentTrace contentTrace) {
 
         if (trace.getRequest().getUri().toString() != null
-                && trace.getRequest().getUri().toString().contains("app/arms-gateway")
                 && contentTrace != null) {
+        	
+        	if (trace.getRequest().getUri().toString().contains("app/arms-gateway")) {
+        		contentTrace.setResponseBody("Redacted");
+                contentTrace.setRequestBody("Redacted");
+                
+                return;
+        	}
 
-            contentTrace.setResponseBody("Redacted");
-            contentTrace.setRequestBody("Redacted");
+        	if (trace.getRequest().getUri().toString().contains("/document-space/")) {
+        		contentTrace.setResponseBody("File IO");
+                contentTrace.setRequestBody("File IO");
+        	}
         }
     }
 }
