@@ -1,11 +1,10 @@
 package mil.tron.commonapi.controller.documentspace;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.servlet.http.HttpServletResponse;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
@@ -26,14 +25,18 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.exception.FileCompressionException;
+import mil.tron.commonapi.dto.documentspace.DocumentDto;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 
 @RestController
-@RequestMapping("${api-prefix.v2}/document-space")
+@RequestMapping("${api-prefix.v2}" + DocumentSpaceController.ENDPOINT)
 @PreAuthorizeDashboardAdmin
 @ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
 public class DocumentSpaceController {
+	protected static final String ENDPOINT = "/document-space";
+	
+	public static final Pattern DOCUMENT_SPACE_PATTERN = Pattern.compile(String.format("\\/v[\\d]\\%s", ENDPOINT));
+	
 	private final DocumentSpaceService documentSpaceService;
 	
 	public DocumentSpaceController(DocumentSpaceService documentSpaceService) {
@@ -70,20 +73,8 @@ public class DocumentSpaceController {
                 .body(response);
     }
     
-    @GetMapping("/files/res/{keyNames}")
-    public void downloadFilesServletResponse(HttpServletResponse response, @PathVariable("keyNames") String[] keyNames) {
-        response.setHeader("Content-disposition", "attachment; filename=\"" + "files.zip" + "\"");
-        response.setContentType(("application/zip"));
-        
-		try {
-			documentSpaceService.downloadAndWriteCompressedFiles(keyNames, response.getOutputStream());
-		} catch (IOException e) {
-			throw new FileCompressionException("Could not get response output stream");
-		}
-    }
-    
     @GetMapping("/files/{keyNames}")
-    public ResponseEntity<StreamingResponseBody> downloadFilesStreamingResponseBody(@PathVariable("keyNames") String[] keyNames) {
+    public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable("keyNames") Set<String> keyNames) {
         StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(keyNames, out);
         
         return ResponseEntity
@@ -99,7 +90,7 @@ public class DocumentSpaceController {
     }
 
     @GetMapping("/files")
-    public List<String> listObjects() {
+    public List<DocumentDto> listObjects() {
         return documentSpaceService.listFiles();
     }
 }

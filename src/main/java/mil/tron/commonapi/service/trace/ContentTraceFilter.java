@@ -7,6 +7,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
+import mil.tron.commonapi.controller.documentspace.DocumentSpaceController;
+
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -26,7 +28,6 @@ import java.net.URISyntaxException;
 @Component
 @Profile("production | development")
 public class ContentTraceFilter extends OncePerRequestFilter {
-
     private ContentTraceManager traceManager;
 
     @Autowired
@@ -39,8 +40,13 @@ public class ContentTraceFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-
-        if (!isRequestValid(request)) {
+    	
+    	/**
+    	 * Interaction between {@link StreamingResponseBody} on the Controller & {@link ContentCachingResponseWrapper}
+    	 * causes behavior in which what appears to happen is that the output stream will be read, causing
+    	 * empty responses. So skip the filter if the request matches specifically to the Document Space endpoint.
+    	 */
+        if (!isRequestValid(request) || DocumentSpaceController.DOCUMENT_SPACE_PATTERN.asPredicate().test(request.getServletPath())) {
             filterChain.doFilter(request, response);
             return;
         }
