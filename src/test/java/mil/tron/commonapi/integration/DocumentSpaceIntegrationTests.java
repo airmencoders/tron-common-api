@@ -81,7 +81,7 @@ public class DocumentSpaceIntegrationTests {
                 .build();
 
         // persist the admin
-        dashRepo.save(admin);
+        if (!dashRepo.existsById(id))  dashRepo.save(admin);
 
         BasicAWSCredentials awsCredentials = new BasicAWSCredentials("admin", "admin");
         ClientConfiguration clientConfiguration = new ClientConfiguration();
@@ -105,6 +105,7 @@ public class DocumentSpaceIntegrationTests {
     @AfterEach
     void destroy() {
         s3Mock.shutdown();
+        dashRepo.deleteById(id);
     }
 
     @Test
