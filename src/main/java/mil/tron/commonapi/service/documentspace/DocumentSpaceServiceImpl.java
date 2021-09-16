@@ -12,6 +12,7 @@ import java.util.zip.ZipOutputStream;
 
 import com.amazonaws.services.s3.internal.BucketNameUtils;
 import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.transfer.Upload;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -106,7 +107,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 */
 	private void checkSpaceNotExists(String name) {
 		if (name == null)
-			throw new BadRequestException(String.format(NAME_NULL_ERROR));
+			throw new BadRequestException(NAME_NULL_ERROR);
 
 		this.listSpaces().forEach(item -> {
 			if (item.replace("/", "").equalsIgnoreCase(name)) {
@@ -122,7 +123,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 */
 	private void checkSpaceExists(String name) {
 		if (name == null)
-			throw new BadRequestException(String.format(NAME_NULL_ERROR));
+			throw new BadRequestException(NAME_NULL_ERROR);
 
 		for (String s : this.listSpaces()) {
 			if (s.replace("/", "")
@@ -141,10 +142,16 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 */
 	private void checkSpaceNameValid(String name) {
 		if (name == null)
-			throw new BadRequestException(String.format(NAME_NULL_ERROR));
+			throw new BadRequestException(NAME_NULL_ERROR);
 
 		if (verifySpaceNameValid(name)) return;
 		throw new BadRequestException("Invalid space name");
+	}
+
+	private void checkFileExists(String spaceName, String fileName) {
+		if (!documentSpaceClient.doesObjectExist(bucketName, spaceName + "/" + fileName)) {
+			throw new RecordNotFoundException(String.format("Cannot find file with name %s", fileName));
+		}
 	}
 
 	/**
@@ -204,7 +211,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	public List<S3Object> getFiles(String space, Set<String> fileKeys) {
 		checkSpaceExists(space);
 		return fileKeys.stream()
-				.filter(item -> !item.startsWith(RESERVED_METAFILE))
+				.filter(item -> !item.contains(RESERVED_METAFILE))
 				.map(item -> documentSpaceClient.getObject(bucketName, space + "/" + item))
 				.collect(Collectors.toList());
 	}
@@ -247,14 +254,17 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
     public void uploadFile(String space, MultipartFile file) {
+		checkSpaceExists(space);
+
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
 		metaData.setContentLength(file.getSize());
 		
 		try {
-			transferManager.upload(bucketName, space + file.getOriginalFilename(), file.getInputStream(), metaData);
-//			documentSpaceClient.putObject(bucketName, file.getOriginalFilename(), file.getInputStream(), metaData);
-		} catch (IOException e) {
+			Upload upload = transferManager.upload(bucketName, space + "/" + file.getOriginalFilename(), file.getInputStream(), metaData);
+			upload.waitForCompletion();
+			//			documentSpaceClient.putObject(bucketName, file.getOriginalFilename(), file.getInputStream(), metaData);
+		} catch (IOException | InterruptedException e) {
 			throw new BadRequestException("Failed retrieving input stream");
 		}
     }
@@ -262,6 +272,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
     @Override
     public void deleteFile(String space, String fileKey) {
 		checkSpaceExists(space);
+		checkFileExists(space, fileKey);
         documentSpaceClient.deleteObject(bucketName, space + "/" + fileKey);
     }
 
@@ -278,8 +289,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				.listObjects(bucketName, spaceName)
 				.getObjectSummaries()
 				.stream()
-				.filter(item -> !item.getKey().startsWith(RESERVED_METAFILE))  // hide the metafile
-        		.map(this::convertS3SummaryToDto)
+				.filter(item -> !item.getKey().contains(RESERVED_METAFILE))  // hide the metafile
+        		.map(item -> this.convertS3SummaryToDto(spaceName, item))
 				.collect(Collectors.toList());
     }
 
@@ -294,10 +305,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 	
 	@Override
-	public DocumentDto convertS3SummaryToDto(S3ObjectSummary objSummary) {
+	public DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary) {
 		return DocumentDto.builder()
-				.key(objSummary.getKey())
-				.path("")
+				.key(objSummary.getKey().replace(spaceName + "/", ""))
+				.path(spaceName)
 				.uploadedBy("")
 				.uploadedDate(new Date())
 				.build();

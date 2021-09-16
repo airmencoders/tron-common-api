@@ -115,9 +115,10 @@ public class DocumentSpaceController {
     }
     
     @DeleteMapping("/files/{space}/{keyName}")
-    public void delete(@PathVariable String space,
+    public ResponseEntity<Object> delete(@PathVariable String space,
                        @PathVariable("keyName") String keyName) {
     	documentSpaceService.deleteFile(space, keyName);
+    	return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
 

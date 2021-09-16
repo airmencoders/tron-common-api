@@ -27,6 +27,6 @@ public interface DocumentSpaceService {
     List<DocumentDto> listFiles(String spaceName);
     
     DocumentDto convertS3ObjectToDto(S3Object objSummary);
-    DocumentDto convertS3SummaryToDto(S3ObjectSummary objSummary);
+    DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary);
     DocumentDetailsDto convertToDetailsDto(S3Object objSummary);
 }
