@@ -25,11 +25,13 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 
+import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.exception.FileCompressionException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 
 @RestController
 @RequestMapping("${api-prefix.v2}/document-space")
+@PreAuthorizeDashboardAdmin
 @ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
 public class DocumentSpaceController {
 	private final DocumentSpaceService documentSpaceService;
