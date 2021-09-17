@@ -3,7 +3,6 @@ package mil.tron.commonapi.service.documentspace;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -110,7 +109,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			throw new BadRequestException(NAME_NULL_ERROR);
 
 		this.listSpaces().forEach(item -> {
-			if (item.replace("/", "").equalsIgnoreCase(name)) {
+			if (item.getName().equalsIgnoreCase(name)) {
 				throw new ResourceAlreadyExistsException(String.format("Space with name %s already exists", name));
 			}
 		});
@@ -125,9 +124,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		if (name == null)
 			throw new BadRequestException(NAME_NULL_ERROR);
 
-		for (String s : this.listSpaces()) {
-			if (s.replace("/", "")
-					.equalsIgnoreCase(name.replace("/", ""))) {
+		for (DocumentSpaceInfoDto s : this.listSpaces()) {
+			if (s.getName().equalsIgnoreCase(name.replace("/", ""))) {
 				return;
 			}
 		}
@@ -159,8 +157,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @return list of string space names
 	 */
 	@Override
-	public List<String> listSpaces() {
-		return getObjects(null);
+	public List<DocumentSpaceInfoDto> listSpaces() {
+		return getObjects(null).stream().map(space -> {
+			return DocumentSpaceInfoDto.builder()
+					.name(space.replace("/", ""))
+					.build();
+		}).collect(Collectors.toList());
 	}
 
 	/**
@@ -221,35 +223,26 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		checkSpaceExists(space);
 		List<S3Object> files = getFiles(space, fileKeys);
 		
-		BufferedOutputStream bos = new BufferedOutputStream(out);
-    	ZipOutputStream zipOut = new ZipOutputStream(bos);
-    	
-    	files.forEach(item -> {
-    		ZipEntry entry = new ZipEntry(item.getKey());
+    	try (BufferedOutputStream bos = new BufferedOutputStream(out);
+    	    	ZipOutputStream zipOut = new ZipOutputStream(bos);) {
+    		files.forEach(item -> {
+        		ZipEntry entry = new ZipEntry(item.getKey());
+        		
+        		try (S3ObjectInputStream dataStream = item.getObjectContent()) {
+    				zipOut.putNextEntry(entry);
+    				
+    				dataStream.transferTo(zipOut);
+    				
+    			    zipOut.closeEntry();
+    			} catch (IOException e) {
+    				log.warn("Failed to compress file: " + item.getKey());
+    			}
+        	});
     		
-    		try {
-				zipOut.putNextEntry(entry);
-				
-				var dataStream = item.getObjectContent();
-				
-				dataStream.transferTo(zipOut);
-				
-			    zipOut.closeEntry();
-				dataStream.close();
-			} catch (IOException e) {
-				log.warn("Failed to compress file: " + item.getKey());
-			}
-    	});
-    	
-    	try {
-			zipOut.finish();
-			zipOut.close();
-			
-			bos.close();
-		} catch (IOException e) {
-			log.warn("Failed to close compression streams");
+    		zipOut.finish();
+    	} catch (IOException e1) {
+			log.warn("Failure occurred closing zip output stream");
 		}
-    	
 	}
 
 	@Override
@@ -299,7 +292,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				.key(s3Object.getKey())
 				.path("")
 				.uploadedBy("")
-				.uploadedDate(new Date())
+				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
 				.build();
 	}
 	
@@ -309,7 +302,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				.key(objSummary.getKey().replace(spaceName + "/", ""))
 				.path(spaceName)
 				.uploadedBy("")
-				.uploadedDate(new Date())
+				.uploadedDate(objSummary.getLastModified())
 				.build();
 	}
 
@@ -319,7 +312,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				.key(s3Object.getKey())
 				.path("")
 				.uploadedBy("")
-				.uploadedDate(new Date())
+				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
 				.metadata(s3Object.getObjectMetadata())
 				.build();
 	}

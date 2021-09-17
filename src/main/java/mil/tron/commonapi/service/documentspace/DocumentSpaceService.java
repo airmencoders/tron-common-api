@@ -14,7 +14,7 @@ import mil.tron.commonapi.dto.documentspace.DocumentDetailsDto;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
 
 public interface DocumentSpaceService {
-    List<String> listSpaces();
+    List<DocumentSpaceInfoDto> listSpaces();
     DocumentSpaceInfoDto createSpace(DocumentSpaceInfoDto dto);
     void deleteSpace(String name);
 

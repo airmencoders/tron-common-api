@@ -1,6 +1,8 @@
 package mil.tron.commonapi.dto.documentspace;
 
 
+import javax.validation.constraints.NotNull;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.validations.ValidDocumentSpaceName;
@@ -16,6 +18,7 @@ import mil.tron.commonapi.validations.ValidDocumentSpaceName;
 @Builder
 public class DocumentSpaceInfoDto {
 
+	@NotNull
     @Getter
     @Setter
     @ValidDocumentSpaceName

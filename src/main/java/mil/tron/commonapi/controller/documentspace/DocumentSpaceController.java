@@ -10,8 +10,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
+import mil.tron.commonapi.dto.documentspace.DocumentDtoResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDtoResponseWrapper;
+import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
@@ -64,17 +66,51 @@ public class DocumentSpaceController {
 	    return new ResponseEntity<>(documentSpaceService.listSpaces(), HttpStatus.OK);
     }
 
+    @Operation(summary = "Creates a Document Space", description = "Creates a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation",
+				content = @Content(schema = @Schema(implementation = DocumentSpaceInfoDto.class))),
+			@ApiResponse(responseCode = "409",
+				description = "Conflict - Space already exists",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+				description = "Bad Request - Bad space name",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
 	@PostMapping("/spaces")
-    public ResponseEntity<Object> createSpace(@Valid @RequestBody DocumentSpaceInfoDto dto) {
+    public ResponseEntity<DocumentSpaceInfoDto> createSpace(@Valid @RequestBody DocumentSpaceInfoDto dto) {
 	    return new ResponseEntity<>(documentSpaceService.createSpace(dto), HttpStatus.CREATED);
     }
 
+    @Operation(summary = "Deletes a Document Space", description = "Deletes a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+				description = "Bad Request - Bad space name",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
     @DeleteMapping("/spaces/{name}")
     public ResponseEntity<Object> deleteSpace(@PathVariable String name) {
 	    documentSpaceService.deleteSpace(name);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
+    @Operation(summary = "Uploads a file to a Document Space", description = "Uploads a file to a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+				description = "Bad Request - Bad space name",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
 	@PostMapping("/files/{space}")
     public Map<String, String> upload(@PathVariable String space,
                                       @RequestPart("file") MultipartFile file) {
@@ -86,6 +122,17 @@ public class DocumentSpaceController {
         return result;
     }
 
+    @Operation(summary = "Download from a Document Space", description = "Download a single file from a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+				description = "Bad Request - Bad space name",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
     @GetMapping("/file/{space}/{keyName}")
     public ResponseEntity<InputStreamResource> downloadFile(@PathVariable String space,
                                                             @PathVariable("keyName") String keyName) {
@@ -102,6 +149,17 @@ public class DocumentSpaceController {
                 .body(response);
     }
     
+    @Operation(summary = "Download multiple files from a Document Space", description = "Downloads multiple files from a space as a zip file")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found, file(s) not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+				description = "Bad Request - Bad space name",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
     @GetMapping("/files/{space}/{keyNames}")
     public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable String space,
                                                                @PathVariable("keyNames") Set<String> keyNames) {
@@ -114,6 +172,17 @@ public class DocumentSpaceController {
                 .body(response);
     }
     
+    @Operation(summary = "Deletes from a Document Space", description = "Deletes file from a space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found, file not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+				description = "Bad Request - Bad space name",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
     @DeleteMapping("/files/{space}/{keyName}")
     public ResponseEntity<Object> delete(@PathVariable String space,
                        @PathVariable("keyName") String keyName) {
@@ -122,8 +191,19 @@ public class DocumentSpaceController {
     }
 
 
+    @Operation(summary = "Retrieves all file details from a space", description = "Gets all file details from a space. This is not a download")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = DocumentDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "404",
+    				description = "Not Found - space not found",
+    				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @WrappedEnvelopeResponse
     @GetMapping("/files/{space}")
-    public List<DocumentDto> listObjects(@PathVariable String space) {
-        return documentSpaceService.listFiles(space);
+    public ResponseEntity<List<DocumentDto>> listObjects(@PathVariable String space) {
+        return ResponseEntity
+        		.ok(documentSpaceService.listFiles(space));
     }
 }
