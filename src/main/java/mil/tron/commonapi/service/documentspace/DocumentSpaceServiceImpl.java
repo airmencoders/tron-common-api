@@ -13,6 +13,7 @@ import com.amazonaws.services.s3.internal.BucketNameUtils;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.transfer.Upload;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
+import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import org.assertj.core.util.Lists;
@@ -23,7 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 
 import lombok.extern.slf4j.Slf4j;
 import mil.tron.commonapi.dto.documentspace.DocumentDetailsDto;
@@ -35,17 +35,20 @@ import mil.tron.commonapi.exception.BadRequestException;
 @ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
 public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final AmazonS3 documentSpaceClient;
+	private final TransferManager documentSpaceTransferManager;
 	private final String bucketName;
 	
-	private final TransferManager transferManager;
 	private static final String RESERVED_METAFILE = ".metafile";
 	private static final String NAME_NULL_ERROR = "Space Name cannot be null";
 
-	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, @Value("${minio.bucket-name}") String bucketName) {
+	public DocumentSpaceServiceImpl(
+			AmazonS3 documentSpaceClient, 
+			TransferManager documentSpaceTransferManager,
+			@Value("${minio.bucket-name}") String bucketName) {
 		this.documentSpaceClient = documentSpaceClient;
 		this.bucketName = bucketName;
 		
-		this.transferManager = TransferManagerBuilder.standard().withS3Client(documentSpaceClient).build();
+		this.documentSpaceTransferManager = documentSpaceTransferManager;
 	}
 
 	/**
@@ -254,7 +257,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		metaData.setContentLength(file.getSize());
 		
 		try {
-			Upload upload = transferManager.upload(bucketName, space + "/" + file.getOriginalFilename(), file.getInputStream(), metaData);
+			Upload upload = documentSpaceTransferManager.upload(bucketName, space + "/" + file.getOriginalFilename(), file.getInputStream(), metaData);
 			upload.waitForCompletion();
 		} catch (IOException | InterruptedException e) {  //NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
@@ -274,16 +277,63 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @return
 	 */
 	@Override
-    public List<DocumentDto> listFiles(String spaceName) {
+    public S3PaginationDto listFiles(String spaceName, String continuationToken, Integer limit) {
 		checkSpaceExists(spaceName);
-
-    	return documentSpaceClient
-				.listObjects(bucketName, spaceName)
-				.getObjectSummaries()
+		
+		if (limit == null) {
+			limit = 20;
+		}
+		
+		ListObjectsV2Request request = new ListObjectsV2Request()
+				.withBucketName(bucketName)
+				.withPrefix(spaceName)
+				.withMaxKeys(limit)
+				.withContinuationToken(continuationToken);
+		
+		ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
+		List<S3ObjectSummary> summary = objectListing.getObjectSummaries();
+		// Find the Reserved Metadata file
+		int metadataFileIndex = -1;
+		for (int i = 0; i < summary.size(); i++) {
+			if (summary.get(i).getKey().contains(RESERVED_METAFILE)) {
+				metadataFileIndex = i;
+				break;
+			}
+		}
+		
+		// If Reserved Metadata file exists, remove it
+		// and fetch one more item
+		if (metadataFileIndex != -1) {
+			summary.remove(metadataFileIndex);
+			
+			String next = objectListing.getNextContinuationToken();
+			if (next != null) {
+				request = new ListObjectsV2Request()
+						.withBucketName(bucketName)
+						.withPrefix(spaceName)
+						.withMaxKeys(1)
+						.withContinuationToken(next);
+				
+				String currentContinuationToken = objectListing.getContinuationToken();
+				objectListing = documentSpaceClient.listObjectsV2(request);
+				objectListing.setContinuationToken(currentContinuationToken);
+				
+				summary.addAll(objectListing.getObjectSummaries());
+			}
+		}
+		
+		List<DocumentDto> documents = summary
 				.stream()
-				.filter(item -> !item.getKey().contains(RESERVED_METAFILE))  // hide the metafile
         		.map(item -> this.convertS3SummaryToDto(spaceName, item))
 				.collect(Collectors.toList());
+
+    	return S3PaginationDto.builder()
+    			.currentContinuationToken(objectListing.getContinuationToken())
+    			.nextContinuationToken(objectListing.getNextContinuationToken())
+    			.documents(documents)
+    			.size(limit)
+    			.totalElements(documents.size())
+    			.build();
     }
 
 	@Override

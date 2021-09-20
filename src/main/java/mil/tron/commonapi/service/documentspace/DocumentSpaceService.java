@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Set;
 
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
+import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import com.amazonaws.services.s3.model.S3Object;
@@ -24,7 +26,7 @@ public interface DocumentSpaceService {
 	void downloadAndWriteCompressedFiles(String space, Set<String> fileKeys, OutputStream out);
 	void uploadFile(String space, MultipartFile file);
     void deleteFile(String space, String fileKey);
-    List<DocumentDto> listFiles(String spaceName);
+    S3PaginationDto listFiles(String spaceName, String continuationToken, Integer limit);
     
     DocumentDto convertS3ObjectToDto(S3Object objSummary);
     DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary);
