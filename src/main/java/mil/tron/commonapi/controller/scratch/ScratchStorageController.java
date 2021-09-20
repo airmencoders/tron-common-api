@@ -19,6 +19,7 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.InvalidScratchSpacePermissions;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.scratch.InvalidDataTypeException;
 import mil.tron.commonapi.service.PrivilegeService;
 import mil.tron.commonapi.service.scratch.JsonDbService;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
@@ -32,7 +33,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -43,6 +46,7 @@ public class ScratchStorageController {
     private JsonDbService jsonDbService;
     private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
     private static final String INVALID_PERMS = "Invalid User Permissions";
+    private static final String NO_AUTH_INFO_ERROR = "There is no authentication information found";
     private static final String JSONPATH_ID_QUERY = "$[?(@.id == '%s')]";
 
     public ScratchStorageController(ScratchStorageService scratchStorageService, PrivilegeService privilegeService, JsonDbService jsonDbService) {
@@ -335,6 +339,41 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getKeyValueEntryByAppId(appId, keyName), HttpStatus.OK);
     }
 
+    @Operation(summary = "Retrieves a single key-value pair for for a single app but JSON-ize it",
+            description = "App ID is the UUID of the owning application")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = ScratchStorageEntryDto.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Insufficient privileges",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID / Key name not valid or found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Application UUID",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @GetMapping({"${api-prefix.v1}/scratch/{appId}/{keyName}/jsonize", "${api-prefix.v2}/scratch/{appId}/{keyName}/jsonize"})
+    public ResponseEntity<Object> getKeyValueByKeyNameJsonized(
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
+            @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName) {
+
+        validateScratchReadAccessForUser(appId, keyName);
+        try {
+            ScratchStorageEntryDto data = scratchStorageService.getKeyValueEntryByAppId(appId, keyName);
+            Map<String, Object> response = new HashMap<>();
+            response.put("appId", data.getAppId());
+            response.put("key", data.getKey());
+            response.put("value", new ObjectMapper().readTree(data.getValue()));
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        catch (JsonProcessingException ex) {
+            throw new InvalidDataTypeException("Key value could not be json-ized");
+        }
+    }
+
     @Operation(summary = "Treats the key's value as JSON and returns the JsonPath query invoked onto that JSON structure. " +
                 "Returns JSON string matching the specified JSON Path",
             description = "App ID is the UUID of the owning application")
@@ -383,8 +422,44 @@ public class ScratchStorageController {
                 @Valid @RequestBody ScratchValuePatchJsonDto valueSpec) {
 
         validateScratchWriteAccessForUser(appId, keyName);
-        scratchStorageService.patchKeyValueJson(appId, keyName, valueSpec.getValue(), valueSpec.getJsonPath());
+        if (valueSpec.isNewEntry()) {
+            scratchStorageService.addKeyValueJson(appId, keyName, valueSpec.getNewFieldName(), valueSpec.getValue(), valueSpec.getJsonPath());
+        }
+        else {
+            scratchStorageService.patchKeyValueJson(appId, keyName, valueSpec.getValue(), valueSpec.getJsonPath());
+        }
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @Operation(summary = "Treats the key's value as JSON and attempts to delete a portion of it from given JSON Patch spec." +
+            " Returns NO_CONTENT response on successful update.",
+            description = "App ID is the UUID of the owning application")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204",
+                    description = "Successful operation"),
+            @ApiResponse(responseCode = "404",
+                    description = "Application ID / Key name not valid or found",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Malformed Application UUID / Value cannot be jsonized / Bad JSON Path / Unable to serialize response to JSON",
+                    content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @DeleteMapping({"${api-prefix.v1}/scratch/{appId}/{keyName}/jsonize", "${api-prefix.v2}/scratch/{appId}/{keyName}/jsonize"})
+    public ResponseEntity<Object> deleteKeyValuePairAsJson(
+            Authentication authentication,
+            @Parameter(name = "appId", description = "Application UUID", required = true) @PathVariable UUID appId,
+            @Parameter(name = "keyName", description = "Key Name to look up", required = true) @PathVariable String keyName,
+            @Parameter(name = "updateSpec", description = "Object specifying the json path to execute and the new value", required = true)
+            @Valid @RequestBody ScratchValuePatchJsonDto valueSpec) {
+
+        if (authentication == null) throw new BadRequestException(NO_AUTH_INFO_ERROR);
+
+        if (scratchStorageService.userCanWriteToAppId(appId, authentication.getCredentials().toString(), keyName)) {
+            scratchStorageService.deleteKeyValueJson(appId, keyName, valueSpec.getJsonPath());
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        throw new InvalidScratchSpacePermissions(INVALID_PERMS);
     }
 
     @Operation(summary = "Adds or updates a key-value pair for a given App Id",
@@ -728,7 +803,7 @@ public class ScratchStorageController {
     }
 
     @Operation(summary = "Gets the list of key names the requesting user can access (based on their email)",
-            description = "Checks read access again all keys in given appId, if allowed, keyname is included in return list")
+            description = "Checks read access against all keys in given appId, if allowed, keyname is included in return list")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Operation Successful",
@@ -740,12 +815,47 @@ public class ScratchStorageController {
             @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
             Authentication authentication) {
 
-        if (authentication == null) throw new BadRequestException("There is no authentication information found");
+        if (authentication == null) throw new BadRequestException(NO_AUTH_INFO_ERROR);
 
         return new ResponseEntity<>(scratchStorageService
                 .getKeysUserCanReadFrom(id, authentication.getCredentials().toString()), HttpStatus.OK);
     }
 
+    @Operation(summary = "Gets the list of key names the requesting user can write to (based on their email)",
+            description = "Checks write access against all keys in given appId, if allowed, keyname is included in return list")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Operation Successful",
+                    content = @Content(schema = @Schema(implementation = GenericStringArrayResponseWrapper.class)))
+    })
+    @WrappedEnvelopeResponse
+    @GetMapping("${api-prefix.v2}/scratch/apps/{id}/write")
+    public ResponseEntity<Object> getAppKeysUserCanWriteTo(
+            @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
+            Authentication authentication) {
+
+        if (authentication == null) throw new BadRequestException(NO_AUTH_INFO_ERROR);
+
+        return new ResponseEntity<>(scratchStorageService.getKeysUserCanWriteTo(id, authentication.getCredentials().toString()), HttpStatus.OK);
+    }
+
+    @Operation(summary = "Gets the list of key names the requesting user can admin (based on their email)",
+            description = "Checks admin access against all keys in given appId, if allowed, keyname is included in return list")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Operation Successful",
+                    content = @Content(schema = @Schema(implementation = GenericStringArrayResponseWrapper.class)))
+    })
+    @WrappedEnvelopeResponse
+    @GetMapping("${api-prefix.v2}/scratch/apps/{id}/admin")
+    public ResponseEntity<Object> getAppKeysUserIsAdminOf(
+            @Parameter(name = "id", description = "Application UUID", required = true) @PathVariable UUID id,
+            Authentication authentication) {
+
+        if (authentication == null) throw new BadRequestException(NO_AUTH_INFO_ERROR);
+
+        return new ResponseEntity<>(scratchStorageService.getKeysUserIsAdmin(id, authentication.getCredentials().toString()), HttpStatus.OK);
+    }
 
     // scratch app user management endpoints - admins can only manage scratch space users
 

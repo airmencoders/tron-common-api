@@ -1236,6 +1236,9 @@ public class ScratchStorageIntegrationTest {
                 + Test that KEY_ADMIN on App2/Key1 cannot write to App2/Key2
                 + Test that anyone can read from App2/Key2 since implicitRead is on
                 + Key2 admin turns off implicit read and tests that random person is now forbidden on reads
+                + SSO authenticated user visits, requests keys he can read, write, or admin
+                + Add chris@test.com user to app2/key2 with write privs - should be able to read/write but no admin
+                + Test out JSON ops in ACL Mode with App2... create a JSON Structure in Key2, and add/edit/delete from it
          */
 
         ScratchStorageUserDto jon = ScratchStorageUserDto
@@ -1591,6 +1594,185 @@ public class ScratchStorageIntegrationTest {
         mockMvc.perform(get(ENDPOINT_V2 + "{appId}/{keyName}", app2Id, "Key2")
                 .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
                 .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
+
+        // SSO auth'd user requests keys he can read
+        mockMvc.perform(get(ENDPOINT_V2 + "apps/{appId}/read", app2Id)
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // SSO auth'd user requests keys he can write
+        mockMvc.perform(get(ENDPOINT_V2 + "apps/{appId}/write", app2Id)
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // SSO auth'd user requests keys he can admin
+        mockMvc.perform(get(ENDPOINT_V2 + "apps/{appId}/admin", app2Id)
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // give chris@test.com KEY_WRITE on app2/key2
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken(jim.getEmail()))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key2_acl")
+                        .value("{ \"implicitRead\": false, " +
+                                "\"access\": { \"jim@test.com\" : \"KEY_ADMIN\", \"chris@test.com\" : \"KEY_WRITE\" } }")
+                        .build())))
+                .andExpect(status().isOk());
+
+        // verify read and write access to key2, but no admin access
+        mockMvc.perform(get(ENDPOINT_V2 + "apps/{appId}/read", app2Id)
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+        mockMvc.perform(get(ENDPOINT_V2 + "apps/{appId}/write", app2Id)
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+        mockMvc.perform(get(ENDPOINT_V2 + "apps/{appId}/admin", app2Id)
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // add JSON to App2/Key2 as chris@test.com
+        mockMvc.perform(post(ENDPOINT_V2)
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchStorageEntryDto
+                        .builder()
+                        .appId(app2Id)
+                        .key("Key2")
+                        .value("{ \"data1\": \"some data1\" }")
+                        .build())))
+                .andExpect(status().isOk());
+
+        // add a new field
+        mockMvc.perform(patch(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto
+                        .builder()
+                        .jsonPath("$")
+                        .value("some data2")
+                        .newEntry(true)
+                        .newFieldName("data2")
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify json-ized addition
+        mockMvc.perform(get(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.value.data1", equalTo("some data1")))
+                .andExpect(jsonPath("$.value.data2", equalTo("some data2")));
+
+        // overwrite field
+        mockMvc.perform(patch(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto
+                        .builder()
+                        .jsonPath("$")
+                        .value("some data2 again")
+                        .newEntry(true)
+                        .newFieldName("data2")
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify json-ized addition
+        mockMvc.perform(get(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.value.data1", equalTo("some data1")))
+                .andExpect(jsonPath("$.value.data2", equalTo("some data2 again")));
+
+        // patch field (same as overwriting it)
+        mockMvc.perform(patch(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto
+                        .builder()
+                        .jsonPath("$.data2")
+                        .value("some data2 patched")
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify json-ized addition
+        mockMvc.perform(get(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.value.data1", equalTo("some data1")))
+                .andExpect(jsonPath("$.value.data2", equalTo("some data2 patched")));
+
+        // delete field
+        mockMvc.perform(delete(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto
+                        .builder()
+                        .jsonPath("$.data2")
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // delete non-existent field - is idempotent
+        mockMvc.perform(delete(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto
+                        .builder()
+                        .jsonPath("$.data2")
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify json-ized addition
+        mockMvc.perform(get(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.value.data1", equalTo("some data1")))
+                .andExpect(jsonPath("$.value.data2").doesNotExist());
+
+        // chris@test.com cannot delete the whole key though
+        mockMvc.perform(delete(ENDPOINT_V2 + "/{appId}/key/{keyId}", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("chris@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER))
+                .andExpect(status().isForbidden());
+
+        // add a new field as random person fails
+        mockMvc.perform(patch(ENDPOINT_V2 + "/{appId}/{keyId}/jsonize", app2Id, "Key2")
+                .header(AUTH_HEADER_NAME, createToken("jonny@test.com"))
+                .header(XFCC_HEADER_NAME, XFCC_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto
+                        .builder()
+                        .jsonPath("$")
+                        .value("some data2")
+                        .newEntry(true)
+                        .newFieldName("data2")
+                        .build())))
                 .andExpect(status().isForbidden());
     }
 

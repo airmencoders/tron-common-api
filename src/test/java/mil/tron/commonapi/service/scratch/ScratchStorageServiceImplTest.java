@@ -741,6 +741,94 @@ public class ScratchStorageServiceImplTest {
     }
 
     @Test
+    void testGetKeysUserCanWriteTo() {
+        UUID id = UUID.randomUUID();
+
+        Mockito.when(appRegistryRepo.findById(id))
+                .thenReturn(Optional.of(ScratchStorageAppRegistryEntry
+                        .builder()
+                        .id(id)
+                        .appName("CoolAppWithAcl")
+                        .aclMode(true)
+                        .userPrivs(Set.of(
+                                ScratchStorageAppUserPriv
+                                        .builder()
+                                        .user(ScratchStorageUser.builder().email("admin@test1.com").build())
+                                        .privilege(privAdmin)
+                                        .build()
+                        ))
+                        .build()));
+
+        Mockito.when(repository.findAllKeysForAppId(id))
+                .thenReturn(Lists.newArrayList("Test", "Test1", "Test_acl", "Test1_acl"));
+
+        Mockito.when(repository.findByAppIdAndKey(id, "Test_acl")).thenReturn(Optional.of(
+                ScratchStorageEntry.builder()
+                        .id(UUID.randomUUID())
+                        .appId(id)
+                        .key("Test_acl")
+                        .value(" { \"implicitRead\": true, \"access\": { \"john@test.com\": \"KEY_READ\", \"frank@test.com\": \"KEY_ADMIN\", \"william@test.com\": \"KEY_WRITE\" }}")
+                        .build()));
+
+        Mockito.when(repository.findByAppIdAndKey(id, "Test1_acl")).thenReturn(Optional.of(
+                ScratchStorageEntry.builder()
+                        .id(UUID.randomUUID())
+                        .appId(id)
+                        .key("Test1_acl")
+                        .value(" { \"implicitRead\": false, \"access\": { \"john@test.com\": \"KEY_READ\" }}")
+                        .build()));
+
+        assertEquals(4, service.getKeysUserCanWriteTo(id, "admin@test1.com").size());  // SCRATCH_ADMIN is everything everytime
+        assertEquals(2, service.getKeysUserCanWriteTo(id, "frank@test.com").size());  // KEY_ADMIN is only admin of applicable keys AND their acls
+        assertEquals(1, service.getKeysUserCanWriteTo(id, "william@test.com").size());  // KEY_WRITE is just bound to keys with WRITE and below
+        assertEquals(0, service.getKeysUserCanWriteTo(id, "random_person@test.com").size());
+    }
+
+    @Test
+    void testGetKeysUserCanAdmin() {
+        UUID id = UUID.randomUUID();
+
+        Mockito.when(appRegistryRepo.findById(id))
+                .thenReturn(Optional.of(ScratchStorageAppRegistryEntry
+                        .builder()
+                        .id(id)
+                        .appName("CoolAppWithAcl")
+                        .aclMode(true)
+                        .userPrivs(Set.of(
+                                ScratchStorageAppUserPriv
+                                        .builder()
+                                        .user(ScratchStorageUser.builder().email("admin@test1.com").build())
+                                        .privilege(privAdmin)
+                                        .build()
+                        ))
+                        .build()));
+
+        Mockito.when(repository.findAllKeysForAppId(id))
+                .thenReturn(Lists.newArrayList("Test", "Test1", "Test_acl", "Test1_acl"));
+
+        Mockito.when(repository.findByAppIdAndKey(id, "Test_acl")).thenReturn(Optional.of(
+                ScratchStorageEntry.builder()
+                        .id(UUID.randomUUID())
+                        .appId(id)
+                        .key("Test_acl")
+                        .value(" { \"implicitRead\": true, \"access\": { \"john@test.com\": \"KEY_READ\", \"frank@test.com\": \"KEY_ADMIN\", \"william@test.com\": \"KEY_WRITE\" }}")
+                        .build()));
+
+        Mockito.when(repository.findByAppIdAndKey(id, "Test1_acl")).thenReturn(Optional.of(
+                ScratchStorageEntry.builder()
+                        .id(UUID.randomUUID())
+                        .appId(id)
+                        .key("Test1_acl")
+                        .value(" { \"implicitRead\": false, \"access\": { \"john@test.com\": \"KEY_READ\" }}")
+                        .build()));
+
+        assertEquals(4, service.getKeysUserIsAdmin(id, "admin@test1.com").size());  // SCRATCH_ADMIN is everything everytime
+        assertEquals(2, service.getKeysUserIsAdmin(id, "frank@test.com").size());  // KEY_ADMIN is only admin of applicable keys AND their acls
+        assertEquals(0, service.getKeysUserIsAdmin(id, "william@test.com").size());  // KEY_WRITE is just bound to keys with WRITE and below
+        assertEquals(0, service.getKeysUserIsAdmin(id, "random_person@test.com").size());
+    }
+
+    @Test
     void testGetKeyValueAsJson() {
 
         ScratchStorageEntry entry = ScratchStorageEntry.builder()
@@ -813,6 +901,82 @@ public class ScratchStorageServiceImplTest {
 
         assertThrows(InvalidFieldValueException.class, () -> service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.age"));
         assertThrows(InvalidFieldValueException.class, () -> service.patchKeyValueJson(entry.getId(), "hello",  "John", "$.name"));
+    }
+
+    @Test
+    void testAddToJsonValue() {
+
+        // tests adding a key/value (field/value) to a json structure using json path
+
+        ScratchStorageEntry entry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("hello")
+                .value("{ \"name\": \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
+                .build();
+
+        ScratchStorageEntry invalidJsonEntry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("hello")
+                .value("{ \"name: \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
+                .build();
+
+        final ScratchStorageEntry[] updatedValue = {null};
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
+        Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(invalidJsonEntry));
+
+        Mockito.when(repository.save(Mockito.any(ScratchStorageEntry.class)))
+                .thenAnswer(invocationOnMock -> {
+                    updatedValue[0] = invocationOnMock.getArgument(0);
+                    return invocationOnMock.getArgument(0);
+                });
+
+        service.addKeyValueJson(entry.getId(), "hello",  "age", "38", "$");
+        assertTrue(updatedValue[0].getValue().contains("age"));
+
+        assertThrows(InvalidFieldValueException.class, () -> service.addKeyValueJson(entry.getId(), "hello",  "age", "38", "$"));
+        assertThrows(InvalidFieldValueException.class, () -> service.addKeyValueJson(entry.getId(), "hello",  "age", "38", "$"));
+    }
+
+    @Test
+    void testDeleteFromJsonValue() {
+
+        // tests deleting a key/value (field/value) from a json structure using json path
+
+        ScratchStorageEntry entry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("hello")
+                .value("{ \"name\": \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
+                .build();
+
+        ScratchStorageEntry invalidJsonEntry = ScratchStorageEntry.builder()
+                .id(UUID.randomUUID())
+                .key("hello")
+                .value("{ \"name: \"Dude\", \"skills\": [ \"coding\", \"math\" ] }")
+                .build();
+
+        final ScratchStorageEntry[] updatedValue = {null};
+
+        Mockito.when(appRegistryRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(registeredApps.get(0)));
+        Mockito.when(repository.findByAppIdAndKey(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(entry))
+                .thenReturn(Optional.of(invalidJsonEntry));
+
+        Mockito.when(repository.save(Mockito.any(ScratchStorageEntry.class)))
+                .thenAnswer(invocationOnMock -> {
+                    updatedValue[0] = invocationOnMock.getArgument(0);
+                    return invocationOnMock.getArgument(0);
+                });
+
+        service.deleteKeyValueJson(entry.getId(), "hello",  "$.name");
+        assertFalse(updatedValue[0].getValue().contains("name"));
+
+        assertThrows(InvalidFieldValueException.class, () -> service.deleteKeyValueJson(entry.getId(), "hello", "$.name"));
+        assertThrows(InvalidFieldValueException.class, () -> service.deleteKeyValueJson(entry.getId(), "hello",  "$.name"));
     }
 
     @Test
