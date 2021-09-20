@@ -11,6 +11,8 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,5 +51,15 @@ public class DocumentSpaceConfig {
 	    		.withClientConfiguration(clientConfiguration)
 	            .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
 	            .build();
+    }
+    
+    @Bean
+    public TransferManager documentSpaceTransferManager() {
+    	if (documentSpaceClient() == null) {
+    		log.warn("Document Space client is not available to create Transfer Manager");
+    		return null;
+    	}
+    	
+    	return TransferManagerBuilder.standard().withS3Client(documentSpaceClient()).build();
     }
 }
