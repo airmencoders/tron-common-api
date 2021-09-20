@@ -339,7 +339,7 @@ public class ScratchStorageController {
         return new ResponseEntity<>(scratchStorageService.getKeyValueEntryByAppId(appId, keyName), HttpStatus.OK);
     }
 
-    @Operation(summary = "Retrieves a single key-value pair for for a single app but JSON-ize it",
+    @Operation(summary = "Retrieves a single key-value pair for for a single app but JSON-ize it first before sending back",
             description = "App ID is the UUID of the owning application")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
@@ -352,7 +352,7 @@ public class ScratchStorageController {
                     description = "Application ID / Key name not valid or found",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
             @ApiResponse(responseCode = "400",
-                    description = "Malformed Application UUID",
+                    description = "Malformed Application UUID / JSONization failed",
                     content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @GetMapping({"${api-prefix.v1}/scratch/{appId}/{keyName}/jsonize", "${api-prefix.v2}/scratch/{appId}/{keyName}/jsonize"})
