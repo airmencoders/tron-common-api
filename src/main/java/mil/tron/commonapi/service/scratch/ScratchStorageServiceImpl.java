@@ -4,15 +4,24 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.jayway.jsonpath.*;
-import mil.tron.commonapi.dto.*;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.InvalidJsonException;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
+import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
+import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.ScratchStorageEntryDto;
+import mil.tron.commonapi.dto.ScratchStorageUserDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppRegistryEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageAppUserPriv;
 import mil.tron.commonapi.entity.scratch.ScratchStorageEntry;
 import mil.tron.commonapi.entity.scratch.ScratchStorageUser;
-import mil.tron.commonapi.exception.*;
+import mil.tron.commonapi.exception.InvalidFieldValueException;
+import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepository;
 import mil.tron.commonapi.repository.scratch.ScratchStorageAppUserPrivRepository;
@@ -35,6 +44,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
     private static final String WRITE = "KEY_WRITE"; //write role for acl-controlled keys
     private static final String READ = "KEY_READ"; // read role for acl-controlled keys
     private static final String ADMIN = "KEY_ADMIN";  // admin role for acl-controlled keys
+    private static final String NOT_VALID_JSON_ERROR = "Source Value Not Valid Json";
     private ScratchStorageRepository repository;
     private ScratchStorageAppRegistryEntryRepository appRegistryRepo;
     private ScratchStorageUserRepository scratchUserRepo;
@@ -604,6 +614,53 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Check to see what keys a requesting user can WRITE to in a given app id
+     * @param appId UUID of the app
+     * @param email requesters SSO email
+     * @return list of key names that user can write to
+     */
+    @Override
+    public List<String> getKeysUserCanWriteTo(UUID appId, String email) {
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+        return Lists.newArrayList(repository.findAllKeysForAppId(appEntry.getId())).stream()
+                .filter(item -> {
+                    try {
+                        return this.userCanWriteToAppId(appEntry.getId(), email, item);
+                    } catch (RecordNotFoundException e) {
+                        return false;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Check to see what keys a requesting user is ADMIN of in a given app id
+     * @param appId UUID of the app
+     * @param email requesters SSO email
+     * @return list of key names that user is ADMIN of
+     */
+    @Override
+    public List<String> getKeysUserIsAdmin(UUID appId, String email) {
+        ScratchStorageAppRegistryEntry appEntry = this.validateAppIsRealAndRegistered(appId);
+        return Lists.newArrayList(repository.findAllKeysForAppId(appEntry.getId())).stream()
+                .filter(item -> {
+                    try {
+                        if (!appEntry.isAclMode()) {
+                            return this.userHasAdminWithAppId(appEntry.getId(), email);
+                        } else {
+                            // acl mode SCRATCH_ADMIN trumps everything, but if not then see if they
+                            //  are a KEY_ADMIN of this key...
+                            return (this.userHasAdminWithAppId(appEntry.getId(), email)
+                                    || aclLookup(appEntry, email, keyNameFromAclKey(item), ADMIN));
+                        }
+                    }
+                    catch (RecordNotFoundException e) { return false; }
+                })
+                .collect(Collectors.toList());
+    }
+
+
     private boolean validateAclAccessLevel(String email, String keyName, String desiredRole, JsonNode aclNodes) {
         switch (desiredRole) {
             case READ:
@@ -752,7 +809,7 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
         } catch (JsonProcessingException e) {
             throw new InvalidFieldValueException("Return value Could not be serialized to Json");
         } catch (InvalidJsonException e) {
-            throw new InvalidFieldValueException("Source value not valid Json");
+            throw new InvalidFieldValueException(NOT_VALID_JSON_ERROR);
         }
     }
 
@@ -777,7 +834,56 @@ public class ScratchStorageServiceImpl implements ScratchStorageService {
             // write the modified json structure back to the db as a string
             this.setKeyValuePair(appId, keyName, results.jsonString());
         } catch (InvalidJsonException e) {
-            throw new InvalidFieldValueException("Source Value Not Valid Json");
+            throw new InvalidFieldValueException(NOT_VALID_JSON_ERROR);
+        }
+    }
+
+    /**
+     * Adds a portion of a Json structure given a JsonPath and value
+     *
+     * @param appId        the UUID of the scratch app
+     * @param keyName      the key name of the existing key-value pair
+     * @param fieldName    the field name for the new object/data being added to the existing json structure
+     * @param value        the value to add in the Json
+     * @param jsonPathSpec the Jayway JsonPath specification string
+     */
+    @Override
+    public void addKeyValueJson(UUID appId, String keyName, String fieldName, String value, String jsonPathSpec) {
+
+        // must already exist as a key-value pair to modify...
+        ScratchStorageEntryDto existingJsonValue = this.getKeyValueEntryByAppId(appId, keyName);
+
+        try {
+            // parse it to Json
+            DocumentContext results = JsonPath.parse(existingJsonValue.getValue()).put(jsonPathSpec, fieldName, value);
+
+            // write the modified json structure back to the db as a string
+            this.setKeyValuePair(appId, keyName, results.jsonString());
+        } catch (InvalidJsonException e) {
+            throw new InvalidFieldValueException(NOT_VALID_JSON_ERROR);
+        }
+    }
+
+    /**
+     * Deletes a portion of a Json structure given a JsonPath
+     *
+     * @param appId        the UUID of the scratch app
+     * @param keyName      the key name of the existing key-value pair
+     * @param jsonPathSpec the Jayway JsonPath specification string
+     */
+    @Override
+    public void deleteKeyValueJson(UUID appId, String keyName, String jsonPathSpec) {
+        // must already exist as a key-value pair to modify...
+        ScratchStorageEntryDto existingJsonValue = this.getKeyValueEntryByAppId(appId, keyName);
+
+        try {
+            // parse it to Json
+            DocumentContext results = JsonPath.parse(existingJsonValue.getValue()).delete(jsonPathSpec);
+
+            // write the modified json structure back to the db as a string
+            this.setKeyValuePair(appId, keyName, results.jsonString());
+        } catch (InvalidJsonException e) {
+            throw new InvalidFieldValueException(NOT_VALID_JSON_ERROR);
         }
     }
 }

@@ -593,6 +593,65 @@ public class ScratchStorageControllerTest {
     }
 
     @Test
+    void testAddScratchValuePartAsJson() throws Exception {
+
+        // test a patch request to change ADD to key-value that's a JSON structure
+        ScratchStorageEntryDto entry = ScratchStorageEntryDto
+                .builder()
+                .id(UUID.randomUUID())
+                .appId(UUID.randomUUID())
+                .key("age")
+                .value("{}")
+                .build();
+
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(true); // let user have the privs to mutate
+
+        Mockito.when(service.setKeyValuePair(entry.getAppId(), entry.getKey(), entry.getValue())).thenReturn(entry);
+        Mockito.doNothing().when(service).addKeyValueJson(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
+
+        mockMvc.perform(patch(ENDPOINT + "{appId}/{keyName}/jsonize", entry.getAppId(), entry.getKey())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto
+                        .builder()
+                        .value("Bob")
+                        .newEntry(true)
+                        .newFieldName("name")
+                        .jsonPath("$")
+                        .build())))
+                .andExpect(status().isNoContent());
+
+    }
+
+    @Test
+    @WithMockUser(username="user@test.com")
+    void testDeleteScratchValuePartAsJson() throws Exception {
+
+        // test a patch request to change DELETE something inside that's a JSON structure
+        ScratchStorageEntryDto entry = ScratchStorageEntryDto
+                .builder()
+                .id(UUID.randomUUID())
+                .appId(UUID.randomUUID())
+                .key("age")
+                .value("{}")
+                .build();
+
+        Mockito.when(service.userCanWriteToAppId(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(true);
+
+        Mockito.when(service.setKeyValuePair(entry.getAppId(), entry.getKey(), entry.getValue())).thenReturn(entry);
+        Mockito.doNothing().when(service).deleteKeyValueJson(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString());
+
+        mockMvc.perform(delete(ENDPOINT + "{appId}/{keyName}/jsonize", entry.getAppId(), entry.getKey())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(ScratchValuePatchJsonDto
+                        .builder()
+                        .jsonPath("$")
+                        .build())))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
     @WithMockUser(username="user@test.com")
     void testGetAllAppKeysUserCanRead() throws Exception {
 
@@ -601,6 +660,34 @@ public class ScratchStorageControllerTest {
                 .thenReturn(Lists.newArrayList("test", "test1"));
 
         mockMvc.perform(get(ENDPOINT_V2 + "/apps/{appId}/read", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
+
+    }
+
+    @Test
+    @WithMockUser(username="user@test.com")
+    void testGetAllAppKeysUserCanWrite() throws Exception {
+
+        UUID id = UUID.randomUUID();
+        Mockito.when(service.getKeysUserCanWriteTo(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(Lists.newArrayList("test", "test1"));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/apps/{appId}/write", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
+
+    }
+
+    @Test
+    @WithMockUser(username="user@test.com")
+    void testGetAllAppKeysUserCanAdmin() throws Exception {
+
+        UUID id = UUID.randomUUID();
+        Mockito.when(service.getKeysUserIsAdmin(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(Lists.newArrayList("test", "test1"));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/apps/{appId}/admin", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(2)));
 

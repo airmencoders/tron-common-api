@@ -24,4 +24,12 @@ public class ScratchValuePatchJsonDto {
     @Getter
     @Setter
     private String value;
+
+    @Getter
+    @Setter
+    private String newFieldName;
+
+    @Getter
+    @Setter
+    private boolean newEntry;
 }

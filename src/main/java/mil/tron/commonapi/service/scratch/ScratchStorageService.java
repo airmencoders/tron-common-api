@@ -49,8 +49,12 @@ public interface ScratchStorageService {
     boolean userCanDeleteKeyForAppId(UUID appId, String email, String keyName);
     boolean aclLookup(ScratchStorageAppRegistryEntry appEntry, String email, String keyName, String desiredRole);
     List<String> getKeysUserCanReadFrom(UUID appId, String email);
+    List<String> getKeysUserCanWriteTo(UUID appId, String email);
+    List<String> getKeysUserIsAdmin(UUID appId, String email);
 
     // JSON methods to treating values of specified keys like JSON
     String getKeyValueJson(UUID appId, String keyName, String jsonPathSpec);
     void patchKeyValueJson(UUID appId, String keyName, String value, String jsonPathSpec);
+    void addKeyValueJson(UUID appId, String keyName, String fieldName, String value, String jsonPathSpec);
+    void deleteKeyValueJson(UUID appId, String keyName, String jsonPathSpec);
 }
