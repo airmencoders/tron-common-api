@@ -110,7 +110,7 @@ public class DocumentSpaceController {
 				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PostMapping("/files/{space}")
+	@PostMapping(value = "/files/{space}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public Map<String, String> upload(@PathVariable String space,
                                       @RequestPart("file") MultipartFile file) {
 

@@ -286,7 +286,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		
 		ListObjectsV2Request request = new ListObjectsV2Request()
 				.withBucketName(bucketName)
-				.withPrefix(spaceName)
+				.withPrefix(spaceName + "/")
 				.withMaxKeys(limit)
 				.withContinuationToken(continuationToken);
 		
