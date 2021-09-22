@@ -1,6 +1,6 @@
 [
   {
-    "name": "Puckboard",
+    "name": "tron-puckboard",
     "openApiSpecFilename": "puckboard.yml",
     "sourceUrl": "http://puckboard-api-service.tron-puckboard.svc.cluster.local/puckboard-api/v2",
     "appSourcePath": "puckboard"
