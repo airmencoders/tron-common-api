@@ -341,6 +341,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return DocumentDto.builder()
 				.key(s3Object.getKey())
 				.path("")
+				.size(s3Object.getObjectMetadata().getContentLength())
 				.uploadedBy("")
 				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
 				.build();
@@ -351,6 +352,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return DocumentDto.builder()
 				.key(objSummary.getKey().replace(spaceName + "/", ""))
 				.path(spaceName)
+				.size(objSummary.getSize())
 				.uploadedBy("")
 				.uploadedDate(objSummary.getLastModified())
 				.build();
@@ -361,6 +363,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return DocumentDetailsDto.builder()
 				.key(s3Object.getKey())
 				.path("")
+				.size(s3Object.getObjectMetadata().getContentLength())
 				.uploadedBy("")
 				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
 				.metadata(s3Object.getObjectMetadata())
