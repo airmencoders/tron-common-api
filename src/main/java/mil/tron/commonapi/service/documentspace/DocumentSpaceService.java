@@ -22,6 +22,7 @@ public interface DocumentSpaceService {
 
 	S3Object getFile(String space, String key);
 	S3Object downloadFile(String space, String fileKey);
+	void downloadAllInSpaceAndCompress(String directory, OutputStream out);
 	List<S3Object> getFiles(String space, Set<String> fileKeys);
 	void downloadAndWriteCompressedFiles(String space, Set<String> fileKeys, OutputStream out);
 	void uploadFile(String space, MultipartFile file);

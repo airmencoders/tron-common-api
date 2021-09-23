@@ -132,11 +132,11 @@ public class DocumentSpaceController {
 				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @GetMapping("/file/{space}/{keyName}")
+    @GetMapping("/file/{space}/download")
     public ResponseEntity<InputStreamResource> downloadFile(@PathVariable String space,
-                                                            @PathVariable("keyName") String keyName) {
+                                                            @RequestParam("file") String file) {
 
-        S3Object s3Data = documentSpaceService.downloadFile(space, keyName);
+        S3Object s3Data = documentSpaceService.downloadFile(space, file);
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
@@ -144,7 +144,7 @@ public class DocumentSpaceController {
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.valueOf(s3Meta.getContentType()))
-                .headers(createDownloadHeaders(keyName))
+                .headers(createDownloadHeaders(file))
                 .body(response);
     }
     
@@ -159,10 +159,32 @@ public class DocumentSpaceController {
 				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @GetMapping("/files/{space}/{keyNames}")
+    @GetMapping("/files/{space}/download")
     public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable String space,
-                                                               @PathVariable("keyNames") Set<String> keyNames) {
-        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(space, keyNames, out);
+                                                               @RequestParam("files") Set<String> files) {
+        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(space, files, out);
+        
+        return ResponseEntity
+                .ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .headers(createDownloadHeaders("files.zip"))
+                .body(response);
+    }
+    
+    @Operation(summary = "Download all files from a Document Space", description = "Downloads all files from a space as a zip file")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found, file(s) not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "400",
+				description = "Bad Request - Bad space name",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @GetMapping("/files/{space}/download/all")
+    public ResponseEntity<StreamingResponseBody> downloadAllFilesInSpace(@PathVariable String space) {
+        StreamingResponseBody response = out -> documentSpaceService.downloadAllInSpaceAndCompress(space, out);
         
         return ResponseEntity
                 .ok()
