@@ -1,6 +1,9 @@
 package mil.tron.commonapi.controller.ranks;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import mil.tron.commonapi.dto.rank.RankCategorizedDto;
+import mil.tron.commonapi.dto.rank.RankResponseWrapper;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.service.ranks.RankService;
@@ -51,7 +54,30 @@ public class RankControllerTests {
                 .thenReturn(ranks);
         mockMvc.perform(get(ENDPOINT))
                 .andExpect(status().isOk())
-                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(ranks)));
+                .andExpect(result -> 
+                	assertThat(result.getResponse().getContentAsString())
+                	.isEqualTo(OBJECT_MAPPER.writeValueAsString(RankResponseWrapper.builder().data(ranks).build())));
+    }
+    
+    @Nested
+    class GetRanksByBranchCategorizedTest {
+        @Test
+        void validBranch() throws Exception {
+        	RankCategorizedDto dto =  RankCategorizedDto.builder().officer(usafRanks).build();
+            Mockito.when(rankService.getRanksByBranchAndCategorize(Branch.USAF))
+                    .thenReturn(dto);
+            mockMvc.perform(get(ENDPOINT + "usaf/categorized"))
+                    .andExpect(status().isOk())
+                    .andExpect(result -> 
+                    	assertThat(result.getResponse().getContentAsString())
+                    	.isEqualTo(OBJECT_MAPPER.writeValueAsString(dto)));
+        }
+
+        @Test
+        void invalidBranch() throws Exception {
+            mockMvc.perform(get(ENDPOINT + "doesnotexist/categorized"))
+                    .andExpect(status().isNotFound());
+        }
     }
 
     @Nested
@@ -62,7 +88,9 @@ public class RankControllerTests {
                     .thenReturn(usafRanks);
             mockMvc.perform(get(ENDPOINT + "usaf"))
                     .andExpect(status().isOk())
-                    .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(usafRanks)));
+                    .andExpect(result -> 
+                    	assertThat(result.getResponse().getContentAsString())
+                    	.isEqualTo(OBJECT_MAPPER.writeValueAsString(RankResponseWrapper.builder().data(usafRanks).build())));
         }
 
         @Test
