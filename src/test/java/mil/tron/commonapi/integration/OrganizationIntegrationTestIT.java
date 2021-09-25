@@ -62,7 +62,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties", properties = { "efa-enabled=false" })
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class OrganizationIntegrationTest {
+public class OrganizationIntegrationTestIT {
 
     private static final String ENDPOINT = "/v1/organization/";
     private static final String ENDPOINT_V2 = "/v2/organization/";

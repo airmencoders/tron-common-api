@@ -44,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties")
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class JsonDbIntegrationTest {
+public class JsonDbIntegrationTestIT {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";

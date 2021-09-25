@@ -49,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties")
 @ActiveProfiles(value = { "development", "test" })
 @AutoConfigureMockMvc
-class EntityFieldAuthIntegrationTests {
+class EntityFieldAuthIntegrationTestsIT {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";

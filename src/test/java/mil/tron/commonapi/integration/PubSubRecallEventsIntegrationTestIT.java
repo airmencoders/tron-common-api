@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties")
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class PubSubRecallEventsIntegrationTest {
+public class PubSubRecallEventsIntegrationTestIT {
     private static final String ENDPOINT_V2 = "/v2/subscriptions/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

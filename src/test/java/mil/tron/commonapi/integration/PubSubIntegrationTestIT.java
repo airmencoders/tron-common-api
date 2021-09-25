@@ -61,7 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties", properties = { "webhook-delay-ms=50" })
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class PubSubIntegrationTest {
+public class PubSubIntegrationTestIT {
     private static final String ENDPOINT_V2 = "/v2/subscriptions/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

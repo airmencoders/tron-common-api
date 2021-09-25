@@ -46,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = { "classpath:application.properties", "classpath:application-development.properties" })
 @SpringBootTest(properties = { "security.enabled=true" })
 @AutoConfigureMockMvc
-public class InputFuzzer {
+public class InputFuzzerIT {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";

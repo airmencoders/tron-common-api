@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = { "security.enabled=true" })
 @ActiveProfiles(value = { "development", "test" })
 @AutoConfigureMockMvc
-public class HttpTraceIntegrationTest {
+public class HttpTraceIntegrationTestIT {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";

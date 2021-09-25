@@ -46,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class DocumentSpaceIntegrationTests {
+public class DocumentSpaceIntegrationTestsIT {
 
     public static final String ENDPOINT_V2 = "/v2/document-space";
     private static final ObjectMapper MAPPER = new ObjectMapper();

@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = { "efa-enabled=false", "security.enabled=false"})
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
-public class ErrorValidationIntegrationTest {
+public class ErrorValidationIntegrationTestIT {
 
     @LocalServerPort
     int randomServerPort;

@@ -50,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = { "security.enabled=true", "efa-enabled=false" })
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class AppClientIntegrationTest {
+public class AppClientIntegrationTestIT {
 
     private static final String ENDPOINT = "/v1/app-client/";
     private static final String APP_SOURCE_ENDPOINT = "/v1/app-source/";
