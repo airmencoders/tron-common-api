@@ -1,8 +1,10 @@
 package mil.tron.commonapi.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import mil.tron.commonapi.dto.FilterDto;
 import mil.tron.commonapi.dto.OrganizationDto;
 import mil.tron.commonapi.dto.response.WrappedResponse;
@@ -29,7 +31,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.test.context.TestPropertySource;
@@ -45,6 +49,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -110,7 +115,7 @@ public class OrganizationControllerTest {
 			List<OrganizationDto> orgs = new ArrayList<>();
 			orgs.add(testOrgDto);
 
-			Mockito.when(organizationService.getOrganizations(Mockito.eq(""), Mockito.any())).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizations(Mockito.eq(""), any())).thenReturn(orgs);
 			
 			mockMvc.perform(get(ENDPOINT))
 				.andExpect(status().isOk())
@@ -122,7 +127,7 @@ public class OrganizationControllerTest {
 			List<OrganizationDto> orgs = new ArrayList<>();
 			orgs.add(testOrgDto);
 
-			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.eq(Unit.WING), Mockito.isNull(), Mockito.any())).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.eq(Unit.WING), Mockito.isNull(), any())).thenReturn(orgs);
 
 			mockMvc.perform(get(ENDPOINT + "?type=WING"))
 					.andExpect(status().isOk())
@@ -134,18 +139,18 @@ public class OrganizationControllerTest {
 			List<OrganizationDto> orgs = new ArrayList<>();
 			orgs.add(testOrgDto);
 
-			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.eq(Unit.WING), Mockito.eq(Branch.USAF), Mockito.any())).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.eq(Unit.WING), Mockito.eq(Branch.USAF), any())).thenReturn(orgs);
 
 			mockMvc.perform(get(ENDPOINT + "?type=WING&branch=USAF"))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
 
-			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.isNull(), Mockito.isNull(), Mockito.any())).thenReturn(new ArrayList<>());
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.isNull(), Mockito.isNull(), any())).thenReturn(new ArrayList<>());
 			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=UNKNOWN"))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(new ArrayList<>())));
 
-			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.isNull(), Mockito.eq(Branch.USAF), Mockito.any())).thenReturn(orgs);
+			Mockito.when(organizationService.getOrganizationsByTypeAndService(Mockito.eq(""), Mockito.isNull(), Mockito.eq(Branch.USAF), any())).thenReturn(orgs);
 			mockMvc.perform(get(ENDPOINT + "?type=UNKNOWN&branch=USAF"))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(orgs)));
@@ -157,7 +162,7 @@ public class OrganizationControllerTest {
 		
 		@Test
 		void testGetById() throws Exception {
-			Mockito.when(organizationService.getOrganization(Mockito.any(UUID.class))).thenReturn(testOrgDto);
+			Mockito.when(organizationService.getOrganization(any(UUID.class))).thenReturn(testOrgDto);
 			
 			mockMvc.perform(get(ENDPOINT + "{id}", testOrgDto.getId()))
 				.andExpect(status().isOk())
@@ -166,7 +171,7 @@ public class OrganizationControllerTest {
 		
 		@Test
 		void testGetByIdNotFound() throws Exception {
-			Mockito.when(organizationService.getOrganization(Mockito.any(UUID.class))).thenThrow(RecordNotFoundException.class);
+			Mockito.when(organizationService.getOrganization(any(UUID.class))).thenThrow(RecordNotFoundException.class);
 			
 			mockMvc.perform(get(ENDPOINT + "{id}", testOrgDto.getId()))
 				.andExpect(status().isNotFound());
@@ -185,7 +190,7 @@ public class OrganizationControllerTest {
 			ModelMapper mapper = new ModelMapper();
 			OrganizationDto dto = mapper.map(testOrgDto, OrganizationDto.class);
 			String dtoStr = OBJECT_MAPPER.writeValueAsString(Lists.newArrayList(dto));
-			Mockito.when(organizationService.getOrganizations(Mockito.eq(""), Mockito.any())).thenReturn(Lists.newArrayList(testOrgDto));
+			Mockito.when(organizationService.getOrganizations(Mockito.eq(""), any())).thenReturn(Lists.newArrayList(testOrgDto));
 			Mockito.when(organizationService.convertToDto(testOrg)).thenReturn(dto);
 			mockMvc.perform(get(ENDPOINT + "?onlyIds=true"))
 					.andExpect(status().isOk())
@@ -202,6 +207,32 @@ public class OrganizationControllerTest {
 			mockMvc.perform(get(ENDPOINT + "/{id}?onlyIds=true", testOrgDto.getId()))
 					.andExpect(status().isOk())
 					.andExpect(result -> assertEquals(dtoStr, result.getResponse().getContentAsString()));
+		}
+
+		@Test
+		void testGetOrganizationsWrapped() throws Exception {
+			OrganizationDto mockOrgDto = OrganizationDto.builder().build();
+			Mockito.when(organizationService.getOrganizationsPage("", Pageable.ofSize(20)))
+					.thenReturn(new PageImpl<>(List.of(mockOrgDto)));
+			Mockito.when(organizationService.customizeEntity(any(), any()))
+					.thenReturn(JsonNodeFactory.instance.objectNode());
+			mockMvc.perform(get(ENDPOINT_V2).queryParam("people", "name"))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		void testGetOrganizationsWrappedWithBranchAndUnit() throws Exception {
+			OrganizationDto mockOrgDto = OrganizationDto.builder().build();
+			Mockito.when(organizationService.getOrganizationsByTypeAndServicePage("", Unit.SQUADRON,
+					Branch.USAF, Pageable.ofSize(10)))
+					.thenReturn(new PageImpl<>(List.of(mockOrgDto)));
+			Mockito.when(organizationService.customizeEntity(any(), any()))
+					.thenReturn(JsonNodeFactory.instance.objectNode());
+			mockMvc.perform(get(ENDPOINT_V2)
+					.queryParam("branch", Branch.USAF.toString())
+					.queryParam("type", Unit.SQUADRON.toString())
+					.queryParam("person", "name"))
+					.andExpect(status().isOk());
 		}
 		
 		@Test
@@ -234,7 +265,7 @@ public class OrganizationControllerTest {
 	class TestPost {
 		@Test
 		void testPostValidJsonBody() throws Exception {
-			Mockito.when(organizationService.createOrganization(Mockito.any(OrganizationDto.class))).thenReturn(testOrgDto);
+			Mockito.when(organizationService.createOrganization(any(OrganizationDto.class))).thenReturn(testOrgDto);
 			
 			mockMvc.perform(post(ENDPOINT)
 					.accept(MediaType.APPLICATION_JSON)
@@ -254,7 +285,7 @@ public class OrganizationControllerTest {
 		
 		@Test
 		void testPostOrganizationWithIdAlreadyExists() throws Exception {
-			Mockito.when(organizationService.createOrganization(Mockito.any(OrganizationDto.class))).thenThrow(ResourceAlreadyExistsException.class);
+			Mockito.when(organizationService.createOrganization(any(OrganizationDto.class))).thenThrow(ResourceAlreadyExistsException.class);
 			
 			mockMvc.perform(post(ENDPOINT)
 					.accept(MediaType.APPLICATION_JSON)
@@ -296,7 +327,7 @@ public class OrganizationControllerTest {
 	class TestPut {
 		@Test
 		void testPutValidJsonBody() throws Exception {
-			Mockito.when(organizationService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).thenReturn(testOrgDto);
+			Mockito.when(organizationService.updateOrganization(any(UUID.class), any(OrganizationDto.class))).thenReturn(testOrgDto);
 			
 			mockMvc.perform(put(ENDPOINT + "{id}", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
@@ -327,7 +358,7 @@ public class OrganizationControllerTest {
 		
 		@Test
 		void testPutResourceDoesNotExist() throws Exception {
-			Mockito.when(organizationService.updateOrganization(Mockito.any(UUID.class), Mockito.any(OrganizationDto.class))).thenReturn(null);
+			Mockito.when(organizationService.updateOrganization(any(UUID.class), any(OrganizationDto.class))).thenReturn(null);
 
 			mockMvc.perform(put(ENDPOINT + "{id}", testOrg.getId())
 					.accept(MediaType.APPLICATION_JSON)
@@ -354,14 +385,14 @@ public class OrganizationControllerTest {
 
 		@Test
 		void testDeleteOrgLeader() throws Exception {
-			Mockito.when(organizationService.modify(Mockito.any(UUID.class), Mockito.anyMap())).thenReturn(testOrgDto);
+			Mockito.when(organizationService.modify(any(UUID.class), Mockito.anyMap())).thenReturn(testOrgDto);
 			mockMvc.perform(delete(ENDPOINT + "{id}/leader", testOrgDto.getId()))
 					.andExpect(status().isOk());
 		}
 
 		@Test
 		void testDeleteOrgParent() throws Exception {
-			Mockito.when(organizationService.modify(Mockito.any(UUID.class), Mockito.anyMap())).thenReturn(testOrgDto);
+			Mockito.when(organizationService.modify(any(UUID.class), Mockito.anyMap())).thenReturn(testOrgDto);
 			mockMvc.perform(delete(ENDPOINT + "{id}/parent", testOrgDto.getId()))
 					.andExpect(status().isOk());
 		}
@@ -377,7 +408,7 @@ public class OrganizationControllerTest {
 			newOrg.setId(testOrgDto.getId());
 			newOrg.setName("test org");
 
-			Mockito.when(organizationService.modify(Mockito.any(UUID.class), Mockito.any(Map.class))).thenReturn(newOrg);
+			Mockito.when(organizationService.modify(any(UUID.class), any(Map.class))).thenReturn(newOrg);
 			MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
@@ -397,7 +428,7 @@ public class OrganizationControllerTest {
 			newOrg.setName("test org");
 			newOrg.getMembers().add(p.getId());
 
-			Mockito.when(organizationService.addOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class), Mockito.anyBoolean())).thenReturn(newOrg);
+			Mockito.when(organizationService.addOrganizationMember(any(UUID.class), any(List.class), Mockito.anyBoolean())).thenReturn(newOrg);
 			MvcResult result = mockMvc.perform(patch(ENDPOINT + "{id}/members", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
@@ -409,7 +440,7 @@ public class OrganizationControllerTest {
 			assertEquals(1, OBJECT_MAPPER.readValue(result.getResponse().getContentAsString(), OrganizationDto.class).getMembers().size());
 
 			newOrg.getMembers().remove(p.getId());
-			Mockito.when(organizationService.removeOrganizationMember(Mockito.any(UUID.class), Mockito.any(List.class))).thenReturn(newOrg);
+			Mockito.when(organizationService.removeOrganizationMember(any(UUID.class), any(List.class))).thenReturn(newOrg);
 			MvcResult result2 = mockMvc.perform(delete(ENDPOINT + "{id}/members", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
@@ -430,7 +461,7 @@ public class OrganizationControllerTest {
 			newOrg.setName("test org");
 			newOrg.getSubordinateOrganizations().add(subOrg.getId());
 
-			Mockito.when(organizationService.addSubordinateOrg(Mockito.any(UUID.class), Mockito.anyList())).thenReturn(newOrg);
+			Mockito.when(organizationService.addSubordinateOrg(any(UUID.class), Mockito.anyList())).thenReturn(newOrg);
 			mockMvc.perform(patch(ENDPOINT + "{id}/subordinates", testOrgDto.getId())
 					.accept(MediaType.APPLICATION_JSON)
 					.contentType(MediaType.APPLICATION_JSON)
@@ -501,7 +532,7 @@ public class OrganizationControllerTest {
 
 			// mock out the customize entity - we're not testing that it "works" here, rather the code path
 			//  thru it is OK in the controller... so return any JsonNode.
-			Mockito.when(organizationService.customizeEntity(Mockito.anyMap(), Mockito.any(OrganizationDto.class)))
+			Mockito.when(organizationService.customizeEntity(Mockito.anyMap(), any(OrganizationDto.class)))
 					.thenReturn(OBJECT_MAPPER.readTree(OBJECT_MAPPER.writeValueAsString(newOrg)));
 
 			mockMvc.perform(get(ENDPOINT + "?people=id,firstName&organizations=id,name"))
@@ -513,7 +544,7 @@ public class OrganizationControllerTest {
 			// ...get a single ORG, and do the motions again...
 
 			// but this time make sure the controller populated the options map correctly
-			Mockito.when(organizationService.customizeEntity(Mockito.anyMap(), Mockito.any(OrganizationDto.class)))
+			Mockito.when(organizationService.customizeEntity(Mockito.anyMap(), any(OrganizationDto.class)))
 					.thenAnswer(invocationOnMock -> {
 						Map<String, String> map = invocationOnMock.getArgument(0);
 						assertEquals("id,firstName", map.get("people"));

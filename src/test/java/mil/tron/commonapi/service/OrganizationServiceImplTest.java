@@ -38,6 +38,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.powermock.api.mockito.PowerMockito;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -50,6 +51,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceImplTest {
@@ -251,7 +255,7 @@ class OrganizationServiceImplTest {
 			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(theOrg));
 			Mockito.doNothing().when(eventManagerService).recordEventAndPublish(Mockito.any(PubSubMessage.class));
 			organizationService.deleteOrganization(theOrg.getId());
-			Mockito.verify(repository, Mockito.times(1)).deleteById(theOrg.getId());
+			verify(repository, times(1)).deleteById(theOrg.getId());
 
 			assertNull(theOrg.getParentOrganization());
 			assertFalse(parent.getSubordinateOrganizations().contains(theOrg));
@@ -442,6 +446,18 @@ class OrganizationServiceImplTest {
 	}
 
 	@Test
+	void removeLeaderByUuid() {
+		UUID leaderUuid = UUID.randomUUID();
+		Person mockPerson = Person.builder()
+				.id(leaderUuid)
+				.build();
+		Mockito.when(personRepository.findById(leaderUuid)).thenReturn(Optional.of(mockPerson));
+		Mockito.when(repository.findOrganizationsByLeader(mockPerson)).thenReturn(List.of(testOrg));
+		organizationService.removeLeaderByUuid(leaderUuid);
+		verify(repository, times(1)).save(Mockito.any());
+	}
+
+	@Test
 	void changeOrganizationBranchAndUnitType() {
 		Map<String, String> attribs = new HashMap<>();
 		attribs.put("branchType", Branch.USAF.toString());
@@ -565,6 +581,20 @@ class OrganizationServiceImplTest {
 
 		// test bogus org Id
 		assertThrows(RecordNotFoundException.class, () -> organizationService.addOrganizationMember(new Organization().getId(), Lists.newArrayList(p.getId()), true));
+	}
+
+	@Test
+	void removeParentOrganization() throws Exception {
+		OrganizationService mockOrgService = PowerMockito.spy(organizationService);
+		PowerMockito.when(mockOrgService,
+				"isUserAuthorizedForFieldEdit", Organization.PARENT_ORG_FIELD).thenReturn(true);
+		Mockito.when(repository.findById(testOrg.getId())).thenReturn(Optional.of(testOrg));
+		PowerMockito
+				.when(mockOrgService, "applyFieldAuthority", testOrg)
+				.thenReturn(new EntityFieldAuthResponse<Organization>(testOrg, new ArrayList<String>()));
+		Mockito.when(repository.save(testOrg)).thenReturn(testOrg);
+
+		mockOrgService.removeParentOrganization(testOrg.getId());
 	}
 
 	@Test
