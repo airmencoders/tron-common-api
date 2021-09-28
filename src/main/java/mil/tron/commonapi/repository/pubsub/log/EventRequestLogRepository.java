@@ -12,7 +12,6 @@ import mil.tron.commonapi.entity.pubsub.log.EventRequestLog;
 
 public interface EventRequestLogRepository extends CrudRepository<EventRequestLog, UUID> {
 	Slice<EventRequestLog> findBy(Pageable page);
-	Slice<EventRequestLog> findBy(Specification<EventRequestLog> spec, Pageable pageable);
 	
 	Page<EventRequestLog> findAll(Pageable page);
 	Page<EventRequestLog> findAll(Specification<EventRequestLog> spec, Pageable pageable);
