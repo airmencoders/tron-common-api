@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.internal.hamcrest.HamcrestArgumentMatcher;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -48,7 +49,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties", properties = { "webhook-delay-ms=50", "security.enabled=true" })
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class PubSubPrivsTestIT {
+@AutoConfigureTestDatabase
+public class PubSubPrivsTest {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";

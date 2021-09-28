@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
@@ -46,7 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = { "classpath:application.properties", "classpath:application-development.properties" })
 @SpringBootTest(properties = { "security.enabled=true" })
 @AutoConfigureMockMvc
-public class InputFuzzerIT {
+@AutoConfigureTestDatabase
+public class InputFuzzer {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";

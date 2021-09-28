@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
@@ -41,7 +42,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = { "efa-enabled=false", "security.enabled=false"})
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
-public class ErrorValidationIntegrationTestIT {
+@AutoConfigureTestDatabase
+public class ErrorValidationIntegrationTest {
 
     @LocalServerPort
     int randomServerPort;

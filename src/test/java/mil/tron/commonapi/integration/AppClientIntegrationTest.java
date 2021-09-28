@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -50,7 +51,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = { "security.enabled=true", "efa-enabled=false" })
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class AppClientIntegrationTestIT {
+@AutoConfigureTestDatabase
+public class AppClientIntegrationTest {
 
     private static final String ENDPOINT = "/v1/app-client/";
     private static final String APP_SOURCE_ENDPOINT = "/v1/app-source/";

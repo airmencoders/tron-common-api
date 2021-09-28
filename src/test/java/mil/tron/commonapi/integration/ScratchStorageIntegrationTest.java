@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -61,7 +62,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(locations = "classpath:application-test.properties")
 @ActiveProfiles(value = { "development", "test" })  // enable at least dev so we get tracing enabled for full integration
 @AutoConfigureMockMvc
-public class ScratchStorageIntegrationTestIT {
+@AutoConfigureTestDatabase
+public class ScratchStorageIntegrationTest {
 
     private static final String XFCC_HEADER_NAME = "x-forwarded-client-cert";
     private static final String AUTH_HEADER_NAME = "authorization";
