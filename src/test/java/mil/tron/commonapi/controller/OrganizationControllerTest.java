@@ -562,7 +562,17 @@ public class OrganizationControllerTest {
 
 		}
 
+		@Test
+		void testJsonPatch() throws Exception {
+			OrganizationDto mockOrgDto = OrganizationDto.builder().build();
+			Mockito.when(organizationService.patchOrganization(any(), any()))
+					.thenReturn(mockOrgDto);
 
+			mockMvc.perform(patch(ENDPOINT_V2 + "{id}", UUID.randomUUID())
+					.contentType("application/json-patch+json")
+					.content("[{\"op\": \"replace\", \"path\": \"/name\", \"value\": \"changed\"}]"))
+					.andExpect(status().isOk());
+		}
 
 	}
 }
