@@ -128,7 +128,7 @@ public class SpecificationBuilder {
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
 	
 					return criteriaBuilder.notLike(criteriaBuilder.lower(dbPathObj),  // make case-insensitive
-							"%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()) + "%");
+							"%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue().toLowerCase()) + "%");
 				};
 	
 			case IN:
@@ -150,7 +150,7 @@ public class SpecificationBuilder {
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
 	
 					return criteriaBuilder.like(criteriaBuilder.lower(dbPathObj),  // make case-insensitive
-							castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()) + "%");
+							castToRequiredType(dbPathObj.getJavaType(), field, input.getValue().toLowerCase()) + "%");
 				};
 	
 			case ENDS_WITH:
@@ -161,7 +161,7 @@ public class SpecificationBuilder {
 					checkOperatorSupportsInput(input.getOperator(), dbPathObj.getJavaType(), field);
 	
 					return criteriaBuilder.like(criteriaBuilder.lower(dbPathObj),  // make case-insensitive
-							"%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue()));
+							"%" + castToRequiredType(dbPathObj.getJavaType(), field, input.getValue().toLowerCase()));
 				};
 	
 			default:
