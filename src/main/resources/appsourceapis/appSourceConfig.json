@@ -10,5 +10,11 @@
     "openApiSpecFilename": "arms-gateway.yml",
     "sourceUrl": "http://arms-gateway.tron-common-api.svc.cluster.local",
     "appSourcePath": "arms-gateway"
+  },
+  {
+    "name": "ARMS Gateway 7.1",
+    "openApiSpecFilename": "expr-arms-gateway.yml",
+    "sourceUrl": "http://arms-gateway.tron-common-api.svc.cluster.local",
+    "appSourcePath": "expr-arms-gateway"
   }
 ]
