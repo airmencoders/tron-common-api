@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.CommonApiApplication;
 import mil.tron.commonapi.dto.AppVersionInfoDto;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +21,10 @@ public class AppVersionController {
     // get the version from the JAR Manifest (when application is running as a JAR)
     private final String VERSION = CommonApiApplication.class.getPackage().getImplementationVersion();
 
-    @Operation(summary = "Retrieves current running application version",
+    @Value("${spring.profiles.active:UNKNOWN}")
+    private String environment;
+
+    @Operation(summary = "Retrieves current running application version, along with the enclave level and environment this instance is running in",
             description = "The version is the first 8-characters of the SHA-1 commit hash of the master branch that this version was compiled from")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
@@ -29,9 +33,20 @@ public class AppVersionController {
     })
     @GetMapping("")
     public ResponseEntity<Object> getVersion() {
+
+        String enclaveLevel;
+
+        try {
+            enclaveLevel = System.getenv("ENCLAVE_LEVEL");
+        } catch (SecurityException | NullPointerException e) {
+            enclaveLevel = "UNKNOWN";
+        }
+
         return new ResponseEntity<>(AppVersionInfoDto
                 .builder()
                 .version(VERSION == null ? "Unknown" : VERSION)
+                .enclave(enclaveLevel)
+                .environment(environment)
                 .build(), HttpStatus.OK);
     }
 }

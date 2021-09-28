@@ -13,4 +13,12 @@ public class AppVersionInfoDto {
     @Getter
     @Setter
     private String version;
+
+    @Getter
+    @Setter
+    private String enclave;
+
+    @Getter
+    @Setter
+    private String environment;
 }
