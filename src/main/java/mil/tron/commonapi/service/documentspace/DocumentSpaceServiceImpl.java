@@ -335,12 +335,79 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
     			.totalElements(documents.size())
     			.build();
     }
+	
+	@Override
+	public void downloadAllInSpaceAndCompress(String space, OutputStream out) {
+		checkSpaceExists(space);
 
+		try (BufferedOutputStream bos = new BufferedOutputStream(out);
+    	    	ZipOutputStream zipOut = new ZipOutputStream(bos);) {
+			ListObjectsV2Request request = new ListObjectsV2Request()
+					.withBucketName(bucketName)
+					.withPrefix(space + "/");
+			
+			ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
+			boolean hasNext = true;
+			
+			do {
+				if (objectListing.getNextContinuationToken() == null) {
+					hasNext = false;
+				}
+				
+				List<S3ObjectSummary> fileSummaries = objectListing.getObjectSummaries();
+				
+				for (int i = 0; i < fileSummaries.size(); i++) {
+					S3ObjectSummary summaryItem = fileSummaries.get(i);
+					
+					if (summaryItem.getKey().contains(RESERVED_METAFILE)) {
+						continue;
+					}
+					
+					S3Object s3Object = documentSpaceClient.getObject(bucketName, summaryItem.getKey());
+					
+					insertS3ObjectZipEntry(zipOut, s3Object);
+				}
+				
+				if (hasNext) {
+					request = request.withContinuationToken(objectListing.getNextContinuationToken());
+					objectListing = documentSpaceClient.listObjectsV2(request);
+				}
+			} while(hasNext);
+    		
+    		
+    		zipOut.finish();
+    	} catch (IOException e1) {
+			log.warn("Failure occurred closing zip output stream");
+		}
+	}
+	
+	/**
+	 * Writes an S3 Object to the output stream. This will close the
+	 * input stream of the S3 Object.
+	 * 
+	 * @param zipOutputStream output stream
+	 * @param s3Object {@link S3Object} to write to output stream
+	 */
+	private void insertS3ObjectZipEntry(ZipOutputStream zipOutputStream, S3Object s3Object) {
+		ZipEntry entry = new ZipEntry(s3Object.getKey());
+		
+		try (S3ObjectInputStream dataStream = s3Object.getObjectContent()) {
+			zipOutputStream.putNextEntry(entry);
+			
+			dataStream.transferTo(zipOutputStream);
+			
+			zipOutputStream.closeEntry();
+		} catch (IOException e) {
+			log.warn("Failed to compress file: " + s3Object.getKey());
+		}
+	}
+	
 	@Override
 	public DocumentDto convertS3ObjectToDto(S3Object s3Object) {
 		return DocumentDto.builder()
 				.key(s3Object.getKey())
 				.path("")
+				.size(s3Object.getObjectMetadata().getContentLength())
 				.uploadedBy("")
 				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
 				.build();
@@ -351,6 +418,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return DocumentDto.builder()
 				.key(objSummary.getKey().replace(spaceName + "/", ""))
 				.path(spaceName)
+				.size(objSummary.getSize())
 				.uploadedBy("")
 				.uploadedDate(objSummary.getLastModified())
 				.build();
@@ -361,6 +429,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return DocumentDetailsDto.builder()
 				.key(s3Object.getKey())
 				.path("")
+				.size(s3Object.getObjectMetadata().getContentLength())
 				.uploadedBy("")
 				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
 				.metadata(s3Object.getObjectMetadata())

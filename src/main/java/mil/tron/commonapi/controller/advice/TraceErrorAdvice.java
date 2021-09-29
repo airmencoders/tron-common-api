@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @ControllerAdvice
-@Profile("production | development")
+@Profile("production | development | staging")
 public class TraceErrorAdvice {
 
     private ContentTraceManager manager;

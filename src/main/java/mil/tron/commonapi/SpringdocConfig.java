@@ -64,6 +64,7 @@ public class SpringdocConfig {
 				String.format("%s/wing/**", apiPrefix),
 				String.format("%s/userinfo/**", apiPrefix),
 				String.format("%s/scratch/**", apiPrefix),
+				String.format("%s/rank/**", apiPrefix)
 			};
     	
     	return GroupedOpenApi.builder().group("common-api-v2").pathsToMatch(paths).build();

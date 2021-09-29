@@ -1,11 +1,13 @@
 package mil.tron.commonapi.controller.ranks;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
+import mil.tron.commonapi.dto.rank.RankCategorizedDto;
+import mil.tron.commonapi.dto.rank.RankResponseWrapper;
 import mil.tron.commonapi.entity.branches.Branch;
 import mil.tron.commonapi.entity.ranks.Rank;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -33,8 +35,9 @@ public class RankController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Rank.class))))
+                    content = @Content(schema = @Schema(implementation = RankResponseWrapper.class)))
     })
+    @WrappedEnvelopeResponse
     @GetMapping
     public ResponseEntity<Iterable<Rank>> getRanks() {
         return new ResponseEntity<>(rankService.getRanks(), HttpStatus.OK);
@@ -44,14 +47,29 @@ public class RankController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Rank.class)))),
+                    content = @Content(schema = @Schema(implementation = RankResponseWrapper.class))),
             @ApiResponse(responseCode = "404",
                     description = "Resource not found",
                     content = @Content),
     })
+    @WrappedEnvelopeResponse
     @GetMapping(value = "/{branch}")
     public ResponseEntity<Iterable<Rank>> getRanks(@PathVariable("branch") String branch) {
         return new ResponseEntity<>(rankService.getRanks(convertBranch(branch)), HttpStatus.OK);
+    }
+    
+    @Operation(summary = "Retrieves all ranks for a particular branch", description = "Retrieves all ranks for a particular branch and categorizes them by Pay Grade")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = RankCategorizedDto.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "Resource not found",
+                    content = @Content),
+    })
+    @GetMapping(value = "/{branch}/categorized")
+    public ResponseEntity<RankCategorizedDto> getRanksByBranchCategorizedByPayGrade(@PathVariable("branch") String branch) {
+        return new ResponseEntity<>(rankService.getRanksByBranchAndCategorize(convertBranch(branch)), HttpStatus.OK);
     }
 
     @Operation(summary = "Retrieves information for a particular rank", description = "Retrieves information for a particular rank")

@@ -104,11 +104,12 @@ public class DocumentSpaceServiceImplTest {
     void testListFiles() {
     	documentService.createSpace(dto);
     	List<String> fileNames = new ArrayList<>();
+    	String fakeContent = "fake content";
     	for (int i = 0; i < 20; i++) {
     		String filename = String.format("file%d.txt", i);
     		fileNames.add(filename);
     		
-    		MockMultipartFile file = new MockMultipartFile(filename, filename, "multipart/form-data", "fake content".getBytes()); 
+    		MockMultipartFile file = new MockMultipartFile(filename, filename, "multipart/form-data", fakeContent.getBytes()); 
         	documentService.uploadFile(dto.getName(), file);
     	}
     	
@@ -123,6 +124,7 @@ public class DocumentSpaceServiceImplTest {
     		.isEqualTo(fileNames.stream().map(filename -> DocumentDto.builder()
     				.key(filename)
     				.path(dto.getName())
+    				.size(fakeContent.getBytes().length)
     				.build()).collect(Collectors.toList()));
     }
     
@@ -181,6 +183,25 @@ public class DocumentSpaceServiceImplTest {
     	ByteArrayOutputStream output = new ByteArrayOutputStream();
     	
     	documentService.downloadAndWriteCompressedFiles(dto.getName(), Set.copyOf(fileNames), output);
+    	
+    	assertThat(output.size()).isPositive();
+    }
+    
+    @Test
+    void testdownloadAllInDirectoryAndCompress() {
+    	documentService.createSpace(dto);
+    	List<String> fileNames = new ArrayList<>();
+    	for (int i = 0; i < 5; i++) {
+    		String filename = String.format("file%d.txt", i);
+    		fileNames.add(filename);
+    		
+    		MockMultipartFile file = new MockMultipartFile(filename, filename, "multipart/form-data", "fake content".getBytes()); 
+        	documentService.uploadFile(dto.getName(), file);
+    	}
+    	
+    	ByteArrayOutputStream output = new ByteArrayOutputStream();
+    	
+    	documentService.downloadAllInSpaceAndCompress(dto.getName(), output);
     	
     	assertThat(output.size()).isPositive();
     }
