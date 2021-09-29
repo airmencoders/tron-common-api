@@ -184,4 +184,23 @@ public class DocumentSpaceServiceImplTest {
     	
     	assertThat(output.size()).isPositive();
     }
+    
+    @Test
+    void testdownloadAllInDirectoryAndCompress() {
+    	documentService.createSpace(dto);
+    	List<String> fileNames = new ArrayList<>();
+    	for (int i = 0; i < 5; i++) {
+    		String filename = String.format("file%d.txt", i);
+    		fileNames.add(filename);
+    		
+    		MockMultipartFile file = new MockMultipartFile(filename, filename, "multipart/form-data", "fake content".getBytes()); 
+        	documentService.uploadFile(dto.getName(), file);
+    	}
+    	
+    	ByteArrayOutputStream output = new ByteArrayOutputStream();
+    	
+    	documentService.downloadAllInSpaceAndCompress(dto.getName(), output);
+    	
+    	assertThat(output.size()).isPositive();
+    }
 }
