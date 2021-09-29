@@ -29,7 +29,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping(value = { "${api-prefix.v1}/logs", "${api-prefix.v2}/logs" })
 @PreAuthorizeDashboardAdmin
-@Profile("production | development")
+@Profile("production | development | staging")
 public class HttpLogsController {
 
     private HttpTraceService httpTraceService;
