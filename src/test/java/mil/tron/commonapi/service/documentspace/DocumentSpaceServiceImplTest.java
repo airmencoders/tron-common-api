@@ -104,11 +104,12 @@ public class DocumentSpaceServiceImplTest {
     void testListFiles() {
     	documentService.createSpace(dto);
     	List<String> fileNames = new ArrayList<>();
+    	String fakeContent = "fake content";
     	for (int i = 0; i < 20; i++) {
     		String filename = String.format("file%d.txt", i);
     		fileNames.add(filename);
     		
-    		MockMultipartFile file = new MockMultipartFile(filename, filename, "multipart/form-data", "fake content".getBytes()); 
+    		MockMultipartFile file = new MockMultipartFile(filename, filename, "multipart/form-data", fakeContent.getBytes()); 
         	documentService.uploadFile(dto.getName(), file);
     	}
     	
@@ -123,6 +124,7 @@ public class DocumentSpaceServiceImplTest {
     		.isEqualTo(fileNames.stream().map(filename -> DocumentDto.builder()
     				.key(filename)
     				.path(dto.getName())
+    				.size(fakeContent.getBytes().length)
     				.build()).collect(Collectors.toList()));
     }
     
