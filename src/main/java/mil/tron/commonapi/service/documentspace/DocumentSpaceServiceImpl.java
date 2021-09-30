@@ -4,24 +4,28 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import com.amazonaws.services.s3.internal.BucketNameUtils;
 import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.transfer.Upload;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
+import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.RecordNotFoundException;
-import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import org.assertj.core.util.Lists;
+import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.transfer.TransferManager;
 
@@ -37,194 +41,86 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final AmazonS3 documentSpaceClient;
 	private final TransferManager documentSpaceTransferManager;
 	private final String bucketName;
-	
-	private static final String RESERVED_METAFILE = ".metafile";
-	private static final String NAME_NULL_ERROR = "Space Name cannot be null";
+	private final DocumentSpaceRepository documentSpaceRepository;
 
 	public DocumentSpaceServiceImpl(
 			AmazonS3 documentSpaceClient, 
 			TransferManager documentSpaceTransferManager,
-			@Value("${minio.bucket-name}") String bucketName) {
+			@Value("${minio.bucket-name}") String bucketName,
+			DocumentSpaceRepository documentSpaceRepository) {
 		this.documentSpaceClient = documentSpaceClient;
 		this.bucketName = bucketName;
-		
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
+		this.documentSpaceRepository = documentSpaceRepository;
 	}
 
-	/**
-	 * Helper to grab first part of an s3 object's path be it a folder or filename itself
-	 * Scans the path until end or up to and including the first '/'
-	 * @param path
-	 * @return
-	 */
-	private String grabToFirstSlash(String path) {
-		char[] pathChars = path.toCharArray();
-		StringBuilder result = new StringBuilder();
-		for (char pathChar : pathChars) {
-			result.append(pathChar);
-			if (pathChar == '/') break;
-		}
-		return result.toString();
-	}
-
-	/**
-	 * Helper to get files and folders at a specific level (aka prefix) in the bucket
-	 * @param prefix
-	 * @return
-	 */
-	private List<String> getObjects(String prefix) {
-		String keyPrefix = prefix;
-
-		ListObjectsRequest req = new ListObjectsRequest();
-		req.setBucketName(bucketName);
-		if (keyPrefix != null) {
-			// make sure we end with '/'
-			if (!keyPrefix.endsWith("/")) keyPrefix += "/";
-			req.setPrefix(keyPrefix);
-		}
-
-		String finalKeyPrefix = keyPrefix == null ? "" : keyPrefix;
-		return Lists.newArrayList(documentSpaceClient.listObjects(req)
-				.getObjectSummaries()
-				.stream()
-				.map(item -> item.getKey().replace(finalKeyPrefix, "")) // get name and blank out prefix
-				.map(this::grabToFirstSlash)    // get up to first slash or end of string
-				.collect(Collectors.toSet()));  // de-dupe
-
-	}
-
-	/**
-	 * See if a space name is valid (does not throw)
-	 * @param name
-	 * @return true if valid else false
-	 */
-	public static boolean verifySpaceNameValid(String name) {
-		return BucketNameUtils.isValidV2BucketName(name) && !name.contains("/");
-	}
-
-	/**
-	 * see if a space doesn't exist else throws
-	 * @param name
-	 * @throws ResourceAlreadyExistsException
-	 */
-	private void checkSpaceNotExists(String name) {
-		if (name == null)
-			throw new BadRequestException(NAME_NULL_ERROR);
-
-		this.listSpaces().forEach(item -> {
-			if (item.getName().equalsIgnoreCase(name)) {
-				throw new ResourceAlreadyExistsException(String.format("Space with name %s already exists", name));
-			}
-		});
-	}
-
-	/**
-	 * See if a space exists by name else throws
-	 * @param name
-	 * @throws RecordNotFoundException
-	 */
-	private void checkSpaceExists(String name) {
-		if (name == null)
-			throw new BadRequestException(NAME_NULL_ERROR);
-
-		for (DocumentSpaceInfoDto s : this.listSpaces()) {
-			if (s.getName().equalsIgnoreCase(name.replace("/", ""))) {
-				return;
-			}
-		}
-
-		throw new RecordNotFoundException(String.format("Space with name %s not found", name));
-	}
-
-	/**
-	 * See if a space name is valid (uses s3 bucket naming rules) or throws
-	 * @param name
-	 * @throws BadRequestException
-	 */
-	private void checkSpaceNameValid(String name) {
-		if (name == null)
-			throw new BadRequestException(NAME_NULL_ERROR);
-
-		if (verifySpaceNameValid(name)) return;
-		throw new BadRequestException("Invalid space name");
-	}
-
-	private void checkFileExists(String spaceName, String fileName) {
-		if (!documentSpaceClient.doesObjectExist(bucketName, spaceName + "/" + fileName)) {
-			throw new RecordNotFoundException(String.format("Cannot find file with name %s", fileName));
-		}
-	}
-
-	/**
-	 * Get the list of files and spaces and the root of our bucket
-	 * @return list of string space names
-	 */
 	@Override
 	public List<DocumentSpaceInfoDto> listSpaces() {
-		return getObjects(null).stream().map(space -> {
-			return DocumentSpaceInfoDto.builder()
-					.name(space.replace("/", ""))
-					.build();
-		}).collect(Collectors.toList());
+		return documentSpaceRepository.findAllDynamicBy(DocumentSpaceInfoDto.class);
 	}
 
-	/**
-	 * Creates a space (folder) within the bucket.  We can't create am empty folder though
-	 * since folders are really just prefixes - so put in the hidden metafile that starts with a
-	 * "."
-	 *
-	 * We wont allow dots to begin any filename elsewhere (since we use bucket name validation for
-	 * all filenames and path compos)
-	 * @param dto
-	 * @return
-	 */
 	@Override
 	public DocumentSpaceInfoDto createSpace(DocumentSpaceInfoDto dto) {
-		checkSpaceNotExists(dto.getName());
-		checkSpaceNameValid(dto.getName());
-		this.documentSpaceClient.putObject(this.bucketName, dto.getName() + "/" + RESERVED_METAFILE, "folder_data");
-		return dto;
+		DocumentSpace documentSpace = convertDocumentSpaceDtoToEntity(dto);
+		documentSpace.setId(UUID.randomUUID());
+		
+		return convertDocumentSpaceEntityToDto(documentSpaceRepository.save(documentSpace));
 	}
-
-	/**
-	 * Deletes a space (object) and all its descendants
-	 * @param name name of the space
-	 */
+	
 	@Override
-	public void deleteSpace(String name) {
-		checkSpaceExists(name);
+	public void deleteSpace(UUID documentSpaceId) throws RecordNotFoundException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 
-		// get all objects in this space (prefix), and delete them
-		//  effectively deleting the entire space itself
-		List<String> keys = this.getObjects(name);
-		keys.forEach(item -> this.documentSpaceClient.deleteObject(this.bucketName, name + "/" + item));
+		ListObjectsRequest objectRequest = new ListObjectsRequest().withBucketName(bucketName)
+				.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId()));
+
+		ObjectListing objectListing = null;
+
+		do {
+			if (objectListing == null) {
+				objectListing = documentSpaceClient.listObjects(objectRequest);
+			} else {
+				objectListing = documentSpaceClient.listNextBatchOfObjects(objectListing);
+			}
+			
+			if (!objectListing.getObjectSummaries().isEmpty()) {
+				List<KeyVersion> keys = objectListing.getObjectSummaries().stream()
+						.map(objectSummary -> new KeyVersion(objectSummary.getKey())).collect(Collectors.toList());
+
+				DeleteObjectsRequest multiObjectDeleteRequest = new DeleteObjectsRequest(bucketName).withKeys(keys);
+				
+				documentSpaceClient.deleteObjects(multiObjectDeleteRequest);
+			}
+			
+		} while (objectListing.isTruncated());
+		
+		documentSpaceRepository.deleteById(documentSpace.getId());
 	}
 
     @Override
-    public S3Object getFile(String space, String key) {
-		checkSpaceExists(space);
-		return documentSpaceClient.getObject(bucketName, space + "/" + key);
+    public S3Object getFile(UUID documentSpaceId, String key) throws RecordNotFoundException {
+    	DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+    	
+		return documentSpaceClient.getObject(bucketName, createDocumentSpacePathPrefix(documentSpace.getId()) + key);
     }
     
     @Override
-    public S3Object downloadFile(String space, String fileKey) {
-		checkSpaceExists(space);
-		return getFile(space, fileKey);
+    public S3Object downloadFile(UUID documentSpaceId, String fileKey) throws RecordNotFoundException {
+		return getFile(documentSpaceId, fileKey);
     }
     
     @Override
-	public List<S3Object> getFiles(String space, Set<String> fileKeys) {
-		checkSpaceExists(space);
+	public List<S3Object> getFiles(UUID documentSpaceId, Set<String> fileKeys) throws RecordNotFoundException {
+    	DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+    	
 		return fileKeys.stream()
-				.filter(item -> !item.contains(RESERVED_METAFILE))
-				.map(item -> documentSpaceClient.getObject(bucketName, space + "/" + item))
+				.map(item -> documentSpaceClient.getObject(bucketName, createDocumentSpacePathPrefix(documentSpace.getId()) + item))
 				.collect(Collectors.toList());
 	}
 
 	@Override
-	public void downloadAndWriteCompressedFiles(String space, Set<String> fileKeys, OutputStream out) {
-		checkSpaceExists(space);
-		List<S3Object> files = getFiles(space, fileKeys);
+	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, Set<String> fileKeys, OutputStream out) throws RecordNotFoundException {
+		List<S3Object> files = getFiles(documentSpaceId, fileKeys);
 		
     	try (BufferedOutputStream bos = new BufferedOutputStream(out);
     	    	ZipOutputStream zipOut = new ZipOutputStream(bos);) {
@@ -249,26 +145,39 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-    public void uploadFile(String space, MultipartFile file) {
-		checkSpaceExists(space);
+	public void uploadFile(UUID documentSpaceId, MultipartFile file) throws RecordNotFoundException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
 		metaData.setContentLength(file.getSize());
-		
+
 		try {
-			Upload upload = documentSpaceTransferManager.upload(bucketName, space + "/" + file.getOriginalFilename(), file.getInputStream(), metaData);
+			Upload upload = documentSpaceTransferManager.upload(bucketName,
+					createDocumentSpacePathPrefix(documentSpace.getId()) + file.getOriginalFilename(),
+					file.getInputStream(), metaData);
+			
 			upload.waitForCompletion();
-		} catch (IOException | InterruptedException e) {  //NOSONAR
+		} catch (IOException | InterruptedException e) { // NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
 		}
-    }
+	}
 
     @Override
-    public void deleteFile(String space, String fileKey) {
-		checkSpaceExists(space);
-		checkFileExists(space, fileKey);
-        documentSpaceClient.deleteObject(bucketName, space + "/" + fileKey);
+    public void deleteFile(UUID documentSpaceId, String file) throws RecordNotFoundException {
+    	DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+    	
+    	String fileKey = createDocumentSpacePathPrefix(documentSpace.getId()) + file;
+    	try {
+    		documentSpaceClient.deleteObject(bucketName, fileKey);
+    	} catch (AmazonServiceException ex) {
+    		if (ex.getStatusCode() == 404) {
+    			throw new RecordNotFoundException(String.format("File to delete: %s does not exist", fileKey));
+    		}
+    		
+    		throw ex;
+    	}
+        
     }
 
 	/**
@@ -277,8 +186,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @return
 	 */
 	@Override
-    public S3PaginationDto listFiles(String spaceName, String continuationToken, Integer limit) {
-		checkSpaceExists(spaceName);
+    public S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit) throws RecordNotFoundException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 		
 		if (limit == null) {
 			limit = 20;
@@ -286,45 +195,16 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		
 		ListObjectsV2Request request = new ListObjectsV2Request()
 				.withBucketName(bucketName)
-				.withPrefix(spaceName + "/")
+				.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId()))
 				.withMaxKeys(limit)
 				.withContinuationToken(continuationToken);
 		
 		ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
 		List<S3ObjectSummary> summary = objectListing.getObjectSummaries();
-		// Find the Reserved Metadata file
-		int metadataFileIndex = -1;
-		for (int i = 0; i < summary.size(); i++) {
-			if (summary.get(i).getKey().contains(RESERVED_METAFILE)) {
-				metadataFileIndex = i;
-				break;
-			}
-		}
-		
-		// If Reserved Metadata file exists, remove it
-		// and fetch one more item
-		if (metadataFileIndex != -1) {
-			summary.remove(metadataFileIndex);
-			
-			String next = objectListing.getNextContinuationToken();
-			if (next != null) {
-				request = new ListObjectsV2Request()
-						.withBucketName(bucketName)
-						.withPrefix(spaceName)
-						.withMaxKeys(1)
-						.withContinuationToken(next);
-				
-				String currentContinuationToken = objectListing.getContinuationToken();
-				objectListing = documentSpaceClient.listObjectsV2(request);
-				objectListing.setContinuationToken(currentContinuationToken);
-				
-				summary.addAll(objectListing.getObjectSummaries());
-			}
-		}
 		
 		List<DocumentDto> documents = summary
 				.stream()
-        		.map(item -> this.convertS3SummaryToDto(spaceName, item))
+        		.map(item -> this.convertS3SummaryToDto(createDocumentSpacePathPrefix(documentSpace.getId()), item))
 				.collect(Collectors.toList());
 
     	return S3PaginationDto.builder()
@@ -337,14 +217,14 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
     }
 	
 	@Override
-	public void downloadAllInSpaceAndCompress(String space, OutputStream out) {
-		checkSpaceExists(space);
-
+	public void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out) throws RecordNotFoundException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		
 		try (BufferedOutputStream bos = new BufferedOutputStream(out);
     	    	ZipOutputStream zipOut = new ZipOutputStream(bos);) {
 			ListObjectsV2Request request = new ListObjectsV2Request()
 					.withBucketName(bucketName)
-					.withPrefix(space + "/");
+					.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId()));
 			
 			ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
 			boolean hasNext = true;
@@ -358,10 +238,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				
 				for (int i = 0; i < fileSummaries.size(); i++) {
 					S3ObjectSummary summaryItem = fileSummaries.get(i);
-					
-					if (summaryItem.getKey().contains(RESERVED_METAFILE)) {
-						continue;
-					}
 					
 					S3Object s3Object = documentSpaceClient.getObject(bucketName, summaryItem.getKey());
 					
@@ -379,6 +255,67 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
     	} catch (IOException e1) {
 			log.warn("Failure occurred closing zip output stream");
 		}
+	}
+
+	@Override
+	public DocumentDto convertS3ObjectToDto(S3Object s3Object) {
+		return DocumentDto.builder()
+				.key(s3Object.getKey())
+				.path("")
+				.size(s3Object.getObjectMetadata().getContentLength())
+				.uploadedBy("")
+				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
+				.build();
+	}
+	
+	@Override
+	public DocumentDto convertS3SummaryToDto(String documentSpacePathPrefix, S3ObjectSummary objSummary) {
+		return DocumentDto.builder()
+				.key(objSummary.getKey().replace(documentSpacePathPrefix, ""))
+				.path(documentSpacePathPrefix)
+				.size(objSummary.getSize())
+				.uploadedBy("")
+				.uploadedDate(objSummary.getLastModified())
+				.build();
+	}
+
+	@Override
+	public DocumentDetailsDto convertToDetailsDto(S3Object s3Object) {
+		return DocumentDetailsDto.builder()
+				.key(s3Object.getKey())
+				.path("")
+				.size(s3Object.getObjectMetadata().getContentLength())
+				.uploadedBy("")
+				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
+				.metadata(s3Object.getObjectMetadata())
+				.build();
+	}
+	
+	@Override
+	public DocumentSpace convertDocumentSpaceDtoToEntity(DocumentSpaceInfoDto documentSpaceInfoDto) {
+		return DocumentSpace.builder()
+				.id(documentSpaceInfoDto.getId())
+				.name(documentSpaceInfoDto.getName())
+				.build();
+	}
+	
+	@Override
+	public DocumentSpaceInfoDto convertDocumentSpaceEntityToDto(DocumentSpace documentSpace) {
+		return DocumentSpaceInfoDto.builder()
+				.id(documentSpace.getId())
+				.name(documentSpace.getName())
+				.build();
+	}
+	
+	private DocumentSpace getDocumentSpaceOrElseThrow(UUID documentSpaceId) throws RecordNotFoundException {
+		Optional<DocumentSpace> optionalDocumentSpace = documentSpaceRepository.findById(documentSpaceId);
+
+		return optionalDocumentSpace.orElseThrow(() -> new RecordNotFoundException(
+				String.format("Document Space with id: %s not found", documentSpaceId)));
+	}
+	
+	protected String createDocumentSpacePathPrefix(UUID documentSpaceId) {
+		return documentSpaceId.toString() + "/";
 	}
 	
 	/**
@@ -400,39 +337,5 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		} catch (IOException e) {
 			log.warn("Failed to compress file: " + s3Object.getKey());
 		}
-	}
-	
-	@Override
-	public DocumentDto convertS3ObjectToDto(S3Object s3Object) {
-		return DocumentDto.builder()
-				.key(s3Object.getKey())
-				.path("")
-				.size(s3Object.getObjectMetadata().getContentLength())
-				.uploadedBy("")
-				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
-				.build();
-	}
-	
-	@Override
-	public DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary) {
-		return DocumentDto.builder()
-				.key(objSummary.getKey().replace(spaceName + "/", ""))
-				.path(spaceName)
-				.size(objSummary.getSize())
-				.uploadedBy("")
-				.uploadedDate(objSummary.getLastModified())
-				.build();
-	}
-
-	@Override
-	public DocumentDetailsDto convertToDetailsDto(S3Object s3Object) {
-		return DocumentDetailsDto.builder()
-				.key(s3Object.getKey())
-				.path("")
-				.size(s3Object.getObjectMetadata().getContentLength())
-				.uploadedBy("")
-				.uploadedDate(s3Object.getObjectMetadata().getLastModified())
-				.metadata(s3Object.getObjectMetadata())
-				.build();
 	}
 }

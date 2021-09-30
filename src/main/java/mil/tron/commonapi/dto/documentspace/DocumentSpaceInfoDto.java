@@ -1,26 +1,30 @@
 package mil.tron.commonapi.dto.documentspace;
 
 
-import javax.validation.constraints.NotNull;
+import java.util.UUID;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
-import mil.tron.commonapi.validations.ValidDocumentSpaceName;
 
 /**
  * Information about a document space itself
  */
 
 @AllArgsConstructor
-@NoArgsConstructor
-@EqualsAndHashCode
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Getter
+@Setter
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DocumentSpaceInfoDto {
-
-	@NotNull
-    @Getter
-    @Setter
-    @ValidDocumentSpaceName
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	private UUID id;
+	
+    @NotBlank
+    @Size(max = 255)
     private String name;
 }
