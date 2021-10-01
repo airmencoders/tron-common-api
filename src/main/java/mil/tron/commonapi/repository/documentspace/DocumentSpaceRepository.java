@@ -10,4 +10,5 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 
 public interface DocumentSpaceRepository extends CrudRepository<DocumentSpace, UUID> {
 	<T> List<T> findAllDynamicBy(Class<T> type);
+	boolean existsByName(String name);
 }

@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 
@@ -16,10 +16,11 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import mil.tron.commonapi.dto.documentspace.DocumentDetailsDto;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
 
 public interface DocumentSpaceService {
-    List<DocumentSpaceInfoDto> listSpaces();
-    DocumentSpaceInfoDto createSpace(DocumentSpaceInfoDto dto);
+    List<DocumentSpaceResponseDto> listSpaces();
+    DocumentSpaceResponseDto createSpace(DocumentSpaceRequestDto dto);
     
     /**
      * Deletes a space from database and all files associated with it in the bucket
@@ -40,6 +41,6 @@ public interface DocumentSpaceService {
     DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary);
     DocumentDetailsDto convertToDetailsDto(S3Object objSummary);
     
-    DocumentSpace convertDocumentSpaceDtoToEntity(DocumentSpaceInfoDto documentSpaceInfoDto);
-    DocumentSpaceInfoDto convertDocumentSpaceEntityToDto(DocumentSpace documentSpace);
+    DocumentSpace convertDocumentSpaceRequestDtoToEntity(DocumentSpaceRequestDto documentSpaceInfoDto);
+    DocumentSpaceResponseDto convertDocumentSpaceEntityToResponseDto(DocumentSpace documentSpace);
 }

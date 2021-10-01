@@ -2,6 +2,7 @@ package mil.tron.commonapi.entity.documentspace;
 
 import java.util.UUID;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.validation.constraints.NotBlank;
@@ -28,5 +29,6 @@ public class DocumentSpace {
 	@NotBlank
 	@NotNull
 	@Size(max = 255)
+	@Column(unique = true)
 	private String name;
 }

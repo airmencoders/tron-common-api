@@ -10,8 +10,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDtoResponseWrapper;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDtoResponseWrapper;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
@@ -55,15 +56,15 @@ public class DocumentSpaceController {
 		return headers;
 	}
 
-    @Operation(summary = "Retrieves all document space names")
+    @Operation(summary = "Retrieves all document spaces")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = DocumentSpaceInfoDtoResponseWrapper.class)))
+                    content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDtoResponseWrapper.class)))
     })
     @WrappedEnvelopeResponse
 	@GetMapping("/spaces")
-    public ResponseEntity<List<DocumentSpaceInfoDto>> getSpaces() {
+    public ResponseEntity<List<DocumentSpaceResponseDto>> getSpaces() {
 	    return new ResponseEntity<>(documentSpaceService.listSpaces(), HttpStatus.OK);
     }
 
@@ -71,16 +72,13 @@ public class DocumentSpaceController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation",
-				content = @Content(schema = @Schema(implementation = DocumentSpaceInfoDto.class))),
+				content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDto.class))),
 			@ApiResponse(responseCode = "409",
 				description = "Conflict - Space already exists",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping("/spaces")
-    public ResponseEntity<DocumentSpaceInfoDto> createSpace(@Valid @RequestBody DocumentSpaceInfoDto dto) {
+    public ResponseEntity<DocumentSpaceResponseDto> createSpace(@Valid @RequestBody DocumentSpaceRequestDto dto) {
 	    return new ResponseEntity<>(documentSpaceService.createSpace(dto), HttpStatus.CREATED);
     }
 
@@ -90,9 +88,6 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @DeleteMapping("/spaces/{id}")
@@ -107,9 +102,6 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping(value = "/spaces/{id}/files/upload", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
@@ -129,9 +121,6 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @GetMapping("/spaces/{id}/files/download/single")
@@ -156,9 +145,6 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file(s) not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @GetMapping("/spaces/{id}/files/download")
@@ -179,9 +165,6 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file(s) not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @GetMapping("/spaces/{id}/files/download/all")
@@ -201,9 +184,6 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @DeleteMapping("/spaces/{id}/files/delete")

@@ -14,10 +14,11 @@ import java.util.zip.ZipOutputStream;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.transfer.Upload;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,7 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import lombok.extern.slf4j.Slf4j;
 import mil.tron.commonapi.dto.documentspace.DocumentDetailsDto;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
 import mil.tron.commonapi.exception.BadRequestException;
 
 @Slf4j
@@ -55,16 +57,19 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public List<DocumentSpaceInfoDto> listSpaces() {
-		return documentSpaceRepository.findAllDynamicBy(DocumentSpaceInfoDto.class);
+	public List<DocumentSpaceResponseDto> listSpaces() {
+		return documentSpaceRepository.findAllDynamicBy(DocumentSpaceResponseDto.class);
 	}
 
 	@Override
-	public DocumentSpaceInfoDto createSpace(DocumentSpaceInfoDto dto) {
-		DocumentSpace documentSpace = convertDocumentSpaceDtoToEntity(dto);
-		documentSpace.setId(UUID.randomUUID());
+	public DocumentSpaceResponseDto createSpace(DocumentSpaceRequestDto dto) {
+		DocumentSpace documentSpace = convertDocumentSpaceRequestDtoToEntity(dto);
 		
-		return convertDocumentSpaceEntityToDto(documentSpaceRepository.save(documentSpace));
+		if (documentSpaceRepository.existsByName(documentSpace.getName())) {
+			throw new ResourceAlreadyExistsException(String.format("Document Space with the name: %s already exists", documentSpace.getName()));
+		}
+		
+		return convertDocumentSpaceEntityToResponseDto(documentSpaceRepository.save(documentSpace));
 	}
 	
 	@Override
@@ -292,16 +297,16 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 	
 	@Override
-	public DocumentSpace convertDocumentSpaceDtoToEntity(DocumentSpaceInfoDto documentSpaceInfoDto) {
+	public DocumentSpace convertDocumentSpaceRequestDtoToEntity(DocumentSpaceRequestDto documentSpaceInfoDto) {
 		return DocumentSpace.builder()
-				.id(documentSpaceInfoDto.getId())
+				.id(documentSpaceInfoDto.getId() == null ? UUID.randomUUID() : documentSpaceInfoDto.getId())
 				.name(documentSpaceInfoDto.getName())
 				.build();
 	}
 	
 	@Override
-	public DocumentSpaceInfoDto convertDocumentSpaceEntityToDto(DocumentSpace documentSpace) {
-		return DocumentSpaceInfoDto.builder()
+	public DocumentSpaceResponseDto convertDocumentSpaceEntityToResponseDto(DocumentSpace documentSpace) {
+		return DocumentSpaceResponseDto.builder()
 				.id(documentSpace.getId())
 				.name(documentSpace.getName())
 				.build();

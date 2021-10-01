@@ -11,7 +11,7 @@ import com.jayway.jsonpath.JsonPath;
 
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.JwtUtils;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -135,7 +135,7 @@ public class DocumentSpaceIntegrationTests {
         // create space
         MvcResult result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceInfoDto
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
                         .builder()
                         .name("test1")
                         .build()))
@@ -154,13 +154,24 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(1)))
                 .andReturn();
+        
+        // check that document spaces cannot be created with duplicated names
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
+                        .builder()
+                        .name("test1")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isConflict());
 
         // create many spaces
         Map<String, UUID> spaces = new HashMap<>();
         for (String name : new String[] { "test0", "cool.space", "test2", "test3" }) {
         	result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(MAPPER.writeValueAsString(DocumentSpaceInfoDto
+                    .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
                             .builder()
                             .name(name)
                             .build()))
@@ -232,7 +243,7 @@ public class DocumentSpaceIntegrationTests {
 	void testSpaceDeletion() throws Exception {
 		// create space
 		mockMvc.perform(post(ENDPOINT_V2 + "/spaces").contentType(MediaType.APPLICATION_JSON)
-				.content(MAPPER.writeValueAsString(DocumentSpaceInfoDto.builder().name("test1").build()))
+				.content(MAPPER.writeValueAsString(DocumentSpaceRequestDto.builder().name("test1").build()))
 				.header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
 				.header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
 				.andExpect(status().isCreated()).andExpect(jsonPath("$.name", equalTo("test1")));

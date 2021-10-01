@@ -15,7 +15,8 @@ import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -55,7 +56,8 @@ class DocumentSpaceServiceImplTest {
     
     private S3Mock s3Mock;
     
-    private DocumentSpaceInfoDto dto;
+    private DocumentSpaceRequestDto requestDto;
+    private DocumentSpaceResponseDto responseDto;
     private DocumentSpace entity;
     
     @BeforeEach
@@ -82,14 +84,19 @@ class DocumentSpaceServiceImplTest {
         s3Mock.start();
         amazonS3.createBucket(BUCKET_NAME);
         
-        dto = DocumentSpaceInfoDto.builder()
+        requestDto = DocumentSpaceRequestDto.builder()
         		.id(UUID.randomUUID())
                 .name("test")
                 .build();
         
+        responseDto = DocumentSpaceResponseDto.builder()
+        		.id(requestDto.getId())
+        		.name(requestDto.getName())
+        		.build();
+        
         entity = DocumentSpace.builder()
-        			.id(dto.getId())
-	        		.name(dto.getName())
+        			.id(requestDto.getId())
+	        		.name(requestDto.getName())
 	        		.build();
     }
 
@@ -119,10 +126,10 @@ class DocumentSpaceServiceImplTest {
 
     @Test
     void testListSpaces() {
-    	Mockito.when(documentSpaceRepo.findAllDynamicBy(DocumentSpaceInfoDto.class)).thenReturn(List.of());
+    	Mockito.when(documentSpaceRepo.findAllDynamicBy(DocumentSpaceResponseDto.class)).thenReturn(List.of());
         assertEquals(0, documentService.listSpaces().size());
         
-        Mockito.when(documentSpaceRepo.findAllDynamicBy(DocumentSpaceInfoDto.class)).thenReturn(List.of(dto));
+        Mockito.when(documentSpaceRepo.findAllDynamicBy(DocumentSpaceResponseDto.class)).thenReturn(List.of(responseDto));
         assertEquals(1, documentService.listSpaces().size());
     }
     
@@ -162,7 +169,7 @@ class DocumentSpaceServiceImplTest {
     @Test
     void testListFiles() throws AmazonServiceException, AmazonClientException, InterruptedException {
     	Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
-    	DocumentSpaceInfoDto documentSpaceDto = documentService.createSpace(dto);
+    	DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
     	
     	String content = "fake content";
     	List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 20);
@@ -178,7 +185,7 @@ class DocumentSpaceServiceImplTest {
     		.ignoringFields("uploadedDate", "uploadedBy")
     		.isEqualTo(fileNames.stream().map(filename -> DocumentDto.builder()
     				.key(filename)
-    				.path(dto.getId() + "/")
+    				.path(requestDto.getId() + "/")
     				.size(content.getBytes().length)
     				.build()).collect(Collectors.toList()));
     }
@@ -186,7 +193,7 @@ class DocumentSpaceServiceImplTest {
     @Test
     void testDownloadFile() throws AmazonServiceException, AmazonClientException, InterruptedException {
     	Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
-    	DocumentSpaceInfoDto documentSpaceDto = documentService.createSpace(dto);
+    	DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
     	
     	String content = "fake content";
     	List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 20);
@@ -201,7 +208,7 @@ class DocumentSpaceServiceImplTest {
     @Test
     void testGetFiles() throws AmazonServiceException, AmazonClientException, InterruptedException {
     	Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
-    	DocumentSpaceInfoDto documentSpaceDto = documentService.createSpace(dto);
+    	DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
     	
     	String content = "fake content";
     	List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 5);
@@ -225,7 +232,7 @@ class DocumentSpaceServiceImplTest {
     @Test
     void testDownloadAndWriteCompressedFiles() throws AmazonServiceException, AmazonClientException, InterruptedException {
     	Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
-    	DocumentSpaceInfoDto documentSpaceDto = documentService.createSpace(dto);
+    	DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
     	
     	String content = "fake content";
     	List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 5);
@@ -241,7 +248,7 @@ class DocumentSpaceServiceImplTest {
     @Test
     void testdownloadAllInDirectoryAndCompress() throws AmazonServiceException, AmazonClientException, InterruptedException {
     	Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
-    	DocumentSpaceInfoDto documentSpaceDto = documentService.createSpace(dto);
+    	DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
     	
     	String content = "fake content";
     	uploadDummyFilesUsingTransferManager(content, 5);

@@ -12,15 +12,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 /**
- * Information about a document space itself
+ * DocumentSpace DTO for write operations
+ *
  */
-
 @AllArgsConstructor
 @Getter
 @Setter
 @Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DocumentSpaceInfoDto {
+public class DocumentSpaceRequestDto {
 	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
 	private UUID id;
 	
