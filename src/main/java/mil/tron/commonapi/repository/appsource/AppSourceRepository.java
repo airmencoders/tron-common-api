@@ -1,16 +1,16 @@
 package mil.tron.commonapi.repository.appsource;
 
+import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import mil.tron.commonapi.entity.DashboardUser;
-import mil.tron.commonapi.entity.appsource.AppSource;
-
 public interface AppSourceRepository extends JpaRepository<AppSource, UUID>, AppSourceRepositoryCustom {
     boolean existsByNameIgnoreCase(String name);
+    boolean existsByAppSourcePath(String path);
     boolean existsByIdAndAvailableAsAppSourceTrue(UUID id);
     AppSource findByAppSourcePath(String appSourcePath);
     Optional<AppSource> findByNameIgnoreCase(String name);

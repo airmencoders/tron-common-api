@@ -1,23 +1,20 @@
 package mil.tron.commonapi.appgateway;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.entity.appsource.AppSource;
+import mil.tron.commonapi.repository.appsource.AppSourceRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.transaction.Transactional;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.transaction.Transactional;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import lombok.extern.slf4j.Slf4j;
-import mil.tron.commonapi.entity.appsource.AppSource;
-import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 
 @Service
 @Slf4j
@@ -72,7 +69,8 @@ public class AppSourceConfig {
     @Transactional
     AppSource registerAppSource(AppSourceInterfaceDefinition appDef) {
         AppSource appSource;
-        if (!this.appSourceRepository.existsByNameIgnoreCase(appDef.getName())) {
+        if (!this.appSourceRepository.existsByNameIgnoreCase(appDef.getName())
+                && !this.appSourceRepository.existsByAppSourcePath(appDef.getAppSourcePath())) {
             // add new app source
             appSource = AppSource.builder()
                     .name(appDef.getName())
@@ -81,7 +79,24 @@ public class AppSourceConfig {
                     .availableAsAppSource(true)
                     .nameAsLower(appDef.getName().toLowerCase())
                     .build();
-        } else {
+        }
+        else if (!this.appSourceRepository.existsByNameIgnoreCase(appDef.getName())
+                && this.appSourceRepository.existsByAppSourcePath(appDef.getAppSourcePath())) {
+
+            // weird case where incoming appSourceConfig.json has a different name but same app source pathname
+            //  this would happen if appSource's name was changed in the appSourceConfig.json file and promoted up
+            //  to deployment - it would cause a 500 db error since we would otherwise attempt to add this seemingly
+            //  new appsource and it would croak since appSourcePath have to be unique.  in this case we want to sync the
+            //  old app source name to the new incoming one (keying off of the app source path column in the db)
+
+            appSource = this.appSourceRepository.findByAppSourcePath(appDef.getAppSourcePath());
+
+            // sync existing according to app source pathname
+            appSource.setName(appDef.getName());
+            appSource.setAvailableAsAppSource(true);
+            appSource.setOpenApiSpecFilename(appDef.getOpenApiSpecFilename());
+        }
+        else {
             appSource = this.appSourceRepository.findByNameIgnoreCaseWithEndpoints(appDef.getName());
             // refresh the database to always be correct
             appSource.setAvailableAsAppSource(true);
