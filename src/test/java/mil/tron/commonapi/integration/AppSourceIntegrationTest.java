@@ -33,16 +33,15 @@ import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
 import mil.tron.commonapi.repository.appsource.AppEndpointRepository;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.AppSourceServiceImpl;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
-import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -51,6 +50,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.servlet.MockMvc;
@@ -202,6 +202,30 @@ public class AppSourceIntegrationTest {
         appSourceServiceImpl.createAppSource(appSource);
         val appSources = appSourceServiceImpl.getAppSources();
         assertEquals(1, appSources.size());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testNameMismatchWithSameAppSourcePath() throws Exception {
+        val id = UUID.randomUUID();
+        appSourceRepository.save(
+                AppSource.builder()
+                        .id(id)
+                        .name("App_Source_22")
+                        .nameAsLower("app_source_22")
+                        .appSourcePath("app22")
+                        .build()
+        );
+
+        AppSourceInterfaceDefinition def = AppSourceInterfaceDefinition.builder()
+                .appSourcePath("app22")
+                .name("New_App_Name")
+                .build();
+
+        ReflectionTestUtils.invokeMethod(appSourceConfig, "registerAppSource", def);
+        AppSource source = appSourceRepository.getById(id);
+        assertTrue(source.getName().equals("New_App_Name"));
     }
 
     @Transactional
