@@ -7,14 +7,18 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
+
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.JwtUtils;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +30,10 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -59,6 +66,9 @@ public class DocumentSpaceIntegrationTests {
     private AmazonS3 amazonS3;
     private S3Mock s3Mock;
 
+    @Autowired
+    private DocumentSpaceRepository documentSpaceRepository;
+    
     @Autowired
     AppClientUserRespository appClientUserRespository;
 
@@ -109,6 +119,7 @@ public class DocumentSpaceIntegrationTests {
     void destroy() {
         s3Mock.shutdown();
         dashRepo.deleteById(id);
+        documentSpaceRepository.deleteAll();
     }
 
     @Test
@@ -122,28 +133,32 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.data", hasSize(0)));
 
         // create space
-        mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
+        MvcResult result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceInfoDto
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
                         .builder()
                         .name("test1")
                         .build()))
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", equalTo("test1")));
+                .andExpect(jsonPath("$.name", equalTo("test1")))
+                .andReturn();
+        
+        UUID test1Id = UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.id"));
 
         // check 1 space
         mockMvc.perform(get(ENDPOINT_V2 + "/spaces")
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(1)));
-
-        // check no dupes
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andReturn();
+        
+        // check that document spaces cannot be created with duplicated names
         mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceInfoDto
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
                         .builder()
                         .name("test1")
                         .build()))
@@ -151,30 +166,21 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isConflict());
 
-        // check invalid name(s)
-        for (String name : new String[] { "  ", "", null, ".folder", "Uppercase", "Slashed/Name", "Under_score" }) {
-            mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(MAPPER.writeValueAsString(DocumentSpaceInfoDto
-                            .builder()
-                            .name(name)
-                            .build()))
-                    .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                    .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                    .andExpect(status().isBadRequest());
-        }
-
         // create many spaces
+        Map<String, UUID> spaces = new HashMap<>();
         for (String name : new String[] { "test0", "cool.space", "test2", "test3" }) {
-            mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
+        	result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(MAPPER.writeValueAsString(DocumentSpaceInfoDto
+                    .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
                             .builder()
                             .name(name)
                             .build()))
                     .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                     .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                    .andExpect(status().isCreated());
+                    .andExpect(status().isCreated())
+                    .andReturn();
+        	
+        	spaces.put(name, UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.id")));
         }
 
         // verify 5 spaces
@@ -192,13 +198,13 @@ public class DocumentSpaceIntegrationTests {
                 MediaType.TEXT_PLAIN_VALUE,
                 "Hello, World!".getBytes()
         );
-        mockMvc.perform(multipart(ENDPOINT_V2 + "/files/test0").file(file)
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", test1Id.toString()).file(file)
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk());
 
-        // check file in space test0
-        mockMvc.perform(get(ENDPOINT_V2 + "/files/test0")
+        // check file in space test1
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/files", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
@@ -206,14 +212,14 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents[0].key", equalTo("hello.txt")));
 
         // check file isn't in space test0
-        mockMvc.perform(get(ENDPOINT_V2 + "/files/test1")
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/files", spaces.get("test0").toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.documents", hasSize(0)));
 
-        // upload same file again
-        mockMvc.perform(get(ENDPOINT_V2 + "/files/test0")
+        // upload same file again to test1
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/files", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
@@ -221,52 +227,45 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents[0].key", equalTo("hello.txt")));
 
         // delete invalid file
-        mockMvc.perform(delete(ENDPOINT_V2 + "/files/test0/test.txt")
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/files/delete?file=doesnotexistfile.txt", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isNotFound());
 
         // delete valid file
-        mockMvc.perform(delete(ENDPOINT_V2 + "/files/test0/hello.txt")
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/files/delete?file=hello.txt", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isNoContent());
-
-
     }
 
-    @Test
-    void testSpaceDeletion() throws Exception {
-        // create space
-        mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceInfoDto
-                        .builder()
-                        .name("test1")
-                        .build()))
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", equalTo("test1")));
+	@Test
+	void testSpaceDeletion() throws Exception {
+		// create space
+		mockMvc.perform(post(ENDPOINT_V2 + "/spaces").contentType(MediaType.APPLICATION_JSON)
+				.content(MAPPER.writeValueAsString(DocumentSpaceRequestDto.builder().name("test1").build()))
+				.header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+				.header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+				.andExpect(status().isCreated()).andExpect(jsonPath("$.name", equalTo("test1")));
 
-        // check 1 space
-        mockMvc.perform(get(ENDPOINT_V2 + "/spaces")
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(1)));
+		// check 1 space
+		MvcResult result = mockMvc
+				.perform(get(ENDPOINT_V2 + "/spaces")
+						.header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+						.header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data", hasSize(1))).andReturn();
 
-        // delete space
-        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/test1")
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isNoContent());
+		// delete space
+		mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}", UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.data[0].id")).toString())
+				.header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+				.header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+				.andExpect(status().isNoContent());
 
-        // delete space - that doesnt exist
-        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/test1")
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isNotFound());
-    }
+		// delete space - that doesnt exist
+		mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}", UUID.randomUUID().toString())
+				.header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+				.header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+				.andExpect(status().isNotFound());
+	}
 
 }

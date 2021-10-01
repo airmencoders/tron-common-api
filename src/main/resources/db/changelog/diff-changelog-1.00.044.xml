@@ -1,0 +1,28 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="Dylan" id="1633066423578-1">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_space"/>
+            </not> 
+        </preConditions>
+
+        <createTable tableName="document_space">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="document_spacePK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1633066423578-2">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space"/>
+            <columnExists tableName="document_space" columnName="name" />
+        </preConditions>
+
+        <addUniqueConstraint columnNames="name" constraintName="UC_DOCUMENT_SPACENAME_COL" tableName="document_space"/>
+    </changeSet>
+</databaseChangeLog>

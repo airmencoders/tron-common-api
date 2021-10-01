@@ -10,8 +10,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceInfoDtoResponseWrapper;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDtoResponseWrapper;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
@@ -27,8 +28,10 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import javax.validation.Valid;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @RestController
@@ -53,15 +56,15 @@ public class DocumentSpaceController {
 		return headers;
 	}
 
-    @Operation(summary = "Retrieves all document space names")
+    @Operation(summary = "Retrieves all document spaces")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = DocumentSpaceInfoDtoResponseWrapper.class)))
+                    content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDtoResponseWrapper.class)))
     })
     @WrappedEnvelopeResponse
 	@GetMapping("/spaces")
-    public ResponseEntity<Object> getSpaces() {
+    public ResponseEntity<List<DocumentSpaceResponseDto>> getSpaces() {
 	    return new ResponseEntity<>(documentSpaceService.listSpaces(), HttpStatus.OK);
     }
 
@@ -69,16 +72,13 @@ public class DocumentSpaceController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation",
-				content = @Content(schema = @Schema(implementation = DocumentSpaceInfoDto.class))),
+				content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDto.class))),
 			@ApiResponse(responseCode = "409",
 				description = "Conflict - Space already exists",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PostMapping("/spaces")
-    public ResponseEntity<DocumentSpaceInfoDto> createSpace(@Valid @RequestBody DocumentSpaceInfoDto dto) {
+    public ResponseEntity<DocumentSpaceResponseDto> createSpace(@Valid @RequestBody DocumentSpaceRequestDto dto) {
 	    return new ResponseEntity<>(documentSpaceService.createSpace(dto), HttpStatus.CREATED);
     }
 
@@ -88,14 +88,11 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @DeleteMapping("/spaces/{name}")
-    public ResponseEntity<Object> deleteSpace(@PathVariable String name) {
-	    documentSpaceService.deleteSpace(name);
+    @DeleteMapping("/spaces/{id}")
+    public ResponseEntity<Object> deleteSpace(@PathVariable UUID id) {
+	    documentSpaceService.deleteSpace(id);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -105,16 +102,13 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PostMapping(value = "/files/{space}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public Map<String, String> upload(@PathVariable String space,
+	@PostMapping(value = "/spaces/{id}/files/upload", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public Map<String, String> upload(@PathVariable UUID id,
                                       @RequestPart("file") MultipartFile file) {
 
-		documentSpaceService.uploadFile(space, file);
+		documentSpaceService.uploadFile(id, file);
 		 
         Map<String, String> result = new HashMap<>();
         result.put("key", file.getOriginalFilename());
@@ -127,16 +121,13 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @GetMapping("/file/{space}/download")
-    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable String space,
+    @GetMapping("/spaces/{id}/files/download/single")
+    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
                                                             @RequestParam("file") String file) {
 
-        S3Object s3Data = documentSpaceService.downloadFile(space, file);
+        S3Object s3Data = documentSpaceService.downloadFile(id, file);
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
@@ -154,15 +145,12 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file(s) not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @GetMapping("/files/{space}/download")
-    public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable String space,
+    @GetMapping("/spaces/{id}/files/download")
+    public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable UUID id,
                                                                @RequestParam("files") Set<String> files) {
-        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(space, files, out);
+        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, files, out);
         
         return ResponseEntity
                 .ok()
@@ -177,14 +165,11 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file(s) not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @GetMapping("/files/{space}/download/all")
-    public ResponseEntity<StreamingResponseBody> downloadAllFilesInSpace(@PathVariable String space) {
-        StreamingResponseBody response = out -> documentSpaceService.downloadAllInSpaceAndCompress(space, out);
+    @GetMapping("/spaces/{id}/files/download/all")
+    public ResponseEntity<StreamingResponseBody> downloadAllFilesInSpace(@PathVariable UUID id) {
+        StreamingResponseBody response = out -> documentSpaceService.downloadAllInSpaceAndCompress(id, out);
         
         return ResponseEntity
                 .ok()
@@ -199,15 +184,12 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "400",
-				description = "Bad Request - Bad space name",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @DeleteMapping("/files/{space}/{keyName}")
-    public ResponseEntity<Object> delete(@PathVariable String space,
-                       @PathVariable("keyName") String keyName) {
-    	documentSpaceService.deleteFile(space, keyName);
+    @DeleteMapping("/spaces/{id}/files/delete")
+    public ResponseEntity<Object> delete(@PathVariable UUID id,
+                       @RequestParam("file") String file) {
+    	documentSpaceService.deleteFile(id, file);
     	return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -221,14 +203,14 @@ public class DocumentSpaceController {
     				description = "Not Found - space not found",
     				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @GetMapping("/files/{space}")
+    @GetMapping("/spaces/{id}/files")
     public ResponseEntity<S3PaginationDto> listObjects(
-    		@PathVariable String space, 
+    		@PathVariable UUID id, 
     		@Parameter(name = "continuation", description = "the continuation token", required = false)
 				@RequestParam(name = "continuation", required = false) String continuation,
 			@Parameter(name = "limit", description = "page limit", required = false)
 				@RequestParam(name = "limit", required = false) Integer limit) {
         return ResponseEntity
-        		.ok(documentSpaceService.listFiles(space, continuation, limit));
+        		.ok(documentSpaceService.listFiles(id, continuation, limit));
     }
 }
