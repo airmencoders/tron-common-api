@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 
@@ -43,4 +44,6 @@ public interface DocumentSpaceService {
     
     DocumentSpace convertDocumentSpaceRequestDtoToEntity(DocumentSpaceRequestDto documentSpaceInfoDto);
     DocumentSpaceResponseDto convertDocumentSpaceEntityToResponseDto(DocumentSpace documentSpace);
+    
+    void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberDto documentSpaceMemberDto);
 }

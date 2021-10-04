@@ -12,6 +12,7 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -273,6 +274,10 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 				.findById(id)
 				.orElseThrow(() -> new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
 
+		for (DocumentSpace documentSpace : new HashSet<>(dbUser.getDocumentSpaces())) {
+			dbUser.removeDocumentSpace(documentSpace);
+        }
+		
 		// remove developers attached to this app
 		this.deleteDevelopersFromAppClient(dbUser, "", true);
 

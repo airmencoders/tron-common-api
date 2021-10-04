@@ -3,6 +3,7 @@ package mil.tron.commonapi.dto.appclient;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,11 @@ public class AppClientUserDetailsDto {
     @Setter
     @Builder.Default
     private List<PrivilegeDto> privileges = new ArrayList<>();
+    
+    @Getter
+    @Setter
+    @Builder.Default
+    private List<DocumentSpacePrivilegeDto> documentSpacePrivileges = new ArrayList<>();
 
     @Getter
     @Setter

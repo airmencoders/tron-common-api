@@ -13,6 +13,7 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDtoResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -95,6 +97,22 @@ public class DocumentSpaceController {
 	    documentSpaceService.deleteSpace(id);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+    
+    @Operation(summary = "Adds a user to a Document Space", description = "Adds a user to a Document Space with specified privileges")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PostMapping("/spaces/{id}/users")
+    public ResponseEntity<Object> addUserToDocumentSpace(
+    		@PathVariable UUID id,
+    		@Valid @RequestBody DocumentSpaceDashboardMemberDto dto) {
+	    documentSpaceService.addDashboardUserToDocumentSpace(id, dto);
+	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 
     @Operation(summary = "Uploads a file to a Document Space", description = "Uploads a file to a Document Space")
 	@ApiResponses(value = {
@@ -124,6 +142,7 @@ public class DocumentSpaceController {
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @GetMapping("/spaces/{id}/files/download/single")
+    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
                                                             @RequestParam("file") String file) {
 
@@ -148,6 +167,7 @@ public class DocumentSpaceController {
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @GetMapping("/spaces/{id}/files/download")
+    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable UUID id,
                                                                @RequestParam("files") Set<String> files) {
         StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, files, out);
@@ -168,9 +188,9 @@ public class DocumentSpaceController {
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @GetMapping("/spaces/{id}/files/download/all")
+    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     public ResponseEntity<StreamingResponseBody> downloadAllFilesInSpace(@PathVariable UUID id) {
         StreamingResponseBody response = out -> documentSpaceService.downloadAllInSpaceAndCompress(id, out);
-        
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
@@ -178,7 +198,7 @@ public class DocumentSpaceController {
                 .body(response);
     }
     
-    @Operation(summary = "Deletes from a Document Space", description = "Deletes file from a space")
+    @Operation(summary = "Deletes a file from a Document Space", description = "Deletes file from a space")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation"),
@@ -204,6 +224,7 @@ public class DocumentSpaceController {
     				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @GetMapping("/spaces/{id}/files")
+    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     public ResponseEntity<S3PaginationDto> listObjects(
     		@PathVariable UUID id, 
     		@Parameter(name = "continuation", description = "the continuation token", required = false)

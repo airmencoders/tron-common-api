@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.method.configuration.Globa
 import mil.tron.commonapi.ApplicationProperties;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.AppClientUserService;
+import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeService;
 
 @Configuration
 @ConditionalOnProperty(name = "security.enabled", havingValue="true")
@@ -31,5 +32,10 @@ public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
     @Bean
     public AccessCheckEventRequestLog accessCheckEventRequestLog(AppClientUserRespository appClientUserRespository) {
         return new AccessCheckEventRequestLogImpl(appClientUserRespository);
+    }
+    
+    @Bean
+    public AccessCheckDocumentSpace accessCheckDocumentSpace(DocumentSpacePrivilegeService documentSpacePrivilegeService) {
+    	return new AccessCheckDocumentSpaceImpl(documentSpacePrivilegeService);
     }
 }
