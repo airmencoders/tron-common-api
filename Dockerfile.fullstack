@@ -1,16 +1,7 @@
 # Used for the docker-compose fullstack setup
-
-
-FROM centos:7 as wgetsrc
-RUN yum install wget -y
-
-# Load the hardened jdk image we use to run puckboard
 FROM registry.il2.dso.mil/platform-one/devops/pipeline-templates/ironbank/maven-jdk11:3.6.3
-
 ENV CONTEXTS DEV
-
 USER root
-
 RUN rm -rf src
 COPY . .
 
@@ -36,11 +27,4 @@ RUN rm -rf target/
 RUN mvn clean
 RUN mvn package -Dmaven.test.skip=true
 VOLUME /tmp
-
-# Copy the wget binaries build in stage 1
-COPY --from=wgetsrc /usr/bin/wget /usr/bin
-COPY --from=wgetsrc /usr/lib64/libssl.so.10 /usr/lib64/
-COPY --from=wgetsrc /usr/lib64/libidn.so.11 /usr/lib64/
-COPY --from=wgetsrc /usr/lib64/libcrypto.so.10 /usr/lib64/
-
 ENTRYPOINT ["java","-Xms512m","-Xmx1024m","-XX:+HeapDumpOnOutOfMemoryError","-XX:HeapDumpPath=/tmp/heap-dump.core","-jar","/home/maven/target/common-api.jar"]
