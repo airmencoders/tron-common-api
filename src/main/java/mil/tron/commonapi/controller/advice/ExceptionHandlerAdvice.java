@@ -1,12 +1,5 @@
 package mil.tron.commonapi.controller.advice;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.context.request.WebRequest;
-
 import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.exception.efa.IllegalModificationBaseException;
@@ -14,8 +7,17 @@ import mil.tron.commonapi.exception.efa.IllegalOrganizationModification;
 import mil.tron.commonapi.exception.efa.IllegalPersonModification;
 import mil.tron.commonapi.service.OrganizationService;
 import mil.tron.commonapi.service.PersonService;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
 
 @ControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class ExceptionHandlerAdvice {
 	private final OrganizationService orgService;
 	private final PersonService personService;
@@ -24,7 +26,7 @@ public class ExceptionHandlerAdvice {
 		this.orgService = orgService;
 		this.personService = personService;
 	}
-	
+
 	/**
 	 * Handles EFA related exceptions for the event in which fields were attempted
 	 * to be modified without the proper privileges. 
