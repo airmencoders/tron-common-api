@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
@@ -17,12 +18,12 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
-import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
 public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilegeService {
 	private static final ModelMapper MODEL_MAPPER = new DtoMapper();
 	
@@ -103,15 +104,8 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 	}
 
 	@Override
-	public void removePrivilegesFromDashboardUser(String dashboardUserEmail, DocumentSpace documentSpace,
+	public void removePrivilegesFromDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace,
 			List<DocumentSpacePrivilegeType> privilegesToRemove) {
-		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
-
-		if (dashboardUser == null) {
-			throw new RecordNotFoundException(
-					String.format("Could not remove privileges to user with email: %s because they do not exist",
-							dashboardUserEmail));
-		}
 
 		Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> documentSpacePrivileges = documentSpace.getPrivileges();
 		List<DocumentSpacePrivilege> privilegesToSave = new ArrayList<>();

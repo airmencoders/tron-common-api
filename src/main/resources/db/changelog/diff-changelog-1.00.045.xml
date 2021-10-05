@@ -1,6 +1,12 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
     <changeSet author="Dylan" id="1633352945635-1">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="app_document_space_privileges"/>
+            </not> 
+        </preConditions>
+
         <createTable tableName="app_document_space_privileges">
             <column name="app_client_users_id" type="UUID">
                 <constraints nullable="false" primaryKey="true"/>
@@ -12,6 +18,12 @@
     </changeSet>
     
     <changeSet author="Dylan" id="1633352945635-2">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="dashboard_user_document_space_privileges"/>
+            </not> 
+        </preConditions>
+
         <createTable tableName="dashboard_user_document_space_privileges">
             <column name="dashboard_users_id" type="UUID">
                 <constraints nullable="false" primaryKey="true"/>
@@ -23,6 +35,12 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-3">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_space_app_users"/>
+            </not> 
+        </preConditions>
+
         <createTable tableName="document_space_app_users">
             <column name="document_space_id" type="UUID">
                 <constraints nullable="false" primaryKey="true"/>
@@ -34,6 +52,12 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-4">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_space_dashboard_users"/>
+            </not> 
+        </preConditions>
+
         <createTable tableName="document_space_dashboard_users">
             <column name="document_space_id" type="UUID">
                 <constraints nullable="false" primaryKey="true"/>
@@ -45,6 +69,12 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-5">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_space_privilege"/>
+            </not> 
+        </preConditions>
+
         <createTable tableName="document_space_privilege">
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="document_space_privilegePK"/>
@@ -55,6 +85,12 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-6">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_space_privileges"/>
+            </not> 
+        </preConditions>
+
         <createTable tableName="document_space_privileges">
             <column name="document_space_id" type="UUID">
                 <constraints nullable="false" primaryKey="true"/>
@@ -66,50 +102,140 @@
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-7">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_privilege"/>
+            <columnExists tableName="document_space_privilege" columnName="name" />
+        </preConditions>
+
         <addUniqueConstraint columnNames="name" constraintName="UC_DOCUMENT_SPACE_PRIVILEGENAME_COL" tableName="document_space_privilege"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-8">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_privileges"/>
+            <columnExists tableName="document_space_privileges" columnName="document_space_privilege_id" />
+        </preConditions>
+
         <addUniqueConstraint columnNames="document_space_privilege_id" constraintName="UK_584hk9n1i0je65vxnxt0l0m6q" tableName="document_space_privileges"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-9">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_dashboard_users"/>
+            <columnExists tableName="document_space_dashboard_users" columnName="document_space_id" />
+
+            <tableExists tableName="document_space"/>
+            <columnExists tableName="document_space" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="document_space_id" baseTableName="document_space_dashboard_users" constraintName="FK1iciygmdfr4f7uxokooxw34uv" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="document_space" validate="true"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-10">
+        <preConditions onFail="WARN">
+            <tableExists tableName="app_document_space_privileges"/>
+            <columnExists tableName="app_document_space_privileges" columnName="document_space_privileges_id" />
+
+            <tableExists tableName="document_space_privilege"/>
+            <columnExists tableName="document_space_privilege" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="document_space_privileges_id" baseTableName="app_document_space_privileges" constraintName="FK2shxxnqlai9bxutc6n4padpdj" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="document_space_privilege" validate="true"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-11">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_dashboard_users"/>
+            <columnExists tableName="document_space_dashboard_users" columnName="dashboard_user_id" />
+
+            <tableExists tableName="dashboard_user"/>
+            <columnExists tableName="dashboard_user" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="dashboard_user_id" baseTableName="document_space_dashboard_users" constraintName="FK4p3d5m2darkar81ud5ep3jyv2" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="dashboard_user" validate="true"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-12">
+        <preConditions onFail="WARN">
+            <tableExists tableName="dashboard_user_document_space_privileges"/>
+            <columnExists tableName="dashboard_user_document_space_privileges" columnName="document_space_privileges_id" />
+
+            <tableExists tableName="document_space_privilege"/>
+            <columnExists tableName="document_space_privilege" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="document_space_privileges_id" baseTableName="dashboard_user_document_space_privileges" constraintName="FK71okobfa2par4r25muxr99ts" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="document_space_privilege" validate="true"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-13">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_privileges"/>
+            <columnExists tableName="document_space_privileges" columnName="document_space_privilege_id" />
+
+            <tableExists tableName="document_space_privilege"/>
+            <columnExists tableName="document_space_privilege" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="document_space_privilege_id" baseTableName="document_space_privileges" constraintName="FK7rnqnmx225u5gh5e046lb1tf" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="document_space_privilege" validate="true"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-14">
+        <preConditions onFail="WARN">
+            <tableExists tableName="dashboard_user_document_space_privileges"/>
+            <columnExists tableName="dashboard_user_document_space_privileges" columnName="dashboard_users_id" />
+
+            <tableExists tableName="dashboard_user"/>
+            <columnExists tableName="dashboard_user" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="dashboard_users_id" baseTableName="dashboard_user_document_space_privileges" constraintName="FK8eckt8ydcars49np0nybsiogs" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="dashboard_user" validate="true"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-15">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_privileges"/>
+            <columnExists tableName="document_space_privileges" columnName="document_space_id" />
+
+            <tableExists tableName="document_space"/>
+            <columnExists tableName="document_space" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="document_space_id" baseTableName="document_space_privileges" constraintName="FKa6hgc3bfov2sie09ycc67kn8k" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="document_space" validate="true"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-16">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_app_users"/>
+            <columnExists tableName="document_space_app_users" columnName="document_space_id" />
+
+            <tableExists tableName="document_space"/>
+            <columnExists tableName="document_space" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="document_space_id" baseTableName="document_space_app_users" constraintName="FKcfvwmbaa2q66glf9b73wsbb0e" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="document_space" validate="true"/>
     </changeSet>
 
     <changeSet author="Dylan" id="1633352945635-17">
+        <preConditions onFail="WARN">
+            <tableExists tableName="app_document_space_privileges"/>
+            <columnExists tableName="app_document_space_privileges" columnName="app_client_users_id" />
+
+            <tableExists tableName="app"/>
+            <columnExists tableName="app" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="app_client_users_id" baseTableName="app_document_space_privileges" constraintName="FKltcxn4y99s5thk55besjd2brw" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
     </changeSet>
-    
+
     <changeSet author="Dylan" id="1633352945635-18">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_app_users"/>
+            <columnExists tableName="document_space_app_users" columnName="app_id" />
+
+            <tableExists tableName="app"/>
+            <columnExists tableName="app" columnName="id" />
+        </preConditions>
+
         <addForeignKeyConstraint baseColumnNames="app_id" baseTableName="document_space_app_users" constraintName="FKq9p6bwdh19a0hvvg48e6y6gy1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="app" validate="true"/>
     </changeSet>
 </databaseChangeLog>

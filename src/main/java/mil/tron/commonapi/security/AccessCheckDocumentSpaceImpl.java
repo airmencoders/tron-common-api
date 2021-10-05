@@ -3,6 +3,7 @@ package mil.tron.commonapi.security;
 import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 
 import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeService;
 import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeType;
@@ -21,7 +22,7 @@ public class AccessCheckDocumentSpaceImpl implements AccessCheckDocumentSpace {
 		}
 
 		return authentication.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals(
-				documentSpacePrivilegeService.createPrivilegeName(documentSpaceId, DocumentSpacePrivilegeType.WRITE)));
+				documentSpacePrivilegeService.createPrivilegeName(documentSpaceId, DocumentSpacePrivilegeType.WRITE)) || isDashboardAdmin(authority));
 	}
 
 	@Override
@@ -29,9 +30,9 @@ public class AccessCheckDocumentSpaceImpl implements AccessCheckDocumentSpace {
 		if (!isValidAccessCheckRequest(authentication, documentSpaceId)) {
 			return false;
 		}
-
+		
 		return authentication.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals(
-				documentSpacePrivilegeService.createPrivilegeName(documentSpaceId, DocumentSpacePrivilegeType.READ)));
+				documentSpacePrivilegeService.createPrivilegeName(documentSpaceId, DocumentSpacePrivilegeType.READ)) || isDashboardAdmin(authority));
 	}
 
 	@Override
@@ -42,11 +43,15 @@ public class AccessCheckDocumentSpaceImpl implements AccessCheckDocumentSpace {
 
 		return authentication.getAuthorities().stream()
 				.anyMatch(authority -> authority.getAuthority().equals(documentSpacePrivilegeService
-						.createPrivilegeName(documentSpaceId, DocumentSpacePrivilegeType.MEMBERSHIP)));
+						.createPrivilegeName(documentSpaceId, DocumentSpacePrivilegeType.MEMBERSHIP)) || isDashboardAdmin(authority));
 	}
 	
 	private boolean isValidAccessCheckRequest(Authentication authentication, UUID documentSpaceId) {
 		return authentication != null && documentSpaceId != null;
+	}
+	
+	private boolean isDashboardAdmin(GrantedAuthority authority) {
+		return authority.getAuthority().equalsIgnoreCase("DASHBOARD_ADMIN");
 	}
 
 }

@@ -2,6 +2,8 @@ package mil.tron.commonapi.security;
 
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,6 +37,7 @@ public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
     }
     
     @Bean
+    @ConditionalOnBean(DocumentSpacePrivilegeService.class)
     public AccessCheckDocumentSpace accessCheckDocumentSpace(DocumentSpacePrivilegeService documentSpacePrivilegeService) {
     	return new AccessCheckDocumentSpaceImpl(documentSpacePrivilegeService);
     }

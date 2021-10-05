@@ -22,12 +22,8 @@ import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
-import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
-import mil.tron.commonapi.service.DashboardUserService;
-import mil.tron.commonapi.service.DashboardUserServiceImpl;
-import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +46,6 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -66,21 +61,15 @@ class DocumentSpaceServiceImplTest {
 
 	@Mock
 	private DocumentSpaceRepository documentSpaceRepo;
+	
+	@Mock
+	private DocumentSpacePrivilegeService documentSpacePrivilegeService;
 
 	private S3Mock s3Mock;
 
 	private DocumentSpaceRequestDto requestDto;
 	private DocumentSpaceResponseDto responseDto;
 	private DocumentSpace entity;
-
-	@Mock
-	private DocumentSpacePrivilegeRepository documentSpacePrivilegeRepo;
-
-	@Mock
-	private DocumentSpacePrivilegeService documentSpacePrivilegeService;
-	
-	@Mock
-	private DashboardUserService dashboardUserService;
 
 	@BeforeEach
 	void setup() {
@@ -109,17 +98,17 @@ class DocumentSpaceServiceImplTest {
 				DocumentSpacePrivilegeType.class);
 		documentSpacePrivilegesMap.put(DocumentSpacePrivilegeType.READ,
 				DocumentSpacePrivilege.builder().id(UUID.randomUUID())
-						.name(documentService.createDocumentSpacePathPrefix(requestDto.getId()))
+						.name(String.format("DOCUMENT_SPACE_%s_%s", requestDto.getId().toString(), DocumentSpacePrivilegeType.READ))
 						.type(DocumentSpacePrivilegeType.READ).build());
 
 		documentSpacePrivilegesMap.put(DocumentSpacePrivilegeType.WRITE,
 				DocumentSpacePrivilege.builder().id(UUID.randomUUID())
-						.name(documentService.createDocumentSpacePathPrefix(requestDto.getId()))
+						.name(String.format("DOCUMENT_SPACE_%s_%s", requestDto.getId().toString(), DocumentSpacePrivilegeType.WRITE))
 						.type(DocumentSpacePrivilegeType.WRITE).build());
 
 		documentSpacePrivilegesMap.put(DocumentSpacePrivilegeType.MEMBERSHIP,
 				DocumentSpacePrivilege.builder().id(UUID.randomUUID())
-						.name(documentService.createDocumentSpacePathPrefix(requestDto.getId()))
+						.name(String.format("DOCUMENT_SPACE_%s_%s", requestDto.getId().toString(), DocumentSpacePrivilegeType.MEMBERSHIP))
 						.type(DocumentSpacePrivilegeType.MEMBERSHIP).build());
 		entity = DocumentSpace.builder().id(requestDto.getId()).name(requestDto.getName())
 				.privileges(documentSpacePrivilegesMap).build();

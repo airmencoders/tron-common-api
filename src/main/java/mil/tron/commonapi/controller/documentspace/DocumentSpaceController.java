@@ -38,7 +38,6 @@ import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("${api-prefix.v2}" + DocumentSpaceController.ENDPOINT)
-@PreAuthorizeDashboardAdmin
 @ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
 public class DocumentSpaceController {
 	protected static final String ENDPOINT = "/document-space";
@@ -61,10 +60,14 @@ public class DocumentSpaceController {
     @Operation(summary = "Retrieves all document spaces")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
-                    description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDtoResponseWrapper.class)))
+                description = "Successful operation",
+                content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "403",
+            	description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+                content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @WrappedEnvelopeResponse
+    @PreAuthorizeDashboardAdmin
 	@GetMapping("/spaces")
     public ResponseEntity<List<DocumentSpaceResponseDto>> getSpaces() {
 	    return new ResponseEntity<>(documentSpaceService.listSpaces(), HttpStatus.OK);
@@ -77,8 +80,12 @@ public class DocumentSpaceController {
 				content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDto.class))),
 			@ApiResponse(responseCode = "409",
 				description = "Conflict - Space already exists",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+    @PreAuthorizeDashboardAdmin
 	@PostMapping("/spaces")
     public ResponseEntity<DocumentSpaceResponseDto> createSpace(@Valid @RequestBody DocumentSpaceRequestDto dto) {
 	    return new ResponseEntity<>(documentSpaceService.createSpace(dto), HttpStatus.CREATED);
@@ -90,8 +97,12 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+    @PreAuthorizeDashboardAdmin
     @DeleteMapping("/spaces/{id}")
     public ResponseEntity<Object> deleteSpace(@PathVariable UUID id) {
 	    documentSpaceService.deleteSpace(id);
@@ -104,8 +115,12 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Membership privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
     @PostMapping("/spaces/{id}/users")
     public ResponseEntity<Object> addUserToDocumentSpace(
     		@PathVariable UUID id,
@@ -120,8 +135,12 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@PostMapping(value = "/spaces/{id}/files/upload", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public Map<String, String> upload(@PathVariable UUID id,
                                       @RequestPart("file") MultipartFile file) {
@@ -139,10 +158,13 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @GetMapping("/spaces/{id}/files/download/single")
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+    @GetMapping("/spaces/{id}/files/download/single")
     public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
                                                             @RequestParam("file") String file) {
 
@@ -164,10 +186,13 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file(s) not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @GetMapping("/spaces/{id}/files/download")
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+    @GetMapping("/spaces/{id}/files/download")
     public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable UUID id,
                                                                @RequestParam("files") Set<String> files) {
         StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, files, out);
@@ -185,10 +210,13 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file(s) not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @GetMapping("/spaces/{id}/files/download/all")
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+    @GetMapping("/spaces/{id}/files/download/all")
     public ResponseEntity<StreamingResponseBody> downloadAllFilesInSpace(@PathVariable UUID id) {
         StreamingResponseBody response = out -> documentSpaceService.downloadAllInSpaceAndCompress(id, out);
         return ResponseEntity
@@ -204,15 +232,18 @@ public class DocumentSpaceController {
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found, file not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
     @DeleteMapping("/spaces/{id}/files/delete")
     public ResponseEntity<Object> delete(@PathVariable UUID id,
                        @RequestParam("file") String file) {
     	documentSpaceService.deleteFile(id, file);
     	return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-
 
     @Operation(summary = "Retrieves files from a space", description = "Gets files from a space. This is not a download")
     @ApiResponses(value = {
@@ -221,10 +252,13 @@ public class DocumentSpaceController {
                     content = @Content(schema = @Schema(implementation = S3PaginationDto.class))),
             @ApiResponse(responseCode = "404",
     				description = "Not Found - space not found",
-    				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
-    @GetMapping("/spaces/{id}/files")
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+    @GetMapping("/spaces/{id}/files")
     public ResponseEntity<S3PaginationDto> listObjects(
     		@PathVariable UUID id, 
     		@Parameter(name = "continuation", description = "the continuation token", required = false)
