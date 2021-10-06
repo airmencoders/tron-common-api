@@ -4,6 +4,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import mil.tron.commonapi.entity.appsource.App;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.validations.ValidSubscriberAddress;
 
 import javax.persistence.*;
@@ -52,6 +54,44 @@ public class AppClientUser extends App {
 	@Builder.Default
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "appClientUser")
 	private Set<AppEndpointPriv> appEndpointPrivs = new HashSet<>();
+	
+	@Getter
+    @Setter
+    @Builder.Default
+    @ManyToMany
+    @JoinTable(
+    		joinColumns=@JoinColumn(referencedColumnName="id"),
+    		inverseJoinColumns=@JoinColumn(referencedColumnName="id")
+		)
+	@EqualsAndHashCode.Exclude
+    private Set<DocumentSpacePrivilege> documentSpacePrivileges = new HashSet<>();
+	
+	@Getter
+    @Setter
+    @Builder.Default
+    @ManyToMany(mappedBy="appClientUsers")
+    @EqualsAndHashCode.Exclude
+    private Set<DocumentSpace> documentSpaces = new HashSet<>();
+    
+    public void addDocumentSpacePrivilege(DocumentSpacePrivilege privilege) {
+    	documentSpacePrivileges.add(privilege);
+    	privilege.getAppClientUsers().add(this);
+    }
+    
+    public void removeDocumentSpacePrivilege(DocumentSpacePrivilege privilege) {
+    	documentSpacePrivileges.remove(privilege);
+    	privilege.getAppClientUsers().remove(this);
+    }
+    
+    public void addDocumentSpace(DocumentSpace documentSpace) {
+    	documentSpaces.add(documentSpace);
+    	documentSpace.getAppClientUsers().add(this);
+    }
+    
+    public void removeDocumentSpace(DocumentSpace documentSpace) {
+    	documentSpaces.remove(documentSpace);
+    	documentSpace.getAppClientUsers().remove(this);
+    }
 
 	/**
 	 * The P1 cluster (internal) URL of this application.

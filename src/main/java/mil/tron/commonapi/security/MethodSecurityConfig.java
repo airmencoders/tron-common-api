@@ -2,6 +2,8 @@ package mil.tron.commonapi.security;
 
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.appsource.AppEndpointPrivRepository;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +13,7 @@ import org.springframework.security.config.annotation.method.configuration.Globa
 import mil.tron.commonapi.ApplicationProperties;
 import mil.tron.commonapi.repository.appsource.AppSourceRepository;
 import mil.tron.commonapi.service.AppClientUserService;
+import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeService;
 
 @Configuration
 @ConditionalOnProperty(name = "security.enabled", havingValue="true")
@@ -31,5 +34,11 @@ public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
     @Bean
     public AccessCheckEventRequestLog accessCheckEventRequestLog(AppClientUserRespository appClientUserRespository) {
         return new AccessCheckEventRequestLogImpl(appClientUserRespository);
+    }
+    
+    @Bean
+    @ConditionalOnBean(DocumentSpacePrivilegeService.class)
+    public AccessCheckDocumentSpace accessCheckDocumentSpace(DocumentSpacePrivilegeService documentSpacePrivilegeService) {
+    	return new AccessCheckDocumentSpaceImpl(documentSpacePrivilegeService);
     }
 }

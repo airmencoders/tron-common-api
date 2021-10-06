@@ -109,7 +109,8 @@ public class AccessCheckImplTest {
         AppSource appSource = AppSource.builder().appSourcePath("appsource").build();
         
         AppClientUser appClient = AppClientUser.builder()
-        		.appClientDevelopers(Set.of(new DashboardUser(UUID.randomUUID(), "test@app.dev", "test@app.dev", Set.of(Privilege.builder().id(1L).name("APP_CLIENT_DEVELOPER").build()))))
+				.appClientDevelopers(Set.of(new DashboardUser(UUID.randomUUID(), "test@app.dev", "test@app.dev",
+						Set.of(Privilege.builder().id(1L).name("APP_CLIENT_DEVELOPER").build()), Set.of(), Set.of())))
         		.appEndpointPrivs(Set.of(
         					AppEndpointPriv.builder()
         						.appEndpoint(AppEndpoint.builder()

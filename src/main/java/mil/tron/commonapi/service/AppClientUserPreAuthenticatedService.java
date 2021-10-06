@@ -5,17 +5,14 @@ import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.appsource.AppEndpointPriv;
+import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
-import mil.tron.commonapi.repository.scratch.ScratchStorageAppRegistryEntryRepository;
 import mil.tron.commonapi.service.scratch.ScratchStorageService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.AuthenticationUserDetailsService;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -83,8 +80,9 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 		if (token.getName().equals(this.commonApiAppName) && !token.getCredentials().equals(NO_CREDS)) {
 			Optional<DashboardUser> dashboardUser = dashboardUserRepository.findByEmailIgnoreCase(token.getCredentials().toString());
 			if (dashboardUser.isPresent()) {
-				List<GrantedAuthority> dashboardUserPrivileges = createPrivileges(dashboardUser.get().getPrivileges());
-				return new User(dashboardUser.get().getEmail(), NO_CREDS, dashboardUserPrivileges);
+				List<GrantedAuthority> privileges = createPrivileges(dashboardUser.get().getPrivileges());
+				privileges.addAll(createDocumentSpacePrivileges(dashboardUser.get().getDocumentSpacePrivileges()));
+				return new User(dashboardUser.get().getEmail(), NO_CREDS, privileges);
 			}
 			else {
 				// continue on as a non-dashboard user/admin, if destined for ScratchStorage
@@ -106,6 +104,7 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 		user = checkIfDigitizeAppRequest(token, user);
 
 		List<GrantedAuthority> privileges = createPrivileges(user.getPrivileges());
+		privileges.addAll(createDocumentSpacePrivileges(user.getDocumentSpacePrivileges()));
 		privileges.addAll(createGatewayAuthorities(user.getAppEndpointPrivs()));
 		privileges.add(new SimpleGrantedAuthority("APP_CLIENT"));  // every app client gets this
 		return new User(user.getName(), NO_CREDS, privileges);
@@ -168,6 +167,13 @@ public class AppClientUserPreAuthenticatedService implements AuthenticationUserD
 		}
 
 		return authorities;
+	}
+	
+	private List<GrantedAuthority> createDocumentSpacePrivileges(Set<DocumentSpacePrivilege> privileges) {
+		if (privileges == null)
+			return new ArrayList<>();
+
+		return privileges.stream().map(privilege -> new SimpleGrantedAuthority(privilege.getName())).collect(Collectors.toList());
 	}
 
 	private List<GrantedAuthority> createGatewayAuthorities(Set<AppEndpointPriv> privs) {

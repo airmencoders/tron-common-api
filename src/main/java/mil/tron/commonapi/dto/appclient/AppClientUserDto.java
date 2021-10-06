@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.validations.ValidSubscriberAddress;
 
 import javax.validation.constraints.NotBlank;
@@ -28,6 +29,11 @@ public class AppClientUserDto {
 	@Setter
 	@Builder.Default
 	private List<PrivilegeDto> privileges = new ArrayList<>();
+	
+	@Getter
+    @Setter
+    @Builder.Default
+    private List<DocumentSpacePrivilegeDto> documentSpacePrivileges = new ArrayList<>();
 
 	@Getter
 	@Setter

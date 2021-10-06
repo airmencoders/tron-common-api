@@ -2,6 +2,8 @@ package mil.tron.commonapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
+import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
@@ -40,6 +42,44 @@ public class DashboardUser {
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Privilege> privileges = new HashSet<>();
 
+    @Getter
+    @Setter
+    @Builder.Default
+    @ManyToMany
+    @JoinTable(
+    		joinColumns=@JoinColumn(referencedColumnName="id"),
+    		inverseJoinColumns=@JoinColumn(referencedColumnName="id")
+		)
+    @EqualsAndHashCode.Exclude
+    private Set<DocumentSpacePrivilege> documentSpacePrivileges = new HashSet<>();
+    
+    @Getter
+    @Setter
+    @Builder.Default
+    @ManyToMany(mappedBy="dashboardUsers")
+    @EqualsAndHashCode.Exclude
+    private Set<DocumentSpace> documentSpaces = new HashSet<>();
+    
+    public void addDocumentSpacePrivilege(DocumentSpacePrivilege privilege) {
+    	documentSpacePrivileges.add(privilege);
+    	privilege.getDashboardUsers().add(this);
+    }
+    
+    public void removeDocumentSpacePrivilege(DocumentSpacePrivilege privilege) {
+    	documentSpacePrivileges.remove(privilege);
+    	privilege.getDashboardUsers().remove(this);
+    }
+    
+    public void addDocumentSpace(DocumentSpace documentSpace) {
+    	documentSpaces.add(documentSpace);
+    	documentSpace.getDashboardUsers().add(this);
+    }
+    
+    public void removeDocumentSpace(DocumentSpace documentSpace) {
+    	documentSpaces.remove(documentSpace);
+    	documentSpace.getDashboardUsers().remove(this);
+    }
+    
     @PrePersist
     @PreUpdate
     public void sanitize() {

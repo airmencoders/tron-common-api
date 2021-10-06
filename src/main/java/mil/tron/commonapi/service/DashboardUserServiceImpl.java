@@ -6,6 +6,7 @@ import mil.tron.commonapi.dto.ScratchStorageAppRegistryDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
+import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.InvalidRecordUpdateRequest;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -18,6 +19,7 @@ import org.modelmapper.Conditions;
 import org.modelmapper.Converter;
 import org.modelmapper.spi.MappingContext;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -64,7 +66,13 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 
     @Override
     public DashboardUserDto createDashboardUserDto(DashboardUserDto dashboardUserDto) {
-        DashboardUser dashboardUser = convertToEntity(dashboardUserDto);
+        return convertToDto(createDashboardUser(dashboardUserDto));
+    }
+    
+
+	@Override
+	public DashboardUser createDashboardUser(DashboardUserDto dashboardUserDto) {
+		DashboardUser dashboardUser = convertToEntity(dashboardUserDto);
         if (dashboardUser.getId() == null) {
             // we have to generate an ID manually since we're not using normal
             dashboardUser.setId(UUID.randomUUID());
@@ -83,11 +91,11 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 
         // the record with this 'id' shouldn't already exist...
         if (!dashboardUserRepository.existsById(dashboardUser.getId())) {
-            return convertToDto(dashboardUserRepository.save(dashboardUser));
+            return dashboardUserRepository.save(dashboardUser);
         }
 
         throw new ResourceAlreadyExistsException("Dashboard User with the id: " + dashboardUser.getId() + " already exists.");
-    }
+	}
 
     @Override
     public Iterable<DashboardUserDto> getAllDashboardUsersDto() {
@@ -127,6 +135,10 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         DashboardUser user = dashboardUserRepository.findById(id).orElseThrow(() ->
                 new RecordNotFoundException("Record with ID: " + id.toString() + " not found."));
 
+        for (DocumentSpace documentSpace : new HashSet<>(user.getDocumentSpaces())) {
+        	user.removeDocumentSpace(documentSpace);
+        }
+        
         appSourceService.deleteAdminFromAllAppSources(user);
         appClientUserService.deleteDeveloperFromAllAppClient(user);
         dashboardUserRepository.delete(user);
@@ -186,4 +198,29 @@ public class DashboardUserServiceImpl implements DashboardUserService {
                 .map(ScratchStorageAppRegistryDto.PrivilegeIdPair::getPriv)
                 .collect(Collectors.toSet());
     }
+
+	@Override
+	public DashboardUser createDashboardUserOrReturnExisting(String email) {
+		Optional<DashboardUser> existingDashboardUser = dashboardUserRepository.findByEmailIgnoreCase(email);
+		
+		if (existingDashboardUser.isPresent()) {
+			return existingDashboardUser.get();
+		} else {
+			return createDashboardUser(DashboardUserDto.builder().email(email).build());
+		}
+	}
+
+	@Override
+	@Nullable
+	public DashboardUser getDashboardUserByEmail(String email) {
+		Optional<DashboardUser> dashboardUser = dashboardUserRepository.findByEmailIgnoreCase(email);
+		
+		if (dashboardUser.isEmpty()) {
+			return null;
+		}
+			
+		return dashboardUser.get();
+		
+	}
+
 }

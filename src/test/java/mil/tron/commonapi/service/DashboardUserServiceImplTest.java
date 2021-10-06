@@ -11,7 +11,6 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
-import mil.tron.commonapi.service.scratch.ScratchStorageService;
 import mil.tron.commonapi.service.scratch.ScratchStorageServiceImpl;
 import mil.tron.commonapi.service.utility.DashboardUserUniqueChecksServiceImpl;
 import org.assertj.core.util.Lists;
@@ -24,7 +23,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.*;
@@ -274,5 +272,42 @@ public class DashboardUserServiceImplTest {
         Mockito.when(scratchStorageService.getAllScratchAppsContainingUser(Mockito.anyString()))
                 .thenReturn(Lists.newArrayList());
     	assertThrows(UsernameNotFoundException.class, () -> dashboardUserService.getSelf(testDashboardUserDto.getEmail()));
+    }
+    
+    @Test
+    void createDashboardUserOrReturnExisting_shouldReturnDashboardUser_whenExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(testDashboardUser));
+    	DashboardUser existing = dashboardUserService.createDashboardUserOrReturnExisting(testDashboardUser.getEmail());
+    	
+    	assertThat(existing).isEqualTo(testDashboardUser);
+    }
+    
+    @Test
+    void createDashboardUserOrReturnExisting_shouldReturnNewDashboardUser_whenNotExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.ofNullable(null));
+    	Mockito.when(dashboardUserRepo.save(Mockito.any(DashboardUser.class))).thenReturn(testDashboardUser);
+        Mockito.when(dashboardUserRepo.existsById(Mockito.any(UUID.class))).thenReturn(false);
+        Mockito.when(uniqueChecksService.userEmailIsUnique(Mockito.any(DashboardUser.class))).thenReturn(true);
+        Mockito.when(privilegeRepository.findByName(Mockito.any()))
+                .thenReturn(Optional.of(Privilege.builder()
+                        .name("DASHBOARD_USER")
+                        .id(1L)
+                        .build()))
+                .thenReturn(Optional.empty());
+    	DashboardUser newDashboardUser = dashboardUserService.createDashboardUserOrReturnExisting(testDashboardUser.getEmail());
+    	
+    	assertThat(newDashboardUser).isEqualTo(testDashboardUser);
+    }
+    
+    @Test
+    void getDashboardUserByEmail_shouldReturnNull_whenNotExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.ofNullable(null));
+    	assertThat(dashboardUserService.getDashboardUserByEmail("test@email.com")).isNull();
+    }
+    
+    @Test
+    void getDashboardUserByEmail_shouldReturnDashboardUser_whenExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(testDashboardUser));
+    	assertThat(dashboardUserService.getDashboardUserByEmail(testDashboardUser.getEmail())).isEqualTo(testDashboardUser);
     }
 }
