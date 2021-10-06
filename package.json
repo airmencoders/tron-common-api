@@ -1,0 +1,12 @@
+{
+  "name": "tron-common-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test:e2e-ci": "echo \"E2E tests are done in the Dashboard project\" && exit 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
