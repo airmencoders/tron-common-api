@@ -5,7 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
@@ -44,28 +46,25 @@ class DocumentSpacePrivilegeServiceImplTest {
 	void setup() {
 		UUID id = UUID.randomUUID();
 		
-		EnumMap<DocumentSpacePrivilegeType, DocumentSpacePrivilege> documentSpacePrivilegesMap = new EnumMap<>(
-				DocumentSpacePrivilegeType.class);
-		documentSpacePrivilegesMap.put(DocumentSpacePrivilegeType.READ,
+		documentSpace = DocumentSpace.builder()
+				.id(id)
+				.name("Test Document Space")
+				.build();
+		
+		documentSpace.addPrivilege(
 				DocumentSpacePrivilege.builder().id(UUID.randomUUID())
 						.name(String.format("DOCUMENT_SPACE_%s_%s", id.toString(), DocumentSpacePrivilegeType.READ))
 						.type(DocumentSpacePrivilegeType.READ).build());
 
-		documentSpacePrivilegesMap.put(DocumentSpacePrivilegeType.WRITE,
+		documentSpace.addPrivilege(
 				DocumentSpacePrivilege.builder().id(UUID.randomUUID())
 						.name(String.format("DOCUMENT_SPACE_%s_%s", id.toString(), DocumentSpacePrivilegeType.WRITE))
 						.type(DocumentSpacePrivilegeType.WRITE).build());
 
-		documentSpacePrivilegesMap.put(DocumentSpacePrivilegeType.MEMBERSHIP,
+		documentSpace.addPrivilege(
 				DocumentSpacePrivilege.builder().id(UUID.randomUUID())
 						.name(String.format("DOCUMENT_SPACE_%s_%s", id.toString(), DocumentSpacePrivilegeType.MEMBERSHIP))
 						.type(DocumentSpacePrivilegeType.MEMBERSHIP).build());
-		
-		documentSpace = DocumentSpace.builder()
-				.id(id)
-				.name("Test Document Space")
-				.privileges(documentSpacePrivilegesMap)
-				.build();
 		
 		dashboardUser = DashboardUser.builder()
 				.id(UUID.randomUUID())
@@ -102,11 +101,20 @@ class DocumentSpacePrivilegeServiceImplTest {
 	
 	@Test
 	void shouldCreateAllPrivilegesForANewDocumentSpace() {
+		documentSpace.getPrivileges().forEach((key, value) -> {
+			value.getAppClientUsers().clear();
+			value.getDashboardUsers().clear();
+		});
+		
 		List<DocumentSpacePrivilege> privileges = new ArrayList<>(documentSpace.getPrivileges().values());
 		Mockito.when(documentSpacePrivilegeRepo.saveAll(Mockito.anyList())).thenReturn(privileges);
 		
-		List<DocumentSpacePrivilege> createdPrivileges = documentSpacePrivilegeService.createPrivilegesForNewSpace(documentSpace.getId());
-		assertThat(createdPrivileges).containsExactlyInAnyOrderElementsOf(privileges);
+		documentSpace.setPrivileges(new HashMap<>());
+		
+		documentSpacePrivilegeService.createAndSavePrivilegesForNewSpace(documentSpace);
+		assertThat(documentSpace.getPrivileges().values())
+			.usingElementComparatorIgnoringFields("id")
+			.containsExactlyInAnyOrderElementsOf(privileges);
 	}
 	
 	@Test
@@ -194,10 +202,26 @@ class DocumentSpacePrivilegeServiceImplTest {
 		
 		DocumentSpacePrivilegeDto dto = DocumentSpacePrivilegeDto.builder()
 				.id(privilege.getId())
-				.name(privilege.getName())
 				.type(privilege.getType())
 				.build();
 		
 		assertThat(documentSpacePrivilegeService.convertToDto(privilege)).isEqualTo(dto);
+	}
+	
+	@Test
+	void shouldReturnDashboardMemberPrivilegeRowsForDocumentSpace() {
+		DocumentSpaceDashboardMemberPrivilegeRow privilegeRowA = new DocumentSpaceDashboardMemberPrivilegeRow(
+				dashboardUser.getId(), dashboardUser.getEmail(),
+				documentSpace.getPrivileges().get(DocumentSpacePrivilegeType.READ));
+		
+		Mockito.when(documentSpacePrivilegeRepo.findAllDashboardMemberPrivilegesBelongingToDocumentSpace(Mockito.any(UUID.class), Mockito.anySet()))
+			.thenReturn(Arrays.asList(privilegeRowA));
+		
+		List<DocumentSpaceDashboardMemberPrivilegeRow> result = documentSpacePrivilegeService
+				.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace,
+						new HashSet<>(Arrays.asList(dashboardUser.getId())));
+		
+		assertThat(result).containsExactlyElementsOf(Arrays.asList(privilegeRowA));
+		
 	}
 }

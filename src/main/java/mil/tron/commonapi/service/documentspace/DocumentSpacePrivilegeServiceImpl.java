@@ -17,6 +17,7 @@ import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
@@ -37,9 +38,9 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 	
 	@Override
 	public void deleteAllPrivilegesBelongingToDocumentSpace(DocumentSpace documentSpace) {
-		Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> privileges = documentSpace.getPrivileges();
+		List<DocumentSpacePrivilege> privileges = new ArrayList<>(documentSpace.getPrivileges().values());
 		List<DocumentSpacePrivilege> privilegesToDelete = new ArrayList<>();
-		privileges.forEach((privilegeType, privilege) -> {
+		privileges.forEach(privilege -> {
 			for (DashboardUser dashboardUser : new HashSet<>(privilege.getDashboardUsers())) {
 				privilege.removeDashboardUser(dashboardUser);
 			}
@@ -49,14 +50,14 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 			}
 			
 			privilegesToDelete.add(privilege);
+			documentSpace.removePrivilege(privilege);
 		});
 		
-		documentSpace.getPrivileges().clear();
  		documentSpacePrivilegeRepository.deleteAll(privilegesToDelete);
 	}
 
 	@Override
-	public List<DocumentSpacePrivilege> createPrivilegesForNewSpace(UUID documentSpaceId) {
+	public void createAndSavePrivilegesForNewSpace(DocumentSpace documentSpace) {
 
 		List<DocumentSpacePrivilege> privilegesToAdd = new ArrayList<>();
 		
@@ -64,10 +65,14 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 		
 		for (int i = 0; i < documentSpacePrivilegeTypes.length; i++) {
 			DocumentSpacePrivilegeType currentType = documentSpacePrivilegeTypes[i];
-			privilegesToAdd.add(buildDocumentSpacePrivilege(createPrivilegeName(documentSpaceId, currentType), currentType));
+			
+			DocumentSpacePrivilege privilege = buildDocumentSpacePrivilege(createPrivilegeName(documentSpace.getId(), currentType), currentType);
+			
+			privilegesToAdd.add(privilege);
+			documentSpace.addPrivilege(privilege);
 		}
 		
-		return documentSpacePrivilegeRepository.saveAll(privilegesToAdd);
+		documentSpacePrivilegeRepository.saveAll(privilegesToAdd);
 	}
 
 	@Override
@@ -78,10 +83,6 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 	@Override
 	public void addPrivilegesToDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace,
 			List<DocumentSpacePrivilegeType> privilegesToAdd) throws IllegalArgumentException {
-
-		Set<DocumentSpacePrivilege> existingDashboardUserPrivileges = dashboardUser.getDocumentSpacePrivileges();
-		existingDashboardUserPrivileges
-				.forEach(existingPrivilege -> privilegesToAdd.remove(existingPrivilege.getType()));
 
 		Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> documentSpacePrivileges = documentSpace.getPrivileges();
 		List<DocumentSpacePrivilege> privilegesToSave = new ArrayList<>();
@@ -147,5 +148,11 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 				.name(privilegeName)
 				.type(type)
 				.build();
+	}
+
+	@Override
+	public List<DocumentSpaceDashboardMemberPrivilegeRow> getAllDashboardMemberPrivilegeRowsForDocumentSpace(
+			DocumentSpace documentSpace, Set<UUID> dashboardUserIdsToInclude) {
+		return documentSpacePrivilegeRepository.findAllDashboardMemberPrivilegesBelongingToDocumentSpace(documentSpace.getId(), dashboardUserIdsToInclude);
 	}
 }

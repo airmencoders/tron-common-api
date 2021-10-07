@@ -10,6 +10,7 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,6 +36,9 @@ public class DocumentSpacePrivilege {
 	
 	@Enumerated(EnumType.STRING)
 	private DocumentSpacePrivilegeType type;
+	
+	@ManyToOne
+	private DocumentSpace documentSpace;
 	
 	@ManyToMany(mappedBy="documentSpacePrivileges")
 	@Builder.Default
