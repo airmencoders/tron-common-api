@@ -1,0 +1,28 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="christopherzell (generated)" id="1633627107480-18">
+        <createTable tableName="file_system_entries">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="file_system_entriesPK"/>
+            </column>
+            <column name="doc_space_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="item_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="item_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parent_entry_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1633627107480-19">
+        <addUniqueConstraint columnNames="doc_space_id, parent_entry_id, item_name" constraintName="UKivhwuhhoq3gogpr1a5khxyioh" tableName="file_system_entries"/>
+    </changeSet>
+    <changeSet author="christopherzell (generated)" id="1633627107480-20">
+        <addForeignKeyConstraint baseColumnNames="doc_space_id" baseTableName="file_system_entries" constraintName="FKntl8uwrsn4fohgfkju100y1t1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="document_space" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
