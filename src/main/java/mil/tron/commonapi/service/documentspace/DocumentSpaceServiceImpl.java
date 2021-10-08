@@ -3,12 +3,14 @@ package mil.tron.commonapi.service.documentspace;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -17,17 +19,25 @@ import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.transfer.Upload;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,16 +61,18 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final String bucketName;
 	private final DocumentSpaceRepository documentSpaceRepository;
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
+	private final DashboardUserRepository dashboardUserRepository;
 
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
 			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
-			DocumentSpacePrivilegeService documentSpacePrivilegeService) {
+			DocumentSpacePrivilegeService documentSpacePrivilegeService, DashboardUserRepository dashboardUserRepository) {
 		this.documentSpaceClient = documentSpaceClient;
 		this.bucketName = bucketName;
 		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
 
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
 		this.documentSpaceRepository = documentSpaceRepository;
+		this.dashboardUserRepository = dashboardUserRepository;
 	}
 
 	@Override
@@ -76,15 +88,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			throw new ResourceAlreadyExistsException(
 					String.format("Document Space with the name: %s already exists", documentSpace.getName()));
 		}
-
-		List<DocumentSpacePrivilege> privileges = documentSpacePrivilegeService
-				.createPrivilegesForNewSpace(documentSpace.getId());
 		
-		Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> privilegesMap = privileges.stream()
-				.collect(Collectors.toMap(DocumentSpacePrivilege::getType, Function.identity()));
-		
-		documentSpace.setPrivileges(privilegesMap);
 		documentSpace = documentSpaceRepository.save(documentSpace);
+		documentSpacePrivilegeService.createAndSavePrivilegesForNewSpace(documentSpace);
 
 		return convertDocumentSpaceEntityToResponseDto(documentSpaceRepository.save(documentSpace));
 	}
@@ -331,7 +337,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberDto documentSpaceDashboardMemberDto) throws RecordNotFoundException {
+	public void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceDashboardMemberDto) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 		
 		DashboardUser dashboardUser = documentSpacePrivilegeService.createDashboardUserWithPrivileges(documentSpaceDashboardMemberDto.getEmail(), documentSpace,
@@ -340,5 +346,38 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpace.addDashboardUser(dashboardUser);
 		
 		documentSpaceRepository.save(documentSpace);
+	}
+
+	@Override
+	public Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId,
+			@Nullable Pageable pageable) throws RecordNotFoundException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		
+		Page<DashboardUser> dashboardUsersPaged = dashboardUserRepository.findAllByDocumentSpaces_Id(documentSpace.getId(), pageable);
+		Map<UUID, Integer> dashboardIdToIndexMap = new HashMap<>();
+		for (int i = 0; i < dashboardUsersPaged.getContent().size(); i++) {
+			dashboardIdToIndexMap.put(dashboardUsersPaged.getContent().get(i).getId(), i);
+		}
+		
+		List<DocumentSpaceDashboardMemberPrivilegeRow> dashboardUserDocumentSpacePrivilegeRows =
+				documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace, dashboardIdToIndexMap.keySet());
+		
+		Map<DocumentSpaceDashboardMember, List<DocumentSpacePrivilegeDto>> map = dashboardUserDocumentSpacePrivilegeRows.stream()
+				.collect(Collectors.groupingBy(DocumentSpaceDashboardMemberPrivilegeRow::getDashboardMember, 
+						Collectors.mapping(entry -> {
+							DocumentSpacePrivilege privilege = entry.getPrivilege();
+							
+							return new DocumentSpacePrivilegeDto(privilege.getId(), privilege.getType());
+						}, Collectors.toList())));
+		
+		List<DocumentSpaceDashboardMemberResponseDto> response = new ArrayList<>();
+		map.entrySet().forEach(value -> response.add(new DocumentSpaceDashboardMemberResponseDto(value.getKey().getId(),
+				value.getKey().getEmail(), value.getValue())));
+		
+		if (pageable != null && pageable.getSort().isSorted()) {
+			response.sort(Comparator.comparingInt(item -> dashboardIdToIndexMap.get(item.getId())));
+		}
+		
+		return new PageImpl<>(response, dashboardUsersPaged.getPageable(), response.size());
 	}
 }

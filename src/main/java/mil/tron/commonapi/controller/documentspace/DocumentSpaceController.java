@@ -13,12 +13,18 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDtoResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDtoResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+
+import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.validation.Valid;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,9 +131,30 @@ public class DocumentSpaceController {
     @PostMapping("/spaces/{id}/users")
     public ResponseEntity<Object> addUserToDocumentSpace(
     		@PathVariable UUID id,
-    		@Valid @RequestBody DocumentSpaceDashboardMemberDto dto) {
+    		@Valid @RequestBody DocumentSpaceDashboardMemberRequestDto dto) {
 	    documentSpaceService.addDashboardUserToDocumentSpace(id, dto);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    
+    @Operation(summary = "Gets the members for a Document Space", description = "Gets members for a Document Space. Pagination enabled.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation",
+                content = @Content(schema = @Schema(implementation = DocumentSpaceDashboardMemberResponseDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Membership privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @WrappedEnvelopeResponse
+    @PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
+    @GetMapping("/spaces/{id}/users/dashboard")
+    public ResponseEntity<Page<DocumentSpaceDashboardMemberResponseDto>> getDashboardUsersForDocumentSpace(
+    		@PathVariable UUID id,
+    		@ParameterObject Pageable pageable) {
+    	return ResponseEntity.ok(documentSpaceService.getDashboardUsersForDocumentSpace(id, pageable));
     }
 
     @Operation(summary = "Uploads a file to a Document Space", description = "Uploads a file to a Document Space")

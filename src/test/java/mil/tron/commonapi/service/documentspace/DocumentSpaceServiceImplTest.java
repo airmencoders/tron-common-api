@@ -15,14 +15,18 @@ import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +37,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort.Order;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.mock.web.MockMultipartFile;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,6 +74,9 @@ class DocumentSpaceServiceImplTest {
 	private DocumentSpaceRepository documentSpaceRepo;
 	
 	@Mock
+	private DashboardUserRepository dashboardUserRepository;
+	
+	@Mock
 	private DocumentSpacePrivilegeService documentSpacePrivilegeService;
 
 	private S3Mock s3Mock;
@@ -84,7 +98,7 @@ class DocumentSpaceServiceImplTest {
 		transferManager = TransferManagerBuilder.standard().withS3Client(amazonS3).build();
 
 		documentService = new DocumentSpaceServiceImpl(amazonS3, transferManager, BUCKET_NAME, documentSpaceRepo,
-				documentSpacePrivilegeService);
+				documentSpacePrivilegeService, dashboardUserRepository);
 		s3Mock = new S3Mock.Builder().withPort(9002).withInMemoryBackend().build();
 
 		s3Mock.start();
@@ -281,7 +295,7 @@ class DocumentSpaceServiceImplTest {
 	@Nested
 	class AddDashboardUserToDocumentSpaceTest {
 		private DashboardUser dashboardUser;
-		private DocumentSpaceDashboardMemberDto memberDto;
+		private DocumentSpaceDashboardMemberRequestDto memberDto;
 		
 		@BeforeEach
 		void setup() {
@@ -293,7 +307,7 @@ class DocumentSpaceServiceImplTest {
 					.documentSpacePrivileges(new HashSet<>(Arrays.asList(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ))))
 					.build();
 			
-			memberDto = DocumentSpaceDashboardMemberDto.builder()
+			memberDto = DocumentSpaceDashboardMemberRequestDto.builder()
 					.email(dashboardUser.getEmail())
 					.privileges(Arrays.asList(DocumentSpacePrivilegeType.READ))
 					.build();
@@ -317,6 +331,93 @@ class DocumentSpaceServiceImplTest {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
 			UUID invalidId = UUID.randomUUID();
 			assertThatThrownBy(() -> documentService.addDashboardUserToDocumentSpace(invalidId, memberDto))
+				.isInstanceOf(RecordNotFoundException.class)
+				.hasMessageContaining(String.format("Document Space with id: %s not found", invalidId));
+		}
+	}
+	
+	@Nested
+	class GetDashboardUsersForDocumentSpaceTest {
+		private DashboardUser dashboardUserA;
+		private DashboardUser dashboardUserB;
+		
+		private DocumentSpacePrivilegeDto readDto;
+		private DocumentSpacePrivilegeDto writeDto;
+		
+		private DocumentSpaceDashboardMemberPrivilegeRow privilegeRowA;
+		private DocumentSpaceDashboardMemberPrivilegeRow privilegeRowB;
+		
+		private DocumentSpaceDashboardMemberResponseDto responseDtoA;
+		private DocumentSpaceDashboardMemberResponseDto responseDtoB;
+		
+		@BeforeEach
+		void setup() {
+			DocumentSpacePrivilege read = entity.getPrivileges().get(DocumentSpacePrivilegeType.READ);
+			DocumentSpacePrivilege write = entity.getPrivileges().get(DocumentSpacePrivilegeType.WRITE);
+			
+			dashboardUserA = DashboardUser.builder()
+					.id(UUID.randomUUID())
+					.email("dashboardA@user.com")
+					.emailAsLower("dashboarda@user.com")
+					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
+					.documentSpacePrivileges(new HashSet<>(Arrays.asList(read)))
+					.build();
+			
+			dashboardUserB = DashboardUser.builder()
+					.id(UUID.randomUUID())
+					.email("dashboardB@user.com")
+					.emailAsLower("dashboardb@user.com")
+					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
+					.documentSpacePrivileges(new HashSet<>(Arrays.asList(write)))
+					.build();
+			
+			readDto = new DocumentSpacePrivilegeDto(read.getId(), read.getType());
+			writeDto = new DocumentSpacePrivilegeDto(write.getId(), write.getType());
+			
+			privilegeRowA = new DocumentSpaceDashboardMemberPrivilegeRow(dashboardUserA.getId(), dashboardUserA.getEmail(), read);
+			privilegeRowB = new DocumentSpaceDashboardMemberPrivilegeRow(dashboardUserB.getId(), dashboardUserB.getEmail(), write);
+			
+			responseDtoA = new DocumentSpaceDashboardMemberResponseDto(dashboardUserA.getId(), dashboardUserA.getEmail(), Arrays.asList(readDto));
+			responseDtoB = new DocumentSpaceDashboardMemberResponseDto(dashboardUserB.getId(), dashboardUserB.getEmail(), Arrays.asList(writeDto));
+		}
+		
+		@Test
+		void shouldReturnSorted_whenPageableIncludesSort() {
+			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
+			
+			PageRequest pageable = PageRequest.of(0, 10, Sort.by(new Order(Direction.DESC, "email")));
+			
+			Mockito.when(dashboardUserRepository.findAllByDocumentSpaces_Id(Mockito.any(UUID.class), Mockito.any(Pageable.class)))
+				.thenReturn(new PageImpl<>(Arrays.asList(dashboardUserB, dashboardUserA), pageable, 2));
+			Mockito.when(documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(Mockito.any(DocumentSpace.class), Mockito.anySet()))
+				.thenReturn(Arrays.asList(privilegeRowA, privilegeRowB));
+			
+			Page<DocumentSpaceDashboardMemberResponseDto> result = documentService.getDashboardUsersForDocumentSpace(entity.getId(), pageable);
+			
+			assertThat(result.getContent()).containsExactlyElementsOf(Arrays.asList(responseDtoB, responseDtoA));
+		}
+		
+		@Test
+		void shouldReturnUnsorted_whenPageableNotIncludesSort() {
+			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
+			
+			PageRequest pageable = PageRequest.of(0, 10);
+			
+			Mockito.when(dashboardUserRepository.findAllByDocumentSpaces_Id(Mockito.any(UUID.class), Mockito.any(Pageable.class)))
+				.thenReturn(new PageImpl<>(Arrays.asList(dashboardUserB, dashboardUserA), pageable, 2));
+			Mockito.when(documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(Mockito.any(DocumentSpace.class), Mockito.anySet()))
+				.thenReturn(Arrays.asList(privilegeRowA, privilegeRowB));
+			
+			Page<DocumentSpaceDashboardMemberResponseDto> result = documentService.getDashboardUsersForDocumentSpace(entity.getId(), pageable);
+			
+			assertThat(result.getContent()).containsExactlyInAnyOrderElementsOf(Arrays.asList(responseDtoB, responseDtoA));
+		}
+		
+		@Test
+		void shouldThrow_whenDocumentSpaceNotExists() {
+			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
+			UUID invalidId = UUID.randomUUID();
+			assertThatThrownBy(() -> documentService.getDashboardUsersForDocumentSpace(invalidId, null))
 				.isInstanceOf(RecordNotFoundException.class)
 				.hasMessageContaining(String.format("Document Space with id: %s not found", invalidId));
 		}

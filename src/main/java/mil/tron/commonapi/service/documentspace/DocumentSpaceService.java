@@ -6,10 +6,13 @@ import java.util.Set;
 import java.util.UUID;
 
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.amazonaws.services.s3.model.S3Object;
@@ -45,5 +48,7 @@ public interface DocumentSpaceService {
     DocumentSpace convertDocumentSpaceRequestDtoToEntity(DocumentSpaceRequestDto documentSpaceInfoDto);
     DocumentSpaceResponseDto convertDocumentSpaceEntityToResponseDto(DocumentSpace documentSpace);
     
-    void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberDto documentSpaceMemberDto);
+    void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceMemberDto);
+    
+    Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId, Pageable pageable);
 }

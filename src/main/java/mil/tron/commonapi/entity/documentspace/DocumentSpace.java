@@ -47,14 +47,11 @@ public class DocumentSpace {
 	@Column(unique = true)
 	private String name;
 	
-	@OneToMany
-	@JoinTable(
-    		joinColumns=@JoinColumn(name="document_space_id", referencedColumnName="id"),
-    		inverseJoinColumns=@JoinColumn(name="document_space_privilege_id", referencedColumnName="id")
-		)
+	@OneToMany(mappedBy="documentSpace")
 	@MapKeyEnumerated(EnumType.STRING)
 	@MapKey(name="type")
 	@Builder.Default
+	@EqualsAndHashCode.Exclude
 	private Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> privileges = new EnumMap<>(DocumentSpacePrivilegeType.class);
 	
 	@ManyToMany
@@ -95,5 +92,15 @@ public class DocumentSpace {
     public void removeAppClientUser(AppClientUser appClientUser) {
     	appClientUsers.remove(appClientUser);
     	appClientUser.getDocumentSpaces().remove(this);
+    }
+    
+    public void addPrivilege(DocumentSpacePrivilege privilege) {
+    	privileges.put(privilege.getType(), privilege);
+    	privilege.setDocumentSpace(this);
+    }
+    
+    public void removePrivilege(DocumentSpacePrivilege privilege) {
+    	privileges.remove(privilege.getType());
+    	privilege.setDocumentSpace(null);
     }
 }
