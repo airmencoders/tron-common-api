@@ -1,0 +1,76 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="Dylan" id="1633516308100-1">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_privilege"/>
+
+            <not>
+                <columnExists tableName="document_space_privilege" columnName="document_space_id" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="document_space_privilege">
+            <column name="document_space_id" type="uuid"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1633516308100-2">
+        <preConditions onFail="WARN">
+            <tableExists tableName="document_space_privilege"/>
+            <columnExists tableName="document_space_privilege" columnName="document_space_id" />
+
+            <tableExists tableName="document_space_privileges"/>
+            <columnExists tableName="document_space_privileges" columnName="document_space_privilege_id" />
+        </preConditions>
+
+        <sql dbms="postgresql">
+            UPDATE document_space_privilege
+                SET document_space_id = join_table.document_space_id
+                FROM document_space_privileges join_table
+                WHERE document_space_privilege.id = join_table.document_space_privilege_id
+        </sql>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1633516308100-3">
+        <preConditions onFail="WARN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="FKcgn9t6uj99txy993j10pfnfj8" />
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseColumnNames="document_space_id" baseTableName="document_space_privilege" constraintName="FKcgn9t6uj99txy993j10pfnfj8" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="document_space" validate="true"/>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1633516308100-4">
+        <preConditions onFail="WARN">
+            <foreignKeyConstraintExists foreignKeyName="FK7rnqnmx225u5gh5e046lb1tf" />
+        </preConditions>
+
+        <dropForeignKeyConstraint baseTableName="document_space_privileges" constraintName="FK7rnqnmx225u5gh5e046lb1tf"/>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1633516308100-5">
+        <preConditions onFail="WARN">
+            <foreignKeyConstraintExists foreignKeyName="FKa6hgc3bfov2sie09ycc67kn8k" />
+        </preConditions>
+
+        <dropForeignKeyConstraint baseTableName="document_space_privileges" constraintName="FKa6hgc3bfov2sie09ycc67kn8k"/>
+    </changeSet>
+
+    <changeSet author="Dylan" id="1633516308100-6">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="postgresql" />
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*)
+                FROM pg_constraint
+                WHERE conname='UK_584hk9n1i0je65vxnxt0l0m6q'
+            </sqlCheck>
+        </preConditions>
+
+        <dropUniqueConstraint constraintName="UK_584hk9n1i0je65vxnxt0l0m6q" tableName="document_space_privileges"/>
+    </changeSet>
+    
+    <changeSet author="Dylan" id="1633516308100-7">
+        <dropTable tableName="document_space_privileges"/>
+    </changeSet>
+</databaseChangeLog>

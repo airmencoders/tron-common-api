@@ -2,7 +2,6 @@ package mil.tron.commonapi.dto.documentspace;
 
 import java.util.UUID;
 
-import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 import lombok.AllArgsConstructor;
@@ -20,8 +19,6 @@ public class DocumentSpacePrivilegeDto {
 	@Builder.Default
     private UUID id = UUID.randomUUID();
 	
-    @NotBlank
-	private String name;
-    
+    @NotNull
     private DocumentSpacePrivilegeType type;
 }

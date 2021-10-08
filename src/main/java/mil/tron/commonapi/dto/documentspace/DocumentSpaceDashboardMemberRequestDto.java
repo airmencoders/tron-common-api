@@ -3,6 +3,7 @@ package mil.tron.commonapi.dto.documentspace;
 import java.util.List;
 
 import javax.validation.constraints.Email;
+import javax.validation.constraints.NotNull;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,9 +15,11 @@ import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeType;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-public class DocumentSpaceDashboardMemberDto {
+public class DocumentSpaceDashboardMemberRequestDto {
+	@NotNull
 	@Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
 	private String email;
 	
+	@NotNull
 	private List<DocumentSpacePrivilegeType> privileges;
 }

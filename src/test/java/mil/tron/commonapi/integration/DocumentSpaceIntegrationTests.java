@@ -17,6 +17,7 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
+import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
 import org.junit.jupiter.api.AfterEach;
@@ -70,6 +71,9 @@ public class DocumentSpaceIntegrationTests {
     private DocumentSpaceRepository documentSpaceRepository;
     
     @Autowired
+    private DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository;
+    
+    @Autowired
     AppClientUserRespository appClientUserRespository;
 
     @Autowired
@@ -119,6 +123,7 @@ public class DocumentSpaceIntegrationTests {
     void destroy() {
         s3Mock.shutdown();
         dashRepo.deleteById(id);
+        documentSpacePrivilegeRepository.deleteAll();
         documentSpaceRepository.deleteAll();
     }
 
