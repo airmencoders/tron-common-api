@@ -29,6 +29,7 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
+import mil.tron.commonapi.service.DashboardUserService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -75,9 +76,12 @@ class DocumentSpaceServiceImplTest {
 	
 	@Mock
 	private DashboardUserRepository dashboardUserRepository;
-	
+
 	@Mock
 	private DocumentSpacePrivilegeService documentSpacePrivilegeService;
+
+	@Mock
+	private DashboardUserService dashboardUserService;
 
 	private S3Mock s3Mock;
 
@@ -98,7 +102,7 @@ class DocumentSpaceServiceImplTest {
 		transferManager = TransferManagerBuilder.standard().withS3Client(amazonS3).build();
 
 		documentService = new DocumentSpaceServiceImpl(amazonS3, transferManager, BUCKET_NAME, documentSpaceRepo,
-				documentSpacePrivilegeService, dashboardUserRepository);
+				documentSpacePrivilegeService, dashboardUserRepository, dashboardUserService);
 		s3Mock = new S3Mock.Builder().withPort(9002).withInMemoryBackend().build();
 
 		s3Mock.start();
@@ -335,26 +339,70 @@ class DocumentSpaceServiceImplTest {
 				.hasMessageContaining(String.format("Document Space with id: %s not found", invalidId));
 		}
 	}
-	
+
+	@Nested
+	class RemoveDashboardUserFromDocumentSpaceTest {
+		private DashboardUser dashboardUser;
+		private DocumentSpaceDashboardMemberRequestDto memberDto;
+
+		@BeforeEach
+		void setup() {
+			dashboardUser = DashboardUser.builder()
+					.id(UUID.randomUUID())
+					.email("dashboard@user.com")
+					.emailAsLower("dashboard@user.com")
+					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
+					.documentSpacePrivileges(new HashSet<>(Arrays.asList(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ))))
+					.build();
+
+			memberDto = DocumentSpaceDashboardMemberRequestDto.builder()
+					.email(dashboardUser.getEmail())
+					.privileges(Arrays.asList(DocumentSpacePrivilegeType.READ))
+					.build();
+		}
+
+		@Test
+		void shouldRemoveDashboardUserFromDocumentSpace_whenDocumentSpaceExists() {
+			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
+			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+
+			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), memberDto.getEmail());
+
+			assertThat(entity.getDashboardUsers()).doesNotContain(dashboardUser);
+			assertThat(dashboardUser.getDocumentSpaces()).doesNotContain(entity);
+			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser.getEmail(),entity);
+		}
+
+		@Test
+		void shouldThrow_whenDocumentSpaceNotExists() {
+			UUID invalidId = UUID.randomUUID();
+
+			Mockito.when(documentSpaceRepo.findById(invalidId)).thenReturn(Optional.ofNullable(null));
+			assertThatThrownBy(() -> documentService.removeDashboardUserFromDocumentSpace(invalidId, memberDto.getEmail()))
+				.isInstanceOf(RecordNotFoundException.class)
+				.hasMessageContaining(String.format("Document Space with id: %s not found", invalidId));
+		}
+	}
+
 	@Nested
 	class GetDashboardUsersForDocumentSpaceTest {
 		private DashboardUser dashboardUserA;
 		private DashboardUser dashboardUserB;
-		
+
 		private DocumentSpacePrivilegeDto readDto;
 		private DocumentSpacePrivilegeDto writeDto;
-		
+
 		private DocumentSpaceDashboardMemberPrivilegeRow privilegeRowA;
 		private DocumentSpaceDashboardMemberPrivilegeRow privilegeRowB;
-		
+
 		private DocumentSpaceDashboardMemberResponseDto responseDtoA;
 		private DocumentSpaceDashboardMemberResponseDto responseDtoB;
-		
+
 		@BeforeEach
 		void setup() {
 			DocumentSpacePrivilege read = entity.getPrivileges().get(DocumentSpacePrivilegeType.READ);
 			DocumentSpacePrivilege write = entity.getPrivileges().get(DocumentSpacePrivilegeType.WRITE);
-			
+
 			dashboardUserA = DashboardUser.builder()
 					.id(UUID.randomUUID())
 					.email("dashboardA@user.com")
@@ -362,7 +410,7 @@ class DocumentSpaceServiceImplTest {
 					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
 					.documentSpacePrivileges(new HashSet<>(Arrays.asList(read)))
 					.build();
-			
+
 			dashboardUserB = DashboardUser.builder()
 					.id(UUID.randomUUID())
 					.email("dashboardB@user.com")
@@ -370,49 +418,49 @@ class DocumentSpaceServiceImplTest {
 					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
 					.documentSpacePrivileges(new HashSet<>(Arrays.asList(write)))
 					.build();
-			
+
 			readDto = new DocumentSpacePrivilegeDto(read.getId(), read.getType());
 			writeDto = new DocumentSpacePrivilegeDto(write.getId(), write.getType());
-			
+
 			privilegeRowA = new DocumentSpaceDashboardMemberPrivilegeRow(dashboardUserA.getId(), dashboardUserA.getEmail(), read);
 			privilegeRowB = new DocumentSpaceDashboardMemberPrivilegeRow(dashboardUserB.getId(), dashboardUserB.getEmail(), write);
-			
+
 			responseDtoA = new DocumentSpaceDashboardMemberResponseDto(dashboardUserA.getId(), dashboardUserA.getEmail(), Arrays.asList(readDto));
 			responseDtoB = new DocumentSpaceDashboardMemberResponseDto(dashboardUserB.getId(), dashboardUserB.getEmail(), Arrays.asList(writeDto));
 		}
-		
+
 		@Test
 		void shouldReturnSorted_whenPageableIncludesSort() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-			
+
 			PageRequest pageable = PageRequest.of(0, 10, Sort.by(new Order(Direction.DESC, "email")));
-			
+
 			Mockito.when(dashboardUserRepository.findAllByDocumentSpaces_Id(Mockito.any(UUID.class), Mockito.any(Pageable.class)))
 				.thenReturn(new PageImpl<>(Arrays.asList(dashboardUserB, dashboardUserA), pageable, 2));
 			Mockito.when(documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(Mockito.any(DocumentSpace.class), Mockito.anySet()))
 				.thenReturn(Arrays.asList(privilegeRowA, privilegeRowB));
-			
+
 			Page<DocumentSpaceDashboardMemberResponseDto> result = documentService.getDashboardUsersForDocumentSpace(entity.getId(), pageable);
-			
+
 			assertThat(result.getContent()).containsExactlyElementsOf(Arrays.asList(responseDtoB, responseDtoA));
 		}
-		
+
 		@Test
 		void shouldReturnUnsorted_whenPageableNotIncludesSort() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-			
+
 			PageRequest pageable = PageRequest.of(0, 10);
-			
+
 			Mockito.when(dashboardUserRepository.findAllByDocumentSpaces_Id(Mockito.any(UUID.class), Mockito.any(Pageable.class)))
 				.thenReturn(new PageImpl<>(Arrays.asList(dashboardUserB, dashboardUserA), pageable, 2));
 			Mockito.when(documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(Mockito.any(DocumentSpace.class), Mockito.anySet()))
 				.thenReturn(Arrays.asList(privilegeRowA, privilegeRowB));
-			
+
 			Page<DocumentSpaceDashboardMemberResponseDto> result = documentService.getDashboardUsersForDocumentSpace(entity.getId(), pageable);
-			
+
 			assertThat(result.getContent()).containsExactlyInAnyOrderElementsOf(Arrays.asList(responseDtoB, responseDtoA));
 		}
-		
+
 		@Test
 		void shouldThrow_whenDocumentSpaceNotExists() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));

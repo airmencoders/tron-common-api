@@ -157,6 +157,23 @@ public class DocumentSpaceController {
     	return ResponseEntity.ok(documentSpaceService.getDashboardUsersForDocumentSpace(id, pageable));
     }
 
+    @Operation(summary = "Removes a user from a Document Space", description = "Removes a user from a Document Space and their privileges")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/users")
+    public ResponseEntity<Object> removeUserFromDocumentSpace(
+    		@PathVariable UUID id,
+    		@Valid @RequestBody String email) {
+	    documentSpaceService.removeDashboardUserFromDocumentSpace(id, email);
+	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
     @Operation(summary = "Uploads a file to a Document Space", description = "Uploads a file to a Document Space")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 

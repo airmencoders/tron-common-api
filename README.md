@@ -8,12 +8,16 @@ If you choose to get your hands dirty and want to run the Common API locally for
   + H2 (in-mem) database is used
   + spring security is disabled
 
+You can run `development` with security enabled or you can run `production` with security disabled.  To control security manually 
+set the env var `SECURITY_ENABLED` as in `SECURITY_ENABLED=true mvn spring-boot:run -Pdevelopment` which will force the development 
+profile and force security to be enabled. Or you can just set `security.enabled=true` in application-development.properties
+
+
 If you want to run it locally in `production` profile, then issue `mvn spring-boot:run -Pproduction`.  This means that:
   + you an access it at http://localhost:8080/api (note change in port number)
   + looks for and uses a postgres db (see postgres section below)
   + spring security is enabled
 
-You can also run `development` with security enabled or you can run `production` with security disabled.  To control security manually set the env var `SECURITY_ENABLED` as in `SECURITY_ENABLED=true mvn spring-boot:run -Pdevelopment` which will force the development profile and force security to be enabled.
 
 ## Swagger Docs
 Navigate to the root of the API - `/api` and a redirect will go to the Swagger UI docs.
@@ -84,12 +88,6 @@ Note to log into the IL2 GitLab container registry first:
 
 `docker login registry.il2.dso.mil -u gitlab_ci_token -u <token>` where `<token>` is your GitLab access token with registry accesses enabled.
 
-### docker-compose
-
-The entire Tron Common API stack can be ran using docker-compose.  
-
-See https://code.il2.dso.mil/tron/products/tron-common-api/tron-common-api-local for how to run this locally for development/testing.
-
 ## Authorization
 Application to Common API authorization is based off the `x-forwarded-client-cert` header to identify the requesting application's identify. This header will be provided by ISTIO in production. For development purposes, the application can be ran with the `development` profile to circumvent authorization so that the header does not need to be provided in requests. The `security.enabled` (or env var SECURITY_ENABLED=true) field in the properties is used to control whether or not Spring Security will enforce authorization.
 
@@ -104,8 +102,51 @@ Before running the API with the JWT UTILITY, set an admin email to `ckumabe.ctr@
 
 Run `node proxy.js 9000 8080` if you're running tron-common-api on the "production" profile or `node proxy.js 9000 8088` if running in "development".
 
+### Authorization in local development #2
+To use an alternative method run the tron-common-api-proxy(https://code.il2.dso.mil/tron/products/tron-common-api/tron-common-api-proxy)
+
+Steps after cloning repository:
+* Create a new directory `app` and another directory `jwts` inside of app
+* Move `admin.jwt` into the new `jwts` directory and set an admin email to `ckumabe.ctr@revacomm.com`
+* In `app.js`change the path `'/app/jwts/'` to `'./app/jwts/'`
+* Set the following environment variables  (http://localhost:8080 if running production profile)
+  REAL_PROXY_URL=http://localhost:8088;WEB_PORT=9001;LISTEN_ON_PORT=9000;DEFAULT_JWT_FILE=admin.jwt;DEFAULT_NAMESPACE=istio-system;ENABLE_PROXY=true
+* Start the proxy with `node app.js`
+
 ### Current Privileges
 Current privileges include `READ`/`WRITE` (access to endpoints like /persons and /organization), and `DASHBOARD_USER`/`DASHBOARD_ADMIN` (access to endpoints specifically for dashboard app).
 
 ### App Source configuration for local development
 To populate your App Sources when running in the "development" profile, you'll need to create an `appSourceConfig.local.json` file. To create this file, copy the appSourceConfig.example.json file and fill in with your local App Source configuration.
+
+
+## MinIO
+To run MinIO locally with the development profile you can run it in a docker container with the following steps:
+
+1. Run `docker run --name common-api-minio -p 9002:9002 -p 9003:9003 -e "MINIO_ROOT_USER=admin" -e "MINIO_ROOT_PASSWORD=adminpass" quay.io/minio/minio server /data --console-address ":9003" --address :9002`
+
+This declares port 9002 to be the port to minIO bucket and port 9003 to the web gui.  
+
+
+2. Login to http://localhost:9003 with the credentials used to start up the container
+
+3. Go to Buckets and then click create bucket in the top corner
+
+4. Set bucket name as testbucket
+
+5. Set `minio.enabled=true` in application-development.properties
+
+#### Alternative
+You can also run it locally using the following and follow the same steps 2-5 above
+```
+wget https://dl.min.io/server/minio/release/darwin-amd64/minio
+chmod +x minio
+MINIO_ROOT_USER=admin MINIO_ROOT_PASSWORD=adminpass ./minio server /tmp/data --address ":9002" --console-address ":9003"
+```
+
+
+
+ 
+
+
+
