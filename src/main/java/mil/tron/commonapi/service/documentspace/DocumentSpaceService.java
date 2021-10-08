@@ -32,14 +32,18 @@ public interface DocumentSpaceService {
      */
     void deleteSpace(UUID documentSpaceId);
 
-	S3Object getFile(UUID documentSpaceId, String key);
-	S3Object downloadFile(UUID documentSpaceId, String fileKey);
+	S3Object getFile(UUID documentSpaceId, String path, String key);
+	S3Object downloadFile(UUID documentSpaceId, String path, String fileKey);
 	void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out);
-	List<S3Object> getFiles(UUID documentSpaceId, Set<String> fileKeys);
-	void downloadAndWriteCompressedFiles(UUID documentSpaceId, Set<String> fileKeys, OutputStream out);
-	void uploadFile(UUID documentSpaceId, MultipartFile file);
-    void deleteFile(UUID documentSpaceId, String fileKey);
-    S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit);
+	List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys);
+	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out);
+	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
+    void deleteFile(UUID documentSpaceId, String path, String fileKey);
+    S3PaginationDto listFiles(UUID documentSpaceId, String path, String continuationToken, Integer limit);
+    List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String path);
+    FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
+    void deleteFolder(UUID documentSpaceId, String path);
+    FileSystemElementTree getFolderTree(UUID documentSpaceId, String path);
     
     DocumentDto convertS3ObjectToDto(S3Object objSummary);
     DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary);

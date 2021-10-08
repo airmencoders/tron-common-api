@@ -18,6 +18,7 @@ import java.util.zip.ZipOutputStream;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.transfer.Upload;
+import liquibase.pro.packaged.S;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
@@ -62,10 +63,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final DocumentSpaceRepository documentSpaceRepository;
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 	private final DashboardUserRepository dashboardUserRepository;
+	private final DocumentSpaceFileSystemService documentSpaceFileSystemService;
 
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
-			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
-			DocumentSpacePrivilegeService documentSpacePrivilegeService, DashboardUserRepository dashboardUserRepository) {
+									@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
+									DocumentSpacePrivilegeService documentSpacePrivilegeService, DashboardUserRepository dashboardUserRepository,
+									DocumentSpaceFileSystemService documentSpaceFileSystemService) {
 		this.documentSpaceClient = documentSpaceClient;
 		this.bucketName = bucketName;
 		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
@@ -73,6 +76,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
 		this.documentSpaceRepository = documentSpaceRepository;
 		this.dashboardUserRepository = dashboardUserRepository;
+		this.documentSpaceFileSystemService = documentSpaceFileSystemService;
 	}
 
 	@Override
@@ -88,7 +92,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			throw new ResourceAlreadyExistsException(
 					String.format("Document Space with the name: %s already exists", documentSpace.getName()));
 		}
-		
+
 		documentSpace = documentSpaceRepository.save(documentSpace);
 		documentSpacePrivilegeService.createAndSavePrivilegesForNewSpace(documentSpace);
 
@@ -127,30 +131,37 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public S3Object getFile(UUID documentSpaceId, String key) throws RecordNotFoundException {
+	public S3Object getFile(UUID documentSpaceId, String path, String key) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-
-		return documentSpaceClient.getObject(bucketName, createDocumentSpacePathPrefix(documentSpace.getId()) + key);
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
+				? spec.getDocSpaceQualifiedPath()
+				: this.createDocumentSpacePathPrefix(documentSpace.getId());
+		return documentSpaceClient.getObject(bucketName, prefix + key);
 	}
 
 	@Override
-	public S3Object downloadFile(UUID documentSpaceId, String fileKey) throws RecordNotFoundException {
-		return getFile(documentSpaceId, fileKey);
+	public S3Object downloadFile(UUID documentSpaceId, String path, String fileKey) throws RecordNotFoundException {
+		return getFile(documentSpaceId, path, fileKey);
 	}
 
 	@Override
-	public List<S3Object> getFiles(UUID documentSpaceId, Set<String> fileKeys) throws RecordNotFoundException {
+	public List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
+				? spec.getDocSpaceQualifiedPath()
+				: this.createDocumentSpacePathPrefix(documentSpace.getId());
 
 		return fileKeys.stream().map(
-				item -> documentSpaceClient.getObject(bucketName, createDocumentSpacePathPrefix(documentSpace.getId()) + item))
+				item -> documentSpaceClient.getObject(bucketName, prefix + item))
 				.collect(Collectors.toList());
 	}
 
 	@Override
-	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, Set<String> fileKeys, OutputStream out)
+	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out)
 			throws RecordNotFoundException {
-		List<S3Object> files = getFiles(documentSpaceId, fileKeys);
+		List<S3Object> files = getFiles(documentSpaceId, path, fileKeys);
 
 		try (BufferedOutputStream bos = new BufferedOutputStream(out); ZipOutputStream zipOut = new ZipOutputStream(bos);) {
 			files.forEach(item -> {
@@ -174,16 +185,20 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public void uploadFile(UUID documentSpaceId, MultipartFile file) throws RecordNotFoundException {
+	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
 		metaData.setContentLength(file.getSize());
 
+		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
+				? spec.getDocSpaceQualifiedPath()
+				: this.createDocumentSpacePathPrefix(documentSpace.getId());
+
 		try {
 			Upload upload = documentSpaceTransferManager.upload(bucketName,
-					createDocumentSpacePathPrefix(documentSpace.getId()) + file.getOriginalFilename(), file.getInputStream(),
+					prefix + file.getOriginalFilename(), file.getInputStream(),
 					metaData);
 
 			upload.waitForCompletion();
@@ -193,10 +208,14 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public void deleteFile(UUID documentSpaceId, String file) throws RecordNotFoundException {
+	public void deleteFile(UUID documentSpaceId, String path, String file) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
+				? spec.getDocSpaceQualifiedPath()
+				: this.createDocumentSpacePathPrefix(documentSpace.getId());
 
-		String fileKey = createDocumentSpacePathPrefix(documentSpace.getId()) + file;
+		String fileKey = prefix + file;
 		try {
 			documentSpaceClient.deleteObject(bucketName, fileKey);
 		} catch (AmazonServiceException ex) {
@@ -210,23 +229,43 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, @Nullable Integer limit)
+	public FilePathSpec createFolder(UUID documentSpaceId, String path, String name) {
+		return documentSpaceFileSystemService.convertFileSystemEntityToFilePathSpec(
+				documentSpaceFileSystemService.addFolder(documentSpaceId, name, path));
+	}
+
+	@Override
+	public void deleteFolder(UUID documentSpaceId, String path) {
+		documentSpaceFileSystemService.deleteFolder(documentSpaceId, path);
+	}
+
+	@Override
+	public FileSystemElementTree getFolderTree(UUID documentSpaceId, String path) {
+		return documentSpaceFileSystemService.dumpElementTree(documentSpaceId, path);
+	}
+
+	@Override
+	public S3PaginationDto listFiles(UUID documentSpaceId, String path, String continuationToken, @Nullable Integer limit)
 			throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
+				? spec.getDocSpaceQualifiedPath()
+				: this.createDocumentSpacePathPrefix(documentSpace.getId());
 
 		if (limit == null) {
 			limit = 20;
 		}
 
 		ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-				.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId())).withMaxKeys(limit)
+				.withPrefix(prefix).withMaxKeys(limit)
 				.withContinuationToken(continuationToken);
 
 		ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
 		List<S3ObjectSummary> summary = objectListing.getObjectSummaries();
 
 		List<DocumentDto> documents = summary.stream()
-				.map(item -> this.convertS3SummaryToDto(createDocumentSpacePathPrefix(documentSpace.getId()), item))
+				.map(item -> this.convertS3SummaryToDto(prefix, item))
 				.collect(Collectors.toList());
 
 		return S3PaginationDto.builder().currentContinuationToken(objectListing.getContinuationToken())
@@ -270,6 +309,36 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		} catch (IOException e1) {
 			log.warn("Failure occurred closing zip output stream");
 		}
+	}
+
+	@Override
+	public List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String path) {
+		List<S3Object> files = new ArrayList<>();
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
+				.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId()));
+
+		ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
+		boolean hasNext = true;
+
+		do {
+			if (objectListing.getNextContinuationToken() == null) {
+				hasNext = false;
+			}
+
+			List<S3ObjectSummary> fileSummaries = objectListing.getObjectSummaries();
+
+			for (S3ObjectSummary summaryItem : fileSummaries) {
+				files.add(documentSpaceClient.getObject(bucketName, summaryItem.getKey()));
+			}
+
+			if (hasNext) {
+				request = request.withContinuationToken(objectListing.getNextContinuationToken());
+				objectListing = documentSpaceClient.listObjectsV2(request);
+			}
+		} while (hasNext);
+
+		return files;
 	}
 
 	@Override
@@ -318,7 +387,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	/**
 	 * Writes an S3 Object to the output stream. This will close the input stream of
 	 * the S3 Object.
-	 * 
+	 *
 	 * @param zipOutputStream output stream
 	 * @param s3Object        {@link S3Object} to write to output stream
 	 */
@@ -339,45 +408,45 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceDashboardMemberDto) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		
+
 		DashboardUser dashboardUser = documentSpacePrivilegeService.createDashboardUserWithPrivileges(documentSpaceDashboardMemberDto.getEmail(), documentSpace,
 				documentSpaceDashboardMemberDto.getPrivileges());
-		
+
 		documentSpace.addDashboardUser(dashboardUser);
-		
+
 		documentSpaceRepository.save(documentSpace);
 	}
 
 	@Override
 	public Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId,
-			@Nullable Pageable pageable) throws RecordNotFoundException {
+																						   @Nullable Pageable pageable) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		
+
 		Page<DashboardUser> dashboardUsersPaged = dashboardUserRepository.findAllByDocumentSpaces_Id(documentSpace.getId(), pageable);
 		Map<UUID, Integer> dashboardIdToIndexMap = new HashMap<>();
 		for (int i = 0; i < dashboardUsersPaged.getContent().size(); i++) {
 			dashboardIdToIndexMap.put(dashboardUsersPaged.getContent().get(i).getId(), i);
 		}
-		
+
 		List<DocumentSpaceDashboardMemberPrivilegeRow> dashboardUserDocumentSpacePrivilegeRows =
 				documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace, dashboardIdToIndexMap.keySet());
-		
+
 		Map<DocumentSpaceDashboardMember, List<DocumentSpacePrivilegeDto>> map = dashboardUserDocumentSpacePrivilegeRows.stream()
-				.collect(Collectors.groupingBy(DocumentSpaceDashboardMemberPrivilegeRow::getDashboardMember, 
+				.collect(Collectors.groupingBy(DocumentSpaceDashboardMemberPrivilegeRow::getDashboardMember,
 						Collectors.mapping(entry -> {
 							DocumentSpacePrivilege privilege = entry.getPrivilege();
-							
+
 							return new DocumentSpacePrivilegeDto(privilege.getId(), privilege.getType());
 						}, Collectors.toList())));
-		
+
 		List<DocumentSpaceDashboardMemberResponseDto> response = new ArrayList<>();
 		map.entrySet().forEach(value -> response.add(new DocumentSpaceDashboardMemberResponseDto(value.getKey().getId(),
 				value.getKey().getEmail(), value.getValue())));
-		
+
 		if (pageable != null && pageable.getSort().isSorted()) {
 			response.sort(Comparator.comparingInt(item -> dashboardIdToIndexMap.get(item.getId())));
 		}
-		
+
 		return new PageImpl<>(response, dashboardUsersPaged.getPageable(), response.size());
 	}
 }

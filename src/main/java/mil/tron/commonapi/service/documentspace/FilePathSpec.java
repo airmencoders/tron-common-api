@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class FilePathSpecDto {
+public class FilePathSpec {
     /**
      * The UUID of the parent element that owns this element
      */
@@ -31,7 +31,7 @@ public class FilePathSpecDto {
     private UUID parentFolderId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
 
     /**
-     * The full 'unix-like' path string leading up to and including this element
+     * The full 'unix-like' path string leading up to and including this element (excluding the document space UUID)
      */
     @Builder.Default
     private String fullPathSpec = "";
@@ -70,10 +70,14 @@ public class FilePathSpecDto {
      * @return minio-ready path string up to and including this element
      */
     public String getDocSpaceQualifiedPath() {
-        return this.getDocumentSpaceId() + "/" + this.getUuidList()
+        String path = this.getDocumentSpaceId() + "/" + this.getUuidList()
                 .stream()
                 .map(UUID::toString)
                 .collect(Collectors.joining(DocumentSpaceFileSystemServiceImpl.PATH_SEP));
+
+        if (!path.endsWith(DocumentSpaceFileSystemServiceImpl.PATH_SEP)) path += DocumentSpaceFileSystemServiceImpl.PATH_SEP;
+
+        return path;
     }
 
 }

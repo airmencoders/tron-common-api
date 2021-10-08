@@ -10,13 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDtoResponseWrapper;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDtoResponseWrapper;
-import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
+import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 
@@ -171,9 +165,10 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@PostMapping(value = "/spaces/{id}/files/upload", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public Map<String, String> upload(@PathVariable UUID id,
+                                      @RequestParam(value = "path", defaultValue = "") String path,
                                       @RequestPart("file") MultipartFile file) {
 
-		documentSpaceService.uploadFile(id, file);
+		documentSpaceService.uploadFile(id, path, file);
 		 
         Map<String, String> result = new HashMap<>();
         result.put("key", file.getOriginalFilename());
@@ -194,9 +189,10 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     @GetMapping("/spaces/{id}/files/download/single")
     public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
+                                                            @RequestParam(value = "path", defaultValue = "") String path,
                                                             @RequestParam("file") String file) {
 
-        S3Object s3Data = documentSpaceService.downloadFile(id, file);
+        S3Object s3Data = documentSpaceService.downloadFile(id, path, file);
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
@@ -222,8 +218,9 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     @GetMapping("/spaces/{id}/files/download")
     public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable UUID id,
+                                                               @RequestParam(value = "path", defaultValue = "") String path,
                                                                @RequestParam("files") Set<String> files) {
-        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, files, out);
+        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, path, files, out);
         
         return ResponseEntity
                 .ok()
@@ -268,8 +265,9 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
     @DeleteMapping("/spaces/{id}/files/delete")
     public ResponseEntity<Object> delete(@PathVariable UUID id,
+                       @RequestParam(value = "path", defaultValue = "") String path,
                        @RequestParam("file") String file) {
-    	documentSpaceService.deleteFile(id, file);
+    	documentSpaceService.deleteFile(id, path, file);
     	return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -288,12 +286,32 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     @GetMapping("/spaces/{id}/files")
     public ResponseEntity<S3PaginationDto> listObjects(
-    		@PathVariable UUID id, 
+    		@PathVariable UUID id,
+    		@RequestParam(value = "path", defaultValue = "") String path,
     		@Parameter(name = "continuation", description = "the continuation token", required = false)
 				@RequestParam(name = "continuation", required = false) String continuation,
 			@Parameter(name = "limit", description = "page limit", required = false)
 				@RequestParam(name = "limit", required = false) Integer limit) {
         return ResponseEntity
-        		.ok(documentSpaceService.listFiles(id, continuation, limit));
+        		.ok(documentSpaceService.listFiles(id, path, continuation, limit));
     }
+
+    @PreAuthorizeDashboardAdmin
+	@PostMapping("/spaces/{id}/folders")
+	public ResponseEntity<Object> createFolder(@PathVariable UUID id, @RequestBody DocumentSpacePathSpecDto dto) {
+		return new ResponseEntity<>(documentSpaceService.createFolder(id, dto.getPath(), dto.getFolderName()), HttpStatus.CREATED);
+	}
+
+	@PreAuthorizeDashboardAdmin
+	@DeleteMapping("/spaces/{id}/folders")
+	public ResponseEntity<Object> deleteFolder(@PathVariable UUID id, @RequestBody DocumentSpacePathSpecDto dto) {
+		documentSpaceService.deleteFolder(id, dto.getPath());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@PreAuthorizeDashboardAdmin
+	@GetMapping("/spaces/{id}/folders")
+	public ResponseEntity<Object> dumpTreeAtPath(@PathVariable UUID id, @RequestParam(value = "path", defaultValue = "") String path) {
+		return new ResponseEntity<>(documentSpaceService.getFolderTree(id, path), HttpStatus.OK);
+	}
 }

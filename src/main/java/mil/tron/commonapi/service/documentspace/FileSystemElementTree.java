@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service.documentspace;
 
+import com.amazonaws.services.s3.model.S3Object;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,14 +20,10 @@ public class FileSystemElementTree {
 
     @Builder.Default
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private List<FileSystemElementTree> nodes = new ArrayList<>();
+    private List<FileSystemElementTree> nodes = new ArrayList<>();  // these are folders (sub folders)
+    private List<S3Object> files = new ArrayList<>();
 
     public void addNode(FileSystemElementTree entry) {
         this.nodes.add(entry);
-    }
-
-    @Override
-    public String toString() {
-        return this.value.getItemName();
     }
 }

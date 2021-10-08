@@ -1,10 +1,12 @@
 package mil.tron.commonapi.service.documentspace;
 
+import com.amazonaws.services.s3.model.S3Object;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
@@ -13,13 +15,16 @@ import java.util.*;
 @Service
 public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSystemService {
     private final DocumentSpaceRepository documentSpaceRepository;
+    private final DocumentSpaceService documentSpaceService;
     private final DocumentSpaceFileSystemEntryRepository repository;
     public static final String PATH_SEP = "/";
 
     public DocumentSpaceFileSystemServiceImpl(DocumentSpaceRepository documentSpaceRepository,
-                                              DocumentSpaceFileSystemEntryRepository repository) {
+                                              DocumentSpaceFileSystemEntryRepository repository,
+                                              @Lazy DocumentSpaceService documentSpaceService) {
         this.documentSpaceRepository = documentSpaceRepository;
         this.repository = repository;
+        this.documentSpaceService = documentSpaceService;
     }
 
     /**
@@ -61,10 +66,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * Utility to find out more information about a given path within a space.
      * @param spaceId UUID of the space
      * @param path path to find out about
-     * @return the FilePathSpecDto describing this path
+     * @return the FilePathSpec describing this path
      */
     @Override
-    public FilePathSpecDto parsePathToFilePathSpec(UUID spaceId, @Nullable String path) {
+    public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path) {
 
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
@@ -76,7 +81,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         // dig into the path until last folder is found - this will be the parent folder
         //  all the while build out the full path leading up to this folder (names and uuids)
-        //  to put for possible later use in the object's FilePathSpecDto object
+        //  to put for possible later use in the object's FilePathSpec object
         if (parts.length != 0) {
             for (String folder : parts) {
                 if (folder.isBlank()) continue;
@@ -91,7 +96,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             }
         }
 
-        return FilePathSpecDto.builder()
+        return FilePathSpec.builder()
                 .documentSpaceId(spaceId)
                 .itemId(uuidList.isEmpty() ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID) : uuidList.get(uuidList.size() - 1))
                 .fullPathSpec(pathAccumulator.toString())
@@ -101,13 +106,13 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     }
 
     /**
-     * Utility to take a raw file system entry entity and convert it to a FilePathSpecDto so that
+     * Utility to take a raw file system entry entity and convert it to a FilePathSpec so that
      * we can know more information about it, etc
      * @param entity a DocumentSpaceFileSystemEntry object
      * @return the FilePathSpec object
      */
     @Override
-    public FilePathSpecDto convertFileSystemEntityToFilePathSpec(DocumentSpaceFileSystemEntry entity) {
+    public FilePathSpec convertFileSystemEntityToFilePathSpec(DocumentSpaceFileSystemEntry entity) {
 
         checkSpaceIsValid(entity.getDocumentSpaceId());
         UUID parentFolderId = entity.getParentEntryId();
@@ -131,7 +136,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         }
 
 
-        return FilePathSpecDto.builder()
+        return FilePathSpec.builder()
                 .itemId(entity.getItemId())
                 .itemName(entity.getItemName())
                 .documentSpaceId(entity.getDocumentSpaceId())
@@ -152,7 +157,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
 
         String lookupPath = conditionPath(path);
-        FilePathSpecDto spec = parsePathToFilePathSpec(spaceId, lookupPath);
+        FilePathSpec spec = parsePathToFilePathSpec(spaceId, lookupPath);
         return repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, spec.getParentFolderId());
     }
 
@@ -165,7 +170,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     @Override
     public FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path) {
         checkSpaceIsValid(spaceId);
-        FilePathSpecDto entry = parsePathToFilePathSpec(spaceId, conditionPath(path));
+        FilePathSpec entry = parsePathToFilePathSpec(spaceId, conditionPath(path));
         DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {
             if (entry.getItemId().equals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))) {
                 // this is the root of the document space - so make a new element called "root" to base off of
@@ -203,6 +208,9 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         for (DocumentSpaceFileSystemEntry entry : children) {
             FileSystemElementTree subTree = buildTree(spaceId, entry, new FileSystemElementTree());
             subTree.setValue(entry);
+            FilePathSpec spec = convertFileSystemEntityToFilePathSpec(entry);
+            List<S3Object> files = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
+            subTree.setFiles(files);
             tree.addNode(subTree);
         }
 
@@ -224,7 +232,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
 
         String lookupPath = conditionPath(path);
-        FilePathSpecDto pathSpec = parsePathToFilePathSpec(spaceId, lookupPath);
+        FilePathSpec pathSpec = parsePathToFilePathSpec(spaceId, lookupPath);
 
         // check no existence of duplicate -- so we don't get a nasty DB exception
         if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemName(spaceId, pathSpec.getParentFolderId(), name)) {

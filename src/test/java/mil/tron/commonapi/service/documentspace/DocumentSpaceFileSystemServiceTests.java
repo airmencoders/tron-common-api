@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service.documentspace;
 
+import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -7,9 +8,11 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.annotation.Rollback;
 
 import javax.transaction.Transactional;
@@ -23,6 +26,9 @@ public class DocumentSpaceFileSystemServiceTests {
 
     @Autowired
     DocumentSpaceFileSystemService service;
+
+    @MockBean
+    DocumentSpaceService documentSpaceService;
 
     @Autowired
     DocumentSpaceRepository documentSpaceRepository;
@@ -106,12 +112,12 @@ public class DocumentSpaceFileSystemServiceTests {
         DocumentSpaceFileSystemEntry firstEntry = service.addFolder(spaceId, "some-folder", "/");
         DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder");
 
-        FilePathSpecDto firstSpec = service.convertFileSystemEntityToFilePathSpec(firstEntry);
+        FilePathSpec firstSpec = service.convertFileSystemEntityToFilePathSpec(firstEntry);
         assertEquals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID), firstEntry.getParentEntryId());
         assertEquals(firstEntry.getDocumentSpaceId(), firstSpec.getDocumentSpaceId());
         assertEquals(1, firstSpec.getUuidList().size());  // only itself cause root is owner
 
-        FilePathSpecDto secondSpec = service.convertFileSystemEntityToFilePathSpec(secondEntry);
+        FilePathSpec secondSpec = service.convertFileSystemEntityToFilePathSpec(secondEntry);
         assertEquals(firstEntry.getItemId(), secondSpec.getParentFolderId());
         assertEquals(secondEntry.getDocumentSpaceId(), secondSpec.getDocumentSpaceId());
         assertEquals(2, secondSpec.getUuidList().size()); // itself and parent (firstEntry) = 2
@@ -119,12 +125,12 @@ public class DocumentSpaceFileSystemServiceTests {
         //
         //
         // test out getting a path spec using string paths (vs the object entities above)
-        FilePathSpecDto firstSpecFromPath = service.parsePathToFilePathSpec(firstEntry.getDocumentSpaceId(), "some-folder/");
+        FilePathSpec firstSpecFromPath = service.parsePathToFilePathSpec(firstEntry.getDocumentSpaceId(), "some-folder/");
         assertEquals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID), firstEntry.getParentEntryId());
         assertEquals(firstEntry.getDocumentSpaceId(), firstSpecFromPath.getDocumentSpaceId());
         assertEquals(1, firstSpecFromPath.getUuidList().size());  // only itself cause root is owner
 
-        FilePathSpecDto secondSpecFromPath = service.parsePathToFilePathSpec(secondEntry.getDocumentSpaceId(), "some-folder/some-folder2");
+        FilePathSpec secondSpecFromPath = service.parsePathToFilePathSpec(secondEntry.getDocumentSpaceId(), "some-folder/some-folder2");
         assertEquals(secondEntry.getItemId(), secondSpecFromPath.getParentFolderId());
         assertEquals(secondEntry.getDocumentSpaceId(), secondSpecFromPath.getDocumentSpaceId());
         assertEquals(2, secondSpecFromPath.getUuidList().size()); // itself and parent (firstEntry) = 2
@@ -135,11 +141,12 @@ public class DocumentSpaceFileSystemServiceTests {
     @Test
     void testGetMinioPath() {
         // test that we can get the minio path (ready to use) for addressing a folder in the doc space in Minio
-
+        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString()))
+                .thenReturn(Lists.newArrayList());
         DocumentSpaceFileSystemEntry firstEntry = service.addFolder(spaceId, "some-folder", "/");
         DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder");
-        FilePathSpecDto spec = service.convertFileSystemEntityToFilePathSpec(secondEntry);
-        assertEquals(String.format("%s/%s/%s", spaceId, firstEntry.getItemId(), secondEntry.getItemId()), spec.getDocSpaceQualifiedPath());
+        FilePathSpec spec = service.convertFileSystemEntityToFilePathSpec(secondEntry);
+        assertEquals(String.format("%s/%s/%s/", spaceId, firstEntry.getItemId(), secondEntry.getItemId()), spec.getDocSpaceQualifiedPath());
     }
 
     @Transactional
@@ -147,6 +154,9 @@ public class DocumentSpaceFileSystemServiceTests {
     @Test
     void testGetElementTree() {
         // test that we can dump a given location's hierarchy
+
+        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString()))
+                .thenReturn(Lists.newArrayList());
 
         service.addFolder(spaceId, "some-folder", "/");
         service.addFolder(spaceId, "some-folder2", "some-folder");
@@ -166,6 +176,9 @@ public class DocumentSpaceFileSystemServiceTests {
     @Rollback
     @Test
     void testDeleteFolders() {
+        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString()))
+                .thenReturn(Lists.newArrayList());
+
         service.addFolder(spaceId, "some-folder", "/");
         service.addFolder(spaceId, "some-folder2", "some-folder");
         service.addFolder(spaceId, "some-deep-folder", "/some-folder/some-folder2");
