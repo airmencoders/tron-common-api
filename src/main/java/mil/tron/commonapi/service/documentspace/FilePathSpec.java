@@ -1,14 +1,11 @@
 package mil.tron.commonapi.service.documentspace;
 
-import com.sun.istack.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.google.common.collect.Lists;
+import lombok.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-import org.assertj.core.util.Lists;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,35 +19,44 @@ import java.util.stream.Collectors;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
 public class FilePathSpec {
     /**
      * The UUID of the parent element that owns this element
      */
+    @Getter
+    @Setter
     @Builder.Default
     private UUID parentFolderId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
 
     /**
      * The full 'unix-like' path string leading up to and including this element (excluding the document space UUID)
      */
+    @Getter
+    @Setter
     @Builder.Default
     private String fullPathSpec = "";
 
     /**
      * List of UUIDs leading up to and including this element
      */
+    @Getter
+    @Setter
     @Builder.Default
     private List<UUID> uuidList = Lists.newArrayList(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID));
 
     /**
      * The owning document space
      */
+    @Getter
+    @Setter
     @NotNull
     private UUID documentSpaceId;
 
     /**
      * The actual item UUID (of the folder etc) we're concerned about
      */
+    @Getter
+    @Setter
     @Builder.Default
     @NotNull
     private UUID itemId = UUID.randomUUID();
@@ -60,6 +66,8 @@ public class FilePathSpec {
      */
     @NotBlank
     @NotNull
+    @Getter
+    @Setter
     private String itemName;
 
     private String docSpaceQualifiedPath;

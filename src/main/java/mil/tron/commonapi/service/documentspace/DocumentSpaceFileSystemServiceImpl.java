@@ -28,22 +28,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     }
 
     /**
-     * Helper to get the UUID of the desired parent folder (by its name)
-     * @param spaceId UUID of the doc space
-     * @param parentFolderName parent folder name
-     * @return UUID (if found) of the parent folder
-     * @throws RecordNotFoundException for non-existent parent folder within space
-     */
-    private UUID getIdOfParentFolder(UUID spaceId, String parentFolderName) {
-        DocumentSpaceFileSystemEntry entry = repository
-                .findByDocumentSpaceIdEqualsAndItemNameEquals(spaceId, parentFolderName)
-                .orElseThrow(() -> new RecordNotFoundException(
-                        String.format("Parent folder with that name not found within space %s", spaceId)));
-
-        return entry.getItemId();
-    }
-
-    /**
      * Helper to convert a blank or null string into the root path ("/"),
      * or trim any whitespace off of a path
      * @param path the input path
