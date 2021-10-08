@@ -80,6 +80,14 @@ public class DashboardUser {
     	documentSpace.getDashboardUsers().remove(this);
     }
     
+    public void addPrivilege(Privilege privilege) {
+    	privileges.add(privilege);
+    }
+    
+    public void removePrivilege(Privilege privilege) {
+    	privileges.remove(privilege);
+    }
+    
     @PrePersist
     @PreUpdate
     public void sanitize() {

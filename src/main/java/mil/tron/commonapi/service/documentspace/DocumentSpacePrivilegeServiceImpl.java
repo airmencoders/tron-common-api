@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,9 +17,11 @@ import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 
@@ -27,13 +30,17 @@ import mil.tron.commonapi.service.DashboardUserService;
 @ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
 public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilegeService {
 	private static final ModelMapper MODEL_MAPPER = new DtoMapper();
+	private static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
 	
 	private final DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository;
 	private final DashboardUserService dashboardUserService;
+	private final PrivilegeRepository privilegeRepository;
 	
-	public DocumentSpacePrivilegeServiceImpl(DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository, DashboardUserService dashboardUserService) {
+	public DocumentSpacePrivilegeServiceImpl(DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository,
+			DashboardUserService dashboardUserService, PrivilegeRepository privilegeRepository) {
 		this.documentSpacePrivilegeRepository = documentSpacePrivilegeRepository;
 		this.dashboardUserService = dashboardUserService;
+		this.privilegeRepository = privilegeRepository;
 	}
 	
 	@Override
@@ -134,6 +141,11 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 		DashboardUser dashboardUser = dashboardUserService.createDashboardUserOrReturnExisting(dashboardUserEmail);
 		
 		addPrivilegesToDashboardUser(dashboardUser, documentSpace, privilegesToAdd);
+		
+		Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
+		documentSpaceGlobalPrivilege.ifPresentOrElse(
+				dashboardUser::addPrivilege,
+				() -> log.error(String.format("Global Document Space Privilege (%s) is missing", DOCUMENT_SPACE_USER_PRIVILEGE)));
 		
 		return dashboardUser;
 	}

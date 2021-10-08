@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,9 +22,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 
@@ -34,6 +37,9 @@ class DocumentSpacePrivilegeServiceImplTest {
 	
 	@Mock
 	private DashboardUserService dashboardUserService;
+	
+	@Mock
+	private PrivilegeRepository privilegeRepository;
 	
 	@InjectMocks
 	private DocumentSpacePrivilegeServiceImpl documentSpacePrivilegeService;
@@ -181,8 +187,10 @@ class DocumentSpacePrivilegeServiceImplTest {
 				.emailAsLower("test@email.com")
 				.build();
 		
-		Mockito.when(dashboardUserService.createDashboardUserOrReturnExisting(Mockito.anyString())).thenReturn(createdDashboardUser);
+		Privilege documentSpacePrivilege = new Privilege(44L, "DOCUMENT_SPACE_PRIVILEGE");
 		
+		Mockito.when(dashboardUserService.createDashboardUserOrReturnExisting(Mockito.anyString())).thenReturn(createdDashboardUser);
+		Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
 		DashboardUser dashboardUserWithPrivileges = documentSpacePrivilegeService.createDashboardUserWithPrivileges(
 				createdDashboardUser.getEmail(), documentSpace, new ArrayList<>(Arrays.asList(DocumentSpacePrivilegeType.READ)));
 		
@@ -190,6 +198,7 @@ class DocumentSpacePrivilegeServiceImplTest {
 		
 		assertThat(dashboardUserWithPrivileges.getDocumentSpacePrivileges()).contains(read);
 		assertThat(read.getDashboardUsers()).contains(dashboardUserWithPrivileges);
+		assertThat(dashboardUserWithPrivileges.getPrivileges()).contains(documentSpacePrivilege);
 	}
 	
 	@Test
