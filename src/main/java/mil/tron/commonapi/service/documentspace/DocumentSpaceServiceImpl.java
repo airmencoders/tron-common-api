@@ -24,6 +24,7 @@ import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponse
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
@@ -33,6 +34,7 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
+import mil.tron.commonapi.service.DashboardUserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
@@ -59,20 +61,25 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final AmazonS3 documentSpaceClient;
 	private final TransferManager documentSpaceTransferManager;
 	private final String bucketName;
+
 	private final DocumentSpaceRepository documentSpaceRepository;
-	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 	private final DashboardUserRepository dashboardUserRepository;
 
-	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
-			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
-			DocumentSpacePrivilegeService documentSpacePrivilegeService, DashboardUserRepository dashboardUserRepository) {
-		this.documentSpaceClient = documentSpaceClient;
-		this.bucketName = bucketName;
-		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
+	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 
+	private final DashboardUserService dashboardUserService;
+	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
+					@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
+						DocumentSpacePrivilegeService documentSpacePrivilegeService, DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService) {
+		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
+		this.bucketName = bucketName;
+
 		this.documentSpaceRepository = documentSpaceRepository;
 		this.dashboardUserRepository = dashboardUserRepository;
+
+		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
+		this.dashboardUserService = dashboardUserService;
 	}
 
 	@Override
@@ -88,7 +95,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			throw new ResourceAlreadyExistsException(
 					String.format("Document Space with the name: %s already exists", documentSpace.getName()));
 		}
-		
+
 		documentSpace = documentSpaceRepository.save(documentSpace);
 		documentSpacePrivilegeService.createAndSavePrivilegesForNewSpace(documentSpace);
 
@@ -349,35 +356,59 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
+	public void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String email) throws RecordNotFoundException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+
+		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(email, documentSpace);
+
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
+
+		documentSpace.removeDashboardUser(dashboardUser);
+		documentSpaceRepository.save(documentSpace);
+
+		dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
+
+		Set<Privilege> privileges = dashboardUser.getPrivileges();
+
+		if(privileges.size() == 1 && dashboardUser.getDocumentSpaces().size() == 0){
+			Optional<Privilege> first = privileges.stream().findFirst();
+			if(first.isPresent() && first.get().getName().equals("DASHBOARD_USER")){
+				dashboardUserService.deleteDashboardUser(dashboardUser.getId());
+			}
+		}
+
+	}
+
+	@Override
 	public Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId,
 			@Nullable Pageable pageable) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		
+
 		Page<DashboardUser> dashboardUsersPaged = dashboardUserRepository.findAllByDocumentSpaces_Id(documentSpace.getId(), pageable);
 		Map<UUID, Integer> dashboardIdToIndexMap = new HashMap<>();
 		for (int i = 0; i < dashboardUsersPaged.getContent().size(); i++) {
 			dashboardIdToIndexMap.put(dashboardUsersPaged.getContent().get(i).getId(), i);
 		}
-		
+
 		List<DocumentSpaceDashboardMemberPrivilegeRow> dashboardUserDocumentSpacePrivilegeRows =
 				documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace, dashboardIdToIndexMap.keySet());
-		
+
 		Map<DocumentSpaceDashboardMember, List<DocumentSpacePrivilegeDto>> map = dashboardUserDocumentSpacePrivilegeRows.stream()
-				.collect(Collectors.groupingBy(DocumentSpaceDashboardMemberPrivilegeRow::getDashboardMember, 
+				.collect(Collectors.groupingBy(DocumentSpaceDashboardMemberPrivilegeRow::getDashboardMember,
 						Collectors.mapping(entry -> {
 							DocumentSpacePrivilege privilege = entry.getPrivilege();
-							
+
 							return new DocumentSpacePrivilegeDto(privilege.getId(), privilege.getType());
 						}, Collectors.toList())));
-		
+
 		List<DocumentSpaceDashboardMemberResponseDto> response = new ArrayList<>();
 		map.entrySet().forEach(value -> response.add(new DocumentSpaceDashboardMemberResponseDto(value.getKey().getId(),
 				value.getKey().getEmail(), value.getValue())));
-		
+
 		if (pageable != null && pageable.getSort().isSorted()) {
 			response.sort(Comparator.comparingInt(item -> dashboardIdToIndexMap.get(item.getId())));
 		}
-		
+
 		return new PageImpl<>(response, dashboardUsersPaged.getPageable(), response.size());
 	}
 }

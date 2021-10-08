@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -160,26 +161,24 @@ class DocumentSpacePrivilegeServiceImplTest {
 	@Test
 	void shouldRemovePrivilegeFromDashboardUser() {
 		DocumentSpacePrivilege read = documentSpace.getPrivileges().get(DocumentSpacePrivilegeType.READ);
-		
-		assertThat(dashboardUser.getDocumentSpacePrivileges()).containsOnly(read);
-		
-		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(dashboardUser, documentSpace,
-				new ArrayList<>(Arrays.asList(DocumentSpacePrivilegeType.READ)));
+
+		Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+
+		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(dashboardUser.getEmail(), documentSpace);
 		
 		assertThat(dashboardUser.getDocumentSpacePrivileges()).doesNotContain(read);
 		assertThat(read.getDashboardUsers()).doesNotContain(dashboardUser);
 	}
 	
 	@Test
-	void shouldThrow_whenRemovingNullPrivilegeFromDashboardUser() {
+	void shouldThrow_whenDashBoardUserNotFound() {
 		documentSpace.getPrivileges().remove(DocumentSpacePrivilegeType.READ);
 		
-		assertThatThrownBy(() -> documentSpacePrivilegeService.removePrivilegesFromDashboardUser(dashboardUser,
-				documentSpace, new ArrayList<>(Arrays.asList(DocumentSpacePrivilegeType.READ))))
-			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessageContaining("Could not remove privileges from user");
+		assertThatThrownBy(() -> documentSpacePrivilegeService.removePrivilegesFromDashboardUser("not@real.email", documentSpace))
+			.isInstanceOf(RecordNotFoundException.class)
+			.hasMessageContaining("Could not remove privileges from user with email: not@real.email because they do not exist");
 	}
-	
+
 	@Test
 	void shouldCreateDashboardUserWithPrivileges() {
 		DashboardUser createdDashboardUser = DashboardUser.builder()
