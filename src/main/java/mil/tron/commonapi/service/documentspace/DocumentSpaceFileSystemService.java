@@ -10,8 +10,10 @@ public interface DocumentSpaceFileSystemService {
 
     FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path);
     FilePathSpec convertFileSystemEntityToFilePathSpec(DocumentSpaceFileSystemEntry entry);
+
     List<DocumentSpaceFileSystemEntry> getElementsUnderneath(UUID spaceId, @Nullable String path);
     FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path);
+
     DocumentSpaceFileSystemEntry addFolder(UUID spaceId, String name, @Nullable String path);
     void deleteFolder(UUID spaceId, String path);
 }

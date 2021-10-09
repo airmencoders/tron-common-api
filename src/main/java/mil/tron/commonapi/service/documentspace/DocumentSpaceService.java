@@ -40,10 +40,11 @@ public interface DocumentSpaceService {
 	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
     void deleteFile(UUID documentSpaceId, String path, String fileKey);
     S3PaginationDto listFiles(UUID documentSpaceId, String path, String continuationToken, Integer limit);
-    List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String path);
+    List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String prefix);
+    List<String> getAllFilesInFolderSummaries(UUID documentSpaceId, String prefix);
     FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
     void deleteFolder(UUID documentSpaceId, String path);
-    FileSystemElementTree getFolderTree(UUID documentSpaceId, String path);
+    FilePathSpec getFolderContents(UUID documentSpaceId, String path);
     
     DocumentDto convertS3ObjectToDto(S3Object objSummary);
     DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary);

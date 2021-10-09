@@ -6,6 +6,7 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -15,7 +16,6 @@ import java.util.stream.Collectors;
  * and informative way (much like a DTO), where we have some helpful path information about
  * its parent (etc)
  */
-
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -69,6 +69,22 @@ public class FilePathSpec {
     @Getter
     @Setter
     private String itemName;
+
+    /**
+     * List of files in this folder (one-level deep)
+     */
+    @Getter
+    @Setter
+    @Builder.Default
+    private List<String> files = new ArrayList<>();
+
+    /**
+     * List of sub-folders in this folder (one-level deep)
+     */
+    @Getter
+    @Setter
+    @Builder.Default
+    private List<DocumentSpaceFileSystemEntry> subFolderElements = new ArrayList<>();
 
     private String docSpaceQualifiedPath;
 

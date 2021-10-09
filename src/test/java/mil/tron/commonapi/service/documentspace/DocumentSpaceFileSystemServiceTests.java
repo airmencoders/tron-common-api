@@ -37,6 +37,8 @@ public class DocumentSpaceFileSystemServiceTests {
             .name("CoolSpace")
             .build();
 
+
+
     UUID spaceId;
 
     @BeforeEach
@@ -110,7 +112,7 @@ public class DocumentSpaceFileSystemServiceTests {
         //
         // make a two deep folder structure (name folders the same -- since that's a valid case)
         DocumentSpaceFileSystemEntry firstEntry = service.addFolder(spaceId, "some-folder", "/");
-        DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder");
+        DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder/");
 
         FilePathSpec firstSpec = service.convertFileSystemEntityToFilePathSpec(firstEntry);
         assertEquals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID), firstEntry.getParentEntryId());

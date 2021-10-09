@@ -240,8 +240,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public FileSystemElementTree getFolderTree(UUID documentSpaceId, String path) {
-		return documentSpaceFileSystemService.dumpElementTree(documentSpaceId, path);
+	public FilePathSpec getFolderContents(UUID documentSpaceId, String path) {
+		return documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
 	}
 
 	@Override
@@ -277,46 +277,32 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	public void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 
-		try (BufferedOutputStream bos = new BufferedOutputStream(out); ZipOutputStream zipOut = new ZipOutputStream(bos);) {
-			ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-					.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId()));
+		try (BufferedOutputStream bos = new BufferedOutputStream(out);
+			 ZipOutputStream zipOut = new ZipOutputStream(bos)) {
 
-			ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
-			boolean hasNext = true;
-
-			do {
-				if (objectListing.getNextContinuationToken() == null) {
-					hasNext = false;
-				}
-
-				List<S3ObjectSummary> fileSummaries = objectListing.getObjectSummaries();
-
-				for (int i = 0; i < fileSummaries.size(); i++) {
-					S3ObjectSummary summaryItem = fileSummaries.get(i);
-
-					S3Object s3Object = documentSpaceClient.getObject(bucketName, summaryItem.getKey());
-
-					insertS3ObjectZipEntry(zipOut, s3Object);
-				}
-
-				if (hasNext) {
-					request = request.withContinuationToken(objectListing.getNextContinuationToken());
-					objectListing = documentSpaceClient.listObjectsV2(request);
-				}
-			} while (hasNext);
-
+			this.getAllFilesInFolder(documentSpace.getId(), this.createDocumentSpacePathPrefix(documentSpace.getId()))
+					.forEach(s3Object -> insertS3ObjectZipEntry(zipOut, s3Object));
 			zipOut.finish();
 		} catch (IOException e1) {
 			log.warn("Failure occurred closing zip output stream");
 		}
 	}
 
+	/**
+	 * Gets all S3Objects (files) in a given "folder" (prefix) one-level deep
+	 * Prefix is the "path" leading up to and including the path from which to get a list of files
+	 * e.g. (/`doc-space-uuid`/`some-folder-uuid`/) would be a prefix
+	 * To get a list at the root level, prefix would just be (`/doc-space-uuid/`)
+	 * @param documentSpaceId doc space UUID
+	 * @param prefix prefix from doc space root up to and including the folder to look under
+	 * @return list of S3 objects (files)
+	 */
 	@Override
-	public List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String path) {
+	public List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String prefix) {
 		List<S3Object> files = new ArrayList<>();
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		getDocumentSpaceOrElseThrow(documentSpaceId);
 		ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-				.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId()));
+				.withPrefix(prefix);
 
 		ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
 		boolean hasNext = true;
@@ -327,7 +313,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			}
 
 			List<S3ObjectSummary> fileSummaries = objectListing.getObjectSummaries();
-
 			for (S3ObjectSummary summaryItem : fileSummaries) {
 				files.add(documentSpaceClient.getObject(bucketName, summaryItem.getKey()));
 			}
@@ -339,6 +324,14 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		} while (hasNext);
 
 		return files;
+	}
+
+	@Override
+	public List<String> getAllFilesInFolderSummaries(UUID documentSpaceId, String prefix) {
+		return this.getAllFilesInFolder(documentSpaceId, prefix)
+				.stream()
+				.map(item -> item.getKey())
+				.collect(Collectors.toList());
 	}
 
 	@Override

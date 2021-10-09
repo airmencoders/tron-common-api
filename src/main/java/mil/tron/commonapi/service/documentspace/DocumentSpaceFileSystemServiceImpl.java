@@ -40,6 +40,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         return path.trim();
     }
 
+    /**
+     * Helper to verify a space UUID is real/exists
+     * @param spaceId doc space UUID
+     * @throws RecordNotFoundException if invalid doc space UUID
+     */
     private void checkSpaceIsValid(UUID spaceId) {
         if (!documentSpaceRepository.existsById(spaceId)) {
             throw new RecordNotFoundException(String.format("Document Space %s not found", spaceId));
@@ -47,7 +52,8 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     }
 
     /**
-     * Utility to find out more information about a given path within a space.
+     * Utility to find out more information about a given path within a space.  The given space
+     * is of a unix-like path relative to a doc space (prefix slash is optional) - e.g. /folder1/folder2
      * @param spaceId UUID of the space
      * @param path path to find out about
      * @return the FilePathSpec describing this path
@@ -86,8 +92,14 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 .fullPathSpec(pathAccumulator.toString())
                 .uuidList(uuidList)
                 .parentFolderId(parentFolderId)
+                .subFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
+                        spaceId,
+                        parentFolderId,
+                        uuidList.isEmpty() ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID) : uuidList.get(uuidList.size() - 1)))
+                .files(documentSpaceService.getAllFilesInFolderSummaries(spaceId, lookupPath))
                 .build();
     }
+
 
     /**
      * Utility to take a raw file system entry entity and convert it to a FilePathSpec so that
@@ -127,6 +139,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 .fullPathSpec(pathAccumulator.toString())
                 .uuidList(uuidList)
                 .parentFolderId(entity.getParentEntryId())
+                .files(documentSpaceService.getAllFilesInFolderSummaries(entity.getDocumentSpaceId(), pathAccumulator.toString()))
+                .subFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
+                        entity.getDocumentSpaceId(),
+                        entity.getParentEntryId(),
+                        entity.getItemId()))
                 .build();
     }
 
@@ -134,12 +151,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * Gets list of DocumentSpaceFileSystemEntry elements within given space underneath given path (one-level-deep)
      * @param spaceId docu space UUID
      * @param path path to look under
-     * @return list of DocumentSpaceFileSystemEntry elements
+     * @return list of DocumentSpaceFileSystemEntry elements (folders and files)
      */
     public List<DocumentSpaceFileSystemEntry> getElementsUnderneath(UUID spaceId, @Nullable String path) {
-
         checkSpaceIsValid(spaceId);
-
         String lookupPath = conditionPath(path);
         FilePathSpec spec = parsePathToFilePathSpec(spaceId, lookupPath);
         return repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, spec.getParentFolderId());

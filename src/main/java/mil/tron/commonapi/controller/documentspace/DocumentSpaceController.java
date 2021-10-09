@@ -296,22 +296,22 @@ public class DocumentSpaceController {
         		.ok(documentSpaceService.listFiles(id, path, continuation, limit));
     }
 
-    @PreAuthorizeDashboardAdmin
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@PostMapping("/spaces/{id}/folders")
 	public ResponseEntity<Object> createFolder(@PathVariable UUID id, @RequestBody DocumentSpacePathSpecDto dto) {
 		return new ResponseEntity<>(documentSpaceService.createFolder(id, dto.getPath(), dto.getFolderName()), HttpStatus.CREATED);
 	}
 
-	@PreAuthorizeDashboardAdmin
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/folders")
 	public ResponseEntity<Object> deleteFolder(@PathVariable UUID id, @RequestBody DocumentSpacePathSpecDto dto) {
 		documentSpaceService.deleteFolder(id, dto.getPath());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
-	@PreAuthorizeDashboardAdmin
+	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
 	@GetMapping("/spaces/{id}/folders")
-	public ResponseEntity<Object> dumpTreeAtPath(@PathVariable UUID id, @RequestParam(value = "path", defaultValue = "") String path) {
-		return new ResponseEntity<>(documentSpaceService.getFolderTree(id, path), HttpStatus.OK);
+	public ResponseEntity<Object> dumpContentsAtPath(@PathVariable UUID id, @RequestParam(value = "path", defaultValue = "") String path) {
+		return new ResponseEntity<>(documentSpaceService.getFolderContents(id, path), HttpStatus.OK);
 	}
 }
