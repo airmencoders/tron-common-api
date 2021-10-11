@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -54,6 +55,8 @@ import mil.tron.commonapi.dto.documentspace.DocumentDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
 import mil.tron.commonapi.exception.BadRequestException;
 
+import javax.annotation.PostConstruct;
+
 @Slf4j
 @Service
 @ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
@@ -80,6 +83,20 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
 		this.dashboardUserService = dashboardUserService;
+	}
+
+	/**
+	 * Until we get a real minio bucket from P1...
+	 */
+	@PostConstruct
+	public void setupBucket() {
+		try {
+			if (!this.documentSpaceClient.doesBucketExistV2(this.bucketName))
+				this.documentSpaceClient.createBucket(this.bucketName);
+		}
+		catch (AmazonServiceException ex) {
+			Logger.getLogger("DocumentServiceLogger").warning(ex.getMessage());
+		}
 	}
 
 	@Override
