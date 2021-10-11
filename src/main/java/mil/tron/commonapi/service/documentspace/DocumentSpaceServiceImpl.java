@@ -70,6 +70,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 
+	@Value("${spring.profiles.active}")
+	private String activeProfile;
+
 	private final DashboardUserService dashboardUserService;
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
 					@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
@@ -89,9 +92,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * Until we get a real minio bucket from P1...
 	 */
 	@PostConstruct
-	public void setupBucket(@Value("${spring.profiles.active}") String profileActive) {
+	public void setupBucket() {
 		try {
-			if (!this.documentSpaceClient.doesBucketExistV2(this.bucketName) && profileActive.equals("staging"))
+			if (activeProfile.equals("staging") && !this.documentSpaceClient.doesBucketExistV2(this.bucketName))
 				this.documentSpaceClient.createBucket(this.bucketName);
 		}
 		catch (AmazonServiceException ex) {
