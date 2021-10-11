@@ -89,9 +89,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * Until we get a real minio bucket from P1...
 	 */
 	@PostConstruct
-	public void setupBucket() {
+	public void setupBucket(@Value("${spring.profiles.active}") String profileActive) {
 		try {
-			if (!this.documentSpaceClient.doesBucketExistV2(this.bucketName))
+			if (!this.documentSpaceClient.doesBucketExistV2(this.bucketName) && profileActive.equals("staging"))
 				this.documentSpaceClient.createBucket(this.bucketName);
 		}
 		catch (AmazonServiceException ex) {
