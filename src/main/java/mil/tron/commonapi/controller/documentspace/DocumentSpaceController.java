@@ -8,20 +8,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDtoResponseWrapper;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDtoResponseWrapper;
-import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
+import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
-
 import org.springdoc.api.annotations.ParameterObject;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,17 +28,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.validation.Valid;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("${api-prefix.v2}" + DocumentSpaceController.ENDPOINT)
-@ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
+@IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpaceController {
 	protected static final String ENDPOINT = "/document-space";
 	

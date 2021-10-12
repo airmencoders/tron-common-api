@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service.documentspace;
 
 import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -14,14 +15,13 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.modelmapper.ModelMapper;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
+@IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilegeService {
 	private static final ModelMapper MODEL_MAPPER = new DtoMapper();
 	private static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
