@@ -17,6 +17,7 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.BadRequestException;
+import mil.tron.commonapi.exception.NotAuthorizedException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
@@ -437,5 +438,30 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		}
 
 		return new PageImpl<>(response, dashboardUsersPaged.getPageable(), response.size());
+	}
+
+	@Override
+	public List<DocumentSpacePrivilegeDto> getDashboardUserPrivilegesForDocumentSpace(UUID documentSpaceId,
+			String dashboardUserEmail) throws RecordNotFoundException, NotAuthorizedException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
+		
+		if (dashboardUser == null) {
+			throw new RecordNotFoundException("Requesting Document Space Dashboard User does not exist with email: " + dashboardUserEmail);
+		}
+		
+		List<DocumentSpaceDashboardMemberPrivilegeRow> dashboardUserDocumentSpacePrivilegeRows =
+				documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace, Set.of(dashboardUser.getId()));
+		
+		List<DocumentSpacePrivilegeDto> dashboardUserDocumentSpacePrivileges = dashboardUserDocumentSpacePrivilegeRows.stream().map(row -> {
+			DocumentSpacePrivilege privilege = row.getPrivilege();
+			return new DocumentSpacePrivilegeDto(privilege.getId(), privilege.getType());
+		}).collect(Collectors.toList());
+		
+		if (dashboardUserDocumentSpacePrivileges.isEmpty()) {
+			throw new NotAuthorizedException("Not Authorized to this Document Space");
+		}
+		
+		return dashboardUserDocumentSpacePrivileges;
 	}
 }
