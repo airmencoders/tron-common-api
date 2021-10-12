@@ -351,6 +351,13 @@
     			<spring.profiles.active>production</spring.profiles.active>
     		</properties>
     	</profile>
+        <profile>
+            <id>local</id>
+            <properties>
+                <build.profile.id>local</build.profile.id>
+                <spring.profiles.active>local</spring.profiles.active>
+            </properties>
+        </profile>
     </profiles>
 
 </project>

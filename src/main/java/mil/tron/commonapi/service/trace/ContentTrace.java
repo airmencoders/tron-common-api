@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
  */
 @NoArgsConstructor
 @Component
-@Profile("production | development | staging")
+@Profile("production | development | staging | local")
 public class ContentTrace {
 
     @Getter

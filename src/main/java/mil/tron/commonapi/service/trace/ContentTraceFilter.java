@@ -26,7 +26,7 @@ import java.net.URISyntaxException;
  * its just on during dev/prod profiles and in the integration tests.
  */
 @Component
-@Profile("production | development | staging")
+@Profile("production | development | staging | local")
 public class ContentTraceFilter extends OncePerRequestFilter {
     private ContentTraceManager traceManager;
 

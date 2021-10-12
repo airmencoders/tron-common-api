@@ -26,7 +26,7 @@ import java.util.*;
  * POJO for storage to the database.
  */
 @Service
-@Profile("production | development | staging")
+@Profile("production | development | staging | local")
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class HttpTraceService implements HttpTraceRepository {
 
