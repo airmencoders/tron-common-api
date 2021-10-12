@@ -16,7 +16,7 @@ import java.io.UnsupportedEncodingException;
  */
 @Component
 @RequestScope
-@Profile("production | development | staging")
+@Profile("production | development | staging | local")
 public class ContentTraceManager {
 
     private ContentTrace trace;
