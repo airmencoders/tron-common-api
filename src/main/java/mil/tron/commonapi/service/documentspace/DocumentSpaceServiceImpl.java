@@ -20,6 +20,7 @@ import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +45,8 @@ import java.util.zip.ZipOutputStream;
 @Service
 @IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpaceServiceImpl implements DocumentSpaceService {
+	protected static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
+	
 	private final AmazonS3 documentSpaceClient;
 	private final TransferManager documentSpaceTransferManager;
 	private final String bucketName;
@@ -52,6 +55,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final DashboardUserRepository dashboardUserRepository;
 
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
+	private final PrivilegeRepository privilegeRepository;
 
 	@Value("${spring.profiles.active:UNKNOWN}")
 	private String activeProfile;
@@ -60,9 +64,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private String enclaveLevel;
 
 	private final DashboardUserService dashboardUserService;
+
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
-					@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
-						DocumentSpacePrivilegeService documentSpacePrivilegeService, DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService) {
+			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
+			DocumentSpacePrivilegeService documentSpacePrivilegeService,
+			DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService,
+			PrivilegeRepository privilegeRepository) {
 		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
 		this.bucketName = bucketName;
@@ -72,6 +79,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
 		this.dashboardUserService = dashboardUserService;
+		
+		this.privilegeRepository = privilegeRepository;
 	}
 
 	/**
@@ -368,15 +377,26 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(email, documentSpace);
 
 		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
+		
+		if (dashboardUser == null) {
+			throw new RecordNotFoundException(String.format("Could not remove user from Document Space space. User with email: %s does not exist", email));
+		}
 
 		documentSpace.removeDashboardUser(dashboardUser);
 		documentSpaceRepository.save(documentSpace);
 
-		dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
-
 		Set<Privilege> privileges = dashboardUser.getPrivileges();
-
-		if(privileges.size() == 1 && dashboardUser.getDocumentSpaces().size() == 0){
+		
+		if (dashboardUser.getDocumentSpaces().isEmpty()) {
+			Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
+			documentSpaceGlobalPrivilege.ifPresentOrElse(
+					dashboardUser::removePrivilege,
+					() -> log.error(String.format(
+							"Could not remove Global Document Space Privilege (%s) from user because it is is missing",
+							DOCUMENT_SPACE_USER_PRIVILEGE)));
+		}
+		
+		if(privileges.size() == 1){
 			Optional<Privilege> first = privileges.stream().findFirst();
 			if(first.isPresent() && first.get().getName().equals("DASHBOARD_USER")){
 				dashboardUserService.deleteDashboardUser(dashboardUser.getId());
