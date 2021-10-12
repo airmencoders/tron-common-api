@@ -24,7 +24,6 @@ import java.util.*;
 @IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilegeService {
 	private static final ModelMapper MODEL_MAPPER = new DtoMapper();
-	private static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
 
 	private final DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository;
 	private final DashboardUserService dashboardUserService;
@@ -137,10 +136,10 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 		
 		addPrivilegesToDashboardUser(dashboardUser, documentSpace, privilegesToAdd);
 		
-		Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
+		Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DocumentSpaceServiceImpl.DOCUMENT_SPACE_USER_PRIVILEGE);
 		documentSpaceGlobalPrivilege.ifPresentOrElse(
 				dashboardUser::addPrivilege,
-				() -> log.error(String.format("Global Document Space Privilege (%s) is missing", DOCUMENT_SPACE_USER_PRIVILEGE)));
+				() -> log.error(String.format("Global Document Space Privilege (%s) is missing", DocumentSpaceServiceImpl.DOCUMENT_SPACE_USER_PRIVILEGE)));
 
 		return dashboardUser;
 	}
