@@ -1,41 +1,33 @@
 package mil.tron.commonapi.service.documentspace;
 
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
-
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
+import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
-import liquibase.pro.packaged.S;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
+import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
+import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
-
+import mil.tron.commonapi.service.DashboardUserService;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -43,40 +35,67 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.transfer.TransferManager;
-
-import lombok.extern.slf4j.Slf4j;
-import mil.tron.commonapi.dto.documentspace.DocumentDetailsDto;
-import mil.tron.commonapi.dto.documentspace.DocumentDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
-import mil.tron.commonapi.exception.BadRequestException;
+import javax.annotation.PostConstruct;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.*;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
+@IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final AmazonS3 documentSpaceClient;
 	private final TransferManager documentSpaceTransferManager;
 	private final String bucketName;
+
 	private final DocumentSpaceRepository documentSpaceRepository;
-	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 	private final DashboardUserRepository dashboardUserRepository;
 	private final DocumentSpaceFileSystemService documentSpaceFileSystemService;
 
+	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
+
+	@Value("${spring.profiles.active:UNKNOWN}")
+	private String activeProfile;
+
+	@Value("${ENCLAVE_LEVEL:UNKNOWN}")
+	private String enclaveLevel;
+
+	private final DashboardUserService dashboardUserService;
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
 									@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
 									DocumentSpacePrivilegeService documentSpacePrivilegeService, DashboardUserRepository dashboardUserRepository,
-									DocumentSpaceFileSystemService documentSpaceFileSystemService) {
-		this.documentSpaceClient = documentSpaceClient;
-		this.bucketName = bucketName;
-		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
+									DashboardUserService dashboardUserService, DocumentSpaceFileSystemService documentSpaceFileSystemService) {
 
+		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
+		this.bucketName = bucketName;
+
 		this.documentSpaceRepository = documentSpaceRepository;
 		this.dashboardUserRepository = dashboardUserRepository;
+
 		this.documentSpaceFileSystemService = documentSpaceFileSystemService;
+
+		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
+		this.dashboardUserService = dashboardUserService;
+	}
+
+	/**
+	 * Until we get a real minio bucket from P1... only run
+	 */
+	@PostConstruct
+	public void setupBucket() {
+		try {
+			if (!this.documentSpaceClient.doesBucketExistV2(this.bucketName))
+				this.documentSpaceClient.createBucket(this.bucketName);
+		}
+		catch (SdkClientException ex) {
+			Logger.getLogger("DocumentServiceLogger").warning(ex.getMessage());
+		}
 	}
 
 	@Override
@@ -408,6 +427,30 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpace.addDashboardUser(dashboardUser);
 
 		documentSpaceRepository.save(documentSpace);
+	}
+
+	@Override
+	public void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String email) throws RecordNotFoundException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+
+		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(email, documentSpace);
+
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
+
+		documentSpace.removeDashboardUser(dashboardUser);
+		documentSpaceRepository.save(documentSpace);
+
+		dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
+
+		Set<Privilege> privileges = dashboardUser.getPrivileges();
+
+		if(privileges.size() == 1 && dashboardUser.getDocumentSpaces().size() == 0){
+			Optional<Privilege> first = privileges.stream().findFirst();
+			if(first.isPresent() && first.get().getName().equals("DASHBOARD_USER")){
+				dashboardUserService.deleteDashboardUser(dashboardUser.getId());
+			}
+		}
+
 	}
 
 	@Override

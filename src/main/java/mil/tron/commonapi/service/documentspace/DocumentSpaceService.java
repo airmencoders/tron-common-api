@@ -54,6 +54,8 @@ public interface DocumentSpaceService {
     DocumentSpaceResponseDto convertDocumentSpaceEntityToResponseDto(DocumentSpace documentSpace);
     
     void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceMemberDto);
-    
+
     Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId, Pageable pageable);
+
+    void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String email);
 }

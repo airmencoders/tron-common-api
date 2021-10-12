@@ -8,8 +8,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,9 +23,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 
@@ -34,6 +38,9 @@ class DocumentSpacePrivilegeServiceImplTest {
 	
 	@Mock
 	private DashboardUserService dashboardUserService;
+	
+	@Mock
+	private PrivilegeRepository privilegeRepository;
 	
 	@InjectMocks
 	private DocumentSpacePrivilegeServiceImpl documentSpacePrivilegeService;
@@ -154,26 +161,24 @@ class DocumentSpacePrivilegeServiceImplTest {
 	@Test
 	void shouldRemovePrivilegeFromDashboardUser() {
 		DocumentSpacePrivilege read = documentSpace.getPrivileges().get(DocumentSpacePrivilegeType.READ);
-		
-		assertThat(dashboardUser.getDocumentSpacePrivileges()).containsOnly(read);
-		
-		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(dashboardUser, documentSpace,
-				new ArrayList<>(Arrays.asList(DocumentSpacePrivilegeType.READ)));
+
+		Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+
+		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(dashboardUser.getEmail(), documentSpace);
 		
 		assertThat(dashboardUser.getDocumentSpacePrivileges()).doesNotContain(read);
 		assertThat(read.getDashboardUsers()).doesNotContain(dashboardUser);
 	}
 	
 	@Test
-	void shouldThrow_whenRemovingNullPrivilegeFromDashboardUser() {
+	void shouldThrow_whenDashBoardUserNotFound() {
 		documentSpace.getPrivileges().remove(DocumentSpacePrivilegeType.READ);
 		
-		assertThatThrownBy(() -> documentSpacePrivilegeService.removePrivilegesFromDashboardUser(dashboardUser,
-				documentSpace, new ArrayList<>(Arrays.asList(DocumentSpacePrivilegeType.READ))))
-			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessageContaining("Could not remove privileges from user");
+		assertThatThrownBy(() -> documentSpacePrivilegeService.removePrivilegesFromDashboardUser("not@real.email", documentSpace))
+			.isInstanceOf(RecordNotFoundException.class)
+			.hasMessageContaining("Could not remove privileges from user with email: not@real.email because they do not exist");
 	}
-	
+
 	@Test
 	void shouldCreateDashboardUserWithPrivileges() {
 		DashboardUser createdDashboardUser = DashboardUser.builder()
@@ -181,8 +186,10 @@ class DocumentSpacePrivilegeServiceImplTest {
 				.emailAsLower("test@email.com")
 				.build();
 		
-		Mockito.when(dashboardUserService.createDashboardUserOrReturnExisting(Mockito.anyString())).thenReturn(createdDashboardUser);
+		Privilege documentSpacePrivilege = new Privilege(44L, "DOCUMENT_SPACE_PRIVILEGE");
 		
+		Mockito.when(dashboardUserService.createDashboardUserOrReturnExisting(Mockito.anyString())).thenReturn(createdDashboardUser);
+		Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
 		DashboardUser dashboardUserWithPrivileges = documentSpacePrivilegeService.createDashboardUserWithPrivileges(
 				createdDashboardUser.getEmail(), documentSpace, new ArrayList<>(Arrays.asList(DocumentSpacePrivilegeType.READ)));
 		
@@ -190,6 +197,7 @@ class DocumentSpacePrivilegeServiceImplTest {
 		
 		assertThat(dashboardUserWithPrivileges.getDocumentSpacePrivileges()).contains(read);
 		assertThat(read.getDashboardUsers()).contains(dashboardUserWithPrivileges);
+		assertThat(dashboardUserWithPrivileges.getPrivileges()).contains(documentSpacePrivilege);
 	}
 	
 	@Test

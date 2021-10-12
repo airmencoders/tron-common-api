@@ -12,15 +12,18 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 
 public interface DocumentSpacePrivilegeService {
 	void deleteAllPrivilegesBelongingToDocumentSpace(DocumentSpace documentSpace);
+
 	void createAndSavePrivilegesForNewSpace(DocumentSpace documentSpace);
 	
 	String createPrivilegeName(UUID documentSpaceId, DocumentSpacePrivilegeType privilegeType);
 	
 	void addPrivilegesToDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace, List<DocumentSpacePrivilegeType> privilegesToAdd) throws IllegalArgumentException;
-	void removePrivilegesFromDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace, List<DocumentSpacePrivilegeType> privilegesToRemove);
+
+	void removePrivilegesFromDashboardUser(String dashboardUserEmail, DocumentSpace documentSpace);
+
 	DashboardUser createDashboardUserWithPrivileges(String dashboardUserEmail, DocumentSpace documentSpace, List<DocumentSpacePrivilegeType> privilegesToAdd);
 	
 	List<DocumentSpaceDashboardMemberPrivilegeRow> getAllDashboardMemberPrivilegeRowsForDocumentSpace(DocumentSpace documentSpace, Set<UUID> dashboardUserIdsToInclude);
-	
+
 	DocumentSpacePrivilegeDto convertToDto(DocumentSpacePrivilege documentSpacePrivilege);
 }

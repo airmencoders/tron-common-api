@@ -1,39 +1,40 @@
 package mil.tron.commonapi.service.documentspace;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import org.modelmapper.ModelMapper;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
-
 import lombok.extern.slf4j.Slf4j;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(value = "minio.enabled", havingValue = "true")
+@IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilegeService {
 	private static final ModelMapper MODEL_MAPPER = new DtoMapper();
-	
+	private static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
+
 	private final DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository;
 	private final DashboardUserService dashboardUserService;
-	
-	public DocumentSpacePrivilegeServiceImpl(DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository, DashboardUserService dashboardUserService) {
+	private final PrivilegeRepository privilegeRepository;
+
+	public DocumentSpacePrivilegeServiceImpl(DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository,
+			DashboardUserService dashboardUserService, PrivilegeRepository privilegeRepository) {
 		this.documentSpacePrivilegeRepository = documentSpacePrivilegeRepository;
 		this.dashboardUserService = dashboardUserService;
+		this.privilegeRepository = privilegeRepository;
 	}
 	
 	@Override
@@ -105,24 +106,25 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 	}
 
 	@Override
-	public void removePrivilegesFromDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace,
-			List<DocumentSpacePrivilegeType> privilegesToRemove) {
+	public void removePrivilegesFromDashboardUser(String dashboardUserEmail, DocumentSpace documentSpace) {
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
+
+		List<DocumentSpacePrivilegeType> privilegeList = Arrays.asList(DocumentSpacePrivilegeType.values());
+
+		if (dashboardUser == null) {
+			throw new RecordNotFoundException(
+					String.format("Could not remove privileges from user with email: %s because they do not exist", dashboardUserEmail));
+		}
 
 		Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> documentSpacePrivileges = documentSpace.getPrivileges();
 		List<DocumentSpacePrivilege> privilegesToSave = new ArrayList<>();
 
-		privilegesToRemove.forEach(type -> {
+		privilegeList.forEach(type -> {
 			DocumentSpacePrivilege privilege = documentSpacePrivileges.get(type);
-
-			if (privilege == null) {
-				log.error(String.format(
-						"Error removing Document Space privileges from user. Document Space: %s (%s) missing necessary privilege type: %s",
-						documentSpace.getId(), documentSpace.getName(), type.toString()));
-				throw new IllegalArgumentException("Could not remove privileges from user");
+			if (privilege != null) {
+				privilege.removeDashboardUser(dashboardUser);
+				privilegesToSave.add(privilege);
 			}
-
-			privilege.removeDashboardUser(dashboardUser);
-			privilegesToSave.add(privilege);
 		});
 
 		documentSpacePrivilegeRepository.saveAll(privilegesToSave);
@@ -135,6 +137,11 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 		
 		addPrivilegesToDashboardUser(dashboardUser, documentSpace, privilegesToAdd);
 		
+		Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
+		documentSpaceGlobalPrivilege.ifPresentOrElse(
+				dashboardUser::addPrivilege,
+				() -> log.error(String.format("Global Document Space Privilege (%s) is missing", DOCUMENT_SPACE_USER_PRIVILEGE)));
+
 		return dashboardUser;
 	}
 
