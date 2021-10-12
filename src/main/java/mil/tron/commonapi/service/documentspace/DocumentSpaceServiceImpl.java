@@ -70,8 +70,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 
-	@Value("${spring.profiles.active}")
+	@Value("${spring.profiles.active:UNKNOWN}")
 	private String activeProfile;
+
+	@Value("${ENCLAVE_LEVEL:UNKNOWN}")
+	private String enclaveLevel;
 
 	private final DashboardUserService dashboardUserService;
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
@@ -94,7 +97,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@PostConstruct
 	public void setupBucket() {
 		try {
-			if (activeProfile.equals("staging") && !this.documentSpaceClient.doesBucketExistV2(this.bucketName))
+			if (activeProfile.equals("staging")
+					&& enclaveLevel.equals("IL4")
+					&& !this.documentSpaceClient.doesBucketExistV2(this.bucketName))
 				this.documentSpaceClient.createBucket(this.bucketName);
 		}
 		catch (AmazonServiceException ex) {
