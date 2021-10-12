@@ -65,6 +65,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	private final DashboardUserService dashboardUserService;
 
+	@SuppressWarnings("squid:S00107")
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
 			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
 			DocumentSpacePrivilegeService documentSpacePrivilegeService,
