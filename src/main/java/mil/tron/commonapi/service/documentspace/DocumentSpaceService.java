@@ -8,6 +8,7 @@ import java.util.UUID;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 
@@ -51,6 +52,8 @@ public interface DocumentSpaceService {
     void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceMemberDto);
 
     Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId, Pageable pageable);
+    
+    List<DocumentSpacePrivilegeDto> getDashboardUserPrivilegesForDocumentSpace(UUID documentSpaceId, String dashboardUserEmail);
 
     void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String email);
 }
