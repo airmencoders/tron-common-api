@@ -43,7 +43,7 @@ public interface DocumentSpaceService {
     S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit);
     
     DocumentDto convertS3ObjectToDto(S3Object objSummary);
-    DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary);
+    DocumentDto convertS3SummaryToDto(String spaceName, UUID documentSpaceId, S3ObjectSummary objSummary);
     DocumentDetailsDto convertToDetailsDto(S3Object objSummary);
     
     DocumentSpace convertDocumentSpaceRequestDtoToEntity(DocumentSpaceRequestDto documentSpaceInfoDto);
