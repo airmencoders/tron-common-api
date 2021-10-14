@@ -13,6 +13,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.test.context.support.WithSecurityContextFactory;
 
+import mil.tron.commonapi.service.documentspace.DocumentSpaceServiceImpl;
+
 
 public class WithMockDocumentSpaceUserSecurityContextFactory implements WithSecurityContextFactory<WithMockDocumentSpaceUser> {
 	@Override
@@ -26,6 +28,8 @@ public class WithMockDocumentSpaceUserSecurityContextFactory implements WithSecu
 					.map(documentSpacePrivilege -> new SimpleGrantedAuthority(String.format("DOCUMENT_SPACE_%s_%s",
 							customUser.documentSpaceId(), documentSpacePrivilege.toString())))
 					.collect(Collectors.toList()));
+			
+			authorities.add(new SimpleGrantedAuthority(DocumentSpaceServiceImpl.DOCUMENT_SPACE_USER_PRIVILEGE));
 		}
 		
 		User principal = new User(customUser.username(), "password", authorities);

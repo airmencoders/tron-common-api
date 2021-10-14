@@ -46,7 +46,7 @@ import java.util.zip.ZipOutputStream;
 @Service
 @IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpaceServiceImpl implements DocumentSpaceService {
-	protected static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
+	public static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
 	
 	private final AmazonS3 documentSpaceClient;
 	private final TransferManager documentSpaceTransferManager;
@@ -100,8 +100,18 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public List<DocumentSpaceResponseDto> listSpaces() {
-		return documentSpaceRepository.findAllDynamicBy(DocumentSpaceResponseDto.class);
+	public List<DocumentSpaceResponseDto> listSpaces(String username) {
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(username);
+		
+		if (dashboardUser == null) {
+			throw new RecordNotFoundException(String.format("Could not find spaces. User: %s does not exist", username));
+		}
+		
+		if (dashboardUser.getPrivileges().stream().anyMatch(privilege -> privilege.getName().equalsIgnoreCase("DASHBOARD_ADMIN"))) {
+			return documentSpaceRepository.findAllDynamicBy(DocumentSpaceResponseDto.class);
+		}
+		
+		return documentSpaceRepository.findAllDynamicByDashboardUsers_Id(dashboardUser.getId(), DocumentSpaceResponseDto.class);
 	}
 
 	@Override

@@ -24,7 +24,7 @@ import mil.tron.commonapi.dto.documentspace.DocumentDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
 
 public interface DocumentSpaceService {
-    List<DocumentSpaceResponseDto> listSpaces();
+    List<DocumentSpaceResponseDto> listSpaces(String username);
     DocumentSpaceResponseDto createSpace(DocumentSpaceRequestDto dto);
     
     /**
