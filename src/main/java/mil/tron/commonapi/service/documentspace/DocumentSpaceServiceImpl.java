@@ -22,9 +22,11 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.BadRequestException;
+import mil.tron.commonapi.exception.NotAuthorizedException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
+import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.apache.commons.io.FilenameUtils;
@@ -51,6 +53,8 @@ import java.util.zip.ZipOutputStream;
 @Service
 @IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpaceServiceImpl implements DocumentSpaceService {
+	protected static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
+	
 	private final AmazonS3 documentSpaceClient;
 	private final TransferManager documentSpaceTransferManager;
 	private final String bucketName;
@@ -60,6 +64,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final DocumentSpaceFileSystemService documentSpaceFileSystemService;
 
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
+	private final PrivilegeRepository privilegeRepository;
 
 	@Value("${spring.profiles.active:UNKNOWN}")
 	private String activeProfile;
@@ -68,10 +73,13 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private String enclaveLevel;
 
 	private final DashboardUserService dashboardUserService;
+
+	@SuppressWarnings("squid:S00107")
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
-									@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
-									DocumentSpacePrivilegeService documentSpacePrivilegeService, DashboardUserRepository dashboardUserRepository,
-									DashboardUserService dashboardUserService, DocumentSpaceFileSystemService documentSpaceFileSystemService) {
+			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
+			DocumentSpacePrivilegeService documentSpacePrivilegeService,
+			DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService,
+			PrivilegeRepository privilegeRepository, DocumentSpaceFileSystemService documentSpaceFileSystemService) {
 
 		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
@@ -84,6 +92,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
 		this.dashboardUserService = dashboardUserService;
+		
+		this.privilegeRepository = privilegeRepository;
 	}
 
 	/**
@@ -308,7 +318,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		List<S3ObjectSummary> summary = objectListing.getObjectSummaries();
 
 		List<DocumentDto> documents = summary.stream()
-				.map(item -> this.convertS3SummaryToDto(prefix, item))
+				.map(item -> this.convertS3SummaryToDto(
+						createDocumentSpacePathPrefix(documentSpace.getId()), documentSpace.getId(), item))
 				.collect(Collectors.toList());
 
 		return S3PaginationDto.builder().currentContinuationToken(objectListing.getContinuationToken())
@@ -387,9 +398,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public DocumentDto convertS3SummaryToDto(String documentSpacePathPrefix, S3ObjectSummary objSummary) {
+	public DocumentDto convertS3SummaryToDto(String documentSpacePathPrefix, UUID documentSpaceId, S3ObjectSummary objSummary) {
 		return DocumentDto.builder().key(objSummary.getKey().replace(documentSpacePathPrefix, ""))
 				.path(documentSpacePathPrefix).size(objSummary.getSize()).uploadedBy("")
+				.spaceId(documentSpaceId.toString())
 				.uploadedDate(objSummary.getLastModified()).build();
 	}
 
@@ -463,15 +475,26 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(email, documentSpace);
 
 		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
+		
+		if (dashboardUser == null) {
+			throw new RecordNotFoundException(String.format("Could not remove user from Document Space space. User with email: %s does not exist", email));
+		}
 
 		documentSpace.removeDashboardUser(dashboardUser);
 		documentSpaceRepository.save(documentSpace);
 
-		dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
-
 		Set<Privilege> privileges = dashboardUser.getPrivileges();
-
-		if(privileges.size() == 1 && dashboardUser.getDocumentSpaces().size() == 0){
+		
+		if (dashboardUser.getDocumentSpaces().isEmpty()) {
+			Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
+			documentSpaceGlobalPrivilege.ifPresentOrElse(
+					dashboardUser::removePrivilege,
+					() -> log.error(String.format(
+							"Could not remove Global Document Space Privilege (%s) from user because it is is missing",
+							DOCUMENT_SPACE_USER_PRIVILEGE)));
+		}
+		
+		if(privileges.size() == 1){
 			Optional<Privilege> first = privileges.stream().findFirst();
 			if(first.isPresent() && first.get().getName().equals("DASHBOARD_USER")){
 				dashboardUserService.deleteDashboardUser(dashboardUser.getId());
@@ -511,5 +534,30 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		}
 
 		return new PageImpl<>(response, dashboardUsersPaged.getPageable(), response.size());
+	}
+
+	@Override
+	public List<DocumentSpacePrivilegeDto> getDashboardUserPrivilegesForDocumentSpace(UUID documentSpaceId,
+			String dashboardUserEmail) throws RecordNotFoundException, NotAuthorizedException {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
+		
+		if (dashboardUser == null) {
+			throw new RecordNotFoundException("Requesting Document Space Dashboard User does not exist with email: " + dashboardUserEmail);
+		}
+		
+		List<DocumentSpaceDashboardMemberPrivilegeRow> dashboardUserDocumentSpacePrivilegeRows =
+				documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace, Set.of(dashboardUser.getId()));
+		
+		List<DocumentSpacePrivilegeDto> dashboardUserDocumentSpacePrivileges = dashboardUserDocumentSpacePrivilegeRows.stream().map(row -> {
+			DocumentSpacePrivilege privilege = row.getPrivilege();
+			return new DocumentSpacePrivilegeDto(privilege.getId(), privilege.getType());
+		}).collect(Collectors.toList());
+		
+		if (dashboardUserDocumentSpacePrivileges.isEmpty()) {
+			throw new NotAuthorizedException("Not Authorized to this Document Space");
+		}
+		
+		return dashboardUserDocumentSpacePrivileges;
 	}
 }

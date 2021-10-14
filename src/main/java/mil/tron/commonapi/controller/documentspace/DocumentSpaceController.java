@@ -33,6 +33,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.validation.Valid;
+
+import java.security.Principal;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -111,7 +113,7 @@ public class DocumentSpaceController {
     
     @Operation(summary = "Adds a user to a Document Space", description = "Adds a user to a Document Space with specified privileges")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", 
+			@ApiResponse(responseCode = "204", 
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
@@ -149,6 +151,25 @@ public class DocumentSpaceController {
     		@ParameterObject Pageable pageable) {
     	return ResponseEntity.ok(documentSpaceService.getDashboardUsersForDocumentSpace(id, pageable));
     }
+    
+    @Operation(summary = "Gets the Document Space privileges of the requesting user")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation",
+                content = @Content(schema = @Schema(implementation = DocumentSpacePrivilegeDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Not authorized to this Document Space)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @WrappedEnvelopeResponse
+    @PreAuthorize("isAuthenticated() and #principal != null")
+    @GetMapping("/spaces/{id}/users/dashboard/privileges/self")
+    public ResponseEntity<List<DocumentSpacePrivilegeDto>> getSelfDashboardUserPrivilegesForDocumentSpace(@PathVariable UUID id, Principal principal) {
+    	return ResponseEntity.ok(documentSpaceService.getDashboardUserPrivilegesForDocumentSpace(id, principal.getName()));
+    }
 
     @Operation(summary = "Removes a user from a Document Space", description = "Removes a user from a Document Space and their privileges")
 	@ApiResponses(value = {
@@ -159,7 +180,7 @@ public class DocumentSpaceController {
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
-	@DeleteMapping("/spaces/{id}/users")
+	@DeleteMapping("/spaces/{id}/users/dashboard")
     public ResponseEntity<Object> removeUserFromDocumentSpace(
     		@PathVariable UUID id,
     		@Valid @RequestBody String email) {

@@ -28,6 +28,11 @@ public class DocumentDto {
 	@Getter
 	@Setter
 	private String path;
+
+	@NotNull
+	@Getter
+	@Setter
+	private String spaceId;
 	
 	@NotNull
 	@Getter

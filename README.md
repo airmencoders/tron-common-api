@@ -18,6 +18,7 @@ If you want to run it locally in `production` profile, then issue `mvn spring-bo
   + looks for and uses a postgres db (see postgres section below)
   + spring security is enabled
 
+If you want to run properties specific to your local setup, create an `application-local.properties` file in the resources directory and override specific properties.
 
 ## Swagger Docs
 Navigate to the root of the API - `/api` and a redirect will go to the Swagger UI docs.

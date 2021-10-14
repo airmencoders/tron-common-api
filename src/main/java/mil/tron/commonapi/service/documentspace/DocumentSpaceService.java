@@ -3,6 +3,16 @@ package mil.tron.commonapi.service.documentspace;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import mil.tron.commonapi.dto.documentspace.*;
+import java.io.OutputStream;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
+import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,7 +49,7 @@ public interface DocumentSpaceService {
     FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path);
     
     DocumentDto convertS3ObjectToDto(S3Object objSummary);
-    DocumentDto convertS3SummaryToDto(String spaceName, S3ObjectSummary objSummary);
+    DocumentDto convertS3SummaryToDto(String spaceName, UUID documentSpaceId, S3ObjectSummary objSummary);
     DocumentDetailsDto convertToDetailsDto(S3Object objSummary);
     
     DocumentSpace convertDocumentSpaceRequestDtoToEntity(DocumentSpaceRequestDto documentSpaceInfoDto);
@@ -48,6 +58,8 @@ public interface DocumentSpaceService {
     void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceMemberDto);
 
     Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId, Pageable pageable);
+    
+    List<DocumentSpacePrivilegeDto> getDashboardUserPrivilegesForDocumentSpace(UUID documentSpaceId, String dashboardUserEmail);
 
     void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String email);
 }

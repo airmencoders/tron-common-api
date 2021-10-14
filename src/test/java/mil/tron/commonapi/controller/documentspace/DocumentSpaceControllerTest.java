@@ -47,7 +47,7 @@ class DocumentSpaceControllerTest {
 
         Mockito.doNothing().when(documentSpaceService).removeDashboardUserFromDocumentSpace(documentSpaceId, userEmail);
 
-        mockMvc.perform(delete(ENDPOINT +"spaces/"+ "{id}"+"/users", documentSpaceId)
+        mockMvc.perform(delete(ENDPOINT +"spaces/"+ "{id}"+"/users/dashboard", documentSpaceId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(userEmail)))
                 .andExpect(status().isNoContent());
