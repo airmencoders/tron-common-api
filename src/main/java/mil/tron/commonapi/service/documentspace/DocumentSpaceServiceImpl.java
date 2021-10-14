@@ -27,6 +27,7 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.DashboardUserService;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -150,13 +151,17 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpaceRepository.deleteById(documentSpace.getId());
 	}
 
-	@Override
-	public S3Object getFile(UUID documentSpaceId, String path, String key) throws RecordNotFoundException {
+	private String validateDocSpaceAndReturnPrefix(UUID documentSpaceId, String path) {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
-		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
+		return !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
 				? spec.getDocSpaceQualifiedPath()
 				: this.createDocumentSpacePathPrefix(documentSpace.getId());
+	}
+
+	@Override
+	public S3Object getFile(UUID documentSpaceId, String path, String key) throws RecordNotFoundException {
+		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
 		return documentSpaceClient.getObject(bucketName, prefix + key);
 	}
 
@@ -175,31 +180,35 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 */
 	@Override
 	public List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys) throws RecordNotFoundException {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
-		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
-				? spec.getDocSpaceQualifiedPath()
-				: this.createDocumentSpacePathPrefix(documentSpace.getId());
-
+		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
 		return fileKeys.stream().map(
 				item -> documentSpaceClient.getObject(bucketName, prefix + item))
 				.collect(Collectors.toList());
 	}
 
+	/**
+	 * Writes chosen files from the same doc space folder - into a downloadable zip file
+	 * @param documentSpaceId the document space UUID
+	 * @param path the plain-english path of the file in relation to the doc space
+	 * @param fileKeys the list of filenames from this folder to zip up
+	 * @param out the zip outstream that sends contents to the client
+	 * @throws RecordNotFoundException
+	 */
 	@Override
 	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out)
 			throws RecordNotFoundException {
 		List<S3Object> files = getFiles(documentSpaceId, path, fileKeys);
-
 		try (BufferedOutputStream bos = new BufferedOutputStream(out); ZipOutputStream zipOut = new ZipOutputStream(bos);) {
 			files.forEach(item -> {
-				ZipEntry entry = new ZipEntry(item.getKey());
+
+				// add item to zip - creating the expected folder structure as we do
+				ZipEntry entry = new ZipEntry(path
+						+ DocumentSpaceFileSystemServiceImpl.PATH_SEP
+						+ FilenameUtils.getName(item.getKey()));
 
 				try (S3ObjectInputStream dataStream = item.getObjectContent()) {
 					zipOut.putNextEntry(entry);
-
 					dataStream.transferTo(zipOut);
-
 					zipOut.closeEntry();
 				} catch (IOException e) {
 					log.warn("Failed to compress file: " + item.getKey());
@@ -214,15 +223,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
 	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) throws RecordNotFoundException {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
 		metaData.setContentLength(file.getSize());
 
-		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
-				? spec.getDocSpaceQualifiedPath()
-				: this.createDocumentSpacePathPrefix(documentSpace.getId());
 
 		try {
 			Upload upload = documentSpaceTransferManager.upload(bucketName,
@@ -237,12 +242,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
 	public void deleteFile(UUID documentSpaceId, String path, String file) throws RecordNotFoundException {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
-		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
-				? spec.getDocSpaceQualifiedPath()
-				: this.createDocumentSpacePathPrefix(documentSpace.getId());
-
+		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
 		String fileKey = prefix + file;
 		this.deleteS3ObjectByKey(fileKey);
 	}

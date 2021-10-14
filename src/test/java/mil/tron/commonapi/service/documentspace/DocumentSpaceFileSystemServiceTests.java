@@ -186,10 +186,13 @@ public class DocumentSpaceFileSystemServiceTests {
         service.addFolder(spaceId, "some-deep-folder", "/some-folder/some-folder2");
         service.addFolder(spaceId, "some-deep-folder2", "/some-folder/some-folder2");
 
+        assertEquals(1, service.dumpElementTree(spaceId, "/some-folder").getNodes().size());
+        assertEquals(2, service.dumpElementTree(spaceId, "/some-folder/some-folder2").getNodes().size());
+        assertEquals(0, service.dumpElementTree(spaceId, "/some-folder/some-folder2/some-deep-folder2").getNodes().size());
+        service.deleteFolder(spaceId, "/some-folder/some-folder2/some-deep-folder2");
+        assertEquals(1, service.dumpElementTree(spaceId, "/").getNodes().size());
         service.deleteFolder(spaceId, "/some-folder");
-        FileSystemElementTree tree = service.dumpElementTree(spaceId, "/");
-        assertTrue(tree.getNodes().isEmpty());
-
+        assertEquals(0, service.dumpElementTree(spaceId, "/").getNodes().size());
     }
 
 }

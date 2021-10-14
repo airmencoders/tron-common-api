@@ -214,7 +214,7 @@ class DocumentSpaceServiceImplTest {
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 20);
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		S3PaginationDto s3PaginationDto = documentService.listFiles(documentSpaceDto.getId(), "", null, 30);
+		S3PaginationDto s3PaginationDto = documentService.listFiles(documentSpaceDto.getId(), null, 30);
 
 		assertThat(s3PaginationDto.getSize()).isEqualTo(30);
 		assertThat(s3PaginationDto.getTotalElements()).isEqualTo(fileNames.size());
@@ -287,6 +287,11 @@ class DocumentSpaceServiceImplTest {
 			throws AmazonServiceException, AmazonClientException, InterruptedException {
 		Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
 		DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
+
+		Mockito.when(documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(FilePathSpec.builder()
+						.docSpaceQualifiedPath(documentSpaceDto.getId() + "/")
+						.build());
 
 		String content = "fake content";
 		uploadDummyFilesUsingTransferManager(content, 5);
