@@ -260,7 +260,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		List<S3ObjectSummary> summary = objectListing.getObjectSummaries();
 
 		List<DocumentDto> documents = summary.stream()
-				.map(item -> this.convertS3SummaryToDto(createDocumentSpacePathPrefix(documentSpace.getId()), item))
+				.map(item -> this.convertS3SummaryToDto(
+						createDocumentSpacePathPrefix(documentSpace.getId()), documentSpace.getId(), item))
 				.collect(Collectors.toList());
 
 		return S3PaginationDto.builder().currentContinuationToken(objectListing.getContinuationToken())
@@ -313,9 +314,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public DocumentDto convertS3SummaryToDto(String documentSpacePathPrefix, S3ObjectSummary objSummary) {
+	public DocumentDto convertS3SummaryToDto(String documentSpacePathPrefix, UUID documentSpaceId, S3ObjectSummary objSummary) {
 		return DocumentDto.builder().key(objSummary.getKey().replace(documentSpacePathPrefix, ""))
 				.path(documentSpacePathPrefix).size(objSummary.getSize()).uploadedBy("")
+				.spaceId(documentSpaceId.toString())
 				.uploadedDate(objSummary.getLastModified()).build();
 	}
 

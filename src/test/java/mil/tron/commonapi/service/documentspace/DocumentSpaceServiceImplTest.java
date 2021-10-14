@@ -240,6 +240,7 @@ class DocumentSpaceServiceImplTest {
 		assertThat(s3PaginationDto.getDocuments()).usingRecursiveComparison().ignoringCollectionOrder()
 				.ignoringFields("uploadedDate", "uploadedBy")
 				.isEqualTo(fileNames.stream().map(filename -> DocumentDto.builder().key(filename).path(requestDto.getId() + "/")
+						.spaceId(requestDto.getId().toString())
 						.size(content.getBytes().length).build()).collect(Collectors.toList()));
 	}
 
