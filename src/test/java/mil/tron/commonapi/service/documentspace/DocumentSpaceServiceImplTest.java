@@ -33,11 +33,10 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
 import mil.tron.commonapi.service.DashboardUserService;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -53,9 +52,9 @@ import org.springframework.mock.web.MockMultipartFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.times;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -70,13 +69,15 @@ import java.util.stream.Collectors;
 class DocumentSpaceServiceImplTest {
 	private static final String BUCKET_NAME = "testbucket";
 
+	@InjectMocks
 	private DocumentSpaceServiceImpl documentService;
+
 	private AmazonS3 amazonS3;
 	private TransferManager transferManager;
 
 	@Mock
 	private DocumentSpaceRepository documentSpaceRepo;
-	
+
 	@Mock
 	private DashboardUserRepository dashboardUserRepository;
 
@@ -85,7 +86,7 @@ class DocumentSpaceServiceImplTest {
 
 	@Mock
 	private DashboardUserService dashboardUserService;
-	
+
 	@Mock
 	private PrivilegeRepository privilegeRepository;
 
@@ -358,7 +359,7 @@ class DocumentSpaceServiceImplTest {
 		void setup() {
 			documentSpacePrivilege = new Privilege(44L, DocumentSpaceServiceImpl.DOCUMENT_SPACE_USER_PRIVILEGE);
 			dashboardUserPrivilege = new Privilege(1L, "DASHBOARD_USER");
-			
+
 			dashboardUser = DashboardUser.builder()
 					.id(UUID.randomUUID())
 					.email("dashboard@user.com")
@@ -385,13 +386,13 @@ class DocumentSpaceServiceImplTest {
 			assertThat(dashboardUser.getDocumentSpaces()).doesNotContain(entity);
 			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser.getEmail(),entity);
 		}
-		
+
 		@Test
 		void shouldDeleteDashboardUser_whenUserHasNoMembershipAndNoOtherPrivilege() {
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
 			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
 			Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
-			
+
 			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), memberDto.getEmail());
 
 			assertThat(entity.getDashboardUsers()).doesNotContain(dashboardUser);
@@ -399,16 +400,16 @@ class DocumentSpaceServiceImplTest {
 			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser.getEmail(),entity);
 			Mockito.verify(dashboardUserService).deleteDashboardUser(dashboardUser.getId());
 		}
-		
+
 		@Test
 		void shouldNotDeleteDashboardUser_whenUserHasOtherPrivileges() {
 			Privilege dashboardAdmin = new Privilege(43L, "DASHBOARD_ADMIN");
 			dashboardUser.getPrivileges().add(dashboardAdmin);
-			
+
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
 			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
 			Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
-			
+
 			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), memberDto.getEmail());
 
 			assertThat(entity.getDashboardUsers()).doesNotContain(dashboardUser);
@@ -514,12 +515,12 @@ class DocumentSpaceServiceImplTest {
 				.hasMessageContaining(String.format("Document Space with id: %s not found", invalidId));
 		}
 	}
-	
+
 	@Nested
 	class GetDashboardMemberPrivilegesForDocumentSpaceTest {
 		private DashboardUser dashboardUser;
 		private DocumentSpaceDashboardMemberPrivilegeRow privilegeRow;
-		
+
 		@BeforeEach
 		void setup() {
 			dashboardUser = DashboardUser.builder()
@@ -529,55 +530,201 @@ class DocumentSpaceServiceImplTest {
 					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
 					.documentSpacePrivileges(new HashSet<>(Arrays.asList(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ))))
 					.build();
-			
+
 			DocumentSpacePrivilege read = entity.getPrivileges().get(DocumentSpacePrivilegeType.READ);
 			privilegeRow = new DocumentSpaceDashboardMemberPrivilegeRow(dashboardUser.getId(), dashboardUser.getEmail(), read);
 
 		}
-		
+
 		@Test
 		void shouldGetPrivileges_whenMemberOfDocumentSpace() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
 			Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
 			Mockito.when(documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(
 					Mockito.any(DocumentSpace.class), Mockito.anySet())).thenReturn(List.of(privilegeRow));
-			
+
 			List<DocumentSpacePrivilegeDto> privileges = documentService.getDashboardUserPrivilegesForDocumentSpace(entity.getId(), dashboardUser.getEmail());
 			assertThat(privileges)
 				.isNotEmpty()
 				.hasSize(1)
 				.contains(new DocumentSpacePrivilegeDto(privilegeRow.getPrivilege().getId(), privilegeRow.getPrivilege().getType()));
 		}
-		
+
 		@Test
 		void shouldThrow_whenDashboardUserHasNoPrivilegesToDocumentSpace() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
 			Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
 			Mockito.when(documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(
 					Mockito.any(DocumentSpace.class), Mockito.anySet())).thenReturn(List.of());
-			
+
 			assertThatThrownBy(() -> documentService.getDashboardUserPrivilegesForDocumentSpace(entity.getId(), dashboardUser.getEmail()))
 				.isInstanceOf(NotAuthorizedException.class)
 				.hasMessageContaining("Not Authorized to this Document Space");
 		}
-		
+
 		@Test
 		void shouldThrow_whenDocumentSpaceNotExists() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
-			
+
 			assertThatThrownBy(() -> documentService.getDashboardUserPrivilegesForDocumentSpace(entity.getId(), dashboardUser.getEmail()))
 				.isInstanceOf(RecordNotFoundException.class)
 				.hasMessageContaining(String.format("Document Space with id: %s not found", entity.getId()));
 		}
-		
+
 		@Test
 		void shouldThrow_whenDashboardUserNotExists() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
 			Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(null);
-			
+
 			assertThatThrownBy(() -> documentService.getDashboardUserPrivilegesForDocumentSpace(entity.getId(), dashboardUser.getEmail()))
 				.isInstanceOf(RecordNotFoundException.class)
 				.hasMessageContaining(String.format("Requesting Document Space Dashboard User does not exist with email: ", dashboardUser.getEmail()));
 		}
+	}
+
+	@Nested
+	class BatchAddDashboardUserToDocumentSpaceTest {
+		private DashboardUser dashboardUser;
+
+		private UUID documentSpaceId;
+
+		@BeforeEach
+		void setup() {
+
+			documentSpaceId = UUID.randomUUID();
+			dashboardUser = DashboardUser.builder()
+					.id(UUID.randomUUID())
+					.email("dashboard@user.com")
+					.emailAsLower("dashboard@user.com")
+					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
+					.documentSpacePrivileges(new HashSet<>(Arrays.asList(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ))))
+					.build();
+
+		}
+
+		@Test
+		void shouldAddDashboardUsersToDocumentSpace() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+			Mockito.when(documentSpacePrivilegeService.createDashboardUserWithPrivileges(Mockito.anyString(),
+					Mockito.any(DocumentSpace.class), Mockito.anyList())).thenReturn(dashboardUser);
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/happy-case.csv"));
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(0, exceptionStrings.size());
+			Mockito.verify(documentSpaceRepo, times(1)).save(Mockito.any());
+		}
+
+		@Test
+		void shouldThrow_whenInvalidEmailHeadersExist() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-email-header.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(1, exceptionStrings.size());
+
+			assertEquals("Improper first CSV header: email", exceptionStrings.get(0));
+		}
+
+		@Test
+		void shouldThrow_whenInvalidReadHeadersExist() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-read-header.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(1, exceptionStrings.size());
+
+			assertEquals("Improper second CSV header: read", exceptionStrings.get(0));
+		}
+
+		@Test
+		void shouldThrow_whenInvalidWriteHeadersExist() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-write-header.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(1, exceptionStrings.size());
+
+			assertEquals("Improper third CSV header: write", exceptionStrings.get(0));
+		}
+
+		@Test
+		void shouldThrow_whenInvalidMembershipHeadersExist() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-membership-header.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(1, exceptionStrings.size());
+
+			assertEquals("Improper fourth CSV header: membership", exceptionStrings.get(0));
+		}
+
+		@Test
+		void shouldThrow_whenInvalidUserEmail() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-empty-user-email.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(1, exceptionStrings.size());
+
+			assertEquals("Missing email on row 2", exceptionStrings.get(0));
+		}
+
+		@Test
+		void shouldThrow_whenMissingPermission() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-missing-permission.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(2, exceptionStrings.size());
+
+			assertEquals("Improper minimum row length on row 2", exceptionStrings.get(0));
+			assertEquals("Improper minimum row length on row 4", exceptionStrings.get(1));
+		}
+
+		@Test
+		void shouldNotThrowWhenParsingValidBooleanValues() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+			Mockito.when(documentSpacePrivilegeService.createDashboardUserWithPrivileges(Mockito.anyString(),
+					Mockito.any(DocumentSpace.class), Mockito.anyList())).thenReturn(dashboardUser);
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/boolean-possibilities.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(0, exceptionStrings.size());
+
+			Mockito.verify(documentSpaceRepo, times(1)).save(Mockito.any());
+		}
+
+		@Test
+		void shouldThrow_whenUserAlreadyExists() throws IOException {
+			entity.addDashboardUser(DashboardUser.builder().email("1@tron.dev").build());
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/happy-case.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(1, exceptionStrings.size());
+
+			assertEquals("Unable to add user with email 1@tron.dev, they are already a part of the space", exceptionStrings.get(0));
+		}
+
+		@Test
+		void shouldThrow_whenDuplicateEmailIsFound() throws IOException {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/duplicate-email-case.csv"));
+
+			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
+			assertEquals(1, exceptionStrings.size());
+
+			assertEquals("Duplicate email found on row 4", exceptionStrings.get(0));
+		}
+
 	}
 }

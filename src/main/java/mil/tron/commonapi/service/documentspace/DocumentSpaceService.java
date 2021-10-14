@@ -1,27 +1,17 @@
 package mil.tron.commonapi.service.documentspace;
 
-import java.io.OutputStream;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
-import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-
-import mil.tron.commonapi.dto.documentspace.DocumentDetailsDto;
-import mil.tron.commonapi.dto.documentspace.DocumentDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
+import java.io.OutputStream;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 public interface DocumentSpaceService {
     List<DocumentSpaceResponseDto> listSpaces();
@@ -52,8 +42,10 @@ public interface DocumentSpaceService {
     void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceMemberDto);
 
     Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId, Pageable pageable);
-    
+
     List<DocumentSpacePrivilegeDto> getDashboardUserPrivilegesForDocumentSpace(UUID documentSpaceId, String dashboardUserEmail);
 
     void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String email);
+
+    List<String> batchAddDashboardUserToDocumentSpace(UUID documentSpaceId, MultipartFile file);
 }
