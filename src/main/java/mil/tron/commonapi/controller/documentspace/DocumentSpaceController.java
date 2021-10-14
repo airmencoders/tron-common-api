@@ -15,8 +15,8 @@ import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
-import mil.tron.commonapi.service.documentspace.FilePathSpec;
-import mil.tron.commonapi.service.documentspace.FilePathSpecWithContents;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
@@ -27,13 +27,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.validation.Valid;
-
 import java.security.Principal;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -246,7 +244,7 @@ public class DocumentSpaceController {
                 .body(response);
     }
     
-    @Operation(summary = "Download chosen files from a Document Space folder", description = "Downloads multiple files from the same folder as a zip file")
+    @Operation(summary = "Download chosen files from a chosen Document Space folder", description = "Downloads multiple files from the same folder into a zip file")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation"),
@@ -263,7 +261,7 @@ public class DocumentSpaceController {
                                                                @RequestParam(value = "path", defaultValue = "") String path,
                                                                @RequestParam("files") Set<String> files) {
         StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, path, files, out);
-        
+
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.parseMediaType("application/zip"))

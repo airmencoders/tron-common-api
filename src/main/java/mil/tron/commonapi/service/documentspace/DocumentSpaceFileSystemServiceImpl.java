@@ -7,6 +7,10 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
+import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
+import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -185,7 +189,8 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     @Override
     public FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path) {
         checkSpaceIsValid(spaceId);
-        FilePathSpec entry = parsePathToFilePathSpec(spaceId, conditionPath(path));
+        String lookupPath = conditionPath(path);
+        FilePathSpec entry = parsePathToFilePathSpec(spaceId, lookupPath);
         DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {
             if (entry.getItemId().equals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))) {
                 // this is the root of the document space - so make a new element called "root" to base off of
@@ -202,6 +207,9 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         FileSystemElementTree tree = new FileSystemElementTree();
         tree.setValue(element);
+        List<S3Object> files = documentSpaceService.getAllFilesInFolder(spaceId, lookupPath);
+        tree.setFilePathSpec(entry);
+        tree.setFiles(files);
         return buildTree(spaceId, element, tree);
     }
 
@@ -225,6 +233,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             subTree.setValue(entry);
             FilePathSpec spec = convertFileSystemEntityToFilePathSpec(entry);
             List<S3Object> files = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
+            subTree.setFilePathSpec(spec);
             subTree.setFiles(files);
             tree.addNode(subTree);
         }
@@ -276,6 +285,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(spaceId, lastIdToDelete);
     }
 
+    /**
+     * Private helper for the deleteFolder method to dig in depth first to a file structure and delete
+     * the files and folders on the way up
+     * @param tree the current tree we're on
+     */
     private void deleteParentDirectories(FileSystemElementTree tree) {
 
         // walk the tree depth-first and delete on the way up
@@ -293,17 +307,43 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         }
     }
 
-    /**
-     * Resolves a fully qualified path + filename to what it really looks like (its prefix + filename)
-     * in the minio bucket
-     * @param spaceId doc space UUID
-     * @param pathAndFile the path + file (e.g "/test.txt" or "/notes/notes.txt" or "someFileAtRootPath.txt")
-     * @return the converted path (e.g. "/doc-space-uuid/sub-folder-uuid/notes.txt")
-     */
     @Override
-    public String resolveFullPathAndFileToUUIDPath(UUID spaceId, String pathAndFile) {
-        FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, FilenameUtils.getPath(pathAndFile));
-        return "/" + spec.getFullPathSpec() + "/" + FilenameUtils.getName(pathAndFile);
+    public List<S3ObjectAndFilename> flattenTreeToS3ObjectAndFilenameList(FileSystemElementTree tree) {
+        List<S3ObjectAndFilename> retList = new ArrayList<>();
+        scrapeFolders(tree, retList);
+        return retList;
+    }
 
+    /**
+     * Private helper to assist the the flatten tree method in digging into a file structure
+     * @param tree the current tree we're scraping
+     * @param items the cumulative list of item paths
+     */
+    private void scrapeFolders(FileSystemElementTree tree, List<S3ObjectAndFilename> items) {
+        for (S3Object obj : tree.getFiles()) {
+            items.add(S3ObjectAndFilename.builder()
+                    .pathAndFilename(joinPathParts(tree.getFilePathSpec().getFullPathSpec(), FilenameUtils.getName(obj.getKey())))
+                    .s3Object(obj)
+                    .build());
+        }
+
+        if (tree.getNodes() == null || tree.getNodes().isEmpty()) {
+            return;
+        }
+
+        for (FileSystemElementTree node : tree.getNodes()) {
+            scrapeFolders(node, items);
+        }
+
+    }
+
+    /**
+     * Helper to form a path of components - making sure we start and end with "/" but removing duplicate
+     * sequences of "//" with single "/"
+     * @param parts
+     * @return
+     */
+    private String joinPathParts(String... parts) {
+        return (PATH_SEP + String.join(PATH_SEP, parts)).replace(PATH_SEP + PATH_SEP, PATH_SEP);
     }
 }

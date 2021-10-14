@@ -14,14 +14,11 @@ import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponse
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.OutputStream;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 public interface DocumentSpaceService {
     List<DocumentSpaceResponseDto> listSpaces();

@@ -1,4 +1,4 @@
-package mil.tron.commonapi.service.documentspace;
+package mil.tron.commonapi.service.documentspace.util;
 
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * List FilePathSpec, but we include the subdirs contained herein and files
+ * Like FilePathSpec, but we include the sub dirs contained herein and files
  */
 @SuperBuilder
 @NoArgsConstructor

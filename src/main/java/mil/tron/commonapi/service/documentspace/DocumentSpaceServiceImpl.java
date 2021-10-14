@@ -29,7 +29,10 @@ import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.DashboardUserService;
-import org.apache.commons.io.FilenameUtils;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
+import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
+import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -207,28 +210,26 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out)
 			throws RecordNotFoundException {
-		List<S3Object> files = getFiles(documentSpaceId, path, fileKeys);
-		try (BufferedOutputStream bos = new BufferedOutputStream(out); ZipOutputStream zipOut = new ZipOutputStream(bos);) {
-			files.forEach(item -> {
 
-				// add item to zip - creating the expected folder structure as we do
-				ZipEntry entry = new ZipEntry(path
-						+ DocumentSpaceFileSystemServiceImpl.PATH_SEP
-						+ FilenameUtils.getName(item.getKey()));
+		// make sure given path starts with a "/"
+		String searchPath = (path.startsWith(DocumentSpaceFileSystemServiceImpl.PATH_SEP) ? "" : DocumentSpaceFileSystemServiceImpl.PATH_SEP) + path;
+		// dump all files and folders at this path and down
+		FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId, searchPath);
+		// flatten the tree
+		List<S3ObjectAndFilename> objects = documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(contentsAtPath);
+		// only take the ones we selected in the provided list (items whose prefix matches our path)
+		List<S3ObjectAndFilename> itemsToGet = objects.stream()
+				.filter(item -> {
+					for (String fileKey : fileKeys) {
+						if (item.getPathAndFilename().startsWith(searchPath + DocumentSpaceFileSystemServiceImpl.PATH_SEP + fileKey)) {
+							return true;
+						}
+					}
+					return false;
+				})
+				.collect(Collectors.toList());
 
-				try (S3ObjectInputStream dataStream = item.getObjectContent()) {
-					zipOut.putNextEntry(entry);
-					dataStream.transferTo(zipOut);
-					zipOut.closeEntry();
-				} catch (IOException e) {
-					log.warn("Failed to compress file: " + item.getKey());
-				}
-			});
-
-			zipOut.finish();
-		} catch (IOException e1) {
-			log.warn("Failure occurred closing zip output stream");
-		}
+		writeZipFile(out, itemsToGet);
 	}
 
 	@Override
@@ -329,13 +330,35 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
 	public void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out) throws RecordNotFoundException {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		// dump all files and folders at this path and down
+		FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId, DocumentSpaceFileSystemServiceImpl.PATH_SEP);
+		// flatten the tree
+		List<S3ObjectAndFilename> objects = documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(contentsAtPath);
+		writeZipFile(out, objects);
+	}
 
+	/**
+	 * Private helper to write items to a zip file output stream
+	 * @param out outstream
+	 * @param objects list of S3ObjectAndFilename objects
+	 */
+	private void writeZipFile(OutputStream out, List<S3ObjectAndFilename> objects) {
 		try (BufferedOutputStream bos = new BufferedOutputStream(out);
 			 ZipOutputStream zipOut = new ZipOutputStream(bos)) {
 
-			this.getAllFilesInFolder(documentSpace.getId(), this.createDocumentSpacePathPrefix(documentSpace.getId()))
-					.forEach(s3Object -> insertS3ObjectZipEntry(zipOut, s3Object));
+			objects.forEach(item -> {
+				// add item to zip - creating the expected folder structure as we do
+				//  ensure zip folder entries do not have a leading slash since that creates warnings on
+				//  unzip on some systems - signature of possible zip-slip exploit
+				ZipEntry entry = new ZipEntry(item.getPathAndFileNameWithoutLeadingSlash());
+				try (S3ObjectInputStream dataStream = item.getS3Object().getObjectContent()) {
+					zipOut.putNextEntry(entry);
+					dataStream.transferTo(zipOut);
+					zipOut.closeEntry();
+				} catch (IOException e) {
+					log.warn("Failed to compress file: " + item.getPathAndFilename());
+				}
+			});
 			zipOut.finish();
 		} catch (IOException e1) {
 			log.warn("Failure occurred closing zip output stream");

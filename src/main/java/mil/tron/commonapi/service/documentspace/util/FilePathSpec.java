@@ -1,9 +1,10 @@
-package mil.tron.commonapi.service.documentspace;
+package mil.tron.commonapi.service.documentspace.util;
 
 import com.google.common.collect.Lists;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemServiceImpl;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;

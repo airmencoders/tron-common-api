@@ -7,6 +7,7 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.io.Files;
 import com.jayway.jsonpath.JsonPath;
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.JwtUtils;
@@ -22,6 +23,8 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryR
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
+import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+import org.apache.commons.io.FileUtils;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,12 +41,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -72,6 +77,9 @@ public class DocumentSpaceIntegrationTests {
 
     @Autowired
     private DocumentSpaceRepository documentSpaceRepository;
+
+    @Autowired
+    private DocumentSpaceService documentSpaceService;
     
     @Autowired
     private DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository;
@@ -575,8 +583,20 @@ public class DocumentSpaceIntegrationTests {
                 MediaType.TEXT_PLAIN_VALUE,
                 "Hello, World 2!".getBytes()
         );
+        MockMultipartFile names
+                = new MockMultipartFile(
+                "file",
+                "names.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "names".getBytes()
+        );
         mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", test1Id.toString())
                 .file(file2)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", test1Id.toString())
+                .file(names)
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk());
@@ -637,18 +657,69 @@ public class DocumentSpaceIntegrationTests {
         // |  |- lists/
         // |  |  |- lists.txt
         // |  |- hello2.txt
+        // |  |- names.txt
         // |- hello.txt
         // |- hello3.txt
         mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/files", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.documents", hasSize(4)));
+                .andExpect(jsonPath("$.documents", hasSize(5)));
 
         // download and zip all the files from /docs which should just be one file and the folder "lists" with its one file
+        // should have structure like this in the zip file
+        // |- docs/
+        // |  |- lists/
+        // |  |  |- lists.txt
+        // |  |- hello2.txt
+        String tmpdir = Files.createTempDir().getAbsolutePath();
+        File zipFile = new File(tmpdir + File.separator + "files.zip");
+        FileOutputStream fos = new FileOutputStream(zipFile);
+        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/docs", Set.of("hello2.txt", "lists"), fos);
+        fos.close();
 
+        ZipFile zf = new ZipFile(zipFile);
+        Enumeration<? extends ZipEntry> entries = zf.entries();
+        List<String> contents = new ArrayList<>();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            contents.add(entry.getName());
+        }
+        FileUtils.deleteDirectory(new File(tmpdir));
+        assertTrue(contents.contains("docs/hello2.txt"));
+        assertTrue(contents.contains("docs/lists/lists.txt"));
 
+        // test downloading the whole space - check directory integrity
+        // should have this structure:
+        // / <root>
+        // |- docs/
+        // |  |- lists/
+        // |  |  |- lists.txt
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+        // |- hello3.txt
+        tmpdir = Files.createTempDir().getAbsolutePath();
+        zipFile = new File(tmpdir + File.separator + "files.zip");
+        fos = new FileOutputStream(zipFile);
+        documentSpaceService.downloadAllInSpaceAndCompress(test1Id, fos);
+        fos.close();
+
+        zf = new ZipFile(zipFile);
+        entries = zf.entries();
+        contents = new ArrayList<>();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            contents.add(entry.getName());
+        }
+        FileUtils.deleteDirectory(new File(tmpdir));
+        assertTrue(contents.contains("hello.txt"));
+        assertTrue(contents.contains("hello3.txt"));
+        assertTrue(contents.contains("docs/lists/lists.txt"));
+        assertTrue(contents.contains("docs/hello2.txt"));
+        assertTrue(contents.contains("docs/names.txt"));
     }
+
 
 
 }
