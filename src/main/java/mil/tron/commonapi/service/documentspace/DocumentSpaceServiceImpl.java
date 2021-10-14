@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
+import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.dto.documentspace.*;
@@ -33,9 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -47,7 +46,7 @@ import java.util.zip.ZipOutputStream;
 @IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	protected static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
-	
+
 	private final AmazonS3 documentSpaceClient;
 	private final TransferManager documentSpaceTransferManager;
 	private final String bucketName;
@@ -81,7 +80,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
 		this.dashboardUserService = dashboardUserService;
-		
+
 		this.privilegeRepository = privilegeRepository;
 	}
 
@@ -365,12 +364,22 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceDashboardMemberDto) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		
+
 		DashboardUser dashboardUser = documentSpacePrivilegeService.createDashboardUserWithPrivileges(documentSpaceDashboardMemberDto.getEmail(), documentSpace,
 				documentSpaceDashboardMemberDto.getPrivileges());
-		
+
 		documentSpace.addDashboardUser(dashboardUser);
-		
+
+		documentSpaceRepository.save(documentSpace);
+	}
+
+	private void batchAddDashboardUserToDocumentSpace(DocumentSpace documentSpace, Set<DocumentSpaceDashboardMemberRequestDto> documentSpaceDashboardMemberDto) {
+
+		Set<DashboardUser> dashBoardUsers = documentSpaceDashboardMemberDto.stream().map(member ->
+				documentSpacePrivilegeService.createDashboardUserWithPrivileges(member.getEmail(), documentSpace, member.getPrivileges())).collect(Collectors.toSet());
+
+		dashBoardUsers.forEach(documentSpace::addDashboardUser);
+
 		documentSpaceRepository.save(documentSpace);
 	}
 
@@ -381,7 +390,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(email, documentSpace);
 
 		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
-		
+
 		if (dashboardUser == null) {
 			throw new RecordNotFoundException(String.format("Could not remove user from Document Space space. User with email: %s does not exist", email));
 		}
@@ -390,7 +399,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpaceRepository.save(documentSpace);
 
 		Set<Privilege> privileges = dashboardUser.getPrivileges();
-		
+
 		if (dashboardUser.getDocumentSpaces().isEmpty()) {
 			Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
 			documentSpaceGlobalPrivilege.ifPresentOrElse(
@@ -399,7 +408,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 							"Could not remove Global Document Space Privilege (%s) from user because it is is missing",
 							DOCUMENT_SPACE_USER_PRIVILEGE)));
 		}
-		
+
 		if(privileges.size() == 1){
 			Optional<Privilege> first = privileges.stream().findFirst();
 			if(first.isPresent() && first.get().getName().equals("DASHBOARD_USER")){
@@ -447,23 +456,116 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			String dashboardUserEmail) throws RecordNotFoundException, NotAuthorizedException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
-		
+
 		if (dashboardUser == null) {
 			throw new RecordNotFoundException("Requesting Document Space Dashboard User does not exist with email: " + dashboardUserEmail);
 		}
-		
+
 		List<DocumentSpaceDashboardMemberPrivilegeRow> dashboardUserDocumentSpacePrivilegeRows =
 				documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace, Set.of(dashboardUser.getId()));
-		
+
 		List<DocumentSpacePrivilegeDto> dashboardUserDocumentSpacePrivileges = dashboardUserDocumentSpacePrivilegeRows.stream().map(row -> {
 			DocumentSpacePrivilege privilege = row.getPrivilege();
 			return new DocumentSpacePrivilegeDto(privilege.getId(), privilege.getType());
 		}).collect(Collectors.toList());
-		
+
 		if (dashboardUserDocumentSpacePrivileges.isEmpty()) {
 			throw new NotAuthorizedException("Not Authorized to this Document Space");
 		}
-		
+
 		return dashboardUserDocumentSpacePrivileges;
+	}
+
+	@Override
+	public List<String> batchAddDashboardUserToDocumentSpace(UUID documentSpaceId, MultipartFile file) {
+
+		Set<DocumentSpaceDashboardMemberRequestDto> membersToAdd = new HashSet<>();
+		List<String> errorList = new ArrayList<>();
+
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		Set<String> membersInSpace = documentSpace.getDashboardUsers().stream().map(DashboardUser::getEmail).collect(Collectors.toSet());
+
+		try (CSVReader csvReader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
+
+			List<String[]> strings = csvReader.readAll();
+			for (int i = 0; i < strings.size(); i++) {
+				if(i == 0){
+					validateCSVHeader(strings.get(i), errorList);
+				}else if(strings.get(i).length != 0){
+					DocumentSpaceDashboardMemberRequestDto newDashboardSpaceMember = processCSVRow(strings.get(i), i, errorList);
+					if(newDashboardSpaceMember.getEmail() == null){ // case where an error was found
+						continue;
+					}else if(membersInSpace.contains(newDashboardSpaceMember.getEmail())){ // case for email exists already
+						errorList.add(String.format("Unable to add user with email %s, they are already a part of the space", newDashboardSpaceMember.getEmail()));
+					}else if(membersToAdd.stream().anyMatch(m->m.getEmail().equals(newDashboardSpaceMember.getEmail()))){ // case where email was found in the csv previously
+						errorList.add("Duplicate email found on row " + (i + 1));
+					}else{
+						membersToAdd.add(newDashboardSpaceMember);
+					}
+				}
+			}
+		} catch (IOException e) {
+			throw new BadRequestException("Failed retrieving uploaded file");
+		}
+
+		if(errorList.isEmpty()){
+			batchAddDashboardUserToDocumentSpace(documentSpace, membersToAdd);
+		}
+
+		return  errorList;
+	}
+
+	private void validateCSVHeader(String[] row, List<String> errorList){
+
+		if(!row[0].trim().equalsIgnoreCase("email")){
+			errorList.add("Improper first CSV header: email");
+		}else if(!row[1].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.READ.toString())){
+			errorList.add("Improper second CSV header: read");
+		}else if(!row[2].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.WRITE.toString())){
+			errorList.add("Improper third CSV header: write");
+		}else if(!row[3].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.MEMBERSHIP.toString())){
+			errorList.add("Improper fourth CSV header: membership");
+		}
+	}
+
+	private DocumentSpaceDashboardMemberRequestDto processCSVRow(String[] row, int i, List<String> errorList) {
+		int rowLength = row.length;
+		DocumentSpaceDashboardMemberRequestDto memberToAdd = DocumentSpaceDashboardMemberRequestDto.builder().privileges(new ArrayList<>()).build();
+		if (rowLength < 2) {
+			errorList.add("Improper minimum row length on row " + (i + 1));
+			return memberToAdd;
+		}
+
+		String email = row[0].trim();
+		if(email.equals("")){
+			errorList.add("Missing email on row " + (i + 1));
+			return memberToAdd;
+		}else{
+			memberToAdd.setEmail(email);
+		}
+
+
+		if (parseBooleanPrivilegeValue(row[1].trim())) {
+			memberToAdd.getPrivileges().add(DocumentSpacePrivilegeType.READ);
+		}
+		if (rowLength >= 3 && parseBooleanPrivilegeValue(row[2].trim())) {
+			memberToAdd.getPrivileges().add(DocumentSpacePrivilegeType.WRITE);
+		}
+		if (rowLength >= 4 && parseBooleanPrivilegeValue(row[3].trim())) {
+			memberToAdd.getPrivileges().add(DocumentSpacePrivilegeType.MEMBERSHIP);
+		}
+
+
+		return memberToAdd;
+	}
+
+	/**
+	 * Parse possible string values as a boolean
+	 * @param privilege boolean input value as a string
+	 * @return boolean true if string is valid and parsed as true
+	 * 			else returns false
+	 */
+	private boolean parseBooleanPrivilegeValue(String privilege){
+		return privilege.equalsIgnoreCase("true") || privilege.equalsIgnoreCase("yes") || privilege.equals("1");
 	}
 }
