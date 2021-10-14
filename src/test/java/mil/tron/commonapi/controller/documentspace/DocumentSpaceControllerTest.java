@@ -1,7 +1,11 @@
 package mil.tron.commonapi.controller.documentspace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceCreateFolderDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +26,8 @@ import java.io.FileInputStream;
 import java.util.*;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -87,5 +93,47 @@ class DocumentSpaceControllerTest {
 
 
         Assert.assertEquals(1, result.size());
+    }
+
+    @Test
+    void testFolderCreateEndpoint() throws Exception {
+
+        Mockito.when(documentSpaceService.createFolder(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(FilePathSpec.builder().build());
+
+        mockMvc.perform(post(ENDPOINT +"spaces/{id}/folders", documentSpaceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                    .folderName("newfolder")
+                    .path("/")
+                    .build())))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void testFolderDeleteEndpoint() throws Exception {
+
+        Mockito.doNothing().when(documentSpaceService).deleteFolder(Mockito.any(UUID.class), Mockito.anyString());
+
+        mockMvc.perform(delete(ENDPOINT +"spaces/{id}/folders", documentSpaceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(DocumentSpacePathDto.builder()
+                        .path("/newfolder")
+                        .build())))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testFolderListEndpoint() throws Exception {
+
+        Mockito.when(documentSpaceService.getFolderContents(Mockito.any(UUID.class), Mockito.anyString()))
+                .thenReturn(FilePathSpecWithContents.builder().build());
+
+        mockMvc.perform(get(ENDPOINT +"spaces/{id}/contents", documentSpaceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(DocumentSpacePathDto.builder()
+                        .path("/newfolder")
+                        .build())))
+                .andExpect(status().isOk());
     }
 }

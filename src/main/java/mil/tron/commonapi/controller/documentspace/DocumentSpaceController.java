@@ -357,12 +357,39 @@ public class DocumentSpaceController {
         		.ok(documentSpaceService.listFiles(id, continuation, limit));
     }
 
+	@Operation(summary = "Creates a new folder within a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation - folder created",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceCreateFolderDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Folder with provided name already exists at that path in this document space",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@PostMapping("/spaces/{id}/folders")
 	public ResponseEntity<FilePathSpec> createFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpaceCreateFolderDto dto) {
 		return new ResponseEntity<>(documentSpaceService.createFolder(id, dto.getPath(), dto.getFolderName()), HttpStatus.CREATED);
 	}
 
+	@Operation(summary = "Deletes a folder at a given path", description = "Deletes a folder and all its files and subfolders.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful deletion",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceCreateFolderDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/folders")
 	public ResponseEntity<Void> deleteFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpacePathDto dto) {
@@ -370,6 +397,19 @@ public class DocumentSpaceController {
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
+	@Operation(summary = "List folders and files at given path", description = "Lists folders and files contained " +
+			"within given folder path - one level deep (does not recurse into any sub-folders)")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation - folder created",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceCreateFolderDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
 	@GetMapping("/spaces/{id}/contents")
 	public ResponseEntity<FilePathSpecWithContents> dumpContentsAtPath(@PathVariable UUID id, @RequestParam(value = "path", defaultValue = "") String path) {
