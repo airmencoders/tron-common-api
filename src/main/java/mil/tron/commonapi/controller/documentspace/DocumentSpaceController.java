@@ -12,8 +12,12 @@ import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+import mil.tron.commonapi.service.documentspace.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.FilePathSpecWithContents;
+import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
@@ -23,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -179,6 +184,11 @@ public class DocumentSpaceController {
                                       @RequestParam(value = "path", defaultValue = "") String path,
                                       @RequestPart("file") MultipartFile file) {
 
+		DocSpaceFolderOrFilenameValidator validator = new DocSpaceFolderOrFilenameValidator();
+		if (!validator.isValid(file.getOriginalFilename(), null)) {
+			throw new BadRequestException("Invalid filename");
+		}
+
 		documentSpaceService.uploadFile(id, path, file);
 		 
         Map<String, String> result = new HashMap<>();
@@ -215,7 +225,7 @@ public class DocumentSpaceController {
                 .body(response);
     }
     
-    @Operation(summary = "Download multiple files from a Document Space", description = "Downloads multiple files from a space as a zip file")
+    @Operation(summary = "Download chosen files from a Document Space folder", description = "Downloads multiple files from the same folder as a zip file")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation"),
@@ -298,31 +308,30 @@ public class DocumentSpaceController {
     @GetMapping("/spaces/{id}/files")
     public ResponseEntity<S3PaginationDto> listObjects(
     		@PathVariable UUID id,
-    		@RequestParam(value = "path", defaultValue = "") String path,
     		@Parameter(name = "continuation", description = "the continuation token", required = false)
 				@RequestParam(name = "continuation", required = false) String continuation,
 			@Parameter(name = "limit", description = "page limit", required = false)
 				@RequestParam(name = "limit", required = false) Integer limit) {
         return ResponseEntity
-        		.ok(documentSpaceService.listFiles(id, path, continuation, limit));
+        		.ok(documentSpaceService.listFiles(id, continuation, limit));
     }
 
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@PostMapping("/spaces/{id}/folders")
-	public ResponseEntity<Object> createFolder(@PathVariable UUID id, @RequestBody DocumentSpacePathSpecDto dto) {
+	public ResponseEntity<FilePathSpec> createFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpaceCreateFolderDto dto) {
 		return new ResponseEntity<>(documentSpaceService.createFolder(id, dto.getPath(), dto.getFolderName()), HttpStatus.CREATED);
 	}
 
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/folders")
-	public ResponseEntity<Object> deleteFolder(@PathVariable UUID id, @RequestBody DocumentSpacePathSpecDto dto) {
+	public ResponseEntity<Void> deleteFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpacePathDto dto) {
 		documentSpaceService.deleteFolder(id, dto.getPath());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
 	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
-	@GetMapping("/spaces/{id}/folders")
-	public ResponseEntity<Object> dumpContentsAtPath(@PathVariable UUID id, @RequestParam(value = "path", defaultValue = "") String path) {
+	@GetMapping("/spaces/{id}/contents")
+	public ResponseEntity<FilePathSpecWithContents> dumpContentsAtPath(@PathVariable UUID id, @RequestParam(value = "path", defaultValue = "") String path) {
 		return new ResponseEntity<>(documentSpaceService.getFolderContents(id, path), HttpStatus.OK);
 	}
 }

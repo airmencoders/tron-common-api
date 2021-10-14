@@ -2,6 +2,7 @@ package mil.tron.commonapi.service.documentspace;
 
 import com.google.common.collect.Lists;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 
 import javax.validation.constraints.NotBlank;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
  * and informative way (much like a DTO), where we have some helpful path information about
  * its parent (etc)
  */
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class FilePathSpec {
@@ -69,22 +70,6 @@ public class FilePathSpec {
     @Getter
     @Setter
     private String itemName;
-
-    /**
-     * List of files in this folder (one-level deep)
-     */
-    @Getter
-    @Setter
-    @Builder.Default
-    private List<String> files = new ArrayList<>();
-
-    /**
-     * List of sub-folders in this folder (one-level deep)
-     */
-    @Getter
-    @Setter
-    @Builder.Default
-    private List<DocumentSpaceFileSystemEntry> subFolderElements = new ArrayList<>();
 
     private String docSpaceQualifiedPath;
 

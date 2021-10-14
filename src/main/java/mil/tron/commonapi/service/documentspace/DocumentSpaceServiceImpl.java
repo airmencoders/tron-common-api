@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
+import javax.transaction.Transactional;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -164,6 +165,14 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return getFile(documentSpaceId, path, fileKey);
 	}
 
+	/**
+	 * Gets files (multiple) from the same document space folder
+	 * @param documentSpaceId document space UUID
+	 * @param path the path (the folder from which to download the files from)
+	 * @param fileKeys the selected files from the folder user wants downloaded
+	 * @return the S3 objects representing said files
+	 * @throws RecordNotFoundException
+	 */
 	@Override
 	public List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
@@ -235,42 +244,57 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				: this.createDocumentSpacePathPrefix(documentSpace.getId());
 
 		String fileKey = prefix + file;
+		this.deleteS3ObjectByKey(fileKey);
+	}
+
+	/**
+	 * Provides ability to delete a file by its fully qualified S3 key path
+	 * @param objKey
+	 * @throws RecordNotFoundException
+	 */
+	public void deleteS3ObjectByKey(String objKey) throws RecordNotFoundException {
 		try {
-			documentSpaceClient.deleteObject(bucketName, fileKey);
+			documentSpaceClient.deleteObject(bucketName, objKey);
 		} catch (AmazonServiceException ex) {
 			if (ex.getStatusCode() == 404) {
-				throw new RecordNotFoundException(String.format("File to delete: %s does not exist", fileKey));
+				throw new RecordNotFoundException(String.format("File to delete: %s does not exist", objKey));
 			}
 
 			throw ex;
 		}
-
 	}
 
+	@Transactional
 	@Override
 	public FilePathSpec createFolder(UUID documentSpaceId, String path, String name) {
 		return documentSpaceFileSystemService.convertFileSystemEntityToFilePathSpec(
 				documentSpaceFileSystemService.addFolder(documentSpaceId, name, path));
 	}
 
+	@Transactional
 	@Override
 	public void deleteFolder(UUID documentSpaceId, String path) {
 		documentSpaceFileSystemService.deleteFolder(documentSpaceId, path);
 	}
 
 	@Override
-	public FilePathSpec getFolderContents(UUID documentSpaceId, String path) {
-		return documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+	public FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path) {
+		return documentSpaceFileSystemService.getFilesAndFoldersAtPath(documentSpaceId, path);
 	}
 
+	/**
+	 * Lists ALL files in the identified space - starting at root of the space.
+	 * @param documentSpaceId doc space ID
+	 * @param continuationToken
+	 * @param limit
+	 * @return
+	 * @throws RecordNotFoundException
+	 */
 	@Override
-	public S3PaginationDto listFiles(UUID documentSpaceId, String path, String continuationToken, @Nullable Integer limit)
+	public S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, @Nullable Integer limit)
 			throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
-		String prefix = !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
-				? spec.getDocSpaceQualifiedPath()
-				: this.createDocumentSpacePathPrefix(documentSpace.getId());
+		String prefix = this.createDocumentSpacePathPrefix(documentSpace.getId());
 
 		if (limit == null) {
 			limit = 20;
@@ -320,8 +344,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	public List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String prefix) {
 		List<S3Object> files = new ArrayList<>();
 		getDocumentSpaceOrElseThrow(documentSpaceId);
-		ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-				.withPrefix(prefix);
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, prefix);
+		ListObjectsV2Request request = new ListObjectsV2Request()
+				.withBucketName(bucketName)
+				.withPrefix(spec.getDocSpaceQualifiedPath())  // get the path in UUID form
+				.withDelimiter(DocumentSpaceFileSystemServiceImpl.PATH_SEP);  // make sure we get only one-level deep
 
 		ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
 		boolean hasNext = true;

@@ -1,16 +1,22 @@
 package mil.tron.commonapi.service.documentspace;
 
 import com.amazonaws.services.s3.model.S3Object;
+import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSystemService {
@@ -92,14 +98,29 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 .fullPathSpec(pathAccumulator.toString())
                 .uuidList(uuidList)
                 .parentFolderId(parentFolderId)
-                .subFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
-                        spaceId,
-                        parentFolderId,
-                        uuidList.isEmpty() ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID) : uuidList.get(uuidList.size() - 1)))
-                .files(documentSpaceService.getAllFilesInFolderSummaries(spaceId, lookupPath))
                 .build();
     }
 
+    @Override
+    public FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path) {
+        FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, path);
+        FilePathSpecWithContents contents = new DtoMapper().map(spec, FilePathSpecWithContents.class);
+        contents.setFiles(extractFilesFromPath(documentSpaceService.getAllFilesInFolderSummaries(spaceId, spec.getFullPathSpec())));
+        contents.setSubFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
+                spaceId,
+                spec.getParentFolderId(),
+                spec.getUuidList().isEmpty()
+                    ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID)
+                    : spec.getUuidList().get(spec.getUuidList().size() - 1)));
+
+        return contents;
+    }
+
+    private List<String> extractFilesFromPath(List<String> paths) {
+        return paths.stream()
+                .map(item -> Path.of(item).getFileName().toString())
+                .collect(Collectors.toList());
+    }
 
     /**
      * Utility to take a raw file system entry entity and convert it to a FilePathSpec so that
@@ -139,11 +160,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 .fullPathSpec(pathAccumulator.toString())
                 .uuidList(uuidList)
                 .parentFolderId(entity.getParentEntryId())
-                .files(documentSpaceService.getAllFilesInFolderSummaries(entity.getDocumentSpaceId(), pathAccumulator.toString()))
-                .subFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
-                        entity.getDocumentSpaceId(),
-                        entity.getParentEntryId(),
-                        entity.getItemId()))
                 .build();
     }
 
@@ -254,14 +270,20 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     @Override
     public void deleteFolder(UUID spaceId, String path) {
         checkSpaceIsValid(spaceId);
+        UUID lastIdToDelete = parsePathToFilePathSpec(spaceId, path).getItemId();  // this is the last element to delete
+                                                                                    // which is the 'root' of the given path
         deleteParentDirectories(dumpElementTree(spaceId, path));
-        repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(spaceId, parsePathToFilePathSpec(spaceId, path).getItemId());
+        repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(spaceId, lastIdToDelete);
     }
 
     private void deleteParentDirectories(FileSystemElementTree tree) {
 
         // walk the tree depth-first and delete on the way up
         if (tree.getNodes() == null || tree.getNodes().isEmpty()) {
+            // delete files before the folder
+            for (S3Object obj : tree.getFiles()) {
+                documentSpaceService.deleteS3ObjectByKey(obj.getKey());
+            }
             repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(tree.getValue().getDocumentSpaceId(), tree.getValue().getItemId());
             return;
         }
@@ -269,5 +291,19 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         for (FileSystemElementTree node : tree.getNodes()) {
             deleteParentDirectories(node);
         }
+    }
+
+    /**
+     * Resolves a fully qualified path + filename to what it really looks like (its prefix + filename)
+     * in the minio bucket
+     * @param spaceId doc space UUID
+     * @param pathAndFile the path + file (e.g "/test.txt" or "/notes/notes.txt" or "someFileAtRootPath.txt")
+     * @return the converted path (e.g. "/doc-space-uuid/sub-folder-uuid/notes.txt")
+     */
+    @Override
+    public String resolveFullPathAndFileToUUIDPath(UUID spaceId, String pathAndFile) {
+        FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, FilenameUtils.getPath(pathAndFile));
+        return "/" + spec.getFullPathSpec() + "/" + FilenameUtils.getName(pathAndFile);
+
     }
 }
