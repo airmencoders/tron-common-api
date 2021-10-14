@@ -460,27 +460,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return documentSpaceId.toString() + "/";
 	}
 
-	/**
-	 * Writes an S3 Object to the output stream. This will close the input stream of
-	 * the S3 Object.
-	 *
-	 * @param zipOutputStream output stream
-	 * @param s3Object        {@link S3Object} to write to output stream
-	 */
-	private void insertS3ObjectZipEntry(ZipOutputStream zipOutputStream, S3Object s3Object) {
-		ZipEntry entry = new ZipEntry(s3Object.getKey());
-
-		try (S3ObjectInputStream dataStream = s3Object.getObjectContent()) {
-			zipOutputStream.putNextEntry(entry);
-
-			dataStream.transferTo(zipOutputStream);
-
-			zipOutputStream.closeEntry();
-		} catch (IOException e) {
-			log.warn("Failed to compress file: " + s3Object.getKey());
-		}
-	}
-
 	@Override
 	public void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceDashboardMemberDto) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);

@@ -72,8 +72,6 @@ public class FilePathSpec {
     @Setter
     private String itemName;
 
-    private String docSpaceQualifiedPath;
-
     /**
      * Returns the minio-ready-path up to and including this element
      * example - `doc-space-uuid/element-uuid/element-uuid
