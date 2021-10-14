@@ -165,11 +165,27 @@ class DocumentSpaceServiceImplTest {
 
 	@Test
 	void testListSpaces() {
-		Mockito.when(documentSpaceRepo.findAllDynamicBy(DocumentSpaceResponseDto.class)).thenReturn(List.of());
-		assertEquals(0, documentService.listSpaces().size());
-
+		DashboardUser dashboardUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dashboard@user.com")
+				.emailAsLower("dashboard@user.com")
+				.build();
+		
+		// Test Dashboard Admin should get all
+		Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
+		dashboardUser.setPrivileges(Set.of(new Privilege(1L, "DASHBOARD_ADMIN")));
 		Mockito.when(documentSpaceRepo.findAllDynamicBy(DocumentSpaceResponseDto.class)).thenReturn(List.of(responseDto));
-		assertEquals(1, documentService.listSpaces().size());
+		assertThat(documentService.listSpaces(dashboardUser.getEmail())).hasSize(1);
+
+		// Test that non-Dashboard Admin should only get by their id
+		Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
+		dashboardUser.setPrivileges(Set.of());
+		Mockito.when(documentSpaceRepo.findAllDynamicByDashboardUsers_Id(dashboardUser.getId(), DocumentSpaceResponseDto.class)).thenReturn(List.of(responseDto));
+		assertThat(documentService.listSpaces(dashboardUser.getEmail())).hasSize(1);
+		
+		// Test for exception when Dashboard User not found
+		Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(null);
+		assertThrows(RecordNotFoundException.class, () -> documentService.listSpaces(dashboardUser.getEmail()));
 	}
 
 	@Test

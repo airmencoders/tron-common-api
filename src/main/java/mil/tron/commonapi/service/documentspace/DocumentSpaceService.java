@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public interface DocumentSpaceService {
-    List<DocumentSpaceResponseDto> listSpaces();
+    List<DocumentSpaceResponseDto> listSpaces(String username);
     DocumentSpaceResponseDto createSpace(DocumentSpaceRequestDto dto);
     
     /**

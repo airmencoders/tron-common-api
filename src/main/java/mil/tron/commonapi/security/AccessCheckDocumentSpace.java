@@ -9,4 +9,5 @@ public interface AccessCheckDocumentSpace {
 	boolean hasWriteAccess(Authentication authentication, UUID documentSpaceId);
 	boolean hasReadAccess(Authentication authentication, UUID documentSpaceId);
 	boolean hasMembershipAccess(Authentication authentication, UUID documentSpaceId);
+	boolean hasDocumentSpaceAccess(Authentication authentication);
 }

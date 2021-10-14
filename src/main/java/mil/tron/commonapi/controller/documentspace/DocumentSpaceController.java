@@ -55,20 +55,20 @@ public class DocumentSpaceController {
 		return headers;
 	}
 
-    @Operation(summary = "Retrieves all document spaces")
+    @Operation(summary = "Retrieves all document spaces for the requesting user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                 description = "Successful operation",
                 content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDtoResponseWrapper.class))),
             @ApiResponse(responseCode = "403",
-            	description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+            	description = "Forbidden (Requires DASHBOARD_ADMIN or DOCUMENT_SPACE_USER)",
                 content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @WrappedEnvelopeResponse
-    @PreAuthorizeDashboardAdmin
+    @PreAuthorize("@accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication) and #principal != null")
 	@GetMapping("/spaces")
-    public ResponseEntity<List<DocumentSpaceResponseDto>> getSpaces() {
-	    return new ResponseEntity<>(documentSpaceService.listSpaces(), HttpStatus.OK);
+    public ResponseEntity<List<DocumentSpaceResponseDto>> getSpaces(Principal principal) {
+	    return new ResponseEntity<>(documentSpaceService.listSpaces(principal.getName()), HttpStatus.OK);
     }
 
     @Operation(summary = "Creates a Document Space", description = "Creates a Document Space")

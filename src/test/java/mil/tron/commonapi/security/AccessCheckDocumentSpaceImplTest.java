@@ -14,6 +14,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 
 import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeService;
 import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeType;
+import mil.tron.commonapi.service.documentspace.DocumentSpaceServiceImpl;
 
 @SpringBootTest(properties = { "minio.enabled=true" })
 class AccessCheckDocumentSpaceImplTest {
@@ -123,6 +124,32 @@ class AccessCheckDocumentSpaceImplTest {
 		@WithMockDocumentSpaceUser(documentSpaceId = ID, withPrivileges = { DocumentSpacePrivilegeType.MEMBERSHIP })
 		void membershipAccess_shouldReturnFalse_whenInvalidId() {
 			assertThat(accessCheck.hasMembershipAccess(SecurityContextHolder.getContext().getAuthentication(), null)).isFalse();
+		}
+	}
+	
+	@Nested
+	class HasDocumentSpaceAccessTest {
+		@Test
+		@WithMockUser(authorities = {DocumentSpaceServiceImpl.DOCUMENT_SPACE_USER_PRIVILEGE})
+		void hasDocumentSpaceAccess_shouldReturnTrue_whenAuthUserHasDocumentSpacePrivilege() {
+			assertThat(accessCheck.hasDocumentSpaceAccess(SecurityContextHolder.getContext().getAuthentication())).isTrue();
+		}
+		
+		@Test
+		@WithMockUser(authorities = {"DASHBOARD_ADMIN"})
+		void hasDocumentSpaceAccess_shouldReturnTrue_whenAuthUserIsDashboardAdmin() {
+			assertThat(accessCheck.hasDocumentSpaceAccess(SecurityContextHolder.getContext().getAuthentication())).isTrue();
+		}
+		
+		@Test
+		@WithMockUser()
+		void hasDocumentSpaceAccess_shouldReturnFalse_whenAuthUserIsNotDashboardAdminAndIsNotDocumentSpacePrivilege() {
+			assertThat(accessCheck.hasDocumentSpaceAccess(SecurityContextHolder.getContext().getAuthentication())).isFalse();
+		}
+
+		@Test
+		void hasDocumentSpaceAccess_shouldReturnFalse_whenNoAuthUser() {
+			assertThat(accessCheck.hasDocumentSpaceAccess(SecurityContextHolder.getContext().getAuthentication())).isFalse();
 		}
 	}
 }
