@@ -1,7 +1,6 @@
 package mil.tron.commonapi.controller.documentspace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,13 +42,13 @@ class DocumentSpaceControllerTest {
     @Test
     void removesDashboardUserFromDocumentSpace() throws Exception {
 
-        String userEmail = "dev@tron.dev";
+        String[] userEmails = new String[] {"dev@tron.dev"};
 
-        Mockito.doNothing().when(documentSpaceService).removeDashboardUserFromDocumentSpace(documentSpaceId, userEmail);
+        Mockito.doNothing().when(documentSpaceService).removeDashboardUserFromDocumentSpace(documentSpaceId, userEmails);
 
         mockMvc.perform(delete(ENDPOINT +"spaces/"+ "{id}"+"/users/dashboard", documentSpaceId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(userEmail)))
+                .content(OBJECT_MAPPER.writeValueAsString(userEmails)))
                 .andExpect(status().isNoContent());
     }
 }

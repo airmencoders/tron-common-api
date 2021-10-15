@@ -55,5 +55,5 @@ public interface DocumentSpaceService {
     
     List<DocumentSpacePrivilegeDto> getDashboardUserPrivilegesForDocumentSpace(UUID documentSpaceId, String dashboardUserEmail);
 
-    void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String email);
+    void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String[] emails);
 }
