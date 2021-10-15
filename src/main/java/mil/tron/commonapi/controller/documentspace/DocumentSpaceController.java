@@ -12,8 +12,12 @@ import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
+import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
@@ -28,8 +32,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.validation.Valid;
-import java.io.IOException;
-
 import java.security.Principal;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -220,9 +222,15 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@PostMapping(value = "/spaces/{id}/files/upload", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public Map<String, String> upload(@PathVariable UUID id,
+                                      @RequestParam(value = "path", defaultValue = "") String path,
                                       @RequestPart("file") MultipartFile file) {
 
-		documentSpaceService.uploadFile(id, file);
+		DocSpaceFolderOrFilenameValidator validator = new DocSpaceFolderOrFilenameValidator();
+		if (!validator.isValid(file.getOriginalFilename(), null)) {
+			throw new BadRequestException("Invalid filename");
+		}
+
+		documentSpaceService.uploadFile(id, path, file);
 		 
         Map<String, String> result = new HashMap<>();
         result.put("key", file.getOriginalFilename());
@@ -243,9 +251,10 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     @GetMapping("/spaces/{id}/files/download/single")
     public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
+                                                            @RequestParam(value = "path", defaultValue = "") String path,
                                                             @RequestParam("file") String file) {
 
-        S3Object s3Data = documentSpaceService.downloadFile(id, file);
+        S3Object s3Data = documentSpaceService.downloadFile(id, path, file);
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
@@ -257,7 +266,7 @@ public class DocumentSpaceController {
                 .body(response);
     }
     
-    @Operation(summary = "Download multiple files from a Document Space", description = "Downloads multiple files from a space as a zip file")
+    @Operation(summary = "Download chosen files from a chosen Document Space folder", description = "Downloads multiple files from the same folder into a zip file")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation"),
@@ -271,9 +280,10 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     @GetMapping("/spaces/{id}/files/download")
     public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable UUID id,
+                                                               @RequestParam(value = "path", defaultValue = "") String path,
                                                                @RequestParam("files") Set<String> files) {
-        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, files, out);
-        
+        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, path, files, out);
+
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
@@ -317,8 +327,9 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
     @DeleteMapping("/spaces/{id}/files/delete")
     public ResponseEntity<Object> delete(@PathVariable UUID id,
+                       @RequestParam(value = "path", defaultValue = "") String path,
                        @RequestParam("file") String file) {
-    	documentSpaceService.deleteFile(id, file);
+    	documentSpaceService.deleteFile(id, path, file);
     	return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -337,7 +348,7 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     @GetMapping("/spaces/{id}/files")
     public ResponseEntity<S3PaginationDto> listObjects(
-    		@PathVariable UUID id, 
+    		@PathVariable UUID id,
     		@Parameter(name = "continuation", description = "the continuation token", required = false)
 				@RequestParam(name = "continuation", required = false) String continuation,
 			@Parameter(name = "limit", description = "page limit", required = false)
@@ -345,4 +356,86 @@ public class DocumentSpaceController {
         return ResponseEntity
         		.ok(documentSpaceService.listFiles(id, continuation, limit));
     }
+
+	@Operation(summary = "Creates a new folder within a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation - folder created",
+					content = @Content(schema = @Schema(implementation = FilePathSpec.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Folder with provided name already exists at that path in this document space",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@PostMapping("/spaces/{id}/folders")
+	public ResponseEntity<FilePathSpec> createFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpaceCreateFolderDto dto) {
+		return new ResponseEntity<>(documentSpaceService.createFolder(id, dto.getPath(), dto.getFolderName()), HttpStatus.CREATED);
+	}
+
+	@Operation(summary = "Deletes a folder at a given path", description = "Deletes a folder and all its files and subfolders.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful deletion",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceCreateFolderDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/folders")
+	public ResponseEntity<Void> deleteFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpacePathDto dto) {
+		documentSpaceService.deleteFolder(id, dto.getPath());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "List folders and files at given path", description = "Lists folders and files contained " +
+			"within given folder path - one level deep (does not recurse into any sub-folders)")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation - folder created",
+					content = @Content(schema = @Schema(implementation = FilePathSpecWithContents.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+	@GetMapping("/spaces/{id}/contents")
+	public ResponseEntity<FilePathSpecWithContents> dumpContentsAtPath(@PathVariable UUID id,
+																	   @RequestParam(value = "path", defaultValue = "") String path) {
+		return new ResponseEntity<>(documentSpaceService.getFolderContents(id, path), HttpStatus.OK);
+	}
+
+	@Operation(summary = "Renames a folder at a given path")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful rename",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceRenameFolderDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Name conflict",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@PutMapping("/spaces/{id}/folders")
+	public ResponseEntity<Void> renameFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpaceRenameFolderDto dto) {
+		documentSpaceService.renameFolder(id, dto.getExistingFolderPath(), dto.getNewName());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
 }

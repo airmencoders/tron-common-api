@@ -4,6 +4,8 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,14 +25,21 @@ public interface DocumentSpaceService {
      */
     void deleteSpace(UUID documentSpaceId);
 
-	S3Object getFile(UUID documentSpaceId, String key);
-	S3Object downloadFile(UUID documentSpaceId, String fileKey);
+	S3Object getFile(UUID documentSpaceId, String path, String key);
+	S3Object downloadFile(UUID documentSpaceId, String path, String fileKey);
 	void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out);
-	List<S3Object> getFiles(UUID documentSpaceId, Set<String> fileKeys);
-	void downloadAndWriteCompressedFiles(UUID documentSpaceId, Set<String> fileKeys, OutputStream out);
-	void uploadFile(UUID documentSpaceId, MultipartFile file);
-    void deleteFile(UUID documentSpaceId, String fileKey);
+	List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys);
+	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out);
+	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
+    void deleteFile(UUID documentSpaceId, String path, String fileKey);
+    void renameFolder(UUID documentSpaceId, String pathAndFolder, String newFolderName);
+    void deleteS3ObjectByKey(String objKey);
     S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit);
+    List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String prefix);
+    List<String> getAllFilesInFolderSummaries(UUID documentSpaceId, String prefix);
+    FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
+    void deleteFolder(UUID documentSpaceId, String path);
+    FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path);
     
     DocumentDto convertS3ObjectToDto(S3Object objSummary);
     DocumentDto convertS3SummaryToDto(String spaceName, UUID documentSpaceId, S3ObjectSummary objSummary);

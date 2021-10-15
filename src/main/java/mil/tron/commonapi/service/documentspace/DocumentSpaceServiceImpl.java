@@ -7,6 +7,11 @@ import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
+import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
 import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
@@ -25,6 +30,10 @@ import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.DashboardUserService;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
+import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
+import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -34,6 +43,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
+import javax.transaction.Transactional;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.*;
 import java.util.*;
 import java.util.logging.Logger;
@@ -53,6 +66,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	private final DocumentSpaceRepository documentSpaceRepository;
 	private final DashboardUserRepository dashboardUserRepository;
+	private final DocumentSpaceFileSystemService documentSpaceFileSystemService;
 
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 	private final PrivilegeRepository privilegeRepository;
@@ -70,13 +84,16 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
 			DocumentSpacePrivilegeService documentSpacePrivilegeService,
 			DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService,
-			PrivilegeRepository privilegeRepository) {
+			PrivilegeRepository privilegeRepository, DocumentSpaceFileSystemService documentSpaceFileSystemService) {
+
 		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
 		this.bucketName = bucketName;
 
 		this.documentSpaceRepository = documentSpaceRepository;
 		this.dashboardUserRepository = dashboardUserRepository;
+
+		this.documentSpaceFileSystemService = documentSpaceFileSystemService;
 
 		this.documentSpacePrivilegeService = documentSpacePrivilegeService;
 		this.dashboardUserService = dashboardUserService;
@@ -159,64 +176,87 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpaceRepository.deleteById(documentSpace.getId());
 	}
 
-	@Override
-	public S3Object getFile(UUID documentSpaceId, String key) throws RecordNotFoundException {
+	private String validateDocSpaceAndReturnPrefix(UUID documentSpaceId, String path) {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-
-		return documentSpaceClient.getObject(bucketName, createDocumentSpacePathPrefix(documentSpace.getId()) + key);
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		return !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
+				? spec.getDocSpaceQualifiedPath()
+				: this.createDocumentSpacePathPrefix(documentSpace.getId());
 	}
 
 	@Override
-	public S3Object downloadFile(UUID documentSpaceId, String fileKey) throws RecordNotFoundException {
-		return getFile(documentSpaceId, fileKey);
+	public S3Object getFile(UUID documentSpaceId, String path, String key) throws RecordNotFoundException {
+		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
+		return documentSpaceClient.getObject(bucketName, prefix + key);
 	}
 
 	@Override
-	public List<S3Object> getFiles(UUID documentSpaceId, Set<String> fileKeys) throws RecordNotFoundException {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+	public S3Object downloadFile(UUID documentSpaceId, String path, String fileKey) throws RecordNotFoundException {
+		return getFile(documentSpaceId, path, fileKey);
+	}
 
+	/**
+	 * Gets files (multiple) from the same document space folder
+	 * @param documentSpaceId document space UUID
+	 * @param path the path (the folder from which to download the files from)
+	 * @param fileKeys the selected files from the folder user wants downloaded
+	 * @return the S3 objects representing said files
+	 * @throws RecordNotFoundException
+	 */
+	@Override
+	public List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys) throws RecordNotFoundException {
+		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
 		return fileKeys.stream().map(
-				item -> documentSpaceClient.getObject(bucketName, createDocumentSpacePathPrefix(documentSpace.getId()) + item))
+				item -> documentSpaceClient.getObject(bucketName, prefix + item))
 				.collect(Collectors.toList());
 	}
 
+	/**
+	 * Writes chosen files from the same doc space folder - into a downloadable zip file
+	 * @param documentSpaceId the document space UUID
+	 * @param path the plain-english path of the file in relation to the doc space
+	 * @param fileKeys the list of filenames from this folder to zip up
+	 * @param out the zip outstream that sends contents to the client
+	 * @throws RecordNotFoundException
+	 */
 	@Override
-	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, Set<String> fileKeys, OutputStream out)
+	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out)
 			throws RecordNotFoundException {
-		List<S3Object> files = getFiles(documentSpaceId, fileKeys);
 
-		try (BufferedOutputStream bos = new BufferedOutputStream(out); ZipOutputStream zipOut = new ZipOutputStream(bos);) {
-			files.forEach(item -> {
-				ZipEntry entry = new ZipEntry(item.getKey());
+		// make sure given path starts with a "/"
+		String searchPath = (path.startsWith(DocumentSpaceFileSystemServiceImpl.PATH_SEP) ? "" : DocumentSpaceFileSystemServiceImpl.PATH_SEP) + path;
+		// dump all files and folders at this path and down
+		FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId, searchPath);
+		// flatten the tree
+		List<S3ObjectAndFilename> objects = documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(contentsAtPath);
+		// only take the ones we selected in the provided list (items whose prefix matches our path)
+		List<S3ObjectAndFilename> itemsToGet = objects.stream()
+				.filter(item -> {
+					for (String fileKey : fileKeys) {
+						if (item.getPathAndFilename().startsWith(searchPath +
+								(searchPath.endsWith(DocumentSpaceFileSystemServiceImpl.PATH_SEP) ? "" :  DocumentSpaceFileSystemServiceImpl.PATH_SEP)
+								+ fileKey)) {
+							return true;
+						}
+					}
+					return false;
+				})
+				.collect(Collectors.toList());
 
-				try (S3ObjectInputStream dataStream = item.getObjectContent()) {
-					zipOut.putNextEntry(entry);
-
-					dataStream.transferTo(zipOut);
-
-					zipOut.closeEntry();
-				} catch (IOException e) {
-					log.warn("Failed to compress file: " + item.getKey());
-				}
-			});
-
-			zipOut.finish();
-		} catch (IOException e1) {
-			log.warn("Failure occurred closing zip output stream");
-		}
+		writeZipFile(out, itemsToGet);
 	}
 
 	@Override
-	public void uploadFile(UUID documentSpaceId, MultipartFile file) throws RecordNotFoundException {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-
+	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) throws RecordNotFoundException {
+		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
 		metaData.setContentLength(file.getSize());
 
+
 		try {
 			Upload upload = documentSpaceTransferManager.upload(bucketName,
-					createDocumentSpacePathPrefix(documentSpace.getId()) + file.getOriginalFilename(), file.getInputStream(),
+					prefix + file.getOriginalFilename(), file.getInputStream(),
 					metaData);
 
 			upload.waitForCompletion();
@@ -226,33 +266,72 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public void deleteFile(UUID documentSpaceId, String file) throws RecordNotFoundException {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+	public void deleteFile(UUID documentSpaceId, String path, String file) throws RecordNotFoundException {
+		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
+		String fileKey = prefix + file;
+		this.deleteS3ObjectByKey(fileKey);
+	}
 
-		String fileKey = createDocumentSpacePathPrefix(documentSpace.getId()) + file;
+	@Override
+	public void renameFolder(UUID documentSpaceId, String pathAndFolder, String newFolderName) {
+		documentSpaceFileSystemService.renameFolder(documentSpaceId, pathAndFolder, newFolderName);
+	}
+
+	/**
+	 * Provides ability to delete a file by its fully qualified S3 key path
+	 * @param objKey
+	 * @throws RecordNotFoundException
+	 */
+	public void deleteS3ObjectByKey(String objKey) throws RecordNotFoundException {
 		try {
-			documentSpaceClient.deleteObject(bucketName, fileKey);
+			documentSpaceClient.deleteObject(bucketName, objKey);
 		} catch (AmazonServiceException ex) {
 			if (ex.getStatusCode() == 404) {
-				throw new RecordNotFoundException(String.format("File to delete: %s does not exist", fileKey));
+				throw new RecordNotFoundException(String.format("File to delete: %s does not exist", objKey));
 			}
 
 			throw ex;
 		}
-
 	}
 
+	@Transactional
+	@Override
+	public FilePathSpec createFolder(UUID documentSpaceId, String path, String name) {
+		return documentSpaceFileSystemService.convertFileSystemEntityToFilePathSpec(
+				documentSpaceFileSystemService.addFolder(documentSpaceId, name, path));
+	}
+
+	@Transactional
+	@Override
+	public void deleteFolder(UUID documentSpaceId, String path) {
+		documentSpaceFileSystemService.deleteFolder(documentSpaceId, path);
+	}
+
+	@Override
+	public FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path) {
+		return documentSpaceFileSystemService.getFilesAndFoldersAtPath(documentSpaceId, path);
+	}
+
+	/**
+	 * Lists ALL files in the identified space - starting at root of the space.
+	 * @param documentSpaceId doc space ID
+	 * @param continuationToken
+	 * @param limit
+	 * @return
+	 * @throws RecordNotFoundException
+	 */
 	@Override
 	public S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, @Nullable Integer limit)
 			throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		String prefix = this.createDocumentSpacePathPrefix(documentSpace.getId());
 
 		if (limit == null) {
 			limit = 20;
 		}
 
 		ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-				.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId())).withMaxKeys(limit)
+				.withPrefix(prefix).withMaxKeys(limit)
 				.withContinuationToken(continuationToken);
 
 		ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
@@ -270,40 +349,88 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
 	public void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out) throws RecordNotFoundException {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		// dump all files and folders at this path and down
+		FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId, DocumentSpaceFileSystemServiceImpl.PATH_SEP);
+		// flatten the tree
+		List<S3ObjectAndFilename> objects = documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(contentsAtPath);
+		writeZipFile(out, objects);
+	}
 
-		try (BufferedOutputStream bos = new BufferedOutputStream(out); ZipOutputStream zipOut = new ZipOutputStream(bos);) {
-			ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-					.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId()));
+	/**
+	 * Private helper to write items to a zip file output stream
+	 * @param out outstream
+	 * @param objects list of S3ObjectAndFilename objects
+	 */
+	private void writeZipFile(OutputStream out, List<S3ObjectAndFilename> objects) {
+		try (BufferedOutputStream bos = new BufferedOutputStream(out);
+			 ZipOutputStream zipOut = new ZipOutputStream(bos)) {
 
-			ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
-			boolean hasNext = true;
-
-			do {
-				if (objectListing.getNextContinuationToken() == null) {
-					hasNext = false;
+			objects.forEach(item -> {
+				// add item to zip - creating the expected folder structure as we do
+				//  ensure zip folder entries do not have a leading slash since that creates warnings on
+				//  unzip on some systems - signature of possible zip-slip exploit
+				ZipEntry entry = new ZipEntry(item.getPathAndFileNameWithoutLeadingSlash());
+				try (S3ObjectInputStream dataStream = item.getS3Object().getObjectContent()) {
+					zipOut.putNextEntry(entry);
+					dataStream.transferTo(zipOut);
+					zipOut.closeEntry();
+				} catch (IOException e) {
+					log.warn("Failed to compress file: " + item.getPathAndFilename());
 				}
-
-				List<S3ObjectSummary> fileSummaries = objectListing.getObjectSummaries();
-
-				for (int i = 0; i < fileSummaries.size(); i++) {
-					S3ObjectSummary summaryItem = fileSummaries.get(i);
-
-					S3Object s3Object = documentSpaceClient.getObject(bucketName, summaryItem.getKey());
-
-					insertS3ObjectZipEntry(zipOut, s3Object);
-				}
-
-				if (hasNext) {
-					request = request.withContinuationToken(objectListing.getNextContinuationToken());
-					objectListing = documentSpaceClient.listObjectsV2(request);
-				}
-			} while (hasNext);
-
+			});
 			zipOut.finish();
 		} catch (IOException e1) {
 			log.warn("Failure occurred closing zip output stream");
 		}
+	}
+
+	/**
+	 * Gets all S3Objects (files) in a given "folder" (prefix) one-level deep
+	 * Prefix is the "path" leading up to and including the path from which to get a list of files
+	 * e.g. (/`doc-space-uuid`/`some-folder-uuid`/) would be a prefix
+	 * To get a list at the root level, prefix would just be (`/doc-space-uuid/`)
+	 * @param documentSpaceId doc space UUID
+	 * @param prefix prefix from doc space root up to and including the folder to look under
+	 * @return list of S3 objects (files)
+	 */
+	@Override
+	public List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String prefix) {
+		List<S3Object> files = new ArrayList<>();
+		getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, prefix);
+		ListObjectsV2Request request = new ListObjectsV2Request()
+				.withBucketName(bucketName)
+				.withPrefix(spec.getDocSpaceQualifiedPath())  // get the path in UUID form
+				.withDelimiter(DocumentSpaceFileSystemServiceImpl.PATH_SEP);  // make sure we get only one-level deep
+
+		ListObjectsV2Result objectListing = documentSpaceClient.listObjectsV2(request);
+		boolean hasNext = true;
+
+		do {
+			if (objectListing.getNextContinuationToken() == null) {
+				hasNext = false;
+			}
+
+			List<S3ObjectSummary> fileSummaries = objectListing.getObjectSummaries();
+			for (S3ObjectSummary summaryItem : fileSummaries) {
+				files.add(documentSpaceClient.getObject(bucketName, summaryItem.getKey()));
+			}
+
+			if (hasNext) {
+				request = request.withContinuationToken(objectListing.getNextContinuationToken());
+				objectListing = documentSpaceClient.listObjectsV2(request);
+			}
+		} while (hasNext);
+
+		return files;
+	}
+
+	@Override
+	public List<String> getAllFilesInFolderSummaries(UUID documentSpaceId, String prefix) {
+		return this.getAllFilesInFolder(documentSpaceId, prefix)
+				.stream()
+				.map(item -> item.getKey())
+				.collect(Collectors.toList());
 	}
 
 	@Override
@@ -348,27 +475,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	protected String createDocumentSpacePathPrefix(UUID documentSpaceId) {
 		return documentSpaceId.toString() + "/";
-	}
-
-	/**
-	 * Writes an S3 Object to the output stream. This will close the input stream of
-	 * the S3 Object.
-	 * 
-	 * @param zipOutputStream output stream
-	 * @param s3Object        {@link S3Object} to write to output stream
-	 */
-	private void insertS3ObjectZipEntry(ZipOutputStream zipOutputStream, S3Object s3Object) {
-		ZipEntry entry = new ZipEntry(s3Object.getKey());
-
-		try (S3ObjectInputStream dataStream = s3Object.getObjectContent()) {
-			zipOutputStream.putNextEntry(entry);
-
-			dataStream.transferTo(zipOutputStream);
-
-			zipOutputStream.closeEntry();
-		} catch (IOException e) {
-			log.warn("Failed to compress file: " + s3Object.getKey());
-		}
 	}
 
 	@Override
@@ -434,7 +540,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
 	public Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId,
-			@Nullable Pageable pageable) throws RecordNotFoundException {
+																						   @Nullable Pageable pageable) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 
 		Page<DashboardUser> dashboardUsersPaged = dashboardUserRepository.findAllByDocumentSpaces_Id(documentSpace.getId(), pageable);

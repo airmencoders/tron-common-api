@@ -6,16 +6,7 @@ import java.util.UUID;
 import java.util.EnumMap;
 import java.util.HashSet;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.MapKey;
-import javax.persistence.MapKeyEnumerated;
-import javax.persistence.OneToMany;
+import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -93,6 +84,16 @@ public class DocumentSpace {
     	appClientUsers.remove(appClientUser);
     	appClientUser.getDocumentSpaces().remove(this);
     }
+
+	@Builder.Default
+	@Getter
+	@OneToMany(fetch = FetchType.EAGER)
+	@JoinColumn(name="doc_space_id", updatable = false, insertable = false)
+	private Set<DocumentSpaceFileSystemEntry> fileSystemEntries = new HashSet<>();
+
+	public boolean addFileSystemEntry(DocumentSpaceFileSystemEntry entry) {
+		return fileSystemEntries.add(entry);
+	}
     
     public void addPrivilege(DocumentSpacePrivilege privilege) {
     	privileges.put(privilege.getType(), privilege);

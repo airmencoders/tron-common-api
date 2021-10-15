@@ -33,8 +33,13 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
 import mil.tron.commonapi.service.DashboardUserService;
-import org.junit.Assert;
-import org.junit.jupiter.api.*;
+import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
+import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+import org.assertj.core.util.Lists;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -85,6 +90,9 @@ class DocumentSpaceServiceImplTest {
 	private DocumentSpacePrivilegeService documentSpacePrivilegeService;
 
 	@Mock
+	private DocumentSpaceFileSystemService documentSpaceFileSystemService;
+
+	@Mock
 	private DashboardUserService dashboardUserService;
 
 	@Mock
@@ -109,7 +117,7 @@ class DocumentSpaceServiceImplTest {
 		transferManager = TransferManagerBuilder.standard().withS3Client(amazonS3).build();
 
 		documentService = new DocumentSpaceServiceImpl(amazonS3, transferManager, BUCKET_NAME, documentSpaceRepo,
-				documentSpacePrivilegeService, dashboardUserRepository, dashboardUserService, privilegeRepository);
+				documentSpacePrivilegeService, dashboardUserRepository, dashboardUserService, privilegeRepository, documentSpaceFileSystemService);
 		s3Mock = new S3Mock.Builder().withPort(9002).withInMemoryBackend().build();
 
 		s3Mock.start();
@@ -195,7 +203,7 @@ class DocumentSpaceServiceImplTest {
 				fakeContent.getBytes());
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		documentService.uploadFile(entity.getId(), file);
+		documentService.uploadFile(entity.getId(), "", file);
 
 		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + "filename.txt")).isTrue();
@@ -219,7 +227,7 @@ class DocumentSpaceServiceImplTest {
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0))).isTrue();
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		documentService.deleteFile(entity.getId(), fileNames.get(0));
+		documentService.deleteFile(entity.getId(), "", fileNames.get(0));
 
 		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0))).isFalse();
@@ -254,7 +262,7 @@ class DocumentSpaceServiceImplTest {
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 20);
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		S3Object downloadFile = documentService.downloadFile(documentSpaceDto.getId(), fileNames.get(0));
+		S3Object downloadFile = documentService.downloadFile(documentSpaceDto.getId(), "", fileNames.get(0));
 
 		S3Object actual = amazonS3.getObject(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0));
@@ -270,7 +278,7 @@ class DocumentSpaceServiceImplTest {
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 5);
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		List<S3Object> downloadFiles = documentService.getFiles(documentSpaceDto.getId(), Set.copyOf(fileNames));
+		List<S3Object> downloadFiles = documentService.getFiles(documentSpaceDto.getId(), "", Set.copyOf(fileNames));
 
 		List<S3Object> fromS3 = new ArrayList<>();
 		for (int i = 0; i < fileNames.size(); i++) {
@@ -292,14 +300,53 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
 		DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
 
+		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(FileSystemElementTree.builder().build());
+
+		S3Object obj0 = new S3Object();
+		obj0.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file0.txt");
+		obj0.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+		S3Object obj1 = new S3Object();
+		obj1.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file1.txt");
+		obj1.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+		S3Object obj2 = new S3Object();
+		obj2.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file2.txt");
+		obj2.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+		S3Object obj3 = new S3Object();
+		obj3.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file3.txt");
+		obj3.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+		S3Object obj4 = new S3Object();
+		obj4.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file4.txt");
+		obj4.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+
+		Mockito.when(documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(Mockito.any(FileSystemElementTree.class)))
+				.thenReturn(Lists.newArrayList(
+						S3ObjectAndFilename.builder()
+								.s3Object(obj0)
+								.pathAndFilename("/file0.txt")
+								.build(),
+						S3ObjectAndFilename.builder()
+								.s3Object(obj1)
+								.pathAndFilename("/file1.txt")
+								.build(),
+						S3ObjectAndFilename.builder()
+								.s3Object(obj2)
+								.pathAndFilename("/file2.txt")
+								.build(),
+						S3ObjectAndFilename.builder()
+								.s3Object(obj3)
+								.pathAndFilename("/file3.txt")
+								.build(),
+						S3ObjectAndFilename.builder()
+								.s3Object(obj4)
+								.pathAndFilename("/file4.txt")
+								.build()));
+
+
 		String content = "fake content";
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 5);
-
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		documentService.downloadAndWriteCompressedFiles(documentSpaceDto.getId(), Set.copyOf(fileNames), output);
-
+		documentService.downloadAndWriteCompressedFiles(documentSpaceDto.getId(), "", Set.copyOf(fileNames), output);
 		assertThat(output.size()).isPositive();
 	}
 
@@ -309,12 +356,51 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
 		DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
 
+		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(FileSystemElementTree.builder().build());
+
+		S3Object obj0 = new S3Object();
+		obj0.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file0.txt");
+		obj0.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+		S3Object obj1 = new S3Object();
+		obj1.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file1.txt");
+		obj1.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+		S3Object obj2 = new S3Object();
+		obj2.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file2.txt");
+		obj2.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+		S3Object obj3 = new S3Object();
+		obj3.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file3.txt");
+		obj3.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+		S3Object obj4 = new S3Object();
+		obj4.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file4.txt");
+		obj4.setObjectContent(new ByteArrayInputStream(new byte[] {}));
+
+		Mockito.when(documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(Mockito.any(FileSystemElementTree.class)))
+				.thenReturn(Lists.newArrayList(
+						S3ObjectAndFilename.builder()
+							.s3Object(obj0)
+							.pathAndFilename("/file0.txt")
+							.build(),
+						S3ObjectAndFilename.builder()
+							.s3Object(obj1)
+							.pathAndFilename("/file1.txt")
+							.build(),
+						S3ObjectAndFilename.builder()
+							.s3Object(obj2)
+							.pathAndFilename("/file2.txt")
+							.build(),
+						S3ObjectAndFilename.builder()
+							.s3Object(obj3)
+							.pathAndFilename("/file3.txt")
+							.build(),
+						S3ObjectAndFilename.builder()
+							.s3Object(obj4)
+							.pathAndFilename("/file4.txt")
+							.build()));
+
 		String content = "fake content";
 		uploadDummyFilesUsingTransferManager(content, 5);
-
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
 		documentService.downloadAllInSpaceAndCompress(documentSpaceDto.getId(), output);
 
 		assertThat(output.size()).isPositive();
