@@ -223,7 +223,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		List<S3ObjectAndFilename> itemsToGet = objects.stream()
 				.filter(item -> {
 					for (String fileKey : fileKeys) {
-						if (item.getPathAndFilename().startsWith(searchPath + DocumentSpaceFileSystemServiceImpl.PATH_SEP + fileKey)) {
+						if (item.getPathAndFilename().startsWith(searchPath +
+								(searchPath.endsWith(DocumentSpaceFileSystemServiceImpl.PATH_SEP) ? "" :  DocumentSpaceFileSystemServiceImpl.PATH_SEP)
+								+ fileKey)) {
 							return true;
 						}
 					}

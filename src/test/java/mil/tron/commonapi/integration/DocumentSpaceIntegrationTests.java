@@ -692,6 +692,36 @@ public class DocumentSpaceIntegrationTests {
         assertTrue(contents.contains("docs/hello2.txt"));
         assertTrue(contents.contains("docs/lists/lists.txt"));
 
+        // test downloading all by selection
+        // should have this structure:
+        // / <root>
+        // |- docs/
+        // |  |- lists/
+        // |  |  |- lists.txt
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+        // |- hello3.txt
+        tmpdir = Files.createTempDir().getAbsolutePath();
+        zipFile = new File(tmpdir + File.separator + "files.zip");
+        fos = new FileOutputStream(zipFile);
+        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/", Set.of("hello.txt", "hello3.txt", "docs"), fos);
+        fos.close();
+
+        zf = new ZipFile(zipFile);
+        entries = zf.entries();
+        contents = new ArrayList<>();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            contents.add(entry.getName());
+        }
+        FileUtils.deleteDirectory(new File(tmpdir));
+        assertTrue(contents.contains("hello.txt"));
+        assertTrue(contents.contains("hello3.txt"));
+        assertTrue(contents.contains("docs/lists/lists.txt"));
+        assertTrue(contents.contains("docs/hello2.txt"));
+        assertTrue(contents.contains("docs/names.txt"));
+
         // test downloading the whole space - check directory integrity
         // should have this structure:
         // / <root>
