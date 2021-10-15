@@ -396,11 +396,11 @@ class DocumentSpaceServiceImplTest {
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
 			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
 
-			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), memberDto.getEmail());
+			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), new String[] {memberDto.getEmail()});
 
 			assertThat(entity.getDashboardUsers()).doesNotContain(dashboardUser);
 			assertThat(dashboardUser.getDocumentSpaces()).doesNotContain(entity);
-			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser.getEmail(),entity);
+			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser,entity);
 		}
 
 		@Test
@@ -408,12 +408,12 @@ class DocumentSpaceServiceImplTest {
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
 			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
 			Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
-
-			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), memberDto.getEmail());
+			
+			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), new String[] {memberDto.getEmail()});
 
 			assertThat(entity.getDashboardUsers()).doesNotContain(dashboardUser);
 			assertThat(dashboardUser.getDocumentSpaces()).doesNotContain(entity);
-			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser.getEmail(),entity);
+			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser,entity);
 			Mockito.verify(dashboardUserService).deleteDashboardUser(dashboardUser.getId());
 		}
 
@@ -425,12 +425,12 @@ class DocumentSpaceServiceImplTest {
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
 			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
 			Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
-
-			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), memberDto.getEmail());
+			
+			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), new String[] {memberDto.getEmail()});
 
 			assertThat(entity.getDashboardUsers()).doesNotContain(dashboardUser);
 			assertThat(dashboardUser.getDocumentSpaces()).doesNotContain(entity);
-			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser.getEmail(),entity);
+			Mockito.verify(documentSpacePrivilegeService).removePrivilegesFromDashboardUser(dashboardUser,entity);
 			Mockito.verify(dashboardUserService, Mockito.never()).deleteDashboardUser(dashboardUser.getId());
 		}
 
@@ -439,7 +439,7 @@ class DocumentSpaceServiceImplTest {
 			UUID invalidId = UUID.randomUUID();
 
 			Mockito.when(documentSpaceRepo.findById(invalidId)).thenReturn(Optional.ofNullable(null));
-			assertThatThrownBy(() -> documentService.removeDashboardUserFromDocumentSpace(invalidId, memberDto.getEmail()))
+			assertThatThrownBy(() -> documentService.removeDashboardUserFromDocumentSpace(invalidId, new String[] {memberDto.getEmail()}))
 				.isInstanceOf(RecordNotFoundException.class)
 				.hasMessageContaining(String.format("Document Space with id: %s not found", invalidId));
 		}

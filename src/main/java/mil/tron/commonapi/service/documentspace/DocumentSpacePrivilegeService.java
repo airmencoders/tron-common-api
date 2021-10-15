@@ -19,7 +19,7 @@ public interface DocumentSpacePrivilegeService {
 	
 	void addPrivilegesToDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace, List<DocumentSpacePrivilegeType> privilegesToAdd) throws IllegalArgumentException;
 
-	void removePrivilegesFromDashboardUser(String dashboardUserEmail, DocumentSpace documentSpace);
+	void removePrivilegesFromDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace);
 
 	DashboardUser createDashboardUserWithPrivileges(String dashboardUserEmail, DocumentSpace documentSpace, List<DocumentSpacePrivilegeType> privilegesToAdd);
 	

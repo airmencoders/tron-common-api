@@ -394,38 +394,42 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String email) throws RecordNotFoundException {
+	public void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String[] emails) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 
-		documentSpacePrivilegeService.removePrivilegesFromDashboardUser(email, documentSpace);
-
-		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
-
-		if (dashboardUser == null) {
-			throw new RecordNotFoundException(String.format("Could not remove user from Document Space space. User with email: %s does not exist", email));
-		}
-
-		documentSpace.removeDashboardUser(dashboardUser);
-		documentSpaceRepository.save(documentSpace);
-
-		Set<Privilege> privileges = dashboardUser.getPrivileges();
-
-		if (dashboardUser.getDocumentSpaces().isEmpty()) {
-			Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
-			documentSpaceGlobalPrivilege.ifPresentOrElse(
-					dashboardUser::removePrivilege,
-					() -> log.error(String.format(
-							"Could not remove Global Document Space Privilege (%s) from user because it is is missing",
-							DOCUMENT_SPACE_USER_PRIVILEGE)));
-		}
-
-		if(privileges.size() == 1){
-			Optional<Privilege> first = privileges.stream().findFirst();
-			if(first.isPresent() && first.get().getName().equals("DASHBOARD_USER")){
-				dashboardUserService.deleteDashboardUser(dashboardUser.getId());
+		for (int i = 0; i < emails.length; i++) {
+			String email = emails[i];
+			
+			DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
+			
+			if (dashboardUser == null) {
+				continue;
+			}
+			
+			documentSpacePrivilegeService.removePrivilegesFromDashboardUser(dashboardUser, documentSpace);
+			
+			documentSpace.removeDashboardUser(dashboardUser);
+			
+			Set<Privilege> privileges = dashboardUser.getPrivileges();
+			
+			if (dashboardUser.getDocumentSpaces().isEmpty()) {
+				Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
+				documentSpaceGlobalPrivilege.ifPresentOrElse(
+						dashboardUser::removePrivilege,
+						() -> log.error(String.format(
+								"Could not remove Global Document Space Privilege (%s) from user because it is is missing",
+								DOCUMENT_SPACE_USER_PRIVILEGE)));
+			}
+			
+			if(privileges.size() == 1){
+				Optional<Privilege> first = privileges.stream().findFirst();
+				if(first.isPresent() && first.get().getName().equals("DASHBOARD_USER")){
+					dashboardUserService.deleteDashboardUser(dashboardUser.getId());
+				}
 			}
 		}
-
+		
+		documentSpaceRepository.save(documentSpace);
 	}
 
 	@Override

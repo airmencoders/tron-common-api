@@ -10,7 +10,6 @@ import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
-import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
@@ -105,15 +104,9 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 	}
 
 	@Override
-	public void removePrivilegesFromDashboardUser(String dashboardUserEmail, DocumentSpace documentSpace) {
-		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
+	public void removePrivilegesFromDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace) {
 
 		List<DocumentSpacePrivilegeType> privilegeList = Arrays.asList(DocumentSpacePrivilegeType.values());
-
-		if (dashboardUser == null) {
-			throw new RecordNotFoundException(
-					String.format("Could not remove privileges from user with email: %s because they do not exist", dashboardUserEmail));
-		}
 
 		Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> documentSpacePrivileges = documentSpace.getPrivileges();
 		List<DocumentSpacePrivilege> privilegesToSave = new ArrayList<>();

@@ -49,13 +49,13 @@ class DocumentSpaceControllerTest {
     @Test
     void removesDashboardUserFromDocumentSpace() throws Exception {
 
-        String userEmail = "dev@tron.dev";
+        String[] userEmails = new String[] {"dev@tron.dev"};
 
-        Mockito.doNothing().when(documentSpaceService).removeDashboardUserFromDocumentSpace(documentSpaceId, userEmail);
+        Mockito.doNothing().when(documentSpaceService).removeDashboardUserFromDocumentSpace(documentSpaceId, userEmails);
 
         mockMvc.perform(delete(ENDPOINT +"spaces/"+ "{id}"+"/users/dashboard", documentSpaceId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(userEmail)))
+                .content(OBJECT_MAPPER.writeValueAsString(userEmails)))
                 .andExpect(status().isNoContent());
     }
 

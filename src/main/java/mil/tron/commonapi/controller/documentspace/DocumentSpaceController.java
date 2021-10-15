@@ -167,7 +167,7 @@ public class DocumentSpaceController {
     	return ResponseEntity.ok(documentSpaceService.getDashboardUserPrivilegesForDocumentSpace(id, principal.getName()));
     }
 
-    @Operation(summary = "Removes a user from a Document Space", description = "Removes a user from a Document Space and their privileges")
+    @Operation(summary = "Removes one or more Dashboard User members from a Document Space", description = "Removes Dashboard Users from a Document Space and their privileges")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204",
 				description = "Successful operation"),
@@ -179,8 +179,8 @@ public class DocumentSpaceController {
 	@DeleteMapping("/spaces/{id}/users/dashboard")
     public ResponseEntity<Object> removeUserFromDocumentSpace(
     		@PathVariable UUID id,
-    		@Valid @RequestBody String email) {
-	    documentSpaceService.removeDashboardUserFromDocumentSpace(id, email);
+    		@Valid @RequestBody String[] emails) {
+	    documentSpaceService.removeDashboardUserFromDocumentSpace(id, emails);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
