@@ -12,6 +12,7 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.apache.commons.io.FilenameUtils;
+import org.assertj.core.util.Lists;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,7 @@ import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -82,16 +84,17 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         // dig into the path until last folder is found - this will be the parent folder
         //  all the while build out the full path leading up to this folder (names and uuids)
         //  to put for possible later use in the object's FilePathSpec object
+        DocumentSpaceFileSystemEntry entry = null;
         if (parts.length != 0) {
-            for (String folder : parts) {
-                if (folder.isBlank()) continue;
+            for (int i=0; i<parts.length; i++) {
+                if (parts[i].isBlank()) continue;
 
-                pathAccumulator.append(folder).append(PATH_SEP);
-                DocumentSpaceFileSystemEntry entry = repository
-                        .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, folder, parentFolderId)
+                pathAccumulator.append(parts[i]).append(PATH_SEP);
+                entry = repository
+                        .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, parts[i], parentFolderId)
                         .orElseThrow(() -> new RecordNotFoundException(String.format("Path %s not found", pathAccumulator.toString())));
 
-                parentFolderId = entry.getItemId();  // update parent ID for the next depth iteration
+                if ((i+1) < parts.length) parentFolderId = entry.getItemId();  // update parent ID for the next depth iteration
                 uuidList.add(entry.getItemId());
             }
         }
@@ -99,6 +102,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         return FilePathSpec.builder()
                 .documentSpaceId(spaceId)
                 .itemId(uuidList.isEmpty() ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID) : uuidList.get(uuidList.size() - 1))
+                .itemName(entry != null ? entry.getItemName() : "")
                 .fullPathSpec(pathAccumulator.toString())
                 .uuidList(uuidList)
                 .parentFolderId(parentFolderId)
@@ -112,7 +116,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         contents.setFiles(extractFilesFromPath(documentSpaceService.getAllFilesInFolderSummaries(spaceId, spec.getFullPathSpec())));
         contents.setSubFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
                 spaceId,
-                spec.getParentFolderId(),
+                spec.getItemId(),
                 spec.getUuidList().isEmpty()
                     ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID)
                     : spec.getUuidList().get(spec.getUuidList().size() - 1)));
@@ -168,7 +172,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     }
 
     /**
-     * Gets list of DocumentSpaceFileSystemEntry elements within given space underneath given path (one-level-deep)
+     * Gets list of DocumentSpaceFileSystemEntry elements (folders) within given space underneath given path (one-level-deep)
      * @param spaceId docu space UUID
      * @param path path to look under
      * @return list of DocumentSpaceFileSystemEntry elements (folders and files)
@@ -177,7 +181,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
         FilePathSpec spec = parsePathToFilePathSpec(spaceId, lookupPath);
-        return repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, spec.getParentFolderId());
+        return repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, spec.getItemId());
     }
 
     /**
@@ -259,13 +263,13 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         FilePathSpec pathSpec = parsePathToFilePathSpec(spaceId, lookupPath);
 
         // check no existence of duplicate -- so we don't get a nasty DB exception
-        if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemName(spaceId, pathSpec.getParentFolderId(), name)) {
+        if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemName(spaceId, pathSpec.getItemId(), name)) {
             throw new ResourceAlreadyExistsException(String.format("Folder with name %s already exists under that parent", name));
         }
 
         return repository.save(DocumentSpaceFileSystemEntry.builder()
                 .documentSpaceId(spaceId)
-                .parentEntryId(pathSpec.getParentFolderId())
+                .parentEntryId(pathSpec.getItemId())
                 .itemId(UUID.randomUUID()) // assign UUID to it (gets auto assigned anyways if omitted)
                 .itemName(name)
                 .build());
@@ -345,5 +349,33 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     private String joinPathParts(String... parts) {
         return (PATH_SEP + String.join(PATH_SEP, parts)).replace(PATH_SEP + PATH_SEP, PATH_SEP);
+    }
+
+
+    /**
+     * Renames a folder indicated by its existing path
+     * @param spaceId doc space UUID
+     * @param existingPath the existing path + the folder name (e.g. /docs/lists)
+     * @param newFolderName the new name (e.g. new-lists)
+     */
+    public void renameFolder(UUID spaceId, String existingPath, String newFolderName) {
+        checkSpaceIsValid(spaceId);
+        List<DocumentSpaceFileSystemEntry> a = Lists.newArrayList(repository.findAll());
+        FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, existingPath);
+        DocumentSpaceFileSystemEntry entry = repository.findByItemIdEquals(spec.getItemId())
+                .orElseThrow(() -> new RecordNotFoundException("Cannot find existing element with UUID " + spec.getItemId()));
+
+        // make sure we don't have a same named folder at this path before allowing a name change
+        Optional<DocumentSpaceFileSystemEntry> existingEntry =
+                repository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, newFolderName, spec.getParentFolderId());
+
+        if (existingEntry.isEmpty()) {
+            // allow the name change
+            entry.setItemName(newFolderName);
+            repository.save(entry);
+        }
+        else {
+            throw new ResourceAlreadyExistsException("A folder with that name already exists at this level");
+        }
     }
 }

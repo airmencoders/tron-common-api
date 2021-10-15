@@ -16,6 +16,7 @@ import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
@@ -24,6 +25,7 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeReposit
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import org.apache.commons.io.FileUtils;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -48,6 +50,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -718,6 +721,26 @@ public class DocumentSpaceIntegrationTests {
         assertTrue(contents.contains("docs/lists/lists.txt"));
         assertTrue(contents.contains("docs/hello2.txt"));
         assertTrue(contents.contains("docs/names.txt"));
+
+        // rename "/docs" to "records"
+        assertThrows(ResourceAlreadyExistsException.class, () -> documentSpaceService.renameFolder(test1Id, "/docs", "docs"));
+        documentSpaceService.renameFolder(test1Id, "/docs", "records");
+        tmpdir = Files.createTempDir().getAbsolutePath();
+        zipFile = new File(tmpdir + File.separator + "files.zip");
+        fos = new FileOutputStream(zipFile);
+        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/records", Set.of("hello2.txt", "lists"), fos);
+        fos.close();
+
+        zf = new ZipFile(zipFile);
+        entries = zf.entries();
+        contents = new ArrayList<>();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            contents.add(entry.getName());
+        }
+        FileUtils.deleteDirectory(new File(tmpdir));
+        assertTrue(contents.contains("records/hello2.txt"));
+        assertTrue(contents.contains("records/lists/lists.txt"));
     }
 
 

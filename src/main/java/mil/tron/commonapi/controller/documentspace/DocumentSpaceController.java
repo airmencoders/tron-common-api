@@ -415,4 +415,26 @@ public class DocumentSpaceController {
 	public ResponseEntity<FilePathSpecWithContents> dumpContentsAtPath(@PathVariable UUID id, @RequestParam(value = "path", defaultValue = "") String path) {
 		return new ResponseEntity<>(documentSpaceService.getFolderContents(id, path), HttpStatus.OK);
 	}
+
+	@Operation(summary = "Renames a folder at a given path")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful rename",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceRenameFolderDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Name conflict",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@PutMapping("/spaces/{id}/folders")
+	public ResponseEntity<Void> renameFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpaceRenameFolderDto dto) {
+		documentSpaceService.renameFolder(id, dto.getExistingFolderPath(), dto.getNewName());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
 }

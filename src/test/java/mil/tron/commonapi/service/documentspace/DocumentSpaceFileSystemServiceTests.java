@@ -130,12 +130,12 @@ public class DocumentSpaceFileSystemServiceTests {
         //
         // test out getting a path spec using string paths (vs the object entities above)
         FilePathSpec firstSpecFromPath = service.parsePathToFilePathSpec(firstEntry.getDocumentSpaceId(), "some-folder/");
-        assertEquals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID), firstEntry.getParentEntryId());
+        assertEquals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID), firstSpecFromPath.getParentFolderId());
         assertEquals(firstEntry.getDocumentSpaceId(), firstSpecFromPath.getDocumentSpaceId());
         assertEquals(1, firstSpecFromPath.getUuidList().size());  // only itself cause root is owner
 
         FilePathSpec secondSpecFromPath = service.parsePathToFilePathSpec(secondEntry.getDocumentSpaceId(), "some-folder/some-folder2");
-        assertEquals(secondEntry.getItemId(), secondSpecFromPath.getParentFolderId());
+        assertEquals(secondEntry.getItemId(), secondSpecFromPath.getItemId());
         assertEquals(secondEntry.getDocumentSpaceId(), secondSpecFromPath.getDocumentSpaceId());
         assertEquals(2, secondSpecFromPath.getUuidList().size()); // itself and parent (firstEntry) = 2
     }

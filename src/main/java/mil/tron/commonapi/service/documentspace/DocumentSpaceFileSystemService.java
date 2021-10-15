@@ -22,4 +22,5 @@ public interface DocumentSpaceFileSystemService {
 
     DocumentSpaceFileSystemEntry addFolder(UUID spaceId, String name, @Nullable String path);
     void deleteFolder(UUID spaceId, String path);
+    void renameFolder(UUID spaceId, String existingPath, String newFolderName);
 }

@@ -260,6 +260,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		this.deleteS3ObjectByKey(fileKey);
 	}
 
+	@Override
+	public void renameFolder(UUID documentSpaceId, String pathAndFolder, String newFolderName) {
+		documentSpaceFileSystemService.renameFolder(documentSpaceId, pathAndFolder, newFolderName);
+	}
+
 	/**
 	 * Provides ability to delete a file by its fully qualified S3 key path
 	 * @param objKey

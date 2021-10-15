@@ -3,6 +3,7 @@ package mil.tron.commonapi.controller.documentspace;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceCreateFolderDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceRenameFolderDto;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
@@ -25,9 +26,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.io.FileInputStream;
 import java.util.*;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -135,5 +134,18 @@ class DocumentSpaceControllerTest {
                         .path("/newfolder")
                         .build())))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void testFolderRenameEndpoint() throws Exception {
+
+        Mockito.doNothing().when(documentSpaceService).renameFolder(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString());
+        mockMvc.perform(put(ENDPOINT +"spaces/{id}/folders", documentSpaceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(DocumentSpaceRenameFolderDto.builder()
+                        .existingFolderPath("/newfolder")
+                        .newName("oldfolder")
+                        .build())))
+                .andExpect(status().isNoContent());
     }
 }
