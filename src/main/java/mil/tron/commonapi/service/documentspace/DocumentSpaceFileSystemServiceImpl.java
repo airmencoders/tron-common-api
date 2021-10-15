@@ -360,7 +360,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     public void renameFolder(UUID spaceId, String existingPath, String newFolderName) {
         checkSpaceIsValid(spaceId);
-        List<DocumentSpaceFileSystemEntry> a = Lists.newArrayList(repository.findAll());
         FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, existingPath);
         DocumentSpaceFileSystemEntry entry = repository.findByItemIdEquals(spec.getItemId())
                 .orElseThrow(() -> new RecordNotFoundException("Cannot find existing element with UUID " + spec.getItemId()));

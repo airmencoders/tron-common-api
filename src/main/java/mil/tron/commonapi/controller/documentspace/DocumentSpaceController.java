@@ -361,7 +361,7 @@ public class DocumentSpaceController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201",
 					description = "Successful operation - folder created",
-					content = @Content(schema = @Schema(implementation = DocumentSpaceCreateFolderDto.class))),
+					content = @Content(schema = @Schema(implementation = FilePathSpec.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Not Found - space not found or part of supplied path does not exist",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -402,7 +402,7 @@ public class DocumentSpaceController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation - folder created",
-					content = @Content(schema = @Schema(implementation = DocumentSpaceCreateFolderDto.class))),
+					content = @Content(schema = @Schema(implementation = FilePathSpecWithContents.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Not Found - space not found or part of supplied path does not exist",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -412,7 +412,8 @@ public class DocumentSpaceController {
 	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
 	@GetMapping("/spaces/{id}/contents")
-	public ResponseEntity<FilePathSpecWithContents> dumpContentsAtPath(@PathVariable UUID id, @RequestParam(value = "path", defaultValue = "") String path) {
+	public ResponseEntity<FilePathSpecWithContents> dumpContentsAtPath(@PathVariable UUID id,
+																	   @RequestParam(value = "path", defaultValue = "") String path) {
 		return new ResponseEntity<>(documentSpaceService.getFolderContents(id, path), HttpStatus.OK);
 	}
 
