@@ -21,20 +21,20 @@
 
         <sql dbms="postgresql">
             with dashboard_id AS (
-            select distinct dashboard_user_id
-            from document_space_dashboard_users
+                select distinct dashboard_user_id
+                from document_space_dashboard_users
             ), document_space_privilege AS (
-            select id, name
-            from privilege
-            where name='DOCUMENT_SPACE_USER'
+                select id, name
+                from privilege
+                where name='DOCUMENT_SPACE_USER'
             )
             insert into dashboard_user_privileges(dashboard_user_id, privileges_id)
             select dashboard_id.dashboard_user_id, document_space_privilege.id
-            from dashboard_id, document_space_privilege
-            where not exists (
-            SELECT 1 from dashboard_user_privileges
-            where dashboard_user_id=dashboard_id.dashboard_user_id and privileges_id=document_space_privilege.id
-            )
+                from dashboard_id, document_space_privilege
+                where not exists (
+                    SELECT 1 from dashboard_user_privileges
+                    where dashboard_user_id=dashboard_id.dashboard_user_id and privileges_id=document_space_privilege.id
+                )
         </sql>
     </changeSet>
 
@@ -47,20 +47,20 @@
 
         <sql dbms="postgresql">
             with app_client_id AS (
-            select distinct app_id
-            from document_space_app_users
+                select distinct app_id
+                from document_space_app_users
             ), document_space_privilege AS (
-            select id, name
-            from privilege
-            where name='DOCUMENT_SPACE_USER'
+                select id, name
+                from privilege
+                where name='DOCUMENT_SPACE_USER'
             )
             insert into app_privileges(app_client_user_id, privileges_id)
             select app_client_id.app_id, document_space_privilege.id
-            from app_client_id, document_space_privilege
-            where not exists (
-            SELECT 1 from app_privileges
-            where app_client_user_id=app_client_id.app_id and privileges_id=document_space_privilege.id
-            )
+                from app_client_id, document_space_privilege
+                where not exists (
+                    SELECT 1 from app_privileges
+                    where app_client_user_id=app_client_id.app_id and privileges_id=document_space_privilege.id
+                )
         </sql>
     </changeSet>
 </databaseChangeLog>
