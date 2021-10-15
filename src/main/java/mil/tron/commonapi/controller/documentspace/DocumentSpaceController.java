@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.validation.Valid;
+import java.io.IOException;
 
 import java.security.Principal;
 import java.util.*;
@@ -54,20 +55,20 @@ public class DocumentSpaceController {
 		return headers;
 	}
 
-    @Operation(summary = "Retrieves all document spaces")
+    @Operation(summary = "Retrieves all document spaces for the requesting user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                 description = "Successful operation",
                 content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDtoResponseWrapper.class))),
             @ApiResponse(responseCode = "403",
-            	description = "Forbidden (Requires DASHBOARD_ADMIN privilege)",
+            	description = "Forbidden (Requires DASHBOARD_ADMIN or DOCUMENT_SPACE_USER)",
                 content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
     })
     @WrappedEnvelopeResponse
-    @PreAuthorizeDashboardAdmin
+    @PreAuthorize("@accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication) and #principal != null")
 	@GetMapping("/spaces")
-    public ResponseEntity<List<DocumentSpaceResponseDto>> getSpaces() {
-	    return new ResponseEntity<>(documentSpaceService.listSpaces(), HttpStatus.OK);
+    public ResponseEntity<List<DocumentSpaceResponseDto>> getSpaces(Principal principal) {
+	    return new ResponseEntity<>(documentSpaceService.listSpaces(principal.getName()), HttpStatus.OK);
     }
 
     @Operation(summary = "Creates a Document Space", description = "Creates a Document Space")
@@ -108,7 +109,7 @@ public class DocumentSpaceController {
     
     @Operation(summary = "Adds a user to a Document Space", description = "Adds a user to a Document Space with specified privileges")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "204", 
+			@ApiResponse(responseCode = "204",
 				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
@@ -125,10 +126,10 @@ public class DocumentSpaceController {
 	    documentSpaceService.addDashboardUserToDocumentSpace(id, dto);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-    
+
     @Operation(summary = "Gets the members for a Document Space", description = "Gets members for a Document Space. Pagination enabled.")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", 
+			@ApiResponse(responseCode = "200",
 				description = "Successful operation",
                 content = @Content(schema = @Schema(implementation = DocumentSpaceDashboardMemberResponseDtoResponseWrapper.class))),
 			@ApiResponse(responseCode = "404",
@@ -146,10 +147,10 @@ public class DocumentSpaceController {
     		@ParameterObject Pageable pageable) {
     	return ResponseEntity.ok(documentSpaceService.getDashboardUsersForDocumentSpace(id, pageable));
     }
-    
+
     @Operation(summary = "Gets the Document Space privileges of the requesting user")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", 
+			@ApiResponse(responseCode = "200",
 				description = "Successful operation",
                 content = @Content(schema = @Schema(implementation = DocumentSpacePrivilegeDtoResponseWrapper.class))),
 			@ApiResponse(responseCode = "404",
@@ -182,6 +183,28 @@ public class DocumentSpaceController {
 	    documentSpaceService.removeDashboardUserFromDocumentSpace(id, emails);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    @Operation(summary = "Adds multiple users to a Document Space", description = "Adds multiple users via a csv to a Document Space with specified privileges. Returns a list of any errors encountered.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+				description = "Successful or partially successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Membership privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
+    @PostMapping(value = "/spaces/{id}/batchUsers", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<List<String>> batchAddUserToDocumentSpace(
+    		@PathVariable UUID id,
+			@RequestPart(value = "file") MultipartFile file) {
+		List<String> errorMessages = documentSpaceService.batchAddDashboardUserToDocumentSpace(id, file);
+
+		return ResponseEntity.ok(errorMessages);
+
+	}
 
     @Operation(summary = "Uploads a file to a Document Space", description = "Uploads a file to a Document Space")
 	@ApiResponses(value = {
