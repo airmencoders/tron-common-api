@@ -32,6 +32,7 @@ public interface DocumentSpaceService {
 	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out);
 	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
     void deleteFile(UUID documentSpaceId, String path, String fileKey);
+    List<String> deleteItems(UUID documentSpaceId, String currentPath, List<String> items);
     void renameFolder(UUID documentSpaceId, String pathAndFolder, String newFolderName);
     void deleteS3ObjectByKey(String objKey);
     S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit);

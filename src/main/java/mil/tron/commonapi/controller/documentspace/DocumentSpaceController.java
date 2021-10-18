@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.GenericStringArrayResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -437,5 +438,24 @@ public class DocumentSpaceController {
 	public ResponseEntity<Void> renameFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpaceRenameFolderDto dto) {
 		documentSpaceService.renameFolder(id, dto.getExistingFolderPath(), dto.getNewName());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Deletes selected item(s) from a Document Space", description = "Deletes selected files/folder from a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation - returns list of items that were not able to be deleted",
+					content = @Content(schema = @Schema(implementation = GenericStringArrayResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found, file not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@WrappedEnvelopeResponse
+	@DeleteMapping("/spaces/{id}/delete")
+	public ResponseEntity<Object> delete(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
+		return new ResponseEntity<>(documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete()), HttpStatus.OK);
 	}
 }

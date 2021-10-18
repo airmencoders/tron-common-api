@@ -197,4 +197,21 @@ public class DocumentSpaceFileSystemServiceTests {
         assertEquals(0, service.dumpElementTree(spaceId, "/").getNodes().size());
     }
 
+    @Transactional
+    @Rollback
+    @Test
+    void testFolderIdTest() {
+        service.addFolder(spaceId, "some-folder", "/");
+        service.addFolder(spaceId, "some-folder2", "some-folder");
+        service.addFolder(spaceId, "some-deep-folder", "/some-folder/some-folder2");
+        service.addFolder(spaceId, "some-deep-folder2", "/some-folder/some-folder2");
+
+        assertTrue(service.isFolder(spaceId, "/", "some-folder"));
+        assertTrue(service.isFolder(spaceId, "", "some-folder"));
+        assertTrue(service.isFolder(spaceId, "", "some-folder/"));
+        assertTrue(service.isFolder(spaceId, "/some-folder", "some-folder2"));
+        assertTrue(service.isFolder(spaceId, "/some-folder/", "some-folder2"));
+        assertFalse(service.isFolder(spaceId, "/some-folder", "some-folder3"));
+    }
+
 }

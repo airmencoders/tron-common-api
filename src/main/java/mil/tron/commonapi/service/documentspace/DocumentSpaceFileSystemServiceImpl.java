@@ -12,7 +12,6 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.apache.commons.io.FilenameUtils;
-import org.assertj.core.util.Lists;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -92,7 +91,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 pathAccumulator.append(parts[i]).append(PATH_SEP);
                 entry = repository
                         .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, parts[i], parentFolderId)
-                        .orElseThrow(() -> new RecordNotFoundException(String.format("Path %s not found", pathAccumulator.toString())));
+                        .orElseThrow(() -> new RecordNotFoundException(String.format("Path %s not found or is not a folder", pathAccumulator.toString())));
 
                 if ((i+1) < parts.length) parentFolderId = entry.getItemId();  // update parent ID for the next depth iteration
                 uuidList.add(entry.getItemId());
@@ -276,13 +275,26 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     }
 
     /**
+     * Sees the given item name inside given path is a folder or not
+     * @param spaceId doc space id
+     * @param path the path holding "item name"
+     * @param itemName the item name
+     * @return true if directory else false
+     */
+    public boolean isFolder(UUID spaceId, String path, String itemName) {
+        UUID parentFolderItemId = parsePathToFilePathSpec(spaceId, path).getItemId();
+        return repository.existsByDocumentSpaceIdAndParentEntryIdAndItemName(spaceId,
+                parentFolderItemId,
+                FilenameUtils.normalizeNoEndSeparator(itemName));
+    }
+
+    /**
      * Deletes a folder and all that is contained within/underneath it (like a `rm -rf` in Unix)
      * @param spaceId doc space UUID
      * @param path path to the folder to delete
      */
     @Override
     public void deleteFolder(UUID spaceId, String path) {
-        checkSpaceIsValid(spaceId);
         UUID lastIdToDelete = parsePathToFilePathSpec(spaceId, path).getItemId();  // this is the last element to delete
                                                                                     // which is the 'root' of the given path
         deleteParentDirectories(dumpElementTree(spaceId, path));
