@@ -112,7 +112,9 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     public FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path) {
         FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, path);
         FilePathSpecWithContents contents = new DtoMapper().map(spec, FilePathSpecWithContents.class);
-        contents.setFiles(extractFilesFromPath(documentSpaceService.getAllFilesInFolderSummaries(spaceId, spec.getFullPathSpec())));
+        List<S3Object> s3Objects = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
+        contents.setS3Objects(s3Objects);
+        contents.setFiles(extractFilesFromPath(s3Objects.stream().map(S3Object::getKey).collect(Collectors.toList())));
         contents.setSubFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
                 spaceId,
                 spec.getItemId(),

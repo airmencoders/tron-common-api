@@ -50,4 +50,8 @@ public class DocumentDto {
 	@Getter
 	@Setter
 	private String uploadedBy;
+
+	@Getter
+	@Setter
+	private boolean isFolder;
 }
