@@ -7,11 +7,7 @@ import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
-import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
+import com.google.common.collect.Lists;
 import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
@@ -34,6 +30,7 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -46,8 +43,8 @@ import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.*;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -263,6 +260,33 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		} catch (IOException | InterruptedException e) { // NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
 		}
+	}
+
+	/**
+	 * Deletes items - be it folders and/or files - from the currentPath
+	 * @param documentSpaceId document space Id
+	 * @param currentPath current path we're at (e.g. in the UI)
+	 * @param items the items in this current path to delete
+	 * @returns list of items that could not be deleted
+	 */
+	@Transactional
+	@Override
+	public List<String> deleteItems(UUID documentSpaceId, String currentPath, List<String> items) {
+		List<String> nonDeletedItems = Lists.newArrayList();
+		for (String item : items) {
+			if (documentSpaceFileSystemService.isFolder(documentSpaceId, currentPath, item)) {
+				documentSpaceFileSystemService.deleteFolder(documentSpaceId, FilenameUtils.concat(currentPath, item));
+			}
+			else {
+				try {
+					this.deleteFile(documentSpaceId, currentPath, item);
+				}
+				catch (RecordNotFoundException ex) {
+					nonDeletedItems.add(item);
+				}
+			}
+		}
+		return nonDeletedItems;
 	}
 
 	@Override

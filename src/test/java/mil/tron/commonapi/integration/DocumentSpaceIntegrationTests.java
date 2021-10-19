@@ -7,11 +7,13 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jayway.jsonpath.JsonPath;
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.JwtUtils;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceCreateFolderDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceDeleteItemsDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -25,7 +27,6 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeReposit
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
-import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import org.apache.commons.io.FileUtils;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -352,20 +353,19 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.files", hasSize(1)))
-                .andExpect(jsonPath("$.subFolderElements", hasSize(1)))
-                .andExpect(jsonPath("$.files[0]", equalTo("hello.txt")))
-                .andExpect(jsonPath("$.subFolderElements[0].itemName", equalTo("docs")));
+                .andExpect(jsonPath("$.documents[*].key", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("docs")));
 
         // checks root without the path param
         mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.files", hasSize(1)))
-                .andExpect(jsonPath("$.subFolderElements", hasSize(1)))
-                .andExpect(jsonPath("$.files[0]", equalTo("hello.txt")))
-                .andExpect(jsonPath("$.subFolderElements[0].itemName", equalTo("docs")));
+                .andExpect(jsonPath("$.documents[*].key", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("docs")));
 
         // try make duplicate folder name
         mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", test1Id)
@@ -395,19 +395,19 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.files", hasSize(1)))
-                .andExpect(jsonPath("$.subFolderElements", hasSize(1)))
-                .andExpect(jsonPath("$.files[0]", equalTo("hello.txt")))
-                .andExpect(jsonPath("$.subFolderElements[0].itemName", equalTo("docs")));
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("docs")));
 
         // from docs level - see we have one subfolder no files
         mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.files", hasSize(0)))
-                .andExpect(jsonPath("$.subFolderElements", hasSize(1)))
-                .andExpect(jsonPath("$.subFolderElements[0].itemName", equalTo("notes")));
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("notes")));
 
         // add file to docs/notes
         MockMultipartFile notesFile
@@ -427,9 +427,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.files", hasSize(1)))
-                .andExpect(jsonPath("$.subFolderElements", hasSize(0)))
-                .andExpect(jsonPath("$.files[0]", equalTo("notes.txt")));
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(0)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("notes.txt")));
 
         // add another file to docs/notes
         MockMultipartFile accountingFile
@@ -450,9 +450,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.files", hasSize(2)))
-                .andExpect(jsonPath("$.subFolderElements", hasSize(0)))
-                .andExpect(jsonPath("$.files", Matchers.hasItem("accounts.txt")));
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(0)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("accounts.txt")));
 
         // now just delete one file
         mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/files/delete?path=/docs/notes&file=accounts.txt", test1Id.toString())
@@ -471,9 +471,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.files", hasSize(1)))
-                .andExpect(jsonPath("$.subFolderElements", hasSize(0)))
-                .andExpect(jsonPath("$.files", not(Matchers.hasItem("accounts.txt"))));
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(0)))
+                .andExpect(jsonPath("$.documents[*].key", not(Matchers.hasItem("accounts.txt"))));
 
         // dump ALL files - from this space- ignore folders for the moment from the doc space
         mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/files", test1Id.toString())
@@ -503,9 +503,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.files", hasSize(1)))
-                .andExpect(jsonPath("$.subFolderElements", hasSize(0)))
-                .andExpect(jsonPath("$.files[0]", equalTo("hello.txt")));
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(0)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")));
 
         // make a new folder "jobs/name" - but with / in the new name - should error out 400
         mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", test1Id)
@@ -771,8 +771,50 @@ public class DocumentSpaceIntegrationTests {
         FileUtils.deleteDirectory(new File(tmpdir));
         assertTrue(contents.contains("records/hello2.txt"));
         assertTrue(contents.contains("records/lists/lists.txt"));
-    }
 
+        // now let's delete things, remember we have this structure at the moment
+        // / <root>
+        // |- records/
+        // |  |- lists/
+        // |  |  |- lists.txt
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+        // |- hello3.txt
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                        .currentPath("/records")
+                        .itemsToDelete(Lists.newArrayList("lists", "hello2.txt"))
+                        .build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+
+        // check we still have /docs/names.txt
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/records", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(0)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")));
+
+        // re-issuing this should return a list of two items that couldn't be deleted
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                        .currentPath("/records")
+                        .itemsToDelete(Lists.newArrayList("lists", "hello2.txt"))
+                        .build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
+
+    }
 
 
 }

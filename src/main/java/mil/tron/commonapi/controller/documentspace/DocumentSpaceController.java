@@ -8,9 +8,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import liquibase.util.file.FilenameUtils;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.dto.GenericStringArrayResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -402,7 +404,7 @@ public class DocumentSpaceController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation - folder created",
-					content = @Content(schema = @Schema(implementation = FilePathSpecWithContents.class))),
+					content = @Content(schema = @Schema(implementation = S3PaginationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Not Found - space not found or part of supplied path does not exist",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -412,9 +414,40 @@ public class DocumentSpaceController {
 	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
 	@GetMapping("/spaces/{id}/contents")
-	public ResponseEntity<FilePathSpecWithContents> dumpContentsAtPath(@PathVariable UUID id,
-																	   @RequestParam(value = "path", defaultValue = "") String path) {
-		return new ResponseEntity<>(documentSpaceService.getFolderContents(id, path), HttpStatus.OK);
+	public ResponseEntity<S3PaginationDto> dumpContentsAtPath(@PathVariable UUID id,
+													   @RequestParam(value = "path", defaultValue = "") String path) {
+		FilePathSpecWithContents contents = documentSpaceService.getFolderContents(id, path);
+		List<DocumentDto> filesAndFolders = new ArrayList<>();
+		if (contents.getSubFolderElements() != null) {
+			contents.getSubFolderElements().forEach(item -> {
+				filesAndFolders.add(DocumentDto.builder()
+						.path(path)
+						.size(0L)
+						.spaceId(id.toString())
+						.isFolder(true)
+						.key(item.getItemName())
+						.build());
+			});
+		}
+		if (contents.getS3Objects() != null) {
+			contents.getS3Objects().forEach(item -> {
+				filesAndFolders.add(DocumentDto.builder()
+						.path(path)
+						.size(item.getObjectMetadata().getContentLength())
+						.spaceId(id.toString())
+						.isFolder(false)
+						.key(FilenameUtils.getName(item.getKey()))
+						.build());
+			});
+		}
+		S3PaginationDto dto = S3PaginationDto.builder()
+				.size(filesAndFolders.size())
+				.documents(filesAndFolders)
+				.currentContinuationToken(null)
+				.nextContinuationToken(null)
+				.totalElements(filesAndFolders.size())
+				.build();
+		return new ResponseEntity<>(dto, HttpStatus.OK);
 	}
 
 	@Operation(summary = "Renames a folder at a given path")
@@ -437,5 +470,24 @@ public class DocumentSpaceController {
 	public ResponseEntity<Void> renameFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpaceRenameFolderDto dto) {
 		documentSpaceService.renameFolder(id, dto.getExistingFolderPath(), dto.getNewName());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Deletes selected item(s) from a Document Space", description = "Deletes selected files/folder from a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation - returns list of items that were not able to be deleted",
+					content = @Content(schema = @Schema(implementation = GenericStringArrayResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found, file not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@WrappedEnvelopeResponse
+	@DeleteMapping("/spaces/{id}/delete")
+	public ResponseEntity<Object> deleteItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
+		return new ResponseEntity<>(documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete()), HttpStatus.OK);
 	}
 }
