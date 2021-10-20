@@ -36,16 +36,13 @@ public interface DocumentSpaceService {
     void renameFolder(UUID documentSpaceId, String pathAndFolder, String newFolderName);
     void deleteS3ObjectByKey(String objKey);
     S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit);
-    List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String prefix);
-    List<String> getAllFilesInFolderSummaries(UUID documentSpaceId, String prefix);
+    List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix);
     FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
     void deleteFolder(UUID documentSpaceId, String path);
     FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path);
     
-    DocumentDto convertS3ObjectToDto(S3Object objSummary);
     DocumentDto convertS3SummaryToDto(String spaceName, UUID documentSpaceId, S3ObjectSummary objSummary);
-    DocumentDetailsDto convertToDetailsDto(S3Object objSummary);
-    
+
     DocumentSpace convertDocumentSpaceRequestDtoToEntity(DocumentSpaceRequestDto documentSpaceInfoDto);
     DocumentSpaceResponseDto convertDocumentSpaceEntityToResponseDto(DocumentSpace documentSpace);
     

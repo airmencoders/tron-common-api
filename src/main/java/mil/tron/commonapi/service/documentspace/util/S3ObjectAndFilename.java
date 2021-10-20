@@ -1,6 +1,6 @@
 package mil.tron.commonapi.service.documentspace.util;
 
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import lombok.*;
 
 /**
@@ -24,6 +24,6 @@ public class S3ObjectAndFilename {
 
     @Getter
     @Setter
-    private S3Object s3Object;
+    private S3ObjectSummary s3Object;
 
 }

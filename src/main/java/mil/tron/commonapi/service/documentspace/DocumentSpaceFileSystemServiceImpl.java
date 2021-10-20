@@ -1,6 +1,6 @@
 package mil.tron.commonapi.service.documentspace;
 
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -112,9 +112,9 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     public FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path) {
         FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, path);
         FilePathSpecWithContents contents = new DtoMapper().map(spec, FilePathSpecWithContents.class);
-        List<S3Object> s3Objects = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
+        List<S3ObjectSummary> s3Objects = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
         contents.setS3Objects(s3Objects);
-        contents.setFiles(extractFilesFromPath(s3Objects.stream().map(S3Object::getKey).collect(Collectors.toList())));
+        contents.setFiles(extractFilesFromPath(s3Objects.stream().map(S3ObjectSummary::getKey).collect(Collectors.toList())));
         contents.setSubFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
                 spaceId,
                 spec.getItemId(),
@@ -212,7 +212,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         FileSystemElementTree tree = new FileSystemElementTree();
         tree.setValue(element);
-        List<S3Object> files = documentSpaceService.getAllFilesInFolder(spaceId, lookupPath);
+        List<S3ObjectSummary> files = documentSpaceService.getAllFilesInFolder(spaceId, lookupPath);
         tree.setFilePathSpec(entry);
         tree.setFiles(files);
         return buildTree(spaceId, element, tree);
@@ -237,7 +237,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             FileSystemElementTree subTree = buildTree(spaceId, entry, new FileSystemElementTree());
             subTree.setValue(entry);
             FilePathSpec spec = convertFileSystemEntityToFilePathSpec(entry);
-            List<S3Object> files = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
+            List<S3ObjectSummary> files = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
             subTree.setFilePathSpec(spec);
             subTree.setFiles(files);
             tree.addNode(subTree);
@@ -313,7 +313,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         // walk the tree depth-first and delete on the way up
         if (tree.getNodes() == null || tree.getNodes().isEmpty()) {
             // delete files before the folder
-            for (S3Object obj : tree.getFiles()) {
+            for (S3ObjectSummary obj : tree.getFiles()) {
                 documentSpaceService.deleteS3ObjectByKey(obj.getKey());
             }
             repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(tree.getValue().getDocumentSpaceId(), tree.getValue().getItemId());
@@ -338,7 +338,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @param items the cumulative list of item paths
      */
     private void scrapeFolders(FileSystemElementTree tree, List<S3ObjectAndFilename> items) {
-        for (S3Object obj : tree.getFiles()) {
+        for (S3ObjectSummary obj : tree.getFiles()) {
             items.add(S3ObjectAndFilename.builder()
                     .pathAndFilename(joinPathParts(tree.getFilePathSpec().getFullPathSpec(), FilenameUtils.getName(obj.getKey())))
                     .s3Object(obj)
