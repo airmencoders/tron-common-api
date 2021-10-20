@@ -1,15 +1,12 @@
 package mil.tron.commonapi.service.documentspace.util;
 
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemServiceImpl;
-import org.apache.commons.io.FilenameUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Utility class to hold a linked list of a file system hierarchy
@@ -50,7 +47,7 @@ public class FileSystemElementTree {
      */
     @Getter
     @Setter
-    private List<S3Object> files = new ArrayList<>();
+    private List<S3ObjectSummary> files = new ArrayList<>();
 
     public void addNode(FileSystemElementTree entry) {
         this.nodes.add(entry);

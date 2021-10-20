@@ -394,10 +394,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				//  ensure zip folder entries do not have a leading slash since that creates warnings on
 				//  unzip on some systems - signature of possible zip-slip exploit
 				ZipEntry entry = new ZipEntry(item.getPathAndFileNameWithoutLeadingSlash());
-				try (S3ObjectInputStream dataStream = item.getS3Object().getObjectContent()) {
+				S3Object object = documentSpaceClient.getObject(bucketName, item.getS3Object().getKey());
+				try (S3ObjectInputStream dataStream = object.getObjectContent()) {
 					zipOut.putNextEntry(entry);
 					dataStream.transferTo(zipOut);
 					zipOut.closeEntry();
+					object.close();
 				} catch (IOException e) {
 					log.warn("Failed to compress file: " + item.getPathAndFilename());
 				}
@@ -418,8 +420,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @return list of S3 objects (files)
 	 */
 	@Override
-	public List<S3Object> getAllFilesInFolder(UUID documentSpaceId, String prefix) {
-		List<S3Object> files = new ArrayList<>();
+	public List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix) {
+		List<S3ObjectSummary> files = new ArrayList<>();
 		getDocumentSpaceOrElseThrow(documentSpaceId);
 		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, prefix);
 		ListObjectsV2Request request = new ListObjectsV2Request()
@@ -436,9 +438,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			}
 
 			List<S3ObjectSummary> fileSummaries = objectListing.getObjectSummaries();
-			for (S3ObjectSummary summaryItem : fileSummaries) {
-				files.add(documentSpaceClient.getObject(bucketName, summaryItem.getKey()));
-			}
+			files.addAll(fileSummaries);
 
 			if (hasNext) {
 				request = request.withContinuationToken(objectListing.getNextContinuationToken());
@@ -450,32 +450,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public List<String> getAllFilesInFolderSummaries(UUID documentSpaceId, String prefix) {
-		return this.getAllFilesInFolder(documentSpaceId, prefix)
-				.stream()
-				.map(item -> item.getKey())
-				.collect(Collectors.toList());
-	}
-
-	@Override
-	public DocumentDto convertS3ObjectToDto(S3Object s3Object) {
-		return DocumentDto.builder().key(s3Object.getKey()).path("").size(s3Object.getObjectMetadata().getContentLength())
-				.uploadedBy("").uploadedDate(s3Object.getObjectMetadata().getLastModified()).build();
-	}
-
-	@Override
 	public DocumentDto convertS3SummaryToDto(String documentSpacePathPrefix, UUID documentSpaceId, S3ObjectSummary objSummary) {
 		return DocumentDto.builder().key(objSummary.getKey().replace(documentSpacePathPrefix, ""))
 				.path(documentSpacePathPrefix).size(objSummary.getSize()).uploadedBy("")
 				.spaceId(documentSpaceId.toString())
 				.uploadedDate(objSummary.getLastModified()).build();
-	}
-
-	@Override
-	public DocumentDetailsDto convertToDetailsDto(S3Object s3Object) {
-		return DocumentDetailsDto.builder().key(s3Object.getKey()).path("")
-				.size(s3Object.getObjectMetadata().getContentLength()).uploadedBy("")
-				.uploadedDate(s3Object.getObjectMetadata().getLastModified()).metadata(s3Object.getObjectMetadata()).build();
 	}
 
 	@Override

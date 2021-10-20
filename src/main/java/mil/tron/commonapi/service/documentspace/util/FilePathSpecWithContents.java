@@ -1,6 +1,6 @@
 package mil.tron.commonapi.service.documentspace.util;
 
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
@@ -18,7 +18,7 @@ public class FilePathSpecWithContents extends FilePathSpec {
 
     @Getter
     @Setter
-    private List<S3Object> s3Objects = new ArrayList<>();
+    private List<S3ObjectSummary> s3Objects = new ArrayList<>();
 
     /**
      * List of file (string file names) in this folder (one-level deep)

@@ -433,7 +433,7 @@ public class DocumentSpaceController {
 			contents.getS3Objects().forEach(item -> {
 				filesAndFolders.add(DocumentDto.builder()
 						.path(path)
-						.size(item.getObjectMetadata().getContentLength())
+						.size(item.getSize())
 						.spaceId(id.toString())
 						.isFolder(false)
 						.key(FilenameUtils.getName(item.getKey()))

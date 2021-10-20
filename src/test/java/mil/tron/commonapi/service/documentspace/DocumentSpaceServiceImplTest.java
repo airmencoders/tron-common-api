@@ -10,6 +10,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 
@@ -303,21 +304,16 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(FileSystemElementTree.builder().build());
 
-		S3Object obj0 = new S3Object();
+		S3ObjectSummary obj0 = new S3ObjectSummary();
 		obj0.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file0.txt");
-		obj0.setObjectContent(new ByteArrayInputStream(new byte[] {}));
-		S3Object obj1 = new S3Object();
+		S3ObjectSummary obj1 = new S3ObjectSummary();
 		obj1.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file1.txt");
-		obj1.setObjectContent(new ByteArrayInputStream(new byte[] {}));
-		S3Object obj2 = new S3Object();
+		S3ObjectSummary obj2 = new S3ObjectSummary();
 		obj2.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file2.txt");
-		obj2.setObjectContent(new ByteArrayInputStream(new byte[] {}));
-		S3Object obj3 = new S3Object();
+		S3ObjectSummary obj3 = new S3ObjectSummary();
 		obj3.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file3.txt");
-		obj3.setObjectContent(new ByteArrayInputStream(new byte[] {}));
-		S3Object obj4 = new S3Object();
+		S3ObjectSummary obj4 = new S3ObjectSummary();
 		obj4.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file4.txt");
-		obj4.setObjectContent(new ByteArrayInputStream(new byte[] {}));
 
 		Mockito.when(documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(Mockito.any(FileSystemElementTree.class)))
 				.thenReturn(Lists.newArrayList(
@@ -359,21 +355,16 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(FileSystemElementTree.builder().build());
 
-		S3Object obj0 = new S3Object();
+		S3ObjectSummary obj0 = new S3ObjectSummary();
 		obj0.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file0.txt");
-		obj0.setObjectContent(new ByteArrayInputStream(new byte[] {}));
-		S3Object obj1 = new S3Object();
+		S3ObjectSummary obj1 = new S3ObjectSummary();
 		obj1.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file1.txt");
-		obj1.setObjectContent(new ByteArrayInputStream(new byte[] {}));
-		S3Object obj2 = new S3Object();
+		S3ObjectSummary obj2 = new S3ObjectSummary();
 		obj2.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file2.txt");
-		obj2.setObjectContent(new ByteArrayInputStream(new byte[] {}));
-		S3Object obj3 = new S3Object();
+		S3ObjectSummary obj3 = new S3ObjectSummary();
 		obj3.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file3.txt");
-		obj3.setObjectContent(new ByteArrayInputStream(new byte[] {}));
-		S3Object obj4 = new S3Object();
+		S3ObjectSummary obj4 = new S3ObjectSummary();
 		obj4.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file4.txt");
-		obj4.setObjectContent(new ByteArrayInputStream(new byte[] {}));
 
 		Mockito.when(documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(Mockito.any(FileSystemElementTree.class)))
 				.thenReturn(Lists.newArrayList(
