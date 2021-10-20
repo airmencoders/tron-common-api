@@ -18,7 +18,7 @@
         <java.version>11</java.version>
         <camel.version>3.5.0</camel.version>
         <spring-security.version>5.5.2</spring-security.version>
-        <tomcat.version>9.0.50</tomcat.version>
+        <tomcat.version>9.0.54</tomcat.version>
         <aws.sdk.version>1.12.68</aws.sdk.version>
     </properties>
 
