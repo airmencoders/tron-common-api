@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.google.common.collect.Lists;
 import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,8 @@ import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFile;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.NotAuthorizedException;
@@ -31,6 +34,7 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -67,6 +71,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 	private final PrivilegeRepository privilegeRepository;
+	
+	private final DocumentSpaceFileService documentSpaceFileService;
 
 	@Value("${spring.profiles.active:UNKNOWN}")
 	private String activeProfile;
@@ -81,7 +87,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
 			DocumentSpacePrivilegeService documentSpacePrivilegeService,
 			DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService,
-			PrivilegeRepository privilegeRepository, DocumentSpaceFileSystemService documentSpaceFileSystemService) {
+			PrivilegeRepository privilegeRepository, DocumentSpaceFileSystemService documentSpaceFileSystemService,
+			DocumentSpaceFileService documentSpaceFileService) {
 
 		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
@@ -96,6 +103,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		this.dashboardUserService = dashboardUserService;
 
 		this.privilegeRepository = privilegeRepository;
+		
+		this.documentSpaceFileService = documentSpaceFileService;
 	}
 
 	/**
@@ -176,9 +185,13 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private String validateDocSpaceAndReturnPrefix(UUID documentSpaceId, String path) {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		return getPathPrefix(documentSpace.getId(), path, spec);
+	}
+	
+	private String getPathPrefix(UUID documentSpaceId, String path, FilePathSpec spec) {
 		return !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
 				? spec.getDocSpaceQualifiedPath()
-				: this.createDocumentSpacePathPrefix(documentSpace.getId());
+				: this.createDocumentSpacePathPrefix(documentSpaceId);
 	}
 
 	@Override
@@ -245,18 +258,46 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
 	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) throws RecordNotFoundException {
-		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
+		getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
+		
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
 		metaData.setContentLength(file.getSize());
-
-
+		
+		String filename = file.getOriginalFilename();
+		if (filename == null) {
+			filename = RandomStringUtils.randomAlphanumeric(16);
+		}
+		
+		DocumentSpaceFileSystemEntry parentFolder = documentSpaceFileSystemService.getDocumentSpaceFileSystemEntryByItemId(filePathSpec.getItemId());
+		if (parentFolder == null) {
+			throw new RecordNotFoundException("Folder does not exist at path: " + path);
+		}
+		
 		try {
 			Upload upload = documentSpaceTransferManager.upload(bucketName,
-					prefix + file.getOriginalFilename(), file.getInputStream(),
+					prefix + filename, file.getInputStream(),
 					metaData);
-
-			upload.waitForCompletion();
+			
+			DocumentSpaceFile documentSpaceFile = documentSpaceFileService.getFileByParentFolderIdAndFilename(parentFolder.getItemId(), filename);
+			
+			UploadResult uploadResult = upload.waitForUploadResult();
+			
+			if (documentSpaceFile == null) {
+				documentSpaceFile = DocumentSpaceFile.builder()
+						.fileName(filename)
+						.fileSize(file.getSize())
+						.etag(uploadResult.getETag())
+						.parentFolder(parentFolder)
+						.build();
+			} else {
+				documentSpaceFile.setFileSize(file.getSize());
+				documentSpaceFile.setEtag(uploadResult.getETag());
+			}
+			
+			documentSpaceFileService.saveDocumentSpaceFile(documentSpaceFile);
 		} catch (IOException | InterruptedException e) { // NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
 		}
@@ -289,9 +330,21 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return nonDeletedItems;
 	}
 
+	@Transactional(dontRollbackOn={RecordNotFoundException.class})
 	@Override
 	public void deleteFile(UUID documentSpaceId, String path, String file) throws RecordNotFoundException {
-		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
+		getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
+		
+		DocumentSpaceFile documentSpaceFile = documentSpaceFileService.getFileByParentFolderIdAndFilename(filePathSpec.getItemId(), file);
+		
+		if (documentSpaceFile == null) {
+			log.warn("Could not delete Document Space File: it does not exist in the database");
+		} else {
+			documentSpaceFileService.deleteDocumentSpaceFile(documentSpaceFile);
+		}
+		
 		String fileKey = prefix + file;
 		this.deleteS3ObjectByKey(fileKey);
 	}

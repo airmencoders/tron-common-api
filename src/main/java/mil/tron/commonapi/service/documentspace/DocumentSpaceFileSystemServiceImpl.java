@@ -28,14 +28,17 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     private final DocumentSpaceRepository documentSpaceRepository;
     private final DocumentSpaceService documentSpaceService;
     private final DocumentSpaceFileSystemEntryRepository repository;
+    private final DocumentSpaceFileService documentSpaceFileService;
     public static final String PATH_SEP = "/";
 
     public DocumentSpaceFileSystemServiceImpl(DocumentSpaceRepository documentSpaceRepository,
                                               DocumentSpaceFileSystemEntryRepository repository,
-                                              @Lazy DocumentSpaceService documentSpaceService) {
+                                              @Lazy DocumentSpaceService documentSpaceService,
+                                              DocumentSpaceFileService documentSpaceFileService) {
         this.documentSpaceRepository = documentSpaceRepository;
         this.repository = repository;
         this.documentSpaceService = documentSpaceService;
+        this.documentSpaceFileService = documentSpaceFileService;
     }
 
     /**
@@ -300,6 +303,8 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         UUID lastIdToDelete = parsePathToFilePathSpec(spaceId, path).getItemId();  // this is the last element to delete
                                                                                     // which is the 'root' of the given path
         deleteParentDirectories(dumpElementTree(spaceId, path));
+        
+        documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolder(lastIdToDelete);
         repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(spaceId, lastIdToDelete);
     }
 
@@ -316,6 +321,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             for (S3ObjectSummary obj : tree.getFiles()) {
                 documentSpaceService.deleteS3ObjectByKey(obj.getKey());
             }
+            documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolder(tree.getValue().getItemId());
             repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(tree.getValue().getDocumentSpaceId(), tree.getValue().getItemId());
             return;
         }
@@ -391,4 +397,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             throw new ResourceAlreadyExistsException("A folder with that name already exists at this level");
         }
     }
+
+    @Nullable
+	@Override
+	public DocumentSpaceFileSystemEntry getDocumentSpaceFileSystemEntryByItemId(UUID id) {
+		return repository.findByItemIdEquals(id).orElse(null);
+	}
 }

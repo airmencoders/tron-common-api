@@ -98,6 +98,9 @@ class DocumentSpaceServiceImplTest {
 
 	@Mock
 	private PrivilegeRepository privilegeRepository;
+	
+	@Mock
+	private DocumentSpaceFileService documentSpaceFileService;
 
 	private S3Mock s3Mock;
 
@@ -118,7 +121,7 @@ class DocumentSpaceServiceImplTest {
 		transferManager = TransferManagerBuilder.standard().withS3Client(amazonS3).build();
 
 		documentService = new DocumentSpaceServiceImpl(amazonS3, transferManager, BUCKET_NAME, documentSpaceRepo,
-				documentSpacePrivilegeService, dashboardUserRepository, dashboardUserService, privilegeRepository, documentSpaceFileSystemService);
+				documentSpacePrivilegeService, dashboardUserRepository, dashboardUserService, privilegeRepository, documentSpaceFileSystemService, documentSpaceFileService);
 		s3Mock = new S3Mock.Builder().withPort(9002).withInMemoryBackend().build();
 
 		s3Mock.start();
