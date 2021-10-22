@@ -37,10 +37,8 @@ import mil.tron.commonapi.service.DashboardUserService;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.assertj.core.util.Lists;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -179,7 +177,7 @@ class DocumentSpaceServiceImplTest {
 				.email("dashboard@user.com")
 				.emailAsLower("dashboard@user.com")
 				.build();
-		
+
 		// Test Dashboard Admin should get all
 		Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
 		dashboardUser.setPrivileges(Set.of(new Privilege(1L, "DASHBOARD_ADMIN")));
@@ -191,7 +189,7 @@ class DocumentSpaceServiceImplTest {
 		dashboardUser.setPrivileges(Set.of());
 		Mockito.when(documentSpaceRepo.findAllDynamicByDashboardUsers_Id(dashboardUser.getId(), DocumentSpaceResponseDto.class)).thenReturn(List.of(responseDto));
 		assertThat(documentService.listSpaces(dashboardUser.getEmail())).hasSize(1);
-		
+
 		// Test for exception when Dashboard User not found
 		Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(null);
 		assertThrows(RecordNotFoundException.class, () -> documentService.listSpaces(dashboardUser.getEmail()));
@@ -396,12 +394,12 @@ class DocumentSpaceServiceImplTest {
 
 		assertThat(output.size()).isPositive();
 	}
-	
+
 	@Nested
 	class AddDashboardUserToDocumentSpaceTest {
 		private DashboardUser dashboardUser;
 		private DocumentSpaceDashboardMemberRequestDto memberDto;
-		
+
 		@BeforeEach
 		void setup() {
 			dashboardUser = DashboardUser.builder()
@@ -411,26 +409,26 @@ class DocumentSpaceServiceImplTest {
 					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
 					.documentSpacePrivileges(new HashSet<>(Arrays.asList(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ))))
 					.build();
-			
+
 			memberDto = DocumentSpaceDashboardMemberRequestDto.builder()
 					.email(dashboardUser.getEmail())
 					.privileges(Arrays.asList(DocumentSpacePrivilegeType.READ))
 					.build();
 		}
-		
+
 		@Test
 		void shouldAddDashboardUserToDocumentSpace_whenDocumentSpaceExists() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
 			Mockito.when(documentSpacePrivilegeService.createDashboardUserWithPrivileges(Mockito.anyString(),
 					Mockito.any(DocumentSpace.class), Mockito.anyList())).thenReturn(dashboardUser);
-			
+
 			documentService.addDashboardUserToDocumentSpace(entity.getId(), memberDto);
-			
+
 			assertThat(entity.getDashboardUsers()).contains(dashboardUser);
 			assertThat(dashboardUser.getDocumentSpaces()).contains(entity);
 			assertThat(dashboardUser.getDocumentSpacePrivileges()).contains(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ));
 		}
-		
+
 		@Test
 		void shouldThrow_whenDocumentSpaceNotExists() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
@@ -485,7 +483,7 @@ class DocumentSpaceServiceImplTest {
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
 			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
 			Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
-			
+
 			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), new String[] {memberDto.getEmail()});
 
 			assertThat(entity.getDashboardUsers()).doesNotContain(dashboardUser);
@@ -502,7 +500,7 @@ class DocumentSpaceServiceImplTest {
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
 			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
 			Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
-			
+
 			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), new String[] {memberDto.getEmail()});
 
 			assertThat(entity.getDashboardUsers()).doesNotContain(dashboardUser);
@@ -820,4 +818,91 @@ class DocumentSpaceServiceImplTest {
 		}
 
 	}
+
+	@Nested
+	class SetDashboardUserDefaultDocumentSpace {
+		private DashboardUser dashboardUser;
+
+		private UUID documentSpaceId;
+
+		@BeforeEach
+		void setup() {
+
+			documentSpaceId = UUID.randomUUID();
+			dashboardUser = DashboardUser.builder()
+					.id(UUID.randomUUID())
+					.email("dashboard@user.com")
+					.emailAsLower("dashboard@user.com")
+					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
+					.documentSpacePrivileges(new HashSet<>(Arrays.asList(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ))))
+					.build();
+
+		}
+
+		@Test
+		void shouldSetDashboardUserDefaultDocumentSpaceAndSave() {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+
+			Mockito.doReturn(true).when(documentSpaceRepo).isUserInDocumentSpace(dashboardUser.getId(), entity.getId());
+
+			entity.addDashboardUser(dashboardUser);
+			Assert.assertNull(dashboardUser.getDefaultDocumentSpaceId());
+
+			documentService.setDashboardUserDefaultDocumentSpace(documentSpaceId, dashboardUser.getEmail());
+
+			dashboardUser.setDefaultDocumentSpaceId(documentSpaceId);
+			Mockito.verify(dashboardUserRepository, times(1)).save(dashboardUser);
+		}
+
+		@Test
+		void shouldThrow_whenDashboardUserIsNotFound() {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+
+			assertThatThrownBy(() -> documentService.setDashboardUserDefaultDocumentSpace(documentSpaceId, dashboardUser.getEmail()))
+					.isInstanceOf(RecordNotFoundException.class)
+					.hasMessageContaining(String.format("Requesting Document Space Dashboard User does not exist with email: ", dashboardUser.getEmail()));
+		}
+
+		@Test
+		void shouldThrow_whenDashboardUserIsNotFoundInDocumentSpace() {
+			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
+			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+
+			assertThatThrownBy(() -> documentService.setDashboardUserDefaultDocumentSpace(documentSpaceId, dashboardUser.getEmail()))
+					.isInstanceOf(NotAuthorizedException.class)
+					.hasMessageContaining("Not Authorized to this Document Space");
+		}
+	}
+
+	@Nested
+	class UnsetDashboardUsersDefaultDocumentSpace {
+		private DashboardUser dashboardUser;
+		private UUID documentSpaceId;
+
+		@BeforeEach
+		void setup() {
+
+			documentSpaceId = UUID.randomUUID();
+			dashboardUser = DashboardUser.builder()
+					.id(UUID.randomUUID())
+					.email("dashboard@user.com")
+					.emailAsLower("dashboard@user.com")
+					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
+					.defaultDocumentSpaceId(entity.getId())
+					.documentSpacePrivileges(new HashSet<>(Arrays.asList(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ))))
+					.build();
+
+			entity.addDashboardUser(dashboardUser);
+
+		}
+
+		@Test
+		void shouldRemoveAllDefaultDocumentSpaceIdsFromDashboardUsers() {
+			assertNotNull(dashboardUser.getDefaultDocumentSpaceId());
+			documentService.unsetDashboardUsersDefaultDocumentSpace(entity);
+			Mockito.verify(dashboardUserRepository, times(1)).unsetDashboardUsersDefaultDocumentSpaceForDocumentSpace(entity.getId());
+		}
+	}
+
 }
