@@ -1,9 +1,11 @@
 package mil.tron.commonapi.dto.dav;
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import lombok.AllArgsConstructor;
 
+@AllArgsConstructor
 public class PropResourceType {
 
-    @JacksonXmlProperty(localName = "collection")
-    private boolean collection;
+    @JacksonXmlProperty(localName = "D:collection")
+    private String collection;
 }

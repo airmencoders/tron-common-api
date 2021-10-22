@@ -5,6 +5,7 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Singular;
 
 import java.util.List;
 
@@ -14,6 +15,7 @@ import java.util.List;
 public class PropFindDto {
 
     @JacksonXmlElementWrapper(useWrapping = false)
+    @Singular
     private List<PropFindResponse> responses;
 
 }

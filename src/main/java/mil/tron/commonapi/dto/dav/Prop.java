@@ -10,15 +10,15 @@ import java.util.Optional;
 @Builder
 public class Prop {
 
-    @JacksonXmlProperty(localName = "resourcetype")
+    @JacksonXmlProperty(localName = "D:resourcetype")
     private PropResourceType resourceType;
 
-    @JacksonXmlProperty(localName = "creationdate")
+    @JacksonXmlProperty(localName = "D:creationdate")
     private String creationDate;
 
-    @JacksonXmlProperty(localName = "getlastmodified")
+    @JacksonXmlProperty(localName = "D:getlastmodified")
     private String lastModified;
 
-    @JacksonXmlProperty(localName = "getcontentlength")
+    @JacksonXmlProperty(localName = "D:getcontentlength")
     private Optional<Long> contentLength;
 }

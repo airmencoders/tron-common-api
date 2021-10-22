@@ -12,5 +12,6 @@ public class PropFindResponse {
     @JacksonXmlProperty(localName = "D:href")
     private String href;
 
-
+    @JacksonXmlProperty(localName = "D:propstat")
+    private PropStat propStat;
 }
