@@ -1,24 +1,16 @@
 package mil.tron.commonapi.controller.documentspace;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
-import mil.tron.commonapi.dto.dav.*;
-import org.apache.http.HttpResponse;
-import org.apache.http.entity.ContentType;
+import mil.tron.commonapi.dto.dav.PropFindDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
 
 @RestController
 @RequestMapping("${api-prefix.v2}" + DocumentSpaceWebDavController.ENDPOINT)
@@ -27,7 +19,7 @@ public class DocumentSpaceWebDavController {
 
     // Note: In formal implementation WebDAV verbs will need to be "whitelisted" in a filter
     @RequestMapping(value = "", produces = { "application/xml"})
-    @ResponseBody public ResponseEntity<String> getContents(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    @ResponseBody public ResponseEntity<String> getContents(HttpServletRequest request, HttpServletResponse response) {
         XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
         response.setContentType("application/xml");
