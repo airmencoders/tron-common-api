@@ -5,9 +5,9 @@ import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
-import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.google.common.collect.Lists;
 import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,6 @@ import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFile;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -33,6 +32,8 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,10 +46,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
+
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -271,30 +277,37 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			filename = RandomStringUtils.randomAlphanumeric(16);
 		}
 		
-		DocumentSpaceFileSystemEntry parentFolder = documentSpaceFileSystemService.getDocumentSpaceFileSystemEntryByItemId(filePathSpec.getItemId());
-		if (parentFolder == null) {
-			throw new RecordNotFoundException("Folder does not exist at path: " + path);
+		MessageDigest md;
+		try {
+			md = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e1) {
+			throw new IllegalArgumentException("Internal error occurred while uploading file: could not generate checksum value");
 		}
 		
-		try {
+		try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream());
+				DigestInputStream dis = new DigestInputStream(bis, md)) {
 			Upload upload = documentSpaceTransferManager.upload(bucketName,
-					prefix + filename, file.getInputStream(),
+					prefix + filename, bis,
 					metaData);
 			
-			DocumentSpaceFile documentSpaceFile = documentSpaceFileService.getFileByParentFolderIdAndFilename(parentFolder.getItemId(), filename);
+			DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
+					.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), filename).orElse(null);
 			
-			UploadResult uploadResult = upload.waitForUploadResult();
+			upload.waitForCompletion();
 			
 			if (documentSpaceFile == null) {
-				documentSpaceFile = DocumentSpaceFile.builder()
-						.fileName(filename)
-						.fileSize(file.getSize())
-						.etag(uploadResult.getETag())
-						.parentFolder(parentFolder)
+				documentSpaceFile = DocumentSpaceFileSystemEntry.builder()
+						.documentSpaceId(documentSpaceId)
+						.parentEntryId(filePathSpec.getItemId())
+						.isFolder(false)
+						.itemName(filename)
+						.size(file.getSize())
+						.etag(Hex.encodeHexString(md.digest()))
+						.isDeleteArchived(false)
 						.build();
 			} else {
-				documentSpaceFile.setFileSize(file.getSize());
-				documentSpaceFile.setEtag(uploadResult.getETag());
+				documentSpaceFile.setSize(file.getSize());
+				documentSpaceFile.setEtag(Hex.encodeHexString(md.digest()));
 			}
 			
 			documentSpaceFileService.saveDocumentSpaceFile(documentSpaceFile);
@@ -337,7 +350,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
 		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
 		
-		DocumentSpaceFile documentSpaceFile = documentSpaceFileService.getFileByParentFolderIdAndFilename(filePathSpec.getItemId(), file);
+		DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
+				.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), file).orElse(null);
 		
 		if (documentSpaceFile == null) {
 			log.warn("Could not delete Document Space File: it does not exist in the database");
@@ -369,6 +383,25 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 			throw ex;
 		}
+	}
+	
+	/**
+	 * Deletes a list of S3 objects by their key
+	 * @param objKeys the array of object keys to delete
+	 * @return a list of object keys of the items that failed to be deleted from S3 or an empty list if no errors
+	 */
+	@Override
+	public List<DeleteError> deleteS3ObjectsByKey(String[] objKeys) {
+		DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(bucketName)
+				.withKeys(objKeys);
+		
+		try {
+			documentSpaceClient.deleteObjects(deleteObjectsRequest);
+		} catch (MultiObjectDeleteException ex) {
+			return ex.getErrors();
+		}
+		
+		return new ArrayList<>();
 	}
 
 	@Transactional
@@ -505,9 +538,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public DocumentDto convertS3SummaryToDto(String documentSpacePathPrefix, UUID documentSpaceId, S3ObjectSummary objSummary) {
 		return DocumentDto.builder().key(objSummary.getKey().replace(documentSpacePathPrefix, ""))
-				.path(documentSpacePathPrefix).size(objSummary.getSize()).uploadedBy("")
+				.path(documentSpacePathPrefix).size(objSummary.getSize()).lastModifiedBy("")
 				.spaceId(documentSpaceId.toString())
-				.uploadedDate(objSummary.getLastModified()).build();
+				.lastModifiedDate(objSummary.getLastModified()).build();
 	}
 
 	@Override

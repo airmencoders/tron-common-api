@@ -8,7 +8,12 @@ import lombok.NoArgsConstructor;
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -37,6 +42,10 @@ public class DocumentSpaceFileSystemEntry {
     @Builder.Default
     private UUID parentEntryId = UUID.fromString(NIL_UUID);
 
+    @NotNull
+    @Builder.Default
+    private boolean isFolder = true;
+    
     @NotBlank
     @NotNull
     @Column(name="item_name", nullable = false)
@@ -46,6 +55,42 @@ public class DocumentSpaceFileSystemEntry {
     @NotNull
     @Column(name="item_id", nullable = false)
     private UUID itemId = UUID.randomUUID();
+    
+    @NotNull
+    @Builder.Default
+	private long size = 0L;
+	
+	@NotNull
+	@Size(min = 1, max = 255)
+	private String etag;
+	
+	@NotNull
+	@Builder.Default
+	private boolean isDeleteArchived = false;
+    
+	@NotNull
+    @Column(nullable = false, updatable = false)
+	protected String createdBy;
+
+	protected String lastModifiedBy;
+	
+	@NotNull
+	@Column(nullable = false, updatable = false)
+	@Temporal(TemporalType.TIMESTAMP)
+    protected Date createdOn;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date lastModifiedOn;
+
+	private String getCurrentAuditor() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		
+		if (auth == null || !auth.isAuthenticated()) {
+			return "Unknown";
+		}
+		
+		return auth.getName();
+	}
 
     @Override
     public boolean equals(Object o) {
@@ -61,10 +106,22 @@ public class DocumentSpaceFileSystemEntry {
     }
 
     @PrePersist
-    @PreUpdate
     void checkParentUUID() {
         if (this.parentEntryId == null) {
             this.parentEntryId = UUID.fromString(NIL_UUID);
         }
+        
+        setCreatedOn(new Date());
+		setCreatedBy(getCurrentAuditor());
     }
+    
+    @PreUpdate
+	private void onPreUpdate() {
+    	if (this.parentEntryId == null) {
+            this.parentEntryId = UUID.fromString(NIL_UUID);
+        }
+    	
+		setLastModifiedOn(new Date());
+		setLastModifiedBy(getCurrentAuditor());
+	}
 }

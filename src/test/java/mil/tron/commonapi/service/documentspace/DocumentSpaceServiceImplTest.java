@@ -26,6 +26,7 @@ import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.NotAuthorizedException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -34,6 +35,7 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
 import mil.tron.commonapi.service.DashboardUserService;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.assertj.core.util.Lists;
@@ -207,10 +209,17 @@ class DocumentSpaceServiceImplTest {
 				fakeContent.getBytes());
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
+		Mockito.when(
+				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(
+						FilePathSpec.builder().itemId(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID)).build());
+		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(), Mockito.any(),
+				Mockito.anyString())).thenReturn(Optional.ofNullable(null));
 		documentService.uploadFile(entity.getId(), "", file);
 
 		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + "filename.txt")).isTrue();
+		Mockito.verify(documentSpaceFileService).saveDocumentSpaceFile(Mockito.any(DocumentSpaceFileSystemEntry.class));
 	}
 
 	@Test
@@ -231,8 +240,17 @@ class DocumentSpaceServiceImplTest {
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0))).isTrue();
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
+		Mockito.when(
+				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(
+						FilePathSpec.builder().itemId(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID)).build());
+		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(UUID.class),
+				Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(Optional.of(DocumentSpaceFileSystemEntry.builder().documentSpaceId(entity.getId())
+						.isFolder(false).itemName(fileNames.get(0)).build()));
 		documentService.deleteFile(entity.getId(), "", fileNames.get(0));
 
+		Mockito.verify(documentSpaceFileService).deleteDocumentSpaceFile(Mockito.any());
 		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0))).isFalse();
 	}
@@ -251,7 +269,7 @@ class DocumentSpaceServiceImplTest {
 		assertThat(s3PaginationDto.getSize()).isEqualTo(30);
 		assertThat(s3PaginationDto.getTotalElements()).isEqualTo(fileNames.size());
 		assertThat(s3PaginationDto.getDocuments()).usingRecursiveComparison().ignoringCollectionOrder()
-				.ignoringFields("uploadedDate", "uploadedBy")
+				.ignoringFields("lastModifiedDate", "lastModifiedBy")
 				.isEqualTo(fileNames.stream().map(filename -> DocumentDto.builder().key(filename).path(requestDto.getId() + "/")
 						.spaceId(requestDto.getId().toString())
 						.size(content.getBytes().length).build()).collect(Collectors.toList()));

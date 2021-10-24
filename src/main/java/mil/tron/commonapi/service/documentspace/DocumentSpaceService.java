@@ -2,6 +2,8 @@ package mil.tron.commonapi.service.documentspace;
 
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
+
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
@@ -35,6 +37,7 @@ public interface DocumentSpaceService {
     List<String> deleteItems(UUID documentSpaceId, String currentPath, List<String> items);
     void renameFolder(UUID documentSpaceId, String pathAndFolder, String newFolderName);
     void deleteS3ObjectByKey(String objKey);
+    List<DeleteError> deleteS3ObjectsByKey(String[] objKeys);
     S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit);
     List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix);
     FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
