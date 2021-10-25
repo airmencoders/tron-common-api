@@ -224,7 +224,7 @@ public class DocumentSpaceFileSystemServiceTests {
         
         service.deleteFolder(spaceId, "/some-folder/some-folder2/some-deep-folder2");
         
-        Mockito.verify(documentSpaceFileService).deleteAllDocumentSpaceFilesInParentFolderExcept(Mockito.any(UUID.class), Mockito.any(UUID.class), Mockito.anyList());
+        Mockito.verify(documentSpaceFileService).deleteAllDocumentSpaceFilesInParentFolderExcept(Mockito.any(UUID.class), Mockito.any(UUID.class), Mockito.anySet());
     }
 
     @Transactional
