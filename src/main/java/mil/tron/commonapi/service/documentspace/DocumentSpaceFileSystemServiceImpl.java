@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -338,15 +339,19 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 		 * error from being deleted from S3 will be checked. Do not delete any file from
 		 * the database that could not be deleted from S3 except for S3 NoSuchKey errors.
 		 */
-        if (errors.isEmpty()) {
-        	documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolder(tree.getFilePathSpec().getDocumentSpaceId(), tree.getValue().getItemId());
-        	repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(tree.getValue().getDocumentSpaceId(), tree.getValue().getItemId());
-        } else {
+		if (errors.isEmpty()) {
+			documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolder(
+					tree.getFilePathSpec().getDocumentSpaceId(), tree.getValue().getItemId());
+			
+			repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(tree.getValue().getDocumentSpaceId(),
+					tree.getValue().getItemId());
+		} else {
 			documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolderExcept(
-					tree.getFilePathSpec().getDocumentSpaceId(),
-					tree.getValue().getItemId(), 
-					extractFilesFromPath(errors.stream().filter(error -> !"NoSuchKey".equals(error.getCode())).map(DeleteError::getKey).collect(Collectors.toList())));
-        }
+					tree.getFilePathSpec().getDocumentSpaceId(), tree.getValue().getItemId(),
+					new HashSet<String>(
+							extractFilesFromPath(errors.stream().filter(error -> !"NoSuchKey".equals(error.getCode()))
+									.map(DeleteError::getKey).collect(Collectors.toList()))));
+		}
     }
 
     @Override

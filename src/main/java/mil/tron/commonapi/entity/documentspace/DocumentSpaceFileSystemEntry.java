@@ -70,17 +70,17 @@ public class DocumentSpaceFileSystemEntry {
     
 	@NotNull
     @Column(nullable = false, updatable = false)
-	protected String createdBy;
+	private String createdBy;
 
-	protected String lastModifiedBy;
+	private String lastModifiedBy;
 	
 	@NotNull
 	@Column(nullable = false, updatable = false)
 	@Temporal(TemporalType.TIMESTAMP)
-    protected Date createdOn;
+	private Date createdOn;
 
 	@Temporal(TemporalType.TIMESTAMP)
-	protected Date lastModifiedOn;
+	private Date lastModifiedOn;
 
 	private String getCurrentAuditor() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();

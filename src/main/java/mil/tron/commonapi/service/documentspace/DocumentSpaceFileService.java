@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service.documentspace;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
@@ -54,5 +54,5 @@ public interface DocumentSpaceFileService {
 	 * @param excludedFilenames the file names to exclude from deletion
 	 */
 	void deleteAllDocumentSpaceFilesInParentFolderExcept(UUID documentSpaceId, UUID parentFolderId,
-			List<String> excludedFilenames);
+			Set<String> excludedFilenames);
 }

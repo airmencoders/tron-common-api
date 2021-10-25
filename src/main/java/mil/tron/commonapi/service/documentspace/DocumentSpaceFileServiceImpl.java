@@ -2,6 +2,7 @@ package mil.tron.commonapi.service.documentspace;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 
 	@Override
 	public void deleteAllDocumentSpaceFilesInParentFolderExcept(UUID documentSpaceId, UUID parentFolderId,
-			List<String> excludedFilenames) {
+			Set<String> excludedFilenames) {
 		documentSpaceFileSystemRepository
 				.deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndItemNameNotInAndIsFolderFalse(documentSpaceId,
 						parentFolderId, excludedFilenames);

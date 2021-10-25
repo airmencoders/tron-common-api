@@ -35,7 +35,6 @@ import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -274,7 +273,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		
 		String filename = file.getOriginalFilename();
 		if (filename == null) {
-			filename = RandomStringUtils.randomAlphanumeric(16);
+			throw new BadRequestException("Uploaded file is missing a filename");
 		}
 		
 		MessageDigest md;
