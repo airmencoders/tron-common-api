@@ -12,6 +12,7 @@ import liquibase.util.file.FilenameUtils;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
+import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.GenericStringArrayResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -172,6 +173,25 @@ public class DocumentSpaceController {
     	return ResponseEntity.ok(documentSpaceService.getDashboardUserPrivilegesForDocumentSpace(id, principal.getName()));
     }
 
+    @Operation(summary = "Sets the default Document Space privileges of the requesting user")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+				description = "Successful operation",
+                content = @Content(schema = @Schema(implementation = DocumentSpacePrivilegeDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Not authorized to this Document Space)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PreAuthorize("isAuthenticated() and #principal != null")
+    @PatchMapping("/spaces/{id}/user/default")
+    public ResponseEntity<Void>patchSelfDocumentSpaceDefault(@PathVariable UUID id, Principal principal) {
+		documentSpaceService.setDashboardUserDefaultDocumentSpace(id, principal.getName());
+		return new ResponseEntity<>(HttpStatus.OK);
+    }
+
     @Operation(summary = "Removes one or more Dashboard User members from a Document Space", description = "Removes Dashboard Users from a Document Space and their privileges")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204",
@@ -180,6 +200,7 @@ public class DocumentSpaceController {
 				description = "Not Found - space not found",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
+	@PreAuthorizeOnlySSO
 	@PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/users/dashboard")
     public ResponseEntity<Object> removeUserFromDocumentSpace(

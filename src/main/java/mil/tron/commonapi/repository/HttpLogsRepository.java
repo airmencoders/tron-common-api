@@ -25,7 +25,7 @@ public interface HttpLogsRepository extends JpaRepository<HttpLogEntry, UUID> {
             "lower(h.userAgent) like lower(:userAgent) and lower(h.requestedUrl) like lower(:requestedUrl) order by h.requestTimestamp")
     Page<HttpLogEntry> findRequestedLogs
             (Date requestTimeStamp, String requestMethod, String userName, int status, String userAgent, String requestedUrl, Pageable page);
-    
+
     @Query(value = "SELECT h.userName AS name, COUNT(*) AS requestCount"
     		+ " FROM HttpLogEntry h"
     		+ " WHERE h.requestTimestamp BETWEEN :startDate and :endDate"

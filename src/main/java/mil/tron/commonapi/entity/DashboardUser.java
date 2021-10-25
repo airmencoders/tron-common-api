@@ -59,7 +59,12 @@ public class DashboardUser {
     @ManyToMany(mappedBy="dashboardUsers")
     @EqualsAndHashCode.Exclude
     private Set<DocumentSpace> documentSpaces = new HashSet<>();
-    
+
+    @Getter
+    @Setter
+    @EqualsAndHashCode.Exclude
+    private UUID defaultDocumentSpaceId;
+
     public void addDocumentSpacePrivilege(DocumentSpacePrivilege privilege) {
     	documentSpacePrivileges.add(privilege);
     	privilege.getDashboardUsers().add(this);

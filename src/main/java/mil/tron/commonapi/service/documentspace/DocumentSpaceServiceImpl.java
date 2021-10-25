@@ -183,6 +183,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 		} while (objectListing.isTruncated());
 
+		unsetDashboardUsersDefaultDocumentSpace(documentSpace);
+
 		documentSpacePrivilegeService.deleteAllPrivilegesBelongingToDocumentSpace(documentSpace);
 		documentSpaceRepository.deleteById(documentSpace.getId());
 	}
@@ -663,11 +665,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	public List<DocumentSpacePrivilegeDto> getDashboardUserPrivilegesForDocumentSpace(UUID documentSpaceId,
 			String dashboardUserEmail) throws RecordNotFoundException, NotAuthorizedException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
+		DashboardUser dashboardUser = getDashboardUserOrElseThrow(dashboardUserEmail);
 
-		if (dashboardUser == null) {
-			throw new RecordNotFoundException("Requesting Document Space Dashboard User does not exist with email: " + dashboardUserEmail);
-		}
 
 		List<DocumentSpaceDashboardMemberPrivilegeRow> dashboardUserDocumentSpacePrivilegeRows =
 				documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace, Set.of(dashboardUser.getId()));
@@ -776,4 +775,35 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private boolean parseBooleanPrivilegeValue(String privilege){
 		return privilege.equalsIgnoreCase("true") || privilege.equalsIgnoreCase("yes") || privilege.equals("1");
 	}
+
+
+	@Override
+	public void setDashboardUserDefaultDocumentSpace(UUID documentSpaceId, String dashboardUserEmail) {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		DashboardUser dashboardUser = getDashboardUserOrElseThrow(dashboardUserEmail);
+
+
+		if(!documentSpaceRepository.isUserInDocumentSpace(dashboardUser.getId(), documentSpace.getId())){
+			throw new NotAuthorizedException("Not Authorized to this Document Space");
+		}
+		dashboardUser.setDefaultDocumentSpaceId(documentSpaceId);
+
+		dashboardUserRepository.save(dashboardUser);
+	}
+
+	private DashboardUser getDashboardUserOrElseThrow(String dashboardUserEmail) throws RecordNotFoundException {
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
+
+		if (dashboardUser == null) {
+			throw new RecordNotFoundException("Requesting Document Space Dashboard User does not exist with email: " + dashboardUserEmail);
+		}
+		return dashboardUser;
+	}
+
+
+	@Override
+	public void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace) {
+		dashboardUserRepository.unsetDashboardUsersDefaultDocumentSpaceForDocumentSpace(documentSpace.getId());
+	}
+
 }
