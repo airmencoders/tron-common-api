@@ -21,5 +21,5 @@ public class DocumentSpaceDashboardMemberRequestDto {
 	private String email;
 	
 	@NotNull
-	private List<DocumentSpacePrivilegeType> privileges;
+	private List<ExternalDocumentSpacePrivilegeType> privileges;
 }
