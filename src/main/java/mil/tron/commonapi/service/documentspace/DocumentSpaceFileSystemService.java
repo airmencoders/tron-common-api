@@ -26,4 +26,6 @@ public interface DocumentSpaceFileSystemService {
     boolean isFolder(UUID spaceId, String path, String itemName);
     void deleteFolder(UUID spaceId, String path);
     void renameFolder(UUID spaceId, String existingPath, String newFolderName);
+    
+    List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(DocumentSpaceFileSystemEntry propagateFrom);
 }

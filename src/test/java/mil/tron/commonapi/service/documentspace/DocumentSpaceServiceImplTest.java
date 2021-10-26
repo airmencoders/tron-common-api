@@ -218,6 +218,7 @@ class DocumentSpaceServiceImplTest {
 		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + "filename.txt")).isTrue();
 		Mockito.verify(documentSpaceFileService).saveDocumentSpaceFile(Mockito.any(DocumentSpaceFileSystemEntry.class));
+		Mockito.verify(documentSpaceFileSystemService).propagateModificationStateToAncestors(Mockito.any(DocumentSpaceFileSystemEntry.class));
 	}
 
 	@Test
@@ -251,6 +252,8 @@ class DocumentSpaceServiceImplTest {
 		Mockito.verify(documentSpaceFileService).deleteDocumentSpaceFile(Mockito.any());
 		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0))).isFalse();
+		
+		Mockito.verify(documentSpaceFileSystemService).propagateModificationStateToAncestors(Mockito.any(DocumentSpaceFileSystemEntry.class));
 	}
 
 	@Test
@@ -899,12 +902,9 @@ class DocumentSpaceServiceImplTest {
 	@Nested
 	class UnsetDashboardUsersDefaultDocumentSpace {
 		private DashboardUser dashboardUser;
-		private UUID documentSpaceId;
 
 		@BeforeEach
 		void setup() {
-
-			documentSpaceId = UUID.randomUUID();
 			dashboardUser = DashboardUser.builder()
 					.id(UUID.randomUUID())
 					.email("dashboard@user.com")

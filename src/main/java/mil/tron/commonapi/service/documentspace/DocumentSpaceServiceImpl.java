@@ -312,6 +312,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			}
 			
 			documentSpaceFileService.saveDocumentSpaceFile(documentSpaceFile);
+			documentSpaceFileSystemService.propagateModificationStateToAncestors(documentSpaceFile);
 		} catch (IOException | InterruptedException e) { // NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
 		}
@@ -358,6 +359,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			log.warn("Could not delete Document Space File: it does not exist in the database");
 		} else {
 			documentSpaceFileService.deleteDocumentSpaceFile(documentSpaceFile);
+			documentSpaceFileSystemService.propagateModificationStateToAncestors(documentSpaceFile);
 		}
 		
 		String fileKey = prefix + file;

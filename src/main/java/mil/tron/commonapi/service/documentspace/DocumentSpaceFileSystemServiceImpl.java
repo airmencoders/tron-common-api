@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -270,7 +271,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             throw new ResourceAlreadyExistsException(String.format("Folder with name %s already exists under that parent", name));
         }
 
-        return repository.save(DocumentSpaceFileSystemEntry.builder()
+        DocumentSpaceFileSystemEntry savedFolder = repository.save(DocumentSpaceFileSystemEntry.builder()
                 .documentSpaceId(spaceId)
                 .parentEntryId(pathSpec.getItemId())
                 .itemId(UUID.randomUUID()) // assign UUID to it (gets auto assigned anyways if omitted)
@@ -278,6 +279,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 .isFolder(true)
                 .etag(createFolderETag(spaceId, pathSpec.getParentFolderId(), name))
                 .build());
+        
+        propagateModificationStateToAncestors(savedFolder);
+        
+        return savedFolder;
     }
 
     /**
@@ -301,12 +306,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     @Override
     public void deleteFolder(UUID spaceId, String path) {
-        UUID lastIdToDelete = parsePathToFilePathSpec(spaceId, path).getItemId();  // this is the last element to delete
-                                                                                    // which is the 'root' of the given path
-        deleteParentDirectories(dumpElementTree(spaceId, path));
-         
-        documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolder(spaceId, lastIdToDelete);
-        repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(spaceId, lastIdToDelete);
+        FileSystemElementTree tree = dumpElementTree(spaceId, path);
+        deleteParentDirectories(tree);
+        
+        propagateModificationStateToAncestors(tree.getValue());
     }
 
     /**
@@ -348,7 +351,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 		} else {
 			documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolderExcept(
 					tree.getFilePathSpec().getDocumentSpaceId(), tree.getValue().getItemId(),
-					new HashSet<String>(
+					new HashSet<>(
 							extractFilesFromPath(errors.stream().filter(error -> !"NoSuchKey".equals(error.getCode()))
 									.map(DeleteError::getKey).collect(Collectors.toList()))));
 		}
@@ -416,6 +419,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             entry.setItemName(newFolderName);
             entry.setEtag(createFolderETag(entry.getDocumentSpaceId(), entry.getParentEntryId(), newFolderName));
             repository.save(entry);
+            propagateModificationStateToAncestors(entry);
         }
         else {
             throw new ResourceAlreadyExistsException("A folder with that name already exists at this level");
@@ -430,5 +434,31 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 	@Override
 	public DocumentSpaceFileSystemEntry getDocumentSpaceFileSystemEntryByItemId(UUID id) {
 		return repository.findByItemIdEquals(id).orElse(null);
+	}
+
+	@Override
+	public List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(
+			DocumentSpaceFileSystemEntry propagateFrom) {
+		UUID rootId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
+		DocumentSpaceFileSystemEntry current = propagateFrom;
+		
+		List<DocumentSpaceFileSystemEntry> entitiesToPropagateTo = new ArrayList<>();
+		
+		while (!current.getParentEntryId().equals(rootId)) {
+			current = repository.findByItemIdEquals(current.getParentEntryId()).orElse(null);
+			if (current == null) {
+				return new ArrayList<>();
+			}
+			
+			entitiesToPropagateTo.add(current);
+		}
+		
+		if (entitiesToPropagateTo.isEmpty()) {
+			return new ArrayList<>();
+		}
+		
+		entitiesToPropagateTo.forEach(entity -> entity.setLastModifiedOn(new Date()));
+		
+		return repository.saveAll(entitiesToPropagateTo);
 	}
 }

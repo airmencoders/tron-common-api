@@ -7,6 +7,7 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
@@ -17,13 +18,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
 
 import javax.transaction.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -38,6 +43,9 @@ public class DocumentSpaceFileSystemServiceTests {
     
     @MockBean
     DocumentSpaceFileService documentSpaceFileService;
+    
+    @Autowired
+    DocumentSpaceFileSystemEntryRepository documentSpaceFileSystemRepository;
 
     @Autowired
     DocumentSpaceRepository documentSpaceRepository;
@@ -243,5 +251,97 @@ public class DocumentSpaceFileSystemServiceTests {
         assertTrue(service.isFolder(spaceId, "/some-folder/", "some-folder2"));
         assertFalse(service.isFolder(spaceId, "/some-folder", "some-folder3"));
     }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void renameFolder_shouldPropagateModification_whenValidRequest() {
+    	DocumentSpaceFileSystemEntry parent = service.addFolder(spaceId, "some-folder", "/");
+    	service.addFolder(spaceId, "testFolder", "/some-folder");
+    	
+    	Date datePriorToRename = new Date();
+    	service.renameFolder(spaceId, "/some-folder/testFolder", "newFolder");
+    	assertThat(parent.getLastModifiedOn()).isAfter(datePriorToRename);
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void renameFolder_shouldThrow_whenNewNameAlreadyExists() {
+    	service.addFolder(spaceId, "some-folder", "/");
+    	service.addFolder(spaceId, "testFolder", "/");
+    	
+    	assertThatThrownBy(() -> service.renameFolder(spaceId, "/some-folder", "testFolder"))
+    		.isInstanceOf(ResourceAlreadyExistsException.class)
+    		.hasMessageContaining("A folder with that name already exists at this level");
+    }
 
+    @Transactional
+    @Rollback
+    @Test
+    void addFolder_shouldPropagateModification_whenValidRequest() {
+    	DocumentSpaceFileSystemEntry parent = service.addFolder(spaceId, "some-folder", "/");
+    	assertThat(parent.getLastModifiedBy()).isNull();
+    	assertThat(parent.getLastModifiedOn()).isNull();
+    	
+    	Date datePriorToAddFolder = new Date();
+    	service.addFolder(spaceId, "testFolder", "/some-folder");
+    	assertThat(parent.getLastModifiedOn()).isAfter(datePriorToAddFolder);
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void deleteFolder_shouldPropagateModification_whenValidRequest() {
+    	DocumentSpaceFileSystemEntry parent = service.addFolder(spaceId, "some-folder", "/");
+    	assertThat(parent.getLastModifiedBy()).isNull();
+    	assertThat(parent.getLastModifiedOn()).isNull();
+    	
+    	service.addFolder(spaceId, "testFolder", "/some-folder");
+    	
+    	Date datePriorToDelete = new Date();
+    	service.deleteFolder(spaceId, "/some-folder/testFolder");
+    	assertThat(parent.getLastModifiedOn()).isAfter(datePriorToDelete);
+    	
+    }
+    
+    @WithMockUser(username = "test@user.com")
+    @Transactional
+    @Rollback
+    @Test
+    void propagateModificationStateToAncestors_shouldPropagateChangesUp_whenEntryContainsAncestors() {
+    	DocumentSpaceFileSystemEntry parent = service.addFolder(spaceId, "some-folder", "/");
+    	DocumentSpaceFileSystemEntry childLevel1 = service.addFolder(spaceId, "testFolder", "/some-folder");
+    	DocumentSpaceFileSystemEntry childLevel2 = service.addFolder(spaceId, "newFolder", "/some-folder/testFolder");
+    	
+    	List<DocumentSpaceFileSystemEntry> propagatedEntities = service.propagateModificationStateToAncestors(childLevel2);
+    	
+    	assertThat(propagatedEntities).containsExactly(childLevel1, parent);
+    }
+    
+    @WithMockUser(username = "test@user.com")
+    @Transactional
+    @Rollback
+    @Test
+    void propagateModificationStateToAncestors_shouldReturnEmptyList_whenEntryIsAtRootLevel() {
+    	DocumentSpaceFileSystemEntry parent = service.addFolder(spaceId, "some-folder", "/");
+    	
+    	List<DocumentSpaceFileSystemEntry> propagatedEntities = service.propagateModificationStateToAncestors(parent);
+    	
+    	assertThat(propagatedEntities).isEmpty();
+    }
+    
+    @WithMockUser(username = "test@user.com")
+    @Transactional
+    @Rollback
+    @Test
+    void propagateModificationStateToAncestors_shouldReturnEmptyList_whenEntryAncestorsDoNotExist() {
+    	DocumentSpaceFileSystemEntry parent = service.addFolder(spaceId, "some-folder", "/");
+    	DocumentSpaceFileSystemEntry childLevel1 = service.addFolder(spaceId, "testFolder", "/some-folder");
+    	
+    	documentSpaceFileSystemRepository.delete(parent);
+    	List<DocumentSpaceFileSystemEntry> propagatedEntities = service.propagateModificationStateToAncestors(childLevel1);
+    	
+    	assertThat(propagatedEntities).isEmpty();
+    }
 }
