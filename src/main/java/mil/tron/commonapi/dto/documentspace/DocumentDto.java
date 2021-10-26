@@ -44,12 +44,12 @@ public class DocumentDto {
 	@NotNull
 	@Getter
 	@Setter
-	private Date uploadedDate;
+	private Date lastModifiedDate;
 	
 	@NotNull
 	@Getter
 	@Setter
-	private String uploadedBy;
+	private String lastModifiedBy;
 
 	@Getter
 	@Setter

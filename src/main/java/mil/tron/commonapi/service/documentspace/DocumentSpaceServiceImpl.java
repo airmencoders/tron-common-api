@@ -5,6 +5,7 @@ import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.collect.Lists;
@@ -17,6 +18,7 @@ import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.NotAuthorizedException;
@@ -30,6 +32,8 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -41,10 +45,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
+
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -67,6 +76,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 	private final PrivilegeRepository privilegeRepository;
+	
+	private final DocumentSpaceFileService documentSpaceFileService;
 
 	@Value("${spring.profiles.active:UNKNOWN}")
 	private String activeProfile;
@@ -81,7 +92,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			@Value("${minio.bucket-name}") String bucketName, DocumentSpaceRepository documentSpaceRepository,
 			DocumentSpacePrivilegeService documentSpacePrivilegeService,
 			DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService,
-			PrivilegeRepository privilegeRepository, DocumentSpaceFileSystemService documentSpaceFileSystemService) {
+			PrivilegeRepository privilegeRepository, DocumentSpaceFileSystemService documentSpaceFileSystemService,
+			DocumentSpaceFileService documentSpaceFileService) {
 
 		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
@@ -96,6 +108,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		this.dashboardUserService = dashboardUserService;
 
 		this.privilegeRepository = privilegeRepository;
+		
+		this.documentSpaceFileService = documentSpaceFileService;
 	}
 
 	/**
@@ -178,9 +192,13 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private String validateDocSpaceAndReturnPrefix(UUID documentSpaceId, String path) {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		return getPathPrefix(documentSpace.getId(), path, spec);
+	}
+	
+	private String getPathPrefix(UUID documentSpaceId, String path, FilePathSpec spec) {
 		return !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
 				? spec.getDocSpaceQualifiedPath()
-				: this.createDocumentSpacePathPrefix(documentSpace.getId());
+				: this.createDocumentSpacePathPrefix(documentSpaceId);
 	}
 
 	@Override
@@ -247,18 +265,53 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
 	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) throws RecordNotFoundException {
-		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
+		getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
+		
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
 		metaData.setContentLength(file.getSize());
-
-
+		
+		String filename = file.getOriginalFilename();
+		if (filename == null) {
+			throw new BadRequestException("Uploaded file is missing a filename");
+		}
+		
+		MessageDigest md;
 		try {
+			md = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e1) {
+			throw new IllegalArgumentException("Internal error occurred while uploading file: could not generate checksum value");
+		}
+		
+		try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream());
+				DigestInputStream dis = new DigestInputStream(bis, md)) {
 			Upload upload = documentSpaceTransferManager.upload(bucketName,
-					prefix + file.getOriginalFilename(), file.getInputStream(),
+					prefix + filename, bis,
 					metaData);
-
+			
+			DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
+					.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), filename).orElse(null);
+			
 			upload.waitForCompletion();
+			
+			if (documentSpaceFile == null) {
+				documentSpaceFile = DocumentSpaceFileSystemEntry.builder()
+						.documentSpaceId(documentSpaceId)
+						.parentEntryId(filePathSpec.getItemId())
+						.isFolder(false)
+						.itemName(filename)
+						.size(file.getSize())
+						.etag(Hex.encodeHexString(md.digest()))
+						.isDeleteArchived(false)
+						.build();
+			} else {
+				documentSpaceFile.setSize(file.getSize());
+				documentSpaceFile.setEtag(Hex.encodeHexString(md.digest()));
+			}
+			
+			documentSpaceFileService.saveDocumentSpaceFile(documentSpaceFile);
 		} catch (IOException | InterruptedException e) { // NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
 		}
@@ -291,9 +344,22 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return nonDeletedItems;
 	}
 
+	@Transactional(dontRollbackOn={RecordNotFoundException.class})
 	@Override
 	public void deleteFile(UUID documentSpaceId, String path, String file) throws RecordNotFoundException {
-		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
+		getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
+		
+		DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
+				.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), file).orElse(null);
+		
+		if (documentSpaceFile == null) {
+			log.warn("Could not delete Document Space File: it does not exist in the database");
+		} else {
+			documentSpaceFileService.deleteDocumentSpaceFile(documentSpaceFile);
+		}
+		
 		String fileKey = prefix + file;
 		this.deleteS3ObjectByKey(fileKey);
 	}
@@ -318,6 +384,25 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 			throw ex;
 		}
+	}
+	
+	/**
+	 * Deletes a list of S3 objects by their key
+	 * @param objKeys the array of object keys to delete
+	 * @return a list of object keys of the items that failed to be deleted from S3 or an empty list if no errors
+	 */
+	@Override
+	public List<DeleteError> deleteS3ObjectsByKey(String[] objKeys) {
+		DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(bucketName)
+				.withKeys(objKeys);
+		
+		try {
+			documentSpaceClient.deleteObjects(deleteObjectsRequest);
+		} catch (MultiObjectDeleteException ex) {
+			return ex.getErrors();
+		}
+		
+		return new ArrayList<>();
 	}
 
 	@Transactional
@@ -454,9 +539,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public DocumentDto convertS3SummaryToDto(String documentSpacePathPrefix, UUID documentSpaceId, S3ObjectSummary objSummary) {
 		return DocumentDto.builder().key(objSummary.getKey().replace(documentSpacePathPrefix, ""))
-				.path(documentSpacePathPrefix).size(objSummary.getSize()).uploadedBy("")
+				.path(documentSpacePathPrefix).size(objSummary.getSize()).lastModifiedBy("")
 				.spaceId(documentSpaceId.toString())
-				.uploadedDate(objSummary.getLastModified()).build();
+				.lastModifiedDate(objSummary.getLastModified()).build();
 	}
 
 	@Override

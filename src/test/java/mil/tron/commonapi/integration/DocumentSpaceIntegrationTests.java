@@ -688,6 +688,7 @@ public class DocumentSpaceIntegrationTests {
             ZipEntry entry = entries.nextElement();
             contents.add(entry.getName());
         }
+        zf.close();
         FileUtils.deleteDirectory(new File(tmpdir));
         assertTrue(contents.contains("docs/hello2.txt"));
         assertTrue(contents.contains("docs/lists/lists.txt"));
@@ -715,6 +716,7 @@ public class DocumentSpaceIntegrationTests {
             ZipEntry entry = entries.nextElement();
             contents.add(entry.getName());
         }
+        zf.close();
         FileUtils.deleteDirectory(new File(tmpdir));
         assertTrue(contents.contains("hello.txt"));
         assertTrue(contents.contains("hello3.txt"));
@@ -745,6 +747,7 @@ public class DocumentSpaceIntegrationTests {
             ZipEntry entry = entries.nextElement();
             contents.add(entry.getName());
         }
+        zf.close();
         FileUtils.deleteDirectory(new File(tmpdir));
         assertTrue(contents.contains("hello.txt"));
         assertTrue(contents.contains("hello3.txt"));
@@ -768,6 +771,7 @@ public class DocumentSpaceIntegrationTests {
             ZipEntry entry = entries.nextElement();
             contents.add(entry.getName());
         }
+        zf.close();
         FileUtils.deleteDirectory(new File(tmpdir));
         assertTrue(contents.contains("records/hello2.txt"));
         assertTrue(contents.contains("records/lists/lists.txt"));

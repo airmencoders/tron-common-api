@@ -1,5 +1,7 @@
 package mil.tron.commonapi.service.documentspace;
 
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
@@ -18,6 +20,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.annotation.Rollback;
 
 import javax.transaction.Transactional;
+
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,6 +35,9 @@ public class DocumentSpaceFileSystemServiceTests {
 
     @MockBean
     DocumentSpaceService documentSpaceService;
+    
+    @MockBean
+    DocumentSpaceFileService documentSpaceFileService;
 
     @Autowired
     DocumentSpaceRepository documentSpaceRepository;
@@ -195,6 +202,29 @@ public class DocumentSpaceFileSystemServiceTests {
         assertEquals(1, service.dumpElementTree(spaceId, "/").getNodes().size());
         service.deleteFolder(spaceId, "/some-folder");
         assertEquals(0, service.dumpElementTree(spaceId, "/").getNodes().size());
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testDeleteFolders_withErrors() {
+        service.addFolder(spaceId, "some-folder", "/");
+        service.addFolder(spaceId, "some-folder2", "some-folder");
+        service.addFolder(spaceId, "some-deep-folder", "/some-folder/some-folder2");
+        service.addFolder(spaceId, "some-deep-folder2", "/some-folder/some-folder2");
+
+        DeleteError deleteErr = new DeleteError();
+        deleteErr.setCode("NoSuchKey");
+        
+        S3ObjectSummary objSummary = new S3ObjectSummary();
+        objSummary.setKey("somekey");
+        
+        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(UUID.class), Mockito.anyString())).thenReturn(List.of(objSummary));
+        Mockito.when(documentSpaceService.deleteS3ObjectsByKey(Mockito.any())).thenReturn(List.of(deleteErr));
+        
+        service.deleteFolder(spaceId, "/some-folder/some-folder2/some-deep-folder2");
+        
+        Mockito.verify(documentSpaceFileService).deleteAllDocumentSpaceFilesInParentFolderExcept(Mockito.any(UUID.class), Mockito.any(UUID.class), Mockito.anySet());
     }
 
     @Transactional

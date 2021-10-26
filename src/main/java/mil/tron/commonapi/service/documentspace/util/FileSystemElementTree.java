@@ -47,6 +47,7 @@ public class FileSystemElementTree {
      */
     @Getter
     @Setter
+    @Builder.Default
     private List<S3ObjectSummary> files = new ArrayList<>();
 
     public void addNode(FileSystemElementTree entry) {

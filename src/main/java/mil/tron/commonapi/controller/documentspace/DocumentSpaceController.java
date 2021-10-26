@@ -38,6 +38,7 @@ import javax.validation.Valid;
 import java.security.Principal;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api-prefix.v2}" + DocumentSpaceController.ENDPOINT)
@@ -438,29 +439,18 @@ public class DocumentSpaceController {
 	public ResponseEntity<S3PaginationDto> dumpContentsAtPath(@PathVariable UUID id,
 													   @RequestParam(value = "path", defaultValue = "") String path) {
 		FilePathSpecWithContents contents = documentSpaceService.getFolderContents(id, path);
-		List<DocumentDto> filesAndFolders = new ArrayList<>();
-		if (contents.getSubFolderElements() != null) {
-			contents.getSubFolderElements().forEach(item -> {
-				filesAndFolders.add(DocumentDto.builder()
-						.path(path)
-						.size(0L)
-						.spaceId(id.toString())
-						.isFolder(true)
-						.key(item.getItemName())
-						.build());
-			});
-		}
-		if (contents.getS3Objects() != null) {
-			contents.getS3Objects().forEach(item -> {
-				filesAndFolders.add(DocumentDto.builder()
-						.path(path)
-						.size(item.getSize())
-						.spaceId(id.toString())
-						.isFolder(false)
-						.key(FilenameUtils.getName(item.getKey()))
-						.build());
-			});
-		}
+		List<DocumentDto> filesAndFolders = contents.getEntries().stream().map(entry -> 
+			DocumentDto.builder()
+					.path(path)
+					.size(entry.getSize())
+					.spaceId(entry.getDocumentSpaceId().toString())
+					.isFolder(entry.isFolder())
+					.key(FilenameUtils.getName(entry.getItemName()))
+					.lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
+					.lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
+					.build()
+		).collect(Collectors.toList());
+		
 		S3PaginationDto dto = S3PaginationDto.builder()
 				.size(filesAndFolders.size())
 				.documents(filesAndFolders)

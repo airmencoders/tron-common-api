@@ -1,6 +1,8 @@
 package mil.tron.commonapi.service.documentspace;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
+
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -11,13 +13,18 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,14 +35,17 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     private final DocumentSpaceRepository documentSpaceRepository;
     private final DocumentSpaceService documentSpaceService;
     private final DocumentSpaceFileSystemEntryRepository repository;
+    private final DocumentSpaceFileService documentSpaceFileService;
     public static final String PATH_SEP = "/";
 
     public DocumentSpaceFileSystemServiceImpl(DocumentSpaceRepository documentSpaceRepository,
                                               DocumentSpaceFileSystemEntryRepository repository,
-                                              @Lazy DocumentSpaceService documentSpaceService) {
+                                              @Lazy DocumentSpaceService documentSpaceService,
+                                              DocumentSpaceFileService documentSpaceFileService) {
         this.documentSpaceRepository = documentSpaceRepository;
         this.repository = repository;
         this.documentSpaceService = documentSpaceService;
+        this.documentSpaceFileService = documentSpaceFileService;
     }
 
     /**
@@ -75,7 +85,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
 
-        String[] parts = lookupPath.split(PATH_SEP);
         UUID parentFolderId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
         List<UUID> uuidList = new ArrayList<>();
         StringBuilder pathAccumulator = new StringBuilder();
@@ -84,18 +93,19 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         //  all the while build out the full path leading up to this folder (names and uuids)
         //  to put for possible later use in the object's FilePathSpec object
         DocumentSpaceFileSystemEntry entry = null;
-        if (parts.length != 0) {
-            for (int i=0; i<parts.length; i++) {
-                if (parts[i].isBlank()) continue;
+        
+        Path asPath = Paths.get(lookupPath);
 
-                pathAccumulator.append(parts[i]).append(PATH_SEP);
-                entry = repository
-                        .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, parts[i], parentFolderId)
-                        .orElseThrow(() -> new RecordNotFoundException(String.format("Path %s not found or is not a folder", pathAccumulator.toString())));
+        for (Iterator<Path> currentPathItem = asPath.iterator(); currentPathItem.hasNext();) {
+            String currentPathItemAsString = currentPathItem.next().toString();
+            
+            pathAccumulator.append(currentPathItemAsString).append(PATH_SEP);
+            entry = repository
+                    .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, currentPathItemAsString, parentFolderId)
+                    .orElseThrow(() -> new RecordNotFoundException(String.format("Path %s not found or is not a folder", pathAccumulator.toString())));
 
-                if ((i+1) < parts.length) parentFolderId = entry.getItemId();  // update parent ID for the next depth iteration
-                uuidList.add(entry.getItemId());
-            }
+            if (currentPathItem.hasNext()) parentFolderId = entry.getItemId();  // update parent ID for the next depth iteration
+            uuidList.add(entry.getItemId());
         }
 
         return FilePathSpec.builder()
@@ -112,15 +122,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     public FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path) {
         FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, path);
         FilePathSpecWithContents contents = new DtoMapper().map(spec, FilePathSpecWithContents.class);
-        List<S3ObjectSummary> s3Objects = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
-        contents.setS3Objects(s3Objects);
-        contents.setFiles(extractFilesFromPath(s3Objects.stream().map(S3ObjectSummary::getKey).collect(Collectors.toList())));
-        contents.setSubFolderElements(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndItemIdIsNot(
-                spaceId,
-                spec.getItemId(),
-                spec.getUuidList().isEmpty()
-                    ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID)
-                    : spec.getUuidList().get(spec.getUuidList().size() - 1)));
+        contents.setEntries(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, spec.getItemId()));
 
         return contents;
     }
@@ -227,7 +229,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     private FileSystemElementTree buildTree(UUID spaceId, DocumentSpaceFileSystemEntry element, FileSystemElementTree tree) {
 
-        List<DocumentSpaceFileSystemEntry> children = repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, element.getItemId());
+        List<DocumentSpaceFileSystemEntry> children = repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsFolderTrue(spaceId, element.getItemId());
         if (children.isEmpty()) {
             return tree;  // no children under this element
         }
@@ -273,6 +275,8 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 .parentEntryId(pathSpec.getItemId())
                 .itemId(UUID.randomUUID()) // assign UUID to it (gets auto assigned anyways if omitted)
                 .itemName(name)
+                .isFolder(true)
+                .etag(createFolderETag(spaceId, pathSpec.getParentFolderId(), name))
                 .build());
     }
 
@@ -285,7 +289,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     public boolean isFolder(UUID spaceId, String path, String itemName) {
         UUID parentFolderItemId = parsePathToFilePathSpec(spaceId, path).getItemId();
-        return repository.existsByDocumentSpaceIdAndParentEntryIdAndItemName(spaceId,
+        return repository.existsByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsFolderTrue(spaceId,
                 parentFolderItemId,
                 FilenameUtils.normalizeNoEndSeparator(itemName));
     }
@@ -300,6 +304,8 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         UUID lastIdToDelete = parsePathToFilePathSpec(spaceId, path).getItemId();  // this is the last element to delete
                                                                                     // which is the 'root' of the given path
         deleteParentDirectories(dumpElementTree(spaceId, path));
+         
+        documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolder(spaceId, lastIdToDelete);
         repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(spaceId, lastIdToDelete);
     }
 
@@ -309,20 +315,43 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @param tree the current tree we're on
      */
     private void deleteParentDirectories(FileSystemElementTree tree) {
-
         // walk the tree depth-first and delete on the way up
         if (tree.getNodes() == null || tree.getNodes().isEmpty()) {
-            // delete files before the folder
-            for (S3ObjectSummary obj : tree.getFiles()) {
-                documentSpaceService.deleteS3ObjectByKey(obj.getKey());
-            }
-            repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(tree.getValue().getDocumentSpaceId(), tree.getValue().getItemId());
+        	purgeDirectory(tree);
             return;
         }
 
         for (FileSystemElementTree node : tree.getNodes()) {
             deleteParentDirectories(node);
         }
+        
+        purgeDirectory(tree);
+    }
+    
+    private void purgeDirectory(FileSystemElementTree tree) {
+    	// delete files before the folder
+    	String[] keysToDelete = tree.getFiles().stream().map(S3ObjectSummary::getKey).toArray(String[]::new);
+        List<DeleteError> errors = keysToDelete.length > 0 ? documentSpaceService.deleteS3ObjectsByKey(keysToDelete) : new ArrayList<>();
+        
+		/*
+		 * Conditionally delete files from the database. If there were no error, then it
+		 * is safe to delete all files and the parent folder. Any file that received an
+		 * error from being deleted from S3 will be checked. Do not delete any file from
+		 * the database that could not be deleted from S3 except for S3 NoSuchKey errors.
+		 */
+		if (errors.isEmpty()) {
+			documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolder(
+					tree.getFilePathSpec().getDocumentSpaceId(), tree.getValue().getItemId());
+			
+			repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(tree.getValue().getDocumentSpaceId(),
+					tree.getValue().getItemId());
+		} else {
+			documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolderExcept(
+					tree.getFilePathSpec().getDocumentSpaceId(), tree.getValue().getItemId(),
+					new HashSet<String>(
+							extractFilesFromPath(errors.stream().filter(error -> !"NoSuchKey".equals(error.getCode()))
+									.map(DeleteError::getKey).collect(Collectors.toList()))));
+		}
     }
 
     @Override
@@ -385,10 +414,21 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         if (existingEntry.isEmpty()) {
             // allow the name change
             entry.setItemName(newFolderName);
+            entry.setEtag(createFolderETag(entry.getDocumentSpaceId(), entry.getParentEntryId(), newFolderName));
             repository.save(entry);
         }
         else {
             throw new ResourceAlreadyExistsException("A folder with that name already exists at this level");
         }
     }
+    
+    private String createFolderETag(UUID documentSpaceId, UUID parentFolderId, String folderName) {
+    	return DigestUtils.md5Hex(String.format("%s/%s/%s", documentSpaceId.toString(), parentFolderId.toString(), folderName));
+    }
+
+    @Nullable
+	@Override
+	public DocumentSpaceFileSystemEntry getDocumentSpaceFileSystemEntryByItemId(UUID id) {
+		return repository.findByItemIdEquals(id).orElse(null);
+	}
 }
