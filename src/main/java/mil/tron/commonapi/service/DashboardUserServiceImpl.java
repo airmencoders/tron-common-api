@@ -114,9 +114,9 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         if (!id.equals(dashboardUser.getId()))
             throw new InvalidRecordUpdateRequest(String.format("ID: %s does not match the resource ID: %s", id, dashboardUser.getId()));
 
-        Optional<DashboardUser> dbDashboardUser = dashboardUserRepository.findById(id);
+        DashboardUser dbDashboardUser = dashboardUserRepository.findById(id).orElse(null);
 
-        if (dbDashboardUser.isEmpty())
+        if (dbDashboardUser == null)
             throw new RecordNotFoundException("Dashboard User resource with the ID: " + id + " does not exist.");
 
         if (!userChecksService.userEmailIsUnique(dashboardUser)) {
@@ -126,8 +126,11 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         if (dashboardUser.getPrivileges().stream().count() == 0) {
             throw new InvalidRecordUpdateRequest("A privilege must be set");
         }
+        
+        dbDashboardUser.setEmail(dashboardUser.getEmail());
+        dbDashboardUser.setPrivileges(dashboardUser.getPrivileges());
 
-        return convertToDto(dashboardUserRepository.save(dashboardUser));
+        return convertToDto(dashboardUserRepository.save(dbDashboardUser));
     }
 
     @Override
