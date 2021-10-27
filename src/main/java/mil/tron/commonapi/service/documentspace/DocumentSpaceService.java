@@ -5,7 +5,6 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 
 import mil.tron.commonapi.dto.documentspace.*;
-import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
