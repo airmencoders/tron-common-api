@@ -285,7 +285,7 @@ class DocumentSpaceServiceImplTest {
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 20);
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		S3Object downloadFile = documentService.downloadFile(documentSpaceDto.getId(), "", fileNames.get(0));
+		S3Object downloadFile = documentService.getFile(documentSpaceDto.getId(), "", fileNames.get(0));
 
 		S3Object actual = amazonS3.getObject(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0));

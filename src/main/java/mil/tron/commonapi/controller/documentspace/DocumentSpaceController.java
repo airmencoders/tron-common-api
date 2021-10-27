@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import liquibase.util.file.FilenameUtils;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
@@ -21,6 +20,7 @@ import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
+import org.apache.commons.io.FilenameUtils;
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
@@ -32,8 +32,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.servlet.resource.ResourceUrlProvider;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.security.Principal;
 import java.util.*;
@@ -273,12 +276,20 @@ public class DocumentSpaceController {
 	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
-    @GetMapping("/spaces/{id}/files/download/single")
-    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
-                                                            @RequestParam(value = "path", defaultValue = "") String path,
-                                                            @RequestParam("file") String file) {
+	@GetMapping("/space/{id}/**")
+    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id, HttpServletRequest request) {
 
-        S3Object s3Data = documentSpaceService.downloadFile(id, path, file);
+		// only way it seems to get the rest-of-url into a variable..
+		ResourceUrlProvider urlProvider = (ResourceUrlProvider) request
+				.getAttribute(ResourceUrlProvider.class.getCanonicalName());
+		String restOfUrl = urlProvider.getPathMatcher().extractPathWithinPattern(
+				String.valueOf(request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)),
+				String.valueOf(request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE)));
+
+		String path = FilenameUtils.getPath(restOfUrl);
+		String name = FilenameUtils.getName(restOfUrl);
+
+        S3Object s3Data = documentSpaceService.getFile(id, path, name);
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
@@ -286,7 +297,7 @@ public class DocumentSpaceController {
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.valueOf(s3Meta.getContentType()))
-                .headers(createDownloadHeaders(file))
+                .headers(createDownloadHeaders(name))
                 .body(response);
     }
     
