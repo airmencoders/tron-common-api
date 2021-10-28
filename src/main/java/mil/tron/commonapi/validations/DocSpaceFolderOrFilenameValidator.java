@@ -21,9 +21,11 @@ public class DocSpaceFolderOrFilenameValidator implements ConstraintValidator<Va
         // loosely follows https://help.dropbox.com/files-folders/sort-preview/file-names
         // while still disallowing special URL-ish characters (&+%?, etc)
         Pattern nonRestrictedCharsRegex = Pattern.compile("[A-Za-z0-9-_()\\s.]+");
-        Pattern noWhiteSpaceBeforeAfterExtension = Pattern.compile("\\s+\\.|\\.\\s+");
+        Pattern noWhiteSpaceBeforeExtension = Pattern.compile("\\s+\\.");
+        Pattern noWhiteSpaceAfterExtension = Pattern.compile("\\.\\s+");
         return nonRestrictedCharsRegex.matcher(filename).matches()
                 && StringUtils.countOccurrencesOf(filename, ".") <= 1
-                && !noWhiteSpaceBeforeAfterExtension.matcher(filename).find();
+                && !noWhiteSpaceBeforeExtension.matcher(filename).find()
+                && !noWhiteSpaceAfterExtension.matcher(filename).find();
     }
 }
