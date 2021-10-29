@@ -28,7 +28,6 @@ public interface DocumentSpaceService {
     void deleteSpace(UUID documentSpaceId);
 
 	S3Object getFile(UUID documentSpaceId, String path, String key);
-	S3Object downloadFile(UUID documentSpaceId, String path, String fileKey);
 	void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out);
 	List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys);
 	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out);

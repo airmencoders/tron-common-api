@@ -607,13 +607,32 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isOk());
 
 
-        // now get the file from "/docs/hello2.txt" folder
-        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/files/download/single?path=/docs&file=hello2.txt", test1Id.toString())
+        // now get the file from "/docs/hello2.txt" folder using semantic path addressing
+        mockMvc.perform(get(ENDPOINT_V2 + "/space/{id}/docs/hello2.txt", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.TEXT_PLAIN))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Hello, World 2!")));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/space/{id}/docs/", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.TEXT_PLAIN))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/space/{id}/hello.txt", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.TEXT_PLAIN))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Hello, World!")));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/space/{id}/docs", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.TEXT_PLAIN))
+                .andExpect(status().isNotFound());
 
         // make new folder within /docs named "lists"
         mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", test1Id)

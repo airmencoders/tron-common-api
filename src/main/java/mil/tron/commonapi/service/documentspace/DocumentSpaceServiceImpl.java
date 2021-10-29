@@ -15,11 +15,7 @@ import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
-import mil.tron.commonapi.entity.documentspace.DocumentSpace;
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMember;
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
+import mil.tron.commonapi.entity.documentspace.*;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.NotAuthorizedException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -32,7 +28,6 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
-
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,12 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -204,12 +194,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public S3Object getFile(UUID documentSpaceId, String path, String key) throws RecordNotFoundException {
 		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
-		return documentSpaceClient.getObject(bucketName, prefix + key);
-	}
-
-	@Override
-	public S3Object downloadFile(UUID documentSpaceId, String path, String fileKey) throws RecordNotFoundException {
-		return getFile(documentSpaceId, path, fileKey);
+		if (documentSpaceClient.doesObjectExist(bucketName, prefix + key)) {
+			return documentSpaceClient.getObject(bucketName, prefix + key);
+		}
+		else {
+			throw new RecordNotFoundException("That file does not exist");
+		}
 	}
 
 	/**
