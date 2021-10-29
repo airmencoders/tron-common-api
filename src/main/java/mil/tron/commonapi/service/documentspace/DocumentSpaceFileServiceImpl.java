@@ -35,6 +35,12 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 	}
 
 	@Override
+	public void archiveDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile) {
+		documentSpaceFile.setDeleteArchived(true);
+		documentSpaceFileSystemRepository.save(documentSpaceFile);
+	}
+
+	@Override
 	public void deleteAllDocumentSpaceFilesInParentFolder(UUID documentSpaceId, UUID parentId) {
 		documentSpaceFileSystemRepository.deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndIsFolderFalse(documentSpaceId, parentId);
 	}

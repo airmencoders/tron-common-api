@@ -345,6 +345,39 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return nonDeletedItems;
 	}
 
+	@Transactional
+	@Override
+	public List<String> archiveItems(UUID documentSpaceId, String currentPath, List<String> items) {
+		List<String> nonArchivedItems = Lists.newArrayList();
+		for (String item : items) {
+			if (documentSpaceFileSystemService.isFolder(documentSpaceId, currentPath, item)) {
+				documentSpaceFileSystemService.archiveFolder(documentSpaceId, FilenameUtils.concat(currentPath, item));
+			}
+			else {
+				try {
+					this.archiveFile(documentSpaceId, currentPath, item);
+				}
+				catch (RecordNotFoundException ex) {
+					nonArchivedItems.add(item);
+				}
+			}
+		}
+		return nonArchivedItems;
+	}
+
+	@Transactional
+	@Override
+	public void archiveFile(UUID documentSpaceId, String path, String fileKey) {
+		getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
+				.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), fileKey)
+				.orElseThrow(() -> new RecordNotFoundException(String.format("%s file does not exist at path %s", fileKey, path)));
+
+		documentSpaceFileService.archiveDocumentSpaceFile(documentSpaceFile);
+		documentSpaceFileSystemService.propagateModificationStateToAncestors(documentSpaceFile);
+	}
+
 	@Transactional(dontRollbackOn={RecordNotFoundException.class})
 	@Override
 	public void deleteFile(UUID documentSpaceId, String path, String file) throws RecordNotFoundException {

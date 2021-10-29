@@ -34,6 +34,13 @@ public interface DocumentSpaceFileService {
 	void deleteDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile);
 
 	/**
+	 * Archives (soft deletes) a file
+	 *
+	 * @param documentSpaceFile the file to archive
+	 */
+	void archiveDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile);
+
+	/**
 	 * Deletes all files from a Document Space belonging to a specific folder. Will
 	 * only delete files within the specific parent folder. It will not propagate
 	 * deletions to sub-folders of the parent.

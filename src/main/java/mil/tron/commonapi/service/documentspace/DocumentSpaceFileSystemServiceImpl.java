@@ -123,7 +123,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     public FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path) {
         FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, path);
         FilePathSpecWithContents contents = new DtoMapper().map(spec, FilePathSpecWithContents.class);
-        contents.setEntries(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, spec.getItemId()));
+        contents.setEntries(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, spec.getItemId(), false));
 
         return contents;
     }
@@ -185,7 +185,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
         FilePathSpec spec = parsePathToFilePathSpec(spaceId, lookupPath);
-        return repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, spec.getItemId());
+        return repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, spec.getItemId(), false);
     }
 
     /**
@@ -355,6 +355,32 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 							extractFilesFromPath(errors.stream().filter(error -> !"NoSuchKey".equals(error.getCode()))
 									.map(DeleteError::getKey).collect(Collectors.toList()))));
 		}
+    }
+
+    @Override
+    public void archiveFolder(UUID spaceId, String path) {
+        FileSystemElementTree tree = dumpElementTree(spaceId, path);
+        archiveParentDirectories(tree);
+
+        propagateModificationStateToAncestors(tree.getValue());
+    }
+
+    private void archiveParentDirectories(FileSystemElementTree tree) {
+        if (tree.getNodes() == null || tree.getNodes().isEmpty()) {
+            // we've reached the end of a path
+            DocumentSpaceFileSystemEntry node = tree.getValue();
+            node.setDeleteArchived(true);
+            repository.save(node);
+            return;
+        }
+
+        for (FileSystemElementTree node : tree.getNodes()) {
+            archiveParentDirectories(node);
+        }
+
+        DocumentSpaceFileSystemEntry node = tree.getValue();
+        node.setDeleteArchived(true);
+        repository.save(node);
     }
 
     @Override

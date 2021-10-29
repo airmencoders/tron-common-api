@@ -17,6 +17,7 @@ import mil.tron.commonapi.dto.documentspace.DocumentSpaceDeleteItemsDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -27,6 +28,7 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeReposit
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import org.apache.commons.io.FileUtils;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -820,5 +822,99 @@ public class DocumentSpaceIntegrationTests {
 
     }
 
+    @Transactional
+    @Rollback
+    @Test
+    void testArchiveFunctions() throws Exception {
+        // create space
+        MvcResult result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
+                        .builder()
+                        .name("test1")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name", equalTo("test1")))
+                .andReturn();
 
+        UUID test1Id = UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.id"));
+
+        // make folder "docs"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", test1Id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("docs")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fullPathSpec", equalTo("docs")));
+
+        // upload file to space
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "hello.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", test1Id.toString())
+                .file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // upload file to docs folder
+        MockMultipartFile file2
+                = new MockMultipartFile(
+                "file",
+                "hello2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World 2!".getBytes()
+        );
+        MockMultipartFile names
+                = new MockMultipartFile(
+                "file",
+                "names.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "names".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", test1Id.toString())
+                .file(file2)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", test1Id.toString())
+                .file(names)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)));  // just 2 things at root - the docs folder and hello.txt
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)));  // just 2 files in the docs folder
+
+        // now archive the /docs/names.txt file via the database
+        FilePathSpec spec = fileSystemService.parsePathToFilePathSpec(test1Id, "/docs/names.txt");
+        DocumentSpaceFileSystemEntry entry = fileSystemEntryRepository.findByItemIdEquals(spec.getItemId()).get();
+        entry.setDeleteArchived(true);
+        fileSystemEntryRepository.save(entry);
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)));  // just 2 files in the docs folder
+    }
 }

@@ -501,4 +501,23 @@ public class DocumentSpaceController {
 	public ResponseEntity<Object> deleteItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
 		return new ResponseEntity<>(documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete()), HttpStatus.OK);
 	}
+
+	@Operation(summary = "Archives selected item(s) from a Document Space", description = "Archives (soft-delete) selected files/folder from a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation - returns list of items that were not able to be archived",
+					content = @Content(schema = @Schema(implementation = GenericStringArrayResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found, file not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@WrappedEnvelopeResponse
+	@DeleteMapping("/spaces/{id}/archive")
+	public ResponseEntity<Object> archiveItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
+		return new ResponseEntity<>(documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete()), HttpStatus.OK);
+	}
 }
