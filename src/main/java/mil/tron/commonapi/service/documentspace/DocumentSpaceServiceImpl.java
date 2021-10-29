@@ -727,6 +727,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	private List<DocumentSpacePrivilegeType> mapToPrivilegeTypes(List<ExternalDocumentSpacePrivilegeType> privileges) {
+		if (privileges == null) {
+			return new ArrayList<>();
+		}
 		return privileges.stream().map(privilege -> {
 			DocumentSpacePrivilegeType mappedType;
 			switch (privilege) {
