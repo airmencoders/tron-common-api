@@ -277,7 +277,9 @@ public class DocumentSpaceController {
 	})
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
 	@GetMapping("/space/{id}/**")
-    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id, HttpServletRequest request) {
+    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
+															@RequestParam(value = "download", required = false) boolean isDownload,
+															HttpServletRequest request) {
 
 		// only way it seems to get the rest-of-url into a variable..
 		ResourceUrlProvider urlProvider = (ResourceUrlProvider) request
@@ -293,12 +295,14 @@ public class DocumentSpaceController {
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
-        
-        return ResponseEntity
-                .ok()
-                .contentType(MediaType.valueOf(s3Meta.getContentType()))
-                .headers(createDownloadHeaders(name))
-                .body(response);
+        ResponseEntity responseEntity = ResponseEntity
+				.ok()
+				.contentType(MediaType.valueOf(s3Meta.getContentType()))
+				.body(response);
+        if (isDownload) {
+        	responseEntity.getHeaders().addAll(createDownloadHeaders(name));
+		}
+        return responseEntity;
     }
     
     @Operation(summary = "Download chosen files from a chosen Document Space folder", description = "Downloads multiple files from the same folder into a zip file")
