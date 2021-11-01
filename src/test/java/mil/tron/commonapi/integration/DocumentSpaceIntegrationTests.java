@@ -12,10 +12,7 @@ import com.google.common.io.Files;
 import com.jayway.jsonpath.JsonPath;
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.JwtUtils;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceCreateFolderDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDeleteItemsDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
+import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -28,7 +25,7 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeReposit
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
-import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.apache.commons.io.FileUtils;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -53,8 +50,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -256,16 +252,26 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents", hasSize(1)))
                 .andExpect(jsonPath("$.documents[0].key", equalTo("hello.txt")));
 
-        // delete invalid file
-        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/files/delete?file=doesnotexistfile.txt", test1Id.toString())
+        // delete invalid/non-existent file
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                    .currentPath("")
+                    .itemsToDelete(Lists.newArrayList("doesnotexistfile.txt"))
+                    .build())))
                 .andExpect(status().isNotFound());
 
         // delete valid file
-        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/files/delete?file=hello.txt", test1Id.toString())
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                        .currentPath("")
+                        .itemsToDelete(Lists.newArrayList("hello.txt"))
+                        .build())))
                 .andExpect(status().isNoContent());
     }
 
@@ -457,9 +463,14 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents[*].key", hasItem("accounts.txt")));
 
         // now just delete one file
-        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/files/delete?path=/docs/notes&file=accounts.txt", test1Id.toString())
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                        .currentPath("/docs/notes")
+                        .itemsToDelete(Lists.newArrayList("accounts.txt"))
+                        .build())))
                 .andExpect(status().isNoContent());
 
         // now test delete again - should be 404
@@ -485,10 +496,11 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents", hasSize(2)));
 
         // now delete /docs (and everything underneath it)
-        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/folders", test1Id.toString())
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id.toString())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpacePathDto.builder()
-                        .path("/docs")
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                        .currentPath("/")
+                        .itemsToDelete(Lists.newArrayList("docs"))
                         .build()))
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
@@ -814,8 +826,7 @@ public class DocumentSpaceIntegrationTests {
                         .currentPath("/records")
                         .itemsToDelete(Lists.newArrayList("lists", "hello2.txt"))
                         .build())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(status().isNoContent());
 
 
         // check we still have /docs/names.txt
@@ -827,7 +838,7 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(0)))
                 .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")));
 
-        // re-issuing this should return a list of two items that couldn't be deleted
+        // re-issuing this should fail due to files not existing
         mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id)
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
@@ -836,8 +847,7 @@ public class DocumentSpaceIntegrationTests {
                         .currentPath("/records")
                         .itemsToDelete(Lists.newArrayList("lists", "hello2.txt"))
                         .build())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(2)));
+                .andExpect(status().isNotFound());
 
     }
 
@@ -922,18 +932,219 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.documents", hasSize(2)));  // just 2 files in the docs folder
+                .andExpect(jsonPath("$.documents", hasSize(2)))  // just 2 files in the docs folder
+                .andExpect(jsonPath("$.documents[?(@.key == 'hello2.txt')]").exists())
+                .andExpect(jsonPath("$.documents[?(@.key == 'names.txt')]").exists());
 
-        // now archive the /docs/names.txt file via the database
-        FilePathSpec spec = fileSystemService.parsePathToFilePathSpec(test1Id, "/docs/names.txt");
-        DocumentSpaceFileSystemEntry entry = fileSystemEntryRepository.findByItemIdEquals(spec.getItemId()).get();
-        entry.setDeleteArchived(true);
-        fileSystemEntryRepository.save(entry);
+        FilePathSpecWithContents contents = documentSpaceService.getFolderContents(test1Id, "/docs");
+        DocumentSpaceFileSystemEntry namesItem = contents.getEntries().stream().filter(item -> item.getItemName().equals("names.txt")).findFirst().get();
+
+        // should have this structure ready for us
+        // / <root>
+        // |- docs/
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+
+        // now archive the /docs/names.txt
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToArchive(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // confirm archived status in the database
+        assertTrue(fileSystemEntryRepository.findByItemIdEquals(namesItem.getItemId()).get().isDeleteArchived());
+
+        // confirm via controller
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)));  // confirm just 1 element(s) left in the docs folder
+
+        // browse archived - should be the one file
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/archived/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))  // has names.txt in it
+                .andExpect(jsonPath("$.documents[0].key", equalTo("names.txt")));
+
+        // unarchive it
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/unarchive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceUnArchiveItemsDto.builder()
+                        .itemsToUnArchive(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // confirm status is no longer archived
+        assertFalse(fileSystemEntryRepository.findByItemIdEquals(namesItem.getItemId()).get().isDeleteArchived());
+
+        // browse archived - should be nothing
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/archived/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(0)));
+
+        // two files should now be back in the /docs folder
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)));
+
+        // now archive (soft-delete) a whole folder ("/docs"), check it and its children are archived - be it sub-folders or files
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/")
+                        .itemsToArchive(Lists.newArrayList("docs"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)));  // confirm just 1 element(s) left in the root folder
+
+        // try to nav to path "/docs" shouldn't work since its archived
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNotFound());
+
+        // look in the archived docs - at root level
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/archived/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1))) // one folder, "/docs"
+                .andExpect(jsonPath("$.documents[0].key", equalTo("docs")));
+
+
+        // since docs is archived - make a folder named docs in the non-archived space - this should be allowed
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", test1Id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("docs")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fullPathSpec", equalTo("docs")));
+
+        // now archive this new "docs" - when there's already a "docs" folder that's archived
+        // should be disallowed - for now)
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/")
+                        .itemsToArchive(Lists.newArrayList("docs"))
+                        .build())))
+                .andExpect(status().isConflict());
+
+        // delete this empty, non-archived "docs" folder - (not archive, delete)
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                        .currentPath("/")
+                        .itemsToDelete(Lists.newArrayList("docs"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // after this deletion, make sure we still have our /docs in the archived state
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/archived/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)));  // has /docs in it
+
+        // unarchive the docs folder
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/unarchive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceUnArchiveItemsDto.builder()
+                        .itemsToUnArchive(Lists.newArrayList("docs"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // confirm presence back in our space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/archived/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(0)));  // has nothing in it
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)));
 
         mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.documents", hasSize(1)));  // just 2 files in the docs folder
+                .andExpect(jsonPath("$.documents", hasSize(2)));
+
+        // now that every is back to starting point, lets archive and hard-delete from archived-status
+
+        // archive the /docs/names.txt
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToArchive(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // confirm archived status in the database
+        assertTrue(fileSystemEntryRepository.findByItemIdEquals(namesItem.getItemId()).get().isDeleteArchived());
+
+        // confirm via controller - its gone
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/archived/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].path", equalTo("/docs")));
+
+        // hard-delete from archived
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToDelete(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // confirm via controller - its gone
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/archived/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(0)));  // confirm just 1 element(s) left in the docs folder
     }
 }

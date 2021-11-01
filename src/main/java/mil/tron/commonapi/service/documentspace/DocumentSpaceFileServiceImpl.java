@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import mil.tron.commonapi.service.documentspace.util.ArchivedStatus;
 import org.springframework.stereotype.Service;
 
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
@@ -32,12 +33,6 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 	@Override
 	public void deleteDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile) {
 		documentSpaceFileSystemRepository.delete(documentSpaceFile);
-	}
-
-	@Override
-	public void archiveDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile) {
-		documentSpaceFile.setDeleteArchived(true);
-		documentSpaceFileSystemRepository.save(documentSpaceFile);
 	}
 
 	@Override

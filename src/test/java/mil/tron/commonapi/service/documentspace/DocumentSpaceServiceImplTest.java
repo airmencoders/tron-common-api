@@ -35,6 +35,7 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 
 import mil.tron.commonapi.service.DashboardUserService;
+import mil.tron.commonapi.service.documentspace.util.ArchivedStatus;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;

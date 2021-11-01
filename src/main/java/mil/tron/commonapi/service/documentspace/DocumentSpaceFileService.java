@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.service.documentspace.util.ArchivedStatus;
 
 public interface DocumentSpaceFileService {
 	/**
@@ -32,13 +33,6 @@ public interface DocumentSpaceFileService {
 	 * @param documentSpaceFile the file to delete
 	 */
 	void deleteDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile);
-
-	/**
-	 * Archives (soft deletes) a file
-	 *
-	 * @param documentSpaceFile the file to archive
-	 */
-	void archiveDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile);
 
 	/**
 	 * Deletes all files from a Document Space belonging to a specific folder. Will
