@@ -16,8 +16,6 @@ public interface DocumentSpaceFileSystemService {
     List<DocumentDto> getArchivedItems(UUID spaceId);
     FilePathSpec convertFileSystemEntityToFilePathSpec(DocumentSpaceFileSystemEntry entry);
 
-    @Nullable
-    DocumentSpaceFileSystemEntry getDocumentSpaceFileSystemEntryByItemId(UUID id);
     List<DocumentSpaceFileSystemEntry> getElementsUnderneath(UUID spaceId, @Nullable String path);
     FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path);
     List<S3ObjectAndFilename> flattenTreeToS3ObjectAndFilenameList(FileSystemElementTree tree);

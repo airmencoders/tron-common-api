@@ -73,26 +73,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         }
     }
 
-    public static boolean resolveArchivedStatus(ArchivedStatus archivedStatus) {
-        if (archivedStatus.equals(ArchivedStatus.ARCHIVED)) return true;
-        else if (archivedStatus.equals(ArchivedStatus.NOT_ARCHIVED)) return false;
-        else throw new IllegalArgumentException("Cannot resolve archived status to boolean");
-    }
-
-    public static ArchivedStatus resolveBooleanToArchivedStatus(boolean doArchive) {
-        return doArchive ? ArchivedStatus.ARCHIVED : ArchivedStatus.NOT_ARCHIVED;
-    }
-
-    private List<DocumentSpaceFileSystemEntry> getFileSystemEntriesByDocSpaceAndParentId(UUID spaceId,
-                                                                                         UUID parentId,
-                                                                                         ArchivedStatus archivedStatus) {
-        if (archivedStatus.equals(ArchivedStatus.EITHER)) {
-            return repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, parentId);
-        } else {
-            return repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, parentId, resolveArchivedStatus(archivedStatus));
-        }
-    }
-
     /**
      * Overload that is hardwired for non-archived paths
      * @param spaceId UUID of the space
@@ -614,12 +594,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     private String createFolderETag(UUID documentSpaceId, UUID parentFolderId, String folderName) {
     	return DigestUtils.md5Hex(String.format("%s/%s/%s", documentSpaceId.toString(), parentFolderId.toString(), folderName));
     }
-
-    @Nullable
-	@Override
-	public DocumentSpaceFileSystemEntry getDocumentSpaceFileSystemEntryByItemId(UUID id) {
-		return repository.findByItemIdEquals(id).orElse(null);
-	}
 
 	@Override
 	public List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(
