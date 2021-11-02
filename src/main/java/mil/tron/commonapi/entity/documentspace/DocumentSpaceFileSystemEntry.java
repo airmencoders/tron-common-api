@@ -22,7 +22,16 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @Data
-@Table(name = "file_system_entries", uniqueConstraints={@UniqueConstraint(columnNames = { "doc_space_id", "parent_entry_id", "item_name" })})
+@Table(name = "file_system_entries",
+        // these constraints ensure we don't have the same folder name (or filename) at the same path level (same parent)
+        //  in a given doc space - but we do allow duplicates if one of the items is in "archived" state
+        uniqueConstraints={@UniqueConstraint(columnNames = {
+            "doc_space_id",
+            "parent_entry_id",
+            "item_name",
+            "is_delete_archived"
+        }
+)})
 public class DocumentSpaceFileSystemEntry {
 
     /**
@@ -45,7 +54,7 @@ public class DocumentSpaceFileSystemEntry {
     @NotNull
     @Builder.Default
     private boolean isFolder = true;
-    
+
     @NotBlank
     @NotNull
     @Column(name="item_name", nullable = false)
@@ -55,25 +64,26 @@ public class DocumentSpaceFileSystemEntry {
     @NotNull
     @Column(name="item_id", nullable = false)
     private UUID itemId = UUID.randomUUID();
-    
+
     @NotNull
     @Builder.Default
 	private long size = 0L;
-	
+
 	@NotNull
 	@Size(min = 1, max = 255)
 	private String etag;
-	
+
+	@Column(name="is_delete_archived", nullable = false)
 	@NotNull
 	@Builder.Default
 	private boolean isDeleteArchived = false;
-    
+
 	@NotNull
     @Column(nullable = false, updatable = false)
 	private String createdBy;
 
 	private String lastModifiedBy;
-	
+
 	@NotNull
 	@Column(nullable = false, updatable = false)
 	@Temporal(TemporalType.TIMESTAMP)
@@ -84,11 +94,11 @@ public class DocumentSpaceFileSystemEntry {
 
 	private String getCurrentAuditor() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		
+
 		if (auth == null || !auth.isAuthenticated()) {
 			return "Unknown";
 		}
-		
+
 		return auth.getName();
 	}
 
@@ -110,17 +120,17 @@ public class DocumentSpaceFileSystemEntry {
         if (this.parentEntryId == null) {
             this.parentEntryId = UUID.fromString(NIL_UUID);
         }
-        
+
         setCreatedOn(new Date());
 		setCreatedBy(getCurrentAuditor());
     }
-    
+
     @PreUpdate
 	private void onPreUpdate() {
     	if (this.parentEntryId == null) {
             this.parentEntryId = UUID.fromString(NIL_UUID);
         }
-    	
+
 		setLastModifiedOn(new Date());
 		setLastModifiedBy(getCurrentAuditor());
 	}

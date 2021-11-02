@@ -5,6 +5,7 @@ import mil.tron.commonapi.dto.documentspace.DocumentSpaceCreateFolderDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRenameFolderDto;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+import mil.tron.commonapi.service.documentspace.util.ArchivedStatus;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.junit.Assert;
@@ -107,19 +108,6 @@ class DocumentSpaceControllerTest {
                     .path("/")
                     .build())))
                 .andExpect(status().isCreated());
-    }
-
-    @Test
-    void testFolderDeleteEndpoint() throws Exception {
-
-        Mockito.doNothing().when(documentSpaceService).deleteFolder(Mockito.any(UUID.class), Mockito.anyString());
-
-        mockMvc.perform(delete(ENDPOINT +"spaces/{id}/folders", documentSpaceId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(DocumentSpacePathDto.builder()
-                        .path("/newfolder")
-                        .build())))
-                .andExpect(status().isNoContent());
     }
 
     @Test

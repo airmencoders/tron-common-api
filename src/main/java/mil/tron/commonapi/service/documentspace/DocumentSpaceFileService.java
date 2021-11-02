@@ -1,10 +1,10 @@
 package mil.tron.commonapi.service.documentspace;
 
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 
 public interface DocumentSpaceFileService {
 	/**

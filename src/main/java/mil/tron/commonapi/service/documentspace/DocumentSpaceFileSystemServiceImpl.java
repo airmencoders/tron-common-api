@@ -3,16 +3,15 @@ package mil.tron.commonapi.service.documentspace;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 
+import mil.tron.commonapi.dto.documentspace.DocumentDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
-import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
-import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
-import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
-import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+import mil.tron.commonapi.service.documentspace.util.*;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -38,6 +37,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     private final DocumentSpaceFileSystemEntryRepository repository;
     private final DocumentSpaceFileService documentSpaceFileService;
     public static final String PATH_SEP = "/";
+    private static final String BAD_PATH = "Path %s not found or is not a folder";
 
     public DocumentSpaceFileSystemServiceImpl(DocumentSpaceRepository documentSpaceRepository,
                                               DocumentSpaceFileSystemEntryRepository repository,
@@ -74,14 +74,26 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     }
 
     /**
-     * Utility to find out more information about a given path within a space.  The given space
-     * is of a unix-like path relative to a doc space (prefix slash is optional) - e.g. /folder1/folder2
+     * Overload that is hardwired for non-archived paths
      * @param spaceId UUID of the space
      * @param path path to find out about
      * @return the FilePathSpec describing this path
      */
     @Override
     public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path) {
+        return this.parsePathToFilePathSpec(spaceId, path, ArchivedStatus.NOT_ARCHIVED);
+    }
+
+    /**
+     * Utility to find out more information about a given path within a space.  The given space
+     * is of a unix-like path relative to a doc space (prefix slash is optional) - e.g. /folder1/folder2
+     * @param spaceId UUID of the space
+     * @param path path to find out about
+     * @param archivedStatus what archived status to look for/include
+     * @return the FilePathSpec describing this path
+     */
+    @Override
+    public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path, ArchivedStatus archivedStatus) {
 
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
@@ -101,9 +113,29 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             String currentPathItemAsString = currentPathItem.next().toString();
             
             pathAccumulator.append(currentPathItemAsString).append(PATH_SEP);
-            entry = repository
-                    .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, currentPathItemAsString, parentFolderId)
-                    .orElseThrow(() -> new RecordNotFoundException(String.format("Path %s not found or is not a folder", pathAccumulator.toString())));
+
+            switch (archivedStatus) {
+                case NOT_ARCHIVED:
+                    // dont get archived items
+                    entry = repository
+                            .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, currentPathItemAsString, parentFolderId, false)
+                            .orElseThrow(() -> new RecordNotFoundException(String.format(BAD_PATH, pathAccumulator.toString())));
+                    break;
+                case ARCHIVED:
+                    // only consider archived items
+                    entry = repository
+                            .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, currentPathItemAsString, parentFolderId, true)
+                            .orElseThrow(() -> new RecordNotFoundException(String.format(BAD_PATH, pathAccumulator.toString())));
+                    break;
+                case EITHER:
+                    // all items
+                    entry = repository
+                            .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, currentPathItemAsString, parentFolderId)
+                            .orElseThrow(() -> new RecordNotFoundException(String.format(BAD_PATH, pathAccumulator.toString())));
+                    break;
+                default:
+                    throw new BadRequestException("Unknown archived status value given");
+            }
 
             if (currentPathItem.hasNext()) parentFolderId = entry.getItemId();  // update parent ID for the next depth iteration
             uuidList.add(entry.getItemId());
@@ -123,9 +155,57 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     public FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path) {
         FilePathSpec spec = this.parsePathToFilePathSpec(spaceId, path);
         FilePathSpecWithContents contents = new DtoMapper().map(spec, FilePathSpecWithContents.class);
-        contents.setEntries(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, spec.getItemId()));
+        contents.setEntries(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, spec.getItemId(), false));
 
         return contents;
+    }
+
+    @Override
+    public List<DocumentDto> getArchivedItems(UUID spaceId) {
+        List<DocumentDto> elements = new ArrayList<>();
+
+        checkSpaceIsValid(spaceId);
+        FilePathSpec entry = parsePathToFilePathSpec(spaceId, PATH_SEP, ArchivedStatus.ARCHIVED);
+        DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {
+            if (entry.getItemId().equals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))) {
+                // this is the root of the document space - so make a new element called "root" to base off of
+                return DocumentSpaceFileSystemEntry.builder()
+                        .documentSpaceId(spaceId)
+                        .itemId(entry.getItemId())
+                        .itemName(PATH_SEP)
+                        .build();
+            }
+            else {
+                throw new RecordNotFoundException("Item ID not found");
+            }
+        });
+
+        return walkTreeForArchivedItems(spaceId, element, elements, PATH_SEP);
+    }
+
+    private List<DocumentDto> walkTreeForArchivedItems(UUID spaceId,
+                                                        DocumentSpaceFileSystemEntry element,
+                                                        List<DocumentDto> elements,
+                                                        String path) {
+
+        List<DocumentSpaceFileSystemEntry> children = repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, element.getItemId());
+        for (DocumentSpaceFileSystemEntry child : children) {
+            if (child.isDeleteArchived()) {
+                elements.add(DocumentDto.builder()
+                    .isFolder(child.isFolder())
+                    .size(child.getSize())
+                    .spaceId(spaceId.toString())
+                    .path(path)
+                    .lastModifiedDate(child.getLastModifiedOn())
+                    .lastModifiedBy(child.getLastModifiedBy())
+                    .key(child.getItemName())
+                    .build());
+            } else if (child.isFolder()) {
+                elements.addAll(walkTreeForArchivedItems(spaceId, child, new ArrayList<>(), joinPathParts(path, child.getItemName())));
+            }
+        }
+
+        return elements;
     }
 
     private List<String> extractFilesFromPath(List<String> paths) {
@@ -250,7 +330,8 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     }
 
     /**
-     * Attempts to add a folder entry to given document space underneath given parent folder name
+     * Attempts to add a folder entry to given document space underneath given parent folder name.
+     * Note that creation of folders in an archived state is not allowed.
      * @param spaceId docu space UUID
      * @param name name of the new folder
      * @param path name of parent folder to nest under - null if to place at root level of space
@@ -266,8 +347,9 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         String lookupPath = conditionPath(path);
         FilePathSpec pathSpec = parsePathToFilePathSpec(spaceId, lookupPath);
 
-        // check no existence of duplicate -- so we don't get a nasty DB exception
-        if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemName(spaceId, pathSpec.getItemId(), name)) {
+        // check no existence of duplicate (...as in no non-archived duplicate exists, a duplicate name but in archived status is allowed)
+        //  so we don't get a nasty DB exception for unique constraint violation
+        if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsDeleteArchivedEquals(spaceId, pathSpec.getItemId(), name, false)) {
             throw new ResourceAlreadyExistsException(String.format("Folder with name %s already exists under that parent", name));
         }
 
@@ -292,6 +374,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @param itemName the item name
      * @return true if directory else false
      */
+    @Override
     public boolean isFolder(UUID spaceId, String path, String itemName) {
         UUID parentFolderItemId = parsePathToFilePathSpec(spaceId, path).getItemId();
         return repository.existsByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsFolderTrue(spaceId,
@@ -357,6 +440,87 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 		}
     }
 
+    /**
+     * Archives or un-archives a file or folder and all its elements (folders and files)
+     * @param spaceId doc space UUID
+     * @param path the path (including folder name if archiving a folder)
+     * @param itemName element to archive
+     */
+    @Override
+    public void archiveElement(UUID spaceId, String path, String itemName) {
+
+        FilePathSpec owningFolderEntry = parsePathToFilePathSpec(spaceId, path);
+
+        // refuse to archive root folder
+        if (itemName.equals(PATH_SEP) || itemName.isBlank()) {
+            throw new BadRequestException("Cannot archive the root folder");
+        }
+
+        // check for existence of same folder/path/name that's already of the desired status
+        if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsDeleteArchivedEquals(spaceId,
+                owningFolderEntry.getItemId(),
+                itemName,
+                true)) {
+
+            throw new ResourceAlreadyExistsException("A folder or file with that path and name is already archived");
+        }
+
+        DocumentSpaceFileSystemEntry startEntry = repository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, owningFolderEntry.getItemId())
+                .orElseThrow(() -> new RecordNotFoundException("Unable to get item for archive"));
+
+        archiveOrUnarchiveChildren(spaceId, startEntry, true);
+        propagateModificationStateToAncestors(startEntry);
+    }
+
+    @Override
+    public void unArchiveElements(UUID spaceId, List<String> items) {
+
+        List<DocumentDto> archivedItems = this.getArchivedItems(spaceId);
+        List<DocumentDto> itemsToUnArchive = archivedItems.stream()
+                .filter(item -> items.contains(item.getKey()))
+                .collect(Collectors.toList());
+
+        for (DocumentDto item : itemsToUnArchive) {
+
+            FilePathSpec owningElement = parsePathToFilePathSpec(spaceId, item.getPath());
+
+            // if parent is not ROOT..
+            if (!owningElement.getItemId().equals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))) {
+                // refuse to unarchive if its parent is archived (like mac os)
+                DocumentSpaceFileSystemEntry parentElem = repository.findByItemIdEquals(owningElement.getItemId())
+                        .orElseThrow(() -> new RecordNotFoundException("Cannot find that parent folder record"));
+
+                if (parentElem.isDeleteArchived()) {
+                    throw new BadRequestException("Cannot unarchive an item if its parent is archived");
+                }
+            }
+
+            // if we get here - either parent is ROOT or its parent is NOT archived, so its valid for un-archiving
+            DocumentSpaceFileSystemEntry startEntry = repository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, item.getKey(), owningElement.getItemId())
+                    .orElseThrow(() -> new RecordNotFoundException("Unable to get item for un-archive"));
+            archiveOrUnarchiveChildren(spaceId, startEntry, false);
+            propagateModificationStateToAncestors(startEntry);
+        }
+    }
+
+
+    private void archiveOrUnarchiveChildren(UUID spaceId, DocumentSpaceFileSystemEntry entry, boolean doArchive) {
+
+        List<DocumentSpaceFileSystemEntry> children = repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, entry.getItemId());
+        if (children == null || children.isEmpty()) {
+            entry.setDeleteArchived(doArchive);
+            repository.save(entry);
+            return;
+        }
+
+        for (DocumentSpaceFileSystemEntry e : children) {
+            archiveOrUnarchiveChildren(spaceId, e, doArchive);
+        }
+
+        entry.setDeleteArchived(doArchive);
+        repository.save(entry);
+    }
+
     @Override
     public List<S3ObjectAndFilename> flattenTreeToS3ObjectAndFilenameList(FileSystemElementTree tree) {
         List<S3ObjectAndFilename> retList = new ArrayList<>();
@@ -394,7 +558,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @return
      */
     private String joinPathParts(String... parts) {
-        return (PATH_SEP + String.join(PATH_SEP, parts)).replace(PATH_SEP + PATH_SEP, PATH_SEP);
+        return (PATH_SEP + String.join(PATH_SEP, parts)).replaceAll("/+", PATH_SEP);
     }
 
 
@@ -429,12 +593,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     private String createFolderETag(UUID documentSpaceId, UUID parentFolderId, String folderName) {
     	return DigestUtils.md5Hex(String.format("%s/%s/%s", documentSpaceId.toString(), parentFolderId.toString(), folderName));
     }
-
-    @Nullable
-	@Override
-	public DocumentSpaceFileSystemEntry getDocumentSpaceFileSystemEntryByItemId(UUID id) {
-		return repository.findByItemIdEquals(id).orElse(null);
-	}
 
 	@Override
 	public List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(

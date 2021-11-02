@@ -8,7 +8,6 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
-import com.google.common.collect.Lists;
 import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
@@ -24,10 +23,7 @@ import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.DashboardUserService;
-import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
-import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
-import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
-import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+import mil.tron.commonapi.service.documentspace.util.*;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +40,7 @@ import java.io.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.Principal;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -313,12 +310,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @param documentSpaceId document space Id
 	 * @param currentPath current path we're at (e.g. in the UI)
 	 * @param items the items in this current path to delete
-	 * @returns list of items that could not be deleted
 	 */
 	@Transactional
 	@Override
-	public List<String> deleteItems(UUID documentSpaceId, String currentPath, List<String> items) {
-		List<String> nonDeletedItems = Lists.newArrayList();
+	public void deleteItems(UUID documentSpaceId, String currentPath, List<String> items) {
 		for (String item : items) {
 			if (documentSpaceFileSystemService.isFolder(documentSpaceId, currentPath, item)) {
 				documentSpaceFileSystemService.deleteFolder(documentSpaceId, FilenameUtils.concat(currentPath, item));
@@ -328,11 +323,27 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 					this.deleteFile(documentSpaceId, currentPath, item);
 				}
 				catch (RecordNotFoundException ex) {
-					nonDeletedItems.add(item);
+					log.warn(String.format("Could not delete file: %s at path %s", currentPath, item));
+
+					// throw so we rollback the operation
+					throw new RecordNotFoundException(String.format("Could not delete file: %s at path %s", currentPath, item));
 				}
 			}
 		}
-		return nonDeletedItems;
+	}
+
+	@Transactional
+	@Override
+	public void archiveItems(UUID documentSpaceId, String currentPath, List<String> items) {
+		for (String item : items) {
+			documentSpaceFileSystemService.archiveElement(documentSpaceId, currentPath, item);
+		}
+	}
+
+	@Transactional
+	@Override
+	public void unArchiveItems(UUID documentSpaceId, List<String> items) {
+		documentSpaceFileSystemService.unArchiveElements(documentSpaceId, items);
 	}
 
 	@Transactional(dontRollbackOn={RecordNotFoundException.class})
@@ -404,15 +415,31 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				documentSpaceFileSystemService.addFolder(documentSpaceId, name, path));
 	}
 
-	@Transactional
-	@Override
-	public void deleteFolder(UUID documentSpaceId, String path) {
-		documentSpaceFileSystemService.deleteFolder(documentSpaceId, path);
-	}
-
 	@Override
 	public FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path) {
 		return documentSpaceFileSystemService.getFilesAndFoldersAtPath(documentSpaceId, path);
+	}
+
+	@Override
+	public List<DocumentDto> getArchivedContents(UUID documentSpaceId) {
+		return documentSpaceFileSystemService.getArchivedItems(documentSpaceId);
+	}
+
+	@Override
+	public List<DocumentDto> getAllArchivedContentsForAuthUser(Principal principal) {
+		List<DocumentSpaceResponseDto> accessibleSpaces = this.listSpaces(principal.getName());
+		List<DocumentDto> archivedItemsList = new ArrayList<>();
+		for (DocumentSpaceResponseDto space : accessibleSpaces) {
+			List<DocumentDto> archivedItems = this.getArchivedContents(space.getId());
+			for (DocumentDto dto : archivedItems) {
+
+				// add space name to the return data
+				dto.setSpaceName(space.getName());
+			}
+			archivedItemsList.addAll(archivedItems);
+		}
+
+		return archivedItemsList;
 	}
 
 	/**
