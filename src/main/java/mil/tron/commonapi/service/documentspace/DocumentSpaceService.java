@@ -36,7 +36,7 @@ public interface DocumentSpaceService {
     void deleteFile(UUID documentSpaceId, String path, String fileKey);
     void archiveItems(UUID documentSpaceId, String currentPath, List<String> items);
     void unArchiveItems(UUID documentSpaceId, List<String> items);
-    void deleteItems(UUID documentSpaceId, String currentPath, List<String> items, ArchivedStatus archivedStatus);
+    void deleteItems(UUID documentSpaceId, String currentPath, List<String> items);
     void renameFolder(UUID documentSpaceId, String pathAndFolder, String newFolderName);
     void deleteS3ObjectByKey(String objKey);
     List<DeleteError> deleteS3ObjectsByKey(String[] objKeys);
@@ -44,7 +44,7 @@ public interface DocumentSpaceService {
     List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix);
     FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
     FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path);
-    List<DocumentDto> getArchivedContentsAtPath(UUID documentSpaceId);
+    List<DocumentDto> getArchivedContents(UUID documentSpaceId);
     
     DocumentDto convertS3SummaryToDto(String spaceName, UUID documentSpaceId, S3ObjectSummary objSummary);
 

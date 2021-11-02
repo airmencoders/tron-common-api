@@ -1002,6 +1002,45 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.documents", hasSize(2)));
 
+        // archive two files in the the docs folder
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToArchive(Lists.newArrayList("names.txt", "hello2.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // unarchive just the names.txt
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/unarchive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceUnArchiveItemsDto.builder()
+                        .itemsToUnArchive(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // should just be the one file left in the archived state
+        // browse archived - should be nothing
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/archived/contents", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)));
+
+        // unarchive hello2.txt
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/unarchive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceUnArchiveItemsDto.builder()
+                        .itemsToUnArchive(Lists.newArrayList("hello2.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
         // now archive (soft-delete) a whole folder ("/docs"), check it and its children are archived - be it sub-folders or files
         mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))

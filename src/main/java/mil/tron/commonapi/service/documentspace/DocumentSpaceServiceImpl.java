@@ -309,11 +309,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @param documentSpaceId document space Id
 	 * @param currentPath current path we're at (e.g. in the UI)
 	 * @param items the items in this current path to delete
-	 * @param archivedStatus whether to look in the archived space for these item
 	 */
 	@Transactional
 	@Override
-	public void deleteItems(UUID documentSpaceId, String currentPath, List<String> items, ArchivedStatus archivedStatus) {
+	public void deleteItems(UUID documentSpaceId, String currentPath, List<String> items) {
 		for (String item : items) {
 			if (documentSpaceFileSystemService.isFolder(documentSpaceId, currentPath, item)) {
 				documentSpaceFileSystemService.deleteFolder(documentSpaceId, FilenameUtils.concat(currentPath, item));
@@ -421,7 +420,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public List<DocumentDto> getArchivedContentsAtPath(UUID documentSpaceId) {
+	public List<DocumentDto> getArchivedContents(UUID documentSpaceId) {
 		return documentSpaceFileSystemService.getArchivedItems(documentSpaceId);
 	}
 

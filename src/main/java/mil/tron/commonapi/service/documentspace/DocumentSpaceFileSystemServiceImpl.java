@@ -476,8 +476,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     public void unArchiveElements(UUID spaceId, List<String> items) {
 
         List<DocumentDto> archivedItems = this.getArchivedItems(spaceId);
+        List<DocumentDto> itemsToUnArchive = archivedItems.stream()
+                .filter(item -> items.contains(item.getKey()))
+                .collect(Collectors.toList());
 
-        for (DocumentDto item : archivedItems) {
+        for (DocumentDto item : itemsToUnArchive) {
 
             FilePathSpec owningElement = parsePathToFilePathSpec(spaceId, item.getPath());
 
@@ -514,10 +517,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             archiveOrUnarchiveChildren(spaceId, e, doArchive);
         }
 
-        for (DocumentSpaceFileSystemEntry e : repository.findByDocumentSpaceIdEqualsAndParentEntryIdEquals(spaceId, entry.getItemId())) {
-            e.setDeleteArchived(doArchive);
-            repository.save(e);
-        }
         entry.setDeleteArchived(doArchive);
         repository.save(entry);
     }

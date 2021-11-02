@@ -430,9 +430,9 @@ public class DocumentSpaceController {
 	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
 	@GetMapping("/spaces/{id}/archived/contents")
-	public ResponseEntity<S3PaginationDto> dumpArchivedContentsAtPath(@PathVariable UUID id) {
+	public ResponseEntity<S3PaginationDto> dumpArchivedContents(@PathVariable UUID id) {
 
-		List<DocumentDto> filesAndFolders = documentSpaceService.getArchivedContentsAtPath(id);
+		List<DocumentDto> filesAndFolders = documentSpaceService.getArchivedContents(id);
 		return new ResponseEntity<>(
 				 S3PaginationDto.builder()
 						.size(filesAndFolders.size())
@@ -480,7 +480,7 @@ public class DocumentSpaceController {
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/delete")
 	public ResponseEntity<Object> deleteItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
-		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete(), ArchivedStatus.NOT_ARCHIVED);
+		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
@@ -499,7 +499,7 @@ public class DocumentSpaceController {
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/archived/delete")
 	public ResponseEntity<Object> deleteArchivedItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
-		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete(), ArchivedStatus.ARCHIVED);
+		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
