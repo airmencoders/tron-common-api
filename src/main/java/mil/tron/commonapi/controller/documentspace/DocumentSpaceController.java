@@ -447,7 +447,7 @@ public class DocumentSpaceController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation",
-					content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDtoResponseWrapper.class))),
+					content = @Content(schema = @Schema(implementation = S3PaginationDto.class))),
 			@ApiResponse(responseCode = "403",
 					description = "Forbidden (Requires DASHBOARD_ADMIN or DOCUMENT_SPACE_USER)",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))

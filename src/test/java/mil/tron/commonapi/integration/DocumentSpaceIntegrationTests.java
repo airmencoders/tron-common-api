@@ -1140,11 +1140,11 @@ public class DocumentSpaceIntegrationTests {
         dashRepo.save(someUser);
         documentSpaceService.addDashboardUserToDocumentSpace(test2Id, DocumentSpaceDashboardMemberRequestDto.builder()
                 .email("someUser@test.gov")
-                .privileges(Lists.newArrayList(DocumentSpacePrivilegeType.READ))
+                .privileges(Lists.newArrayList())
                 .build());
         documentSpaceService.addDashboardUserToDocumentSpace(test3Id, DocumentSpaceDashboardMemberRequestDto.builder()
                 .email("someUser@test.gov")
-                .privileges(Lists.newArrayList(DocumentSpacePrivilegeType.WRITE))
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
                 .build());
 
         // as some-user, archive the names.txt file from test3's docs/ folder
