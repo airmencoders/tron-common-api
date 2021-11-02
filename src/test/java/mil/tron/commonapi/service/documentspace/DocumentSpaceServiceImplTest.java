@@ -423,7 +423,6 @@ class DocumentSpaceServiceImplTest {
 
 			memberDto = DocumentSpaceDashboardMemberRequestDto.builder()
 					.email(dashboardUser.getEmail())
-					.privileges(Arrays.asList(DocumentSpacePrivilegeType.READ))
 					.build();
 		}
 
@@ -473,7 +472,6 @@ class DocumentSpaceServiceImplTest {
 
 			memberDto = DocumentSpaceDashboardMemberRequestDto.builder()
 					.email(dashboardUser.getEmail())
-					.privileges(Arrays.asList(DocumentSpacePrivilegeType.READ))
 					.build();
 		}
 
