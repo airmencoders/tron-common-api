@@ -12,6 +12,14 @@ import java.util.UUID;
 
 public interface DocumentSpaceFileSystemService {
 
+	/**
+	 * Retrieves the {@link FilePathSpec} for a file or folder
+	 * @param documentSpaceId the document space id that this item belongs to
+	 * @param parentFolderId the parent folder id of this item
+	 * @param itemName the name of the item
+	 * @return the {@link FilePathSpec} for item
+	 */
+	FilePathSpec getFilePathSpec(UUID documentSpaceId, UUID parentFolderId, String itemName);
     FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path);
     FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path);
     FilePathSpec convertFileSystemEntityToFilePathSpec(DocumentSpaceFileSystemEntry entry);

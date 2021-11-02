@@ -22,12 +22,16 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Stack;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -439,18 +443,12 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 	@Override
 	public List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(
 			DocumentSpaceFileSystemEntry propagateFrom) {
-		UUID rootId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
-		DocumentSpaceFileSystemEntry current = propagateFrom;
+		Deque<DocumentSpaceFileSystemEntry> entitiesToPropagateTo = null;
 		
-		List<DocumentSpaceFileSystemEntry> entitiesToPropagateTo = new ArrayList<>();
-		
-		while (!current.getParentEntryId().equals(rootId)) {
-			current = repository.findByItemIdEquals(current.getParentEntryId()).orElse(null);
-			if (current == null) {
-				return new ArrayList<>();
-			}
-			
-			entitiesToPropagateTo.add(current);
+		try {
+			entitiesToPropagateTo = getAncestorHierarchy(propagateFrom);
+		} catch (RecordNotFoundException ex) {
+			entitiesToPropagateTo = new ArrayDeque<>();
 		}
 		
 		if (entitiesToPropagateTo.isEmpty()) {
@@ -460,5 +458,60 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 		entitiesToPropagateTo.forEach(entity -> entity.setLastModifiedOn(new Date()));
 		
 		return repository.saveAll(entitiesToPropagateTo);
+	}
+
+	@Override
+	public FilePathSpec getFilePathSpec(UUID documentSpaceId, UUID parentFolderId, String itemName) throws RecordNotFoundException {
+		Optional<DocumentSpaceFileSystemEntry> entry = repository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(documentSpaceId, itemName, parentFolderId);
+		DocumentSpaceFileSystemEntry item = entry.orElse(null);
+		
+		if (item == null) {
+			throw new RecordNotFoundException("Could not find item: " + itemName);
+		}
+		
+		Path path = Paths.get("");
+		Deque<DocumentSpaceFileSystemEntry> ancestors = getAncestorHierarchy(item);
+		List<UUID> idList = new ArrayList<>();
+		
+		while (!ancestors.isEmpty()) {
+			DocumentSpaceFileSystemEntry currentAncestor = ancestors.poll();
+			path = path.resolve(currentAncestor.getItemName());
+			idList.add(currentAncestor.getItemId());
+		}
+
+		return FilePathSpec.builder()
+                .documentSpaceId(documentSpaceId)
+                .itemId(idList.isEmpty() ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID) : idList.get(idList.size() - 1))
+                .itemName(path.getFileName().toString())
+                .fullPathSpec(path.toString())
+                .uuidList(idList)
+                .parentFolderId(parentFolderId)
+                .build();
+	}
+	
+	/**
+	 * Retrieves the ancestor hierarchy from the item. The resulting order will begin from the root
+	 * and drill down to {@link from}
+	 * @param from the starting point
+	 * @return an ordered ancestor list, beginning from the root
+	 */
+	private Deque<DocumentSpaceFileSystemEntry> getAncestorHierarchy(DocumentSpaceFileSystemEntry from) throws RecordNotFoundException {
+		UUID rootId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
+		DocumentSpaceFileSystemEntry currentEntry = from;
+		
+		Deque<DocumentSpaceFileSystemEntry> entryHierarchy = new ArrayDeque<>();
+		while (!currentEntry.getParentEntryId().equals(rootId)) {
+			currentEntry = repository.findByItemIdEquals(currentEntry.getParentEntryId()).orElse(null);
+			
+			// If, while going up the ancestor tree, an ancestor no longer exists then
+			// throw an exception since the original item should also no longer exist
+			if (currentEntry == null) {
+				throw new RecordNotFoundException("Item no longer exists: " + from.getItemName());
+			}
+			
+			entryHierarchy.offerFirst(currentEntry);
+		}
+		
+		return entryHierarchy;
 	}
 }

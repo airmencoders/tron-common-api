@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -29,11 +30,13 @@ public interface DocumentSpaceService {
     void deleteSpace(UUID documentSpaceId);
 
 	S3Object getFile(UUID documentSpaceId, String path, String key);
+	S3Object getFile(UUID doucmentSpaceId, UUID parentFolderId, String filename);
 	void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out);
 	List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys);
 	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out);
 	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
     void deleteFile(UUID documentSpaceId, String path, String fileKey);
+    void deleteFile(UUID documentSpaceId, UUID parentFolderId, String filename);
     List<String> deleteItems(UUID documentSpaceId, String currentPath, List<String> items);
     void renameFolder(UUID documentSpaceId, String pathAndFolder, String newFolderName);
     void deleteS3ObjectByKey(String objKey);

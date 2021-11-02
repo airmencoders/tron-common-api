@@ -45,7 +45,7 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
     List<DocumentSpaceFileSystemEntry> getRecentlyUploadedFilesByDocumentSpaceAndUser(UUID documentSpaceId, String username, Pageable pageable);
     
     @Query("select new mil.tron.commonapi.dto.documentspace.RecentDocumentDto("
-    		+ "entry.id, entry.itemName, coalesce(entry.lastModifiedOn, entry.createdOn), documentSpace.id, documentSpace.name)"
+    		+ "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastModifiedOn, entry.createdOn), documentSpace.id, documentSpace.name)"
     		+ " from DocumentSpaceFileSystemEntry entry, DocumentSpace documentSpace"
     		+ " where (entry.lastModifiedBy = :username OR entry.createdBy = :username) and"
     		+ " entry.isFolder = false and"

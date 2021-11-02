@@ -18,11 +18,12 @@ import lombok.NoArgsConstructor;
 @Data
 @EqualsAndHashCode
 public class RecentDocumentDto {
-	public RecentDocumentDto(@NotNull UUID id, @NotNull String key, @NotNull Date lastModifiedDate,
+	public RecentDocumentDto(@NotNull UUID id, @NotNull String key, @NotNull UUID parentFolderId, @NotNull Date lastModifiedDate,
 			@NotNull UUID documentSpaceId, @NotNull String documentSpaceName) {
 		super();
 		this.id = id;
 		this.key = key;
+		this.parentFolderId = parentFolderId;
 		this.lastModifiedDate = lastModifiedDate;
 		this.documentSpace = new DocumentSpaceResponseDto(documentSpaceId, documentSpaceName);
 	}
@@ -33,9 +34,13 @@ public class RecentDocumentDto {
 	@NotNull
 	private String key;
 	
+	@NotNull
+	private UUID parentFolderId;
+	
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 	@NotNull
 	private Date lastModifiedDate;
 
+	@NotNull
 	private DocumentSpaceResponseDto documentSpace;
 }

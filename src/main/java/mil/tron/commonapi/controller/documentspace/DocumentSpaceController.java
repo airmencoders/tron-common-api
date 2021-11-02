@@ -393,7 +393,7 @@ public class DocumentSpaceController {
         		.ok(documentSpaceService.listFiles(id, continuation, limit));
     }
     
-    @Operation(summary = "Retrieves files from a space", description = "Gets files from a space. This is not a download")
+    @Operation(summary = "Retrieves files from a space that the authenticated user has recently uploaded")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
@@ -417,17 +417,11 @@ public class DocumentSpaceController {
         		.ok(documentSpaceService.getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(id, principal.getName(), size));
     }
     
-    @Operation(summary = "Retrieves files from a space", description = "Gets files from a space. This is not a download")
+    @Operation(summary = "Retrieves files from all spaces that the authenticated user has recently uploaded")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = RecentDocumentDtoResponseWrapper.class))),
-            @ApiResponse(responseCode = "404",
-    				description = "Not Found - space not found",
-    				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-            @ApiResponse(responseCode = "403",
-	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
-	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+                    content = @Content(schema = @Schema(implementation = RecentDocumentDtoResponseWrapper.class)))
     })
     @PreAuthorize("isAuthenticated() and #principal != null")
     @WrappedEnvelopeResponse
@@ -437,6 +431,64 @@ public class DocumentSpaceController {
 			Principal principal) {
         return ResponseEntity
         		.ok(documentSpaceService.getRecentlyUploadedFilesByAuthUser(principal.getName(), pageable));
+    }
+    
+    @Operation(summary = "Download a filefrom a Document Space", 
+    		description = "Download a single file (folder now allowed) from a Document Space by parent folder id and filename")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+	@GetMapping("/spaces/{id}/folder/{parentFolderId}/file/{filename}")
+    public ResponseEntity<InputStreamResource> downloadFileBySpaceAndParent(
+	    		@PathVariable UUID id,
+	    		@PathVariable UUID parentFolderId,
+	    		@PathVariable String filename
+    		) {
+
+        S3Object s3Data = documentSpaceService.getFile(id, parentFolderId, filename);
+        ObjectMetadata s3Meta = s3Data.getObjectMetadata();
+        
+        var response = new InputStreamResource(s3Data.getObjectContent());
+        
+        return ResponseEntity
+                .ok()
+                .contentType(MediaType.valueOf(s3Meta.getContentType()))
+                .headers(createDownloadHeaders(filename))
+                .body(response);
+    }
+    
+    @Operation(summary = "Delete from a Document Space", description = "Delete a single file from a Document Space by parent folder id and filename")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - file does not exist",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/folder/{parentFolderId}/file/{filename}")
+    public ResponseEntity<Void> deleteFileBySpaceAndParent(
+	    		@PathVariable UUID id,
+	    		@PathVariable UUID parentFolderId,
+	    		@PathVariable String filename
+    		) {
+
+        documentSpaceService.deleteFile(id, parentFolderId, filename);
+        
+        return ResponseEntity
+                .noContent()
+                .build();
     }
 
 	@Operation(summary = "Creates a new folder within a Document Space")
