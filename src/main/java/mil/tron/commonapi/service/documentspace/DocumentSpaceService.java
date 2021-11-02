@@ -10,6 +10,7 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.OutputStream;
@@ -61,4 +62,7 @@ public interface DocumentSpaceService {
     void setDashboardUserDefaultDocumentSpace(UUID documentSpaceId, String dashboardUserEmail);
 
     void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace);
+    
+    List<DocumentDto> getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(UUID documentSpaceId, String authenticatedUsername, Integer size);
+    Slice<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername, Pageable pageable);
 }

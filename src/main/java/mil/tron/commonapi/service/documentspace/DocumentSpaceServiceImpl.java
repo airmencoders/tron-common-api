@@ -34,6 +34,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -796,6 +797,34 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace) {
 		dashboardUserRepository.unsetDashboardUsersDefaultDocumentSpaceForDocumentSpace(documentSpace.getId());
+	}
+
+	@Override
+	public List<DocumentDto> getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(UUID documentSpaceId, String authenticatedUsername,
+			@Nullable Integer size) {
+		if (size == null) {
+			size = 5;
+		}
+		
+		return documentSpaceFileService.getRecentlyUploadedFilesByUser(documentSpaceId, authenticatedUsername, size)
+				.stream().map(file -> DocumentDto.builder()
+						.isFolder(file.isFolder())
+						.key(file.getItemName())
+						.lastModifiedBy(file.getLastModifiedBy() != null ? file.getLastModifiedBy() : file.getCreatedBy())
+						.lastModifiedDate(file.getLastModifiedOn() != null ? file.getLastModifiedOn() : file.getCreatedOn())
+						.path(documentSpaceFileSystemService.convertFileSystemEntityToFilePathSpec(file).getFullPathSpec())
+						.size(file.getSize())
+						.spaceId(file.getDocumentSpaceId().toString())
+						.build())
+				.collect(Collectors.toList());
+	}
+
+	@Override
+	public Slice<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername,
+			Pageable pageable) {
+		List<DocumentSpaceResponseDto> authorizedSpaces = listSpaces(authenticatedUsername);
+		Set<UUID> authorizedSpaceIds = authorizedSpaces.stream().map(DocumentSpaceResponseDto::getId).collect(Collectors.toSet());
+		return  documentSpaceFileService.getRecentlyUploadedFilesByUser(authenticatedUsername, authorizedSpaceIds, pageable);
 	}
 
 }

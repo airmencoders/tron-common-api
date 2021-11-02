@@ -38,6 +38,8 @@ import mil.tron.commonapi.service.DashboardUserService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+
+import org.apache.commons.lang3.RandomStringUtils;
 import org.assertj.core.util.Lists;
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
@@ -45,7 +47,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -63,6 +67,7 @@ import static org.mockito.Mockito.times;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -418,6 +423,94 @@ class DocumentSpaceServiceImplTest {
 
 		assertThat(output.size()).isPositive();
 	}
+	
+	@Nested
+	class GetRecentlyUploadedFilesByUserTest {
+		List<DocumentSpaceFileSystemEntry> generateRandomFileEntries(int size) {
+			List<DocumentSpaceFileSystemEntry> entries = new ArrayList<>();
+			
+			for (int i = 0; i < size; i++) {
+				entries.add(DocumentSpaceFileSystemEntry.builder()
+						.createdOn(new Date())
+						.createdBy("testUser")
+						.documentSpaceId(entity.getId())
+						.etag(RandomStringUtils.randomAlphanumeric(32))
+						.id(UUID.randomUUID())
+						.isDeleteArchived(false)
+						.isFolder(false)
+						.itemId(UUID.randomUUID())
+						.itemName(RandomStringUtils.randomAlphanumeric(32))
+						.parentEntryId(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))
+						.size(10L)
+						.build());
+			}
+			
+			return entries;
+		}
+		
+		@Test
+		void shouldGetFiles_withNullLimit() {
+			Mockito.when(documentSpaceFileService.getRecentlyUploadedFilesByUser(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyInt()))
+				.thenReturn(generateRandomFileEntries(1));
+			
+			Mockito.when(documentSpaceFileSystemService.convertFileSystemEntityToFilePathSpec(Mockito.any())).thenAnswer(
+						new Answer<FilePathSpec>() {
+							@Override
+							public FilePathSpec answer(InvocationOnMock invocation) throws Throwable {
+								final Object[] args = invocation.getArguments();
+								
+								DocumentSpaceFileSystemEntry entry = (DocumentSpaceFileSystemEntry) args[0];
+								
+								return FilePathSpec.builder()
+										.documentSpaceId(entry.getDocumentSpaceId())
+										.fullPathSpec(entry.getItemName())
+										.itemId(entry.getItemId())
+										.itemName(entry.getItemName())
+										.parentFolderId(entry.getParentEntryId())
+										.uuidList(Arrays.asList(entry.getItemId()))
+										.build();
+							}
+							
+						}
+					);
+			
+			List<DocumentDto> dtos = documentService.getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(entity.getId(), BUCKET_NAME, null);
+			
+			assertThat(dtos).hasSize(1);
+		}
+		
+		@Test
+		void shouldGetFiles_withLimit() {
+			Mockito.when(documentSpaceFileService.getRecentlyUploadedFilesByUser(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyInt()))
+				.thenReturn(generateRandomFileEntries(5));
+			
+			Mockito.when(documentSpaceFileSystemService.convertFileSystemEntityToFilePathSpec(Mockito.any())).thenAnswer(
+					new Answer<FilePathSpec>() {
+						@Override
+						public FilePathSpec answer(InvocationOnMock invocation) throws Throwable {
+							final Object[] args = invocation.getArguments();
+							
+							DocumentSpaceFileSystemEntry entry = (DocumentSpaceFileSystemEntry) args[0];
+							
+							return FilePathSpec.builder()
+									.documentSpaceId(entry.getDocumentSpaceId())
+									.fullPathSpec(entry.getItemName())
+									.itemId(entry.getItemId())
+									.itemName(entry.getItemName())
+									.parentFolderId(entry.getParentEntryId())
+									.uuidList(Arrays.asList(entry.getItemId()))
+									.build();
+						}
+						
+					}
+				);
+			
+			List<DocumentDto> dtos = documentService.getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(entity.getId(), BUCKET_NAME, 5);
+			
+			assertThat(dtos).hasSize(5);
+		}
+	}
+	
 
 	@Nested
 	class AddDashboardUserToDocumentSpaceTest {

@@ -1,6 +1,10 @@
 package mil.tron.commonapi.controller.documentspace;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import mil.tron.commonapi.dto.documentspace.DocumentDto;
+import mil.tron.commonapi.dto.documentspace.DocumentDtoResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceCreateFolderDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRenameFolderDto;
@@ -17,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -26,6 +31,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.io.FileInputStream;
 import java.util.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -147,5 +153,29 @@ class DocumentSpaceControllerTest {
                         .newName("oldfolder")
                         .build())))
                 .andExpect(status().isNoContent());
+    }
+    
+    @WithMockUser(username = "testuser")
+    @Test
+    void testGetRecentlyUploadedFiles() throws JsonProcessingException, Exception {
+    	DocumentDto documentDto = DocumentDto.builder()
+    			.isFolder(false)
+    			.key("somefile")
+    			.path("somefile")
+    			.lastModifiedBy("testUser")
+    			.lastModifiedDate(new Date())
+    			.size(10L)
+    			.spaceId(UUID.randomUUID().toString())
+    			.build();
+    	
+    	DocumentDtoResponseWrapper response = new DocumentDtoResponseWrapper();
+    	response.setData(Arrays.asList(documentDto));
+    	
+    	Mockito.when(documentSpaceService.getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(Mockito.any(UUID.class), Mockito.anyString(), Mockito.any()))
+    		.thenReturn(Arrays.asList(documentDto));
+    	
+    	mockMvc.perform(get(ENDPOINT +"spaces/{id}/files/recently-uploaded", documentSpaceId))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(response)));
     }
 }

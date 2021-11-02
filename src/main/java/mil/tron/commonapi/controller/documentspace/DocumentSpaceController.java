@@ -25,6 +25,7 @@ import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -390,6 +391,52 @@ public class DocumentSpaceController {
 				@RequestParam(name = "limit", required = false) Integer limit) {
         return ResponseEntity
         		.ok(documentSpaceService.listFiles(id, continuation, limit));
+    }
+    
+    @Operation(summary = "Retrieves files from a space", description = "Gets files from a space. This is not a download")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = DocumentDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "404",
+    				description = "Not Found - space not found",
+    				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id) and #principal != null")
+    @WrappedEnvelopeResponse
+    @GetMapping("/spaces/{id}/files/recently-uploaded")
+    public ResponseEntity<List<DocumentDto>> getRecentlyUploadedFilesByDocumentSpaceAndAuthenticatedUser(
+    		@PathVariable UUID id,
+			@Parameter(name = "size", description = "the amount of entries to retrieve", required = false)
+				@RequestParam(name = "size", required = false) Integer size,
+				Principal principal) {
+        return ResponseEntity
+        		.ok(documentSpaceService.getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(id, principal.getName(), size));
+    }
+    
+    @Operation(summary = "Retrieves files from a space", description = "Gets files from a space. This is not a download")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = RecentDocumentDtoResponseWrapper.class))),
+            @ApiResponse(responseCode = "404",
+    				description = "Not Found - space not found",
+    				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+            @ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+    })
+    @PreAuthorize("isAuthenticated() and #principal != null")
+    @WrappedEnvelopeResponse
+    @GetMapping("/spaces/files/recently-uploaded")
+    public ResponseEntity<Slice<RecentDocumentDto>> getRecentlyUploadedFilesByAuthenticatedUser(
+    		@ParameterObject Pageable pageable,
+			Principal principal) {
+        return ResponseEntity
+        		.ok(documentSpaceService.getRecentlyUploadedFilesByAuthUser(principal.getName(), pageable));
     }
 
 	@Operation(summary = "Creates a new folder within a Document Space")
