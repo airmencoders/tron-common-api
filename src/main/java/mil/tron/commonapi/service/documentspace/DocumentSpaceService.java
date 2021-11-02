@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.OutputStream;
+import java.security.Principal;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -45,6 +46,7 @@ public interface DocumentSpaceService {
     FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
     FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path);
     List<DocumentDto> getArchivedContents(UUID documentSpaceId);
+    List<DocumentDto> getAllArchivedContentsForAuthUser(Principal principal);
     
     DocumentDto convertS3SummaryToDto(String spaceName, UUID documentSpaceId, S3ObjectSummary objSummary);
 

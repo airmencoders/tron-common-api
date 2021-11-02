@@ -40,6 +40,7 @@ import java.io.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.Principal;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -422,6 +423,23 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public List<DocumentDto> getArchivedContents(UUID documentSpaceId) {
 		return documentSpaceFileSystemService.getArchivedItems(documentSpaceId);
+	}
+
+	@Override
+	public List<DocumentDto> getAllArchivedContentsForAuthUser(Principal principal) {
+		List<DocumentSpaceResponseDto> accessibleSpaces = this.listSpaces(principal.getName());
+		List<DocumentDto> archivedItemsList = new ArrayList<>();
+		for (DocumentSpaceResponseDto space : accessibleSpaces) {
+			List<DocumentDto> archivedItems = this.getArchivedContents(space.getId());
+			for (DocumentDto dto : archivedItems) {
+
+				// add space name to the return data
+				dto.setSpaceName(space.getName());
+			}
+			archivedItemsList.addAll(archivedItems);
+		}
+
+		return archivedItemsList;
 	}
 
 	/**

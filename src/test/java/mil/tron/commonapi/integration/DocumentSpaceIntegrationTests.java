@@ -14,7 +14,9 @@ import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.JwtUtils;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
+import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.AppClientUserRespository;
@@ -24,6 +26,8 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryR
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
+import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeService;
+import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeType;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.apache.commons.io.FileUtils;
@@ -85,6 +89,9 @@ public class DocumentSpaceIntegrationTests {
     
     @Autowired
     private DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository;
+
+    @Autowired
+    private DocumentSpacePrivilegeService documentSpacePrivilegeService;
 
     @Autowired
     private DocumentSpaceFileSystemEntryRepository fileSystemEntryRepository;
@@ -855,87 +862,7 @@ public class DocumentSpaceIntegrationTests {
     @Rollback
     @Test
     void testArchiveFunctions() throws Exception {
-        // create space
-        MvcResult result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
-                        .builder()
-                        .name("test1")
-                        .build()))
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", equalTo("test1")))
-                .andReturn();
-
-        UUID test1Id = UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.id"));
-
-        // make folder "docs"
-        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", test1Id)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
-                        .folderName("docs")
-                        .path("/")
-                        .build()))
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.fullPathSpec", equalTo("docs")));
-
-        // upload file to space
-        MockMultipartFile file
-                = new MockMultipartFile(
-                "file",
-                "hello.txt",
-                MediaType.TEXT_PLAIN_VALUE,
-                "Hello, World!".getBytes()
-        );
-        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", test1Id.toString())
-                .file(file)
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isOk());
-
-        // upload file to docs folder
-        MockMultipartFile file2
-                = new MockMultipartFile(
-                "file",
-                "hello2.txt",
-                MediaType.TEXT_PLAIN_VALUE,
-                "Hello, World 2!".getBytes()
-        );
-        MockMultipartFile names
-                = new MockMultipartFile(
-                "file",
-                "names.txt",
-                MediaType.TEXT_PLAIN_VALUE,
-                "names".getBytes()
-        );
-        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", test1Id.toString())
-                .file(file2)
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isOk());
-        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", test1Id.toString())
-                .file(names)
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents", test1Id.toString())
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.documents", hasSize(2)));  // just 2 things at root - the docs folder and hello.txt
-
-        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
-                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
-                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.documents", hasSize(2)))  // just 2 files in the docs folder
-                .andExpect(jsonPath("$.documents[?(@.key == 'hello2.txt')]").exists())
-                .andExpect(jsonPath("$.documents[?(@.key == 'names.txt')]").exists());
-
+        UUID test1Id = createSpaceWithFiles("test1");
         FilePathSpecWithContents contents = documentSpaceService.getFolderContents(test1Id, "/docs");
         DocumentSpaceFileSystemEntry namesItem = contents.getEntries().stream().filter(item -> item.getItemName().equals("names.txt")).findFirst().get();
 
@@ -1185,5 +1112,196 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.documents", hasSize(0)));  // confirm just 1 element(s) left in the docs folder
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testGetArchivedItemsMultipleSpaces() throws Exception {
+
+        // create 3 identical spaces
+        UUID test2Id = createSpaceWithFiles("test2");
+        UUID test3Id = createSpaceWithFiles("test3");
+        UUID test4Id = createSpaceWithFiles("test4");
+
+        DocumentSpace test2 = documentSpaceRepository.findById(test2Id).get();
+        DocumentSpace test3 = documentSpaceRepository.findById(test3Id).get();
+        DocumentSpace test4 = documentSpaceRepository.findById(test4Id).get();
+
+        // associate user with just test2 and test3 (read-only on test2, and write on test3)
+        DashboardUser someUser = DashboardUser.builder()
+                .email("someUser@test.gov")
+                .privileges(Set.of(
+                        privRepo.findByName("DOCUMENT_SPACE_USER").orElseThrow(() -> new RecordNotFoundException("No Document Space User Priv")),
+                        privRepo.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))
+                ))
+                .build();
+
+        dashRepo.save(someUser);
+        documentSpaceService.addDashboardUserToDocumentSpace(test2Id, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("someUser@test.gov")
+                .privileges(Lists.newArrayList(DocumentSpacePrivilegeType.READ))
+                .build());
+        documentSpaceService.addDashboardUserToDocumentSpace(test3Id, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("someUser@test.gov")
+                .privileges(Lists.newArrayList(DocumentSpacePrivilegeType.WRITE))
+                .build());
+
+        // as some-user, archive the names.txt file from test3's docs/ folder
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test3Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToArchive(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // as admin, archive from test2's docs/ folder, hello2.txt
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test2Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToArchive(Lists.newArrayList("hello2.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // as admin, archive from test4's docs/ folder, hello2.txt
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test4Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToArchive(Lists.newArrayList("hello2.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // as admin verify we have two items for viewing all archived items
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/archived")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(3)))
+                .andExpect(jsonPath("$.documents[?(@.spaceName == 'test2')]").exists())
+                .andExpect(jsonPath("$.documents[?(@.spaceName == 'test3')]").exists())
+                .andExpect(jsonPath("$.documents[?(@.spaceName == 'test4')]").exists());
+
+        // as some-user, verify can see just two items - since we can't see into test4 space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/archived")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.spaceName == 'test2')]").exists())
+                .andExpect(jsonPath("$.documents[?(@.spaceName == 'test3')]").exists());
+
+        // as some-user, make sure we can restore test3's file to test3 space
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/unarchive", test3Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceUnArchiveItemsDto.builder()
+                        .itemsToUnArchive(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // one item left in archived
+        // as some-user, verify can see just two items - since we can't see into test4 space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/archived")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[?(@.spaceName == 'test2')]").exists());
+    }
+
+    // helper to create spaces with files
+    private UUID createSpaceWithFiles(String spaceName) throws Exception {
+        // create space
+        MvcResult result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
+                        .builder()
+                        .name(spaceName)
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name", equalTo(spaceName)))
+                .andReturn();
+
+        UUID spaceId = UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.id"));
+
+        // make folder "docs"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", spaceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("docs")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fullPathSpec", equalTo("docs")));
+
+        // upload file to space
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "hello.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", spaceId.toString())
+                .file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // upload file to docs folder
+        MockMultipartFile file2
+                = new MockMultipartFile(
+                "file",
+                "hello2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World 2!".getBytes()
+        );
+        MockMultipartFile names
+                = new MockMultipartFile(
+                "file",
+                "names.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "names".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", spaceId.toString())
+                .file(file2)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", spaceId.toString())
+                .file(names)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)));  // just 2 things at root - the docs folder and hello.txt
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))  // just 2 files in the docs folder
+                .andExpect(jsonPath("$.documents[?(@.key == 'hello2.txt')]").exists())
+                .andExpect(jsonPath("$.documents[?(@.key == 'names.txt')]").exists());
+
+        return spaceId;
     }
 }

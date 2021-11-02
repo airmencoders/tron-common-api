@@ -16,7 +16,6 @@ import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
-import mil.tron.commonapi.service.documentspace.util.ArchivedStatus;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
@@ -440,6 +439,31 @@ public class DocumentSpaceController {
 						.currentContinuationToken(null)
 						.nextContinuationToken(null)
 						.totalElements(filesAndFolders.size())
+						.build(),
+				HttpStatus.OK);
+	}
+
+	@Operation(summary = "Retrieves all archived files for the requesting user for spaces they have access to")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceResponseDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires DASHBOARD_ADMIN or DOCUMENT_SPACE_USER)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("isAuthenticated() and #principal != null")
+	@GetMapping("/spaces/archived")
+	public ResponseEntity<S3PaginationDto> getAllArchivedFilesForAuthUser(Principal principal) {
+		List<DocumentDto> allArchivedItems = documentSpaceService.getAllArchivedContentsForAuthUser(principal);
+
+		return new ResponseEntity<>(
+				S3PaginationDto.builder()
+						.size(allArchivedItems.size())
+						.documents(allArchivedItems)
+						.currentContinuationToken(null)
+						.nextContinuationToken(null)
+						.totalElements(allArchivedItems.size())
 						.build(),
 				HttpStatus.OK);
 	}

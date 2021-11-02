@@ -33,6 +33,10 @@ public class DocumentDto {
 	@Getter
 	@Setter
 	private String spaceId;
+
+	@Getter
+	@Setter
+	private String spaceName;
 	
 	@NotNull
 	@Getter
