@@ -564,8 +564,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	public void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceDashboardMemberDto) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 
+		List<DocumentSpacePrivilegeType> privilegeTypes = this.mapToPrivilegeTypes(documentSpaceDashboardMemberDto.getPrivileges());
+		// Implicitly add READ privilege
+		privilegeTypes.add(DocumentSpacePrivilegeType.READ);
 		DashboardUser dashboardUser = documentSpacePrivilegeService.createDashboardUserWithPrivileges(documentSpaceDashboardMemberDto.getEmail(), documentSpace,
-				documentSpaceDashboardMemberDto.getPrivileges());
+				privilegeTypes);
 
 		documentSpace.addDashboardUser(dashboardUser);
 
@@ -574,8 +577,14 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	private void batchAddDashboardUserToDocumentSpace(DocumentSpace documentSpace, Set<DocumentSpaceDashboardMemberRequestDto> documentSpaceDashboardMemberDto) {
 
-		Set<DashboardUser> dashBoardUsers = documentSpaceDashboardMemberDto.stream().map(member ->
-				documentSpacePrivilegeService.createDashboardUserWithPrivileges(member.getEmail(), documentSpace, member.getPrivileges())).collect(Collectors.toSet());
+		Set<DashboardUser> dashBoardUsers = documentSpaceDashboardMemberDto.stream().map(member -> {
+				List<DocumentSpacePrivilegeType> privilegeTypes = this.mapToPrivilegeTypes(member.getPrivileges());
+				// always add read permission
+				privilegeTypes.add(DocumentSpacePrivilegeType.READ);
+				return documentSpacePrivilegeService.createDashboardUserWithPrivileges(member.getEmail(), documentSpace,
+						privilegeTypes);
+				}
+		).collect(Collectors.toSet());
 
 		dashBoardUsers.forEach(documentSpace::addDashboardUser);
 
@@ -744,15 +753,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			memberToAdd.setEmail(email);
 		}
 
-
-		if (parseBooleanPrivilegeValue(row[1].trim())) {
-			memberToAdd.getPrivileges().add(DocumentSpacePrivilegeType.READ);
+		if (rowLength >= 2 && parseBooleanPrivilegeValue(row[1].trim())) {
+			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.WRITE);
 		}
 		if (rowLength >= 3 && parseBooleanPrivilegeValue(row[2].trim())) {
-			memberToAdd.getPrivileges().add(DocumentSpacePrivilegeType.WRITE);
-		}
-		if (rowLength >= 4 && parseBooleanPrivilegeValue(row[3].trim())) {
-			memberToAdd.getPrivileges().add(DocumentSpacePrivilegeType.MEMBERSHIP);
+			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.MEMBERSHIP);
 		}
 
 
@@ -793,7 +798,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return dashboardUser;
 	}
 
-
 	@Override
 	public void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace) {
 		dashboardUserRepository.unsetDashboardUsersDefaultDocumentSpaceForDocumentSpace(documentSpace.getId());
@@ -827,4 +831,23 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return  documentSpaceFileService.getRecentlyUploadedFilesByUser(authenticatedUsername, authorizedSpaceIds, pageable);
 	}
 
+	private List<DocumentSpacePrivilegeType> mapToPrivilegeTypes(List<ExternalDocumentSpacePrivilegeType> privileges) {
+		if (privileges == null) {
+			return new ArrayList<>();
+		}
+		return privileges.stream().map(privilege -> {
+			DocumentSpacePrivilegeType mappedType;
+			switch (privilege) {
+				case WRITE:
+					mappedType = DocumentSpacePrivilegeType.WRITE;
+					break;
+				case MEMBERSHIP:
+					mappedType = DocumentSpacePrivilegeType.MEMBERSHIP;
+					break;
+				default:
+					throw new IllegalArgumentException("Membership privilege provided is not supported.");
+			}
+			return mappedType;
+		}).collect(Collectors.toList());
+	}
 }

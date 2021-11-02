@@ -34,7 +34,6 @@ public class DashboardUserDto {
     @Setter
     @Builder.Default
     private List<PrivilegeDto> privileges = new ArrayList<>();
-    
     @Getter
     @Setter
     private UUID defaultDocumentSpaceId;
