@@ -25,10 +25,7 @@ import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,6 +34,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.servlet.resource.ResourceUrlProvider;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.security.Principal;
 import java.util.*;
@@ -295,14 +293,13 @@ public class DocumentSpaceController {
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
-        ResponseEntity responseEntity = ResponseEntity
+        ResponseEntity.BodyBuilder responseEntity = ResponseEntity
 				.ok()
-				.contentType(MediaType.valueOf(s3Meta.getContentType()))
-				.body(response);
+				.contentType(MediaType.valueOf(s3Meta.getContentType()));
         if (isDownload) {
-        	responseEntity.getHeaders().addAll(createDownloadHeaders(name));
+			responseEntity = responseEntity.headers(createDownloadHeaders(name));
 		}
-        return responseEntity;
+        return responseEntity.body(response);
     }
     
     @Operation(summary = "Download chosen files from a chosen Document Space folder", description = "Downloads multiple files from the same folder into a zip file")
