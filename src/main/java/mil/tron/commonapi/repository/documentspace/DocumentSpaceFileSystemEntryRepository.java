@@ -6,10 +6,8 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
-import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +20,7 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
     Optional<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(UUID spaceId, String folderName, UUID parentId);
     Optional<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(UUID spaceId, String folderName, UUID parentId, boolean archived);
     Optional<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndItemIdEquals(UUID spaceId, UUID itemId);
+    Optional<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdAndItemIdAndIsFolder(UUID spaceId, UUID itemId, boolean isFolder);
     List<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndParentEntryIdEquals(UUID spaceId, UUID parentId);
     List<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(UUID spaceId, UUID parentId, boolean archived);
 
@@ -39,12 +38,6 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
     Optional<DocumentSpaceFileSystemEntry> findFileByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsFolderFalse(UUID documentSpaceId, UUID parentId, String itemName);
     void deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndIsFolderFalse(UUID documentSpaceId, UUID parentId);
     void deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndItemNameNotInAndIsFolderFalse(UUID documentSpaceId, UUID parentId, Set<String> excludedFilenames);
-    
-    @Query("select entry from DocumentSpaceFileSystemEntry entry"
-    		+ " where entry.documentSpaceId = :documentSpaceId and entry.isFolder = false and"
-    		+ " (entry.lastModifiedBy = :username OR entry.createdBy = :username)"
-    		+ " order by coalesce(entry.lastModifiedOn, entry.createdOn)")
-    List<DocumentSpaceFileSystemEntry> getRecentlyUploadedFilesByDocumentSpaceAndUser(UUID documentSpaceId, String username, Pageable pageable);
     
     @Query("select new mil.tron.commonapi.dto.documentspace.RecentDocumentDto("
     		+ "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastModifiedOn, entry.createdOn), documentSpace.id, documentSpace.name)"

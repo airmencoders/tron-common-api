@@ -196,9 +196,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 	
 	@Override
-	public S3Object getFile(UUID doucmentSpaceId, UUID parentFolderId, String filename) {
-		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(doucmentSpaceId, parentFolderId, filename);
-		return getS3Object(getPathPrefix(doucmentSpaceId, filePathSpec.getFullPathSpec(), filePathSpec) + filename);
+	public S3Object getFile(UUID documentSpaceId, UUID parentFolderId, String filename) {
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId);
+		return getS3Object(getPathPrefix(documentSpaceId, filePathSpec.getFullPathSpec(), filePathSpec) + filename);
 	}
 
 	/**
@@ -381,7 +381,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Transactional(dontRollbackOn={RecordNotFoundException.class})
 	@Override
 	public void deleteFile(UUID documentSpaceId, UUID parentFolderId, String filename) {
-		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId, filename);
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId);
 		DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
 				.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), filename).orElse(null);
 		
@@ -855,26 +855,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace) {
 		dashboardUserRepository.unsetDashboardUsersDefaultDocumentSpaceForDocumentSpace(documentSpace.getId());
-	}
-
-	@Override
-	public List<DocumentDto> getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(UUID documentSpaceId, String authenticatedUsername,
-			@Nullable Integer size) {
-		if (size == null) {
-			size = 5;
-		}
-		
-		return documentSpaceFileService.getRecentlyUploadedFilesByUser(documentSpaceId, authenticatedUsername, size)
-				.stream().map(file -> DocumentDto.builder()
-						.isFolder(file.isFolder())
-						.key(file.getItemName())
-						.lastModifiedBy(file.getLastModifiedBy() != null ? file.getLastModifiedBy() : file.getCreatedBy())
-						.lastModifiedDate(file.getLastModifiedOn() != null ? file.getLastModifiedOn() : file.getCreatedOn())
-						.path(documentSpaceFileSystemService.convertFileSystemEntityToFilePathSpec(file).getFullPathSpec())
-						.size(file.getSize())
-						.spaceId(file.getDocumentSpaceId().toString())
-						.build())
-				.collect(Collectors.toList());
 	}
 
 	@Override

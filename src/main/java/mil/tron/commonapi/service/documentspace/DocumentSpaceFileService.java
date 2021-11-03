@@ -60,16 +60,7 @@ public interface DocumentSpaceFileService {
 	 */
 	void deleteAllDocumentSpaceFilesInParentFolderExcept(UUID documentSpaceId, UUID parentFolderId,
 			Set<String> excludedFilenames);
-	
-	/**
-	 * Returns a list of Files that a User has recently uploaded to a Document Space.
-	 * @param documentSpaceId the document space to search
-	 * @param username the username of the User
-	 * @param size the amount of File records to return
-	 * @return a list of recently uploaded File entries
-	 */
-	List<DocumentSpaceFileSystemEntry> getRecentlyUploadedFilesByUser(UUID documentSpaceId, String username, Integer size);
-	
+
 	/**
 	 * Returns a list of Files that a User has recently uploaded to any Document Space.
 	 * @param username the username of the User

@@ -53,11 +53,6 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 	}
 
 	@Override
-	public List<DocumentSpaceFileSystemEntry> getRecentlyUploadedFilesByUser(UUID documentSpaceId, String username, Integer size) {
-		return documentSpaceFileSystemRepository.getRecentlyUploadedFilesByDocumentSpaceAndUser(documentSpaceId, username, PageRequest.ofSize(size));
-	}
-
-	@Override
 	public Slice<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds,
 			Pageable pageable) {
 		return documentSpaceFileSystemRepository.getRecentlyUploadedFilesByUser(username, authorizedSpaceIds, pageable);

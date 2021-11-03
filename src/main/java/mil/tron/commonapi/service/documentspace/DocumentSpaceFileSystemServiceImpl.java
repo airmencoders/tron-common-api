@@ -27,10 +27,8 @@ import java.util.Date;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Stack;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -102,7 +100,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
 
-        UUID parentFolderId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
+        UUID parentFolderId = DocumentSpaceFileSystemEntry.NIL_UUID;
         List<UUID> uuidList = new ArrayList<>();
         StringBuilder pathAccumulator = new StringBuilder();
 
@@ -147,7 +145,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         return FilePathSpec.builder()
                 .documentSpaceId(spaceId)
-                .itemId(uuidList.isEmpty() ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID) : uuidList.get(uuidList.size() - 1))
+                .itemId(uuidList.isEmpty() ? DocumentSpaceFileSystemEntry.NIL_UUID : uuidList.get(uuidList.size() - 1))
                 .itemName(entry != null ? entry.getItemName() : "")
                 .fullPathSpec(pathAccumulator.toString())
                 .uuidList(uuidList)
@@ -171,7 +169,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
         FilePathSpec entry = parsePathToFilePathSpec(spaceId, PATH_SEP, ArchivedStatus.ARCHIVED);
         DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {
-            if (entry.getItemId().equals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))) {
+            if (entry.getItemId().equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
                 // this is the root of the document space - so make a new element called "root" to base off of
                 return DocumentSpaceFileSystemEntry.builder()
                         .documentSpaceId(spaceId)
@@ -235,7 +233,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         uuidList.add(entity.getItemId());
 
         // traverse up in the tree to the root of the space (if we're not already at the root...)
-        while (!parentFolderId.equals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))) {
+        while (!parentFolderId.equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
 
             // get current item's parent entry from the db
             DocumentSpaceFileSystemEntry entry = repository
@@ -284,7 +282,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         String lookupPath = conditionPath(path);
         FilePathSpec entry = parsePathToFilePathSpec(spaceId, lookupPath);
         DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {
-            if (entry.getItemId().equals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))) {
+            if (entry.getItemId().equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
                 // this is the root of the document space - so make a new element called "root" to base off of
                 return DocumentSpaceFileSystemEntry.builder()
                         .documentSpaceId(spaceId)
@@ -489,7 +487,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             FilePathSpec owningElement = parsePathToFilePathSpec(spaceId, item.getPath());
 
             // if parent is not ROOT..
-            if (!owningElement.getItemId().equals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID))) {
+            if (!owningElement.getItemId().equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
                 // refuse to unarchive if its parent is archived (like mac os)
                 DocumentSpaceFileSystemEntry parentElem = repository.findByItemIdEquals(owningElement.getItemId())
                         .orElseThrow(() -> new RecordNotFoundException("Cannot find that parent folder record"));
@@ -619,17 +617,32 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 	}
 
 	@Override
-	public FilePathSpec getFilePathSpec(UUID documentSpaceId, UUID parentFolderId, String itemName) throws RecordNotFoundException {
-		Optional<DocumentSpaceFileSystemEntry> entry = repository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(documentSpaceId, itemName, parentFolderId);
+	public FilePathSpec getFilePathSpec(UUID documentSpaceId, UUID itemId) throws RecordNotFoundException {
+		// Special case for files living at the root directory
+		if (itemId.equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
+			return FilePathSpec.builder()
+	                .documentSpaceId(documentSpaceId)
+	                .itemId(DocumentSpaceFileSystemEntry.NIL_UUID)
+	                .itemName("")
+	                .fullPathSpec("")
+	                .uuidList(new ArrayList<>())
+	                .parentFolderId(DocumentSpaceFileSystemEntry.NIL_UUID)
+	                .build();
+		}
+		
+		Optional<DocumentSpaceFileSystemEntry> entry = repository.findByDocumentSpaceIdAndItemIdAndIsFolder(documentSpaceId, itemId, true);
 		DocumentSpaceFileSystemEntry item = entry.orElse(null);
 		
 		if (item == null) {
-			throw new RecordNotFoundException("Could not find item: " + itemName);
+			throw new RecordNotFoundException("Could not parse file path because the item: " + itemId + " does not exist");
 		}
 		
 		Path path = Paths.get("");
 		Deque<DocumentSpaceFileSystemEntry> ancestors = getAncestorHierarchy(item);
 		List<UUID> idList = new ArrayList<>();
+
+		// Append the last item to the list
+		ancestors.offerLast(item);
 		
 		while (!ancestors.isEmpty()) {
 			DocumentSpaceFileSystemEntry currentAncestor = ancestors.poll();
@@ -639,22 +652,23 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
 		return FilePathSpec.builder()
                 .documentSpaceId(documentSpaceId)
-                .itemId(idList.isEmpty() ? UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID) : idList.get(idList.size() - 1))
-                .itemName(path.getFileName().toString())
+                .itemId(item.getId())
+                .itemName(item.getItemName())
                 .fullPathSpec(path.toString())
                 .uuidList(idList)
-                .parentFolderId(parentFolderId)
+                .parentFolderId(item.getParentEntryId())
                 .build();
 	}
-	
+
 	/**
 	 * Retrieves the ancestor hierarchy from the item. The resulting order will begin from the root
-	 * and drill down to {@link from}
+	 * and drill down to {@link from} ({@link from} is not included in the resulting hierarchy list).
 	 * @param from the starting point
 	 * @return an ordered ancestor list, beginning from the root
+	 * @throws RecordNotFoundException throws if an ancestor no longer exists
 	 */
 	private Deque<DocumentSpaceFileSystemEntry> getAncestorHierarchy(DocumentSpaceFileSystemEntry from) throws RecordNotFoundException {
-		UUID rootId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
+		UUID rootId = DocumentSpaceFileSystemEntry.NIL_UUID;
 		DocumentSpaceFileSystemEntry currentEntry = from;
 		
 		Deque<DocumentSpaceFileSystemEntry> entryHierarchy = new ArrayDeque<>();

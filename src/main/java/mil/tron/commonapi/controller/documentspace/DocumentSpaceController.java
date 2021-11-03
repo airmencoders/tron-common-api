@@ -34,7 +34,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.servlet.resource.ResourceUrlProvider;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.security.Principal;
 import java.util.*;
@@ -58,6 +57,13 @@ public class DocumentSpaceController {
 	private HttpHeaders createDownloadHeaders(String filename) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Content-disposition", "attachment; filename=\"" + filename + "\"");
+		
+		return headers;
+	}
+	
+	private HttpHeaders createPreviewHeaders(String filename) {
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Content-disposition", "inline; filename=\"" + filename + "\"");
 		
 		return headers;
 	}
@@ -293,13 +299,12 @@ public class DocumentSpaceController {
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
-        ResponseEntity.BodyBuilder responseEntity = ResponseEntity
-				.ok()
-				.contentType(MediaType.valueOf(s3Meta.getContentType()));
-        if (isDownload) {
-			responseEntity = responseEntity.headers(createDownloadHeaders(name));
-		}
-        return responseEntity.body(response);
+        
+        return ResponseEntity
+                .ok()
+                .contentType(MediaType.valueOf(s3Meta.getContentType()))
+                .headers(isDownload ? createDownloadHeaders(name) : createPreviewHeaders(name))
+                .body(response);
     }
     
     @Operation(summary = "Download chosen files from a chosen Document Space folder", description = "Downloads multiple files from the same folder into a zip file")
@@ -372,31 +377,7 @@ public class DocumentSpaceController {
         return ResponseEntity
         		.ok(documentSpaceService.listFiles(id, continuation, limit));
     }
-    
-    @Operation(summary = "Retrieves files from a space that the authenticated user has recently uploaded")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Successful operation",
-                    content = @Content(schema = @Schema(implementation = DocumentDtoResponseWrapper.class))),
-            @ApiResponse(responseCode = "404",
-    				description = "Not Found - space not found",
-    				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-            @ApiResponse(responseCode = "403",
-	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
-	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
-    })
-    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id) and #principal != null")
-    @WrappedEnvelopeResponse
-    @GetMapping("/spaces/{id}/files/recently-uploaded")
-    public ResponseEntity<List<DocumentDto>> getRecentlyUploadedFilesByDocumentSpaceAndAuthenticatedUser(
-    		@PathVariable UUID id,
-			@Parameter(name = "size", description = "the amount of entries to retrieve", required = false)
-				@RequestParam(name = "size", required = false) Integer size,
-				Principal principal) {
-        return ResponseEntity
-        		.ok(documentSpaceService.getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(id, principal.getName(), size));
-    }
-    
+ 
     @Operation(summary = "Retrieves files from all spaces that the authenticated user has recently uploaded")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
@@ -430,7 +411,8 @@ public class DocumentSpaceController {
     public ResponseEntity<InputStreamResource> downloadFileBySpaceAndParent(
 	    		@PathVariable UUID id,
 	    		@PathVariable UUID parentFolderId,
-	    		@PathVariable String filename
+	    		@PathVariable String filename,
+	    		@RequestParam(value = "download", required = false) boolean isDownload
     		) {
 
         S3Object s3Data = documentSpaceService.getFile(id, parentFolderId, filename);
@@ -441,7 +423,7 @@ public class DocumentSpaceController {
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.valueOf(s3Meta.getContentType()))
-                .headers(createDownloadHeaders(filename))
+                .headers(isDownload ? createDownloadHeaders(filename) : createPreviewHeaders(filename))
                 .body(response);
     }
     

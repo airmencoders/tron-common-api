@@ -6,7 +6,6 @@ import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
-import mil.tron.commonapi.service.documentspace.util.ArchivedStatus;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.springframework.data.domain.Page;
@@ -17,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.OutputStream;
 import java.security.Principal;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -38,6 +36,7 @@ public interface DocumentSpaceService {
 	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out);
 	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
     void deleteFile(UUID documentSpaceId, String path, String fileKey);
+    void deleteFile(UUID documentSpaceId, UUID parentFolderId, String filename);
     void archiveItems(UUID documentSpaceId, String currentPath, List<String> items);
     void unArchiveItems(UUID documentSpaceId, List<String> items);
     void deleteItems(UUID documentSpaceId, String currentPath, List<String> items);
@@ -70,6 +69,5 @@ public interface DocumentSpaceService {
 
     void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace);
     
-    List<DocumentDto> getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(UUID documentSpaceId, String authenticatedUsername, Integer size);
     Slice<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername, Pageable pageable);
 }

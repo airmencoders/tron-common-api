@@ -3,13 +3,15 @@ package mil.tron.commonapi.controller.documentspace;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import mil.tron.commonapi.dto.documentspace.DocumentDto;
-import mil.tron.commonapi.dto.documentspace.DocumentDtoResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceCreateFolderDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceRenameFolderDto;
+import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
+import mil.tron.commonapi.dto.documentspace.RecentDocumentDtoResponseWrapper;
+import mil.tron.commonapi.dto.response.pagination.Pagination;
+import mil.tron.commonapi.dto.response.pagination.PaginationLink;
+import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
-import mil.tron.commonapi.service.documentspace.util.ArchivedStatus;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.junit.Assert;
@@ -20,6 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -146,24 +152,23 @@ class DocumentSpaceControllerTest {
     @WithMockUser(username = "testuser")
     @Test
     void testGetRecentlyUploadedFiles() throws JsonProcessingException, Exception {
-    	DocumentDto documentDto = DocumentDto.builder()
-    			.isFolder(false)
-    			.key("somefile")
-    			.path("somefile")
-    			.lastModifiedBy("testUser")
-    			.lastModifiedDate(new Date())
-    			.size(10L)
-    			.spaceId(UUID.randomUUID().toString())
-    			.build();
+    	RecentDocumentDto documentDto = new RecentDocumentDto(UUID.randomUUID(), "testfile.txt", UUID.randomUUID(), new Date(), UUID.randomUUID(), "test document space");
     	
-    	DocumentDtoResponseWrapper response = new DocumentDtoResponseWrapper();
+    	RecentDocumentDtoResponseWrapper response = new RecentDocumentDtoResponseWrapper();
     	response.setData(Arrays.asList(documentDto));
     	
-    	Mockito.when(documentSpaceService.getRecentlyUploadedFilesByDocumentSpaceAndAuthUser(Mockito.any(UUID.class), Mockito.anyString(), Mockito.any()))
-    		.thenReturn(Arrays.asList(documentDto));
+    	Pageable pageable = PageRequest.of(0, 100);
+    	Slice<RecentDocumentDto> serviceResponse = new SliceImpl<>(response.getData(), pageable, false);
+    	Mockito.when(documentSpaceService.getRecentlyUploadedFilesByAuthUser(Mockito.anyString(), Mockito.eq(pageable)))
+    		.thenReturn(serviceResponse);
     	
-    	mockMvc.perform(get(ENDPOINT +"spaces/{id}/files/recently-uploaded", documentSpaceId))
+    	PaginationWrappedResponse<List<RecentDocumentDto>> controllerResponse = PaginationWrappedResponse.<List<RecentDocumentDto>>builder()
+    			.data(response.getData())
+    			.pagination(new Pagination(0, 100, null, null, new PaginationLink()))
+    			.build();
+    	
+    	mockMvc.perform(get(ENDPOINT +"/spaces/files/recently-uploaded?page=0&size=100"))
                 .andExpect(status().isOk())
-                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(response)));
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(controllerResponse)));
     }
 }
