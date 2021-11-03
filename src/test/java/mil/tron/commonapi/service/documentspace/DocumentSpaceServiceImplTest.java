@@ -13,15 +13,8 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-
 import io.findify.s3mock.S3Mock;
-import mil.tron.commonapi.dto.documentspace.DocumentDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberRequestDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceDashboardMemberResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceRequestDto;
-import mil.tron.commonapi.dto.documentspace.S3PaginationDto;
+import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
@@ -33,7 +26,6 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
-
 import mil.tron.commonapi.service.DashboardUserService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
@@ -42,39 +34,32 @@ import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.assertj.core.util.Lists;
 import org.junit.Assert;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.stubbing.Answer;
-import org.springframework.data.domain.Sort.Order;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.domain.Sort.Order;
 import org.springframework.mock.web.MockMultipartFile;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.times;
-
-import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @ExtendWith(MockitoExtension.class)
 class DocumentSpaceServiceImplTest {

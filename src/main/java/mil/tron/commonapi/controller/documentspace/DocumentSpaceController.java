@@ -12,7 +12,6 @@ import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
-import mil.tron.commonapi.dto.GenericStringArrayResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -26,10 +25,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +34,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.servlet.resource.ResourceUrlProvider;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.security.Principal;
 import java.util.*;
@@ -278,7 +275,9 @@ public class DocumentSpaceController {
 	})
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
 	@GetMapping("/space/{id}/**")
-    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id, HttpServletRequest request) {
+    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
+															@RequestParam(value = "download", required = false) boolean isDownload,
+															HttpServletRequest request) {
 
 		// only way it seems to get the rest-of-url into a variable..
 		ResourceUrlProvider urlProvider = (ResourceUrlProvider) request
@@ -294,12 +293,13 @@ public class DocumentSpaceController {
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
-        
-        return ResponseEntity
-                .ok()
-                .contentType(MediaType.valueOf(s3Meta.getContentType()))
-                .headers(createDownloadHeaders(name))
-                .body(response);
+        ResponseEntity.BodyBuilder responseEntity = ResponseEntity
+				.ok()
+				.contentType(MediaType.valueOf(s3Meta.getContentType()));
+        if (isDownload) {
+			responseEntity = responseEntity.headers(createDownloadHeaders(name));
+		}
+        return responseEntity.body(response);
     }
     
     @Operation(summary = "Download chosen files from a chosen Document Space folder", description = "Downloads multiple files from the same folder into a zip file")
@@ -347,26 +347,6 @@ public class DocumentSpaceController {
                 .contentType(MediaType.parseMediaType("application/zip"))
                 .headers(createDownloadHeaders("files.zip"))
                 .body(response);
-    }
-    
-    @Operation(summary = "Deletes a file from a Document Space", description = "Deletes file from a space")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", 
-				description = "Successful operation"),
-			@ApiResponse(responseCode = "404",
-				description = "Not Found - space not found, file not found",
-				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "403",
-	        	description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
-	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
-	})
-    @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
-    @DeleteMapping("/spaces/{id}/files/delete")
-    public ResponseEntity<Object> delete(@PathVariable UUID id,
-                       @RequestParam(value = "path", defaultValue = "") String path,
-                       @RequestParam("file") String file) {
-    	documentSpaceService.deleteFile(id, path, file);
-    	return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @Operation(summary = "Retrieves files from a space", description = "Gets files from a space. This is not a download")
@@ -512,30 +492,11 @@ public class DocumentSpaceController {
 		return new ResponseEntity<>(documentSpaceService.createFolder(id, dto.getPath(), dto.getFolderName()), HttpStatus.CREATED);
 	}
 
-	@Operation(summary = "Deletes a folder at a given path", description = "Deletes a folder and all its files and subfolders.")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "204",
-					description = "Successful deletion",
-					content = @Content(schema = @Schema(implementation = DocumentSpaceCreateFolderDto.class))),
-			@ApiResponse(responseCode = "404",
-					description = "Not Found - space not found or part of supplied path does not exist",
-					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "403",
-					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
-					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
-	})
-	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
-	@DeleteMapping("/spaces/{id}/folders")
-	public ResponseEntity<Void> deleteFolder(@PathVariable UUID id, @RequestBody @Valid DocumentSpacePathDto dto) {
-		documentSpaceService.deleteFolder(id, dto.getPath());
-		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-	}
-
 	@Operation(summary = "List folders and files at given path", description = "Lists folders and files contained " +
 			"within given folder path - one level deep (does not recurse into any sub-folders)")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
-					description = "Successful operation - folder created",
+					description = "Successful operation",
 					content = @Content(schema = @Schema(implementation = S3PaginationDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Not Found - space not found or part of supplied path does not exist",
@@ -548,27 +509,63 @@ public class DocumentSpaceController {
 	@GetMapping("/spaces/{id}/contents")
 	public ResponseEntity<S3PaginationDto> dumpContentsAtPath(@PathVariable UUID id,
 													   @RequestParam(value = "path", defaultValue = "") String path) {
-		FilePathSpecWithContents contents = documentSpaceService.getFolderContents(id, path);
-		List<DocumentDto> filesAndFolders = contents.getEntries().stream().map(entry -> 
-			DocumentDto.builder()
-					.path(path)
-					.size(entry.getSize())
-					.spaceId(entry.getDocumentSpaceId().toString())
-					.isFolder(entry.isFolder())
-					.key(FilenameUtils.getName(entry.getItemName()))
-					.lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
-					.lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
-					.build()
-		).collect(Collectors.toList());
-		
-		S3PaginationDto dto = S3PaginationDto.builder()
-				.size(filesAndFolders.size())
-				.documents(filesAndFolders)
-				.currentContinuationToken(null)
-				.nextContinuationToken(null)
-				.totalElements(filesAndFolders.size())
-				.build();
-		return new ResponseEntity<>(dto, HttpStatus.OK);
+		return new ResponseEntity<>(
+				convertFileSystemEntriesToDto(path, documentSpaceService.getFolderContents(id, path)),
+				HttpStatus.OK);
+	}
+
+	@Operation(summary = "List folders and files that are in Archived status", description = "Lists folders and files that are archived -" +
+			"folders/sub-folders cannot be navigated into while in archived status - just folder name is shown")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = S3PaginationDto.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+	@GetMapping("/spaces/{id}/archived/contents")
+	public ResponseEntity<S3PaginationDto> dumpArchivedContents(@PathVariable UUID id) {
+
+		List<DocumentDto> filesAndFolders = documentSpaceService.getArchivedContents(id);
+		return new ResponseEntity<>(
+				 S3PaginationDto.builder()
+						.size(filesAndFolders.size())
+						.documents(filesAndFolders)
+						.currentContinuationToken(null)
+						.nextContinuationToken(null)
+						.totalElements(filesAndFolders.size())
+						.build(),
+				HttpStatus.OK);
+	}
+
+	@Operation(summary = "Retrieves all archived files for the requesting user for spaces they have access to")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = S3PaginationDto.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires DASHBOARD_ADMIN or DOCUMENT_SPACE_USER)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("isAuthenticated() and #principal != null")
+	@GetMapping("/spaces/archived")
+	public ResponseEntity<S3PaginationDto> getAllArchivedFilesForAuthUser(Principal principal) {
+		List<DocumentDto> allArchivedItems = documentSpaceService.getAllArchivedContentsForAuthUser(principal);
+
+		return new ResponseEntity<>(
+				S3PaginationDto.builder()
+						.size(allArchivedItems.size())
+						.documents(allArchivedItems)
+						.currentContinuationToken(null)
+						.nextContinuationToken(null)
+						.totalElements(allArchivedItems.size())
+						.build(),
+				HttpStatus.OK);
 	}
 
 	@Operation(summary = "Renames a folder at a given path")
@@ -595,9 +592,8 @@ public class DocumentSpaceController {
 
 	@Operation(summary = "Deletes selected item(s) from a Document Space", description = "Deletes selected files/folder from a Document Space")
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200",
-					description = "Successful operation - returns list of items that were not able to be deleted",
-					content = @Content(schema = @Schema(implementation = GenericStringArrayResponseWrapper.class))),
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 					description = "Not Found - space not found, file not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -606,9 +602,92 @@ public class DocumentSpaceController {
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
-	@WrappedEnvelopeResponse
 	@DeleteMapping("/spaces/{id}/delete")
 	public ResponseEntity<Object> deleteItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
-		return new ResponseEntity<>(documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete()), HttpStatus.OK);
+		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Deletes item(s) that are already in the archived state", description = "Deletes selected files/folder" +
+			" from a Document Space that are already archived")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found, file not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/archived/delete")
+	public ResponseEntity<Object> deleteArchivedItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
+		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Archives selected item(s) from a Document Space", description = "Archives (soft-delete) selected files/folder from a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found, file not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/archive")
+	public ResponseEntity<Object> archiveItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceArchiveItemsDto dto) {
+		documentSpaceService.archiveItems(id, dto.getCurrentPath(), dto.getItemsToArchive());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Un-archives selected item(s) from a Document Space", description = "Un-archives selected files/folder from a Document Space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found, file not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@PostMapping("/spaces/{id}/unarchive")
+	public ResponseEntity<Object> unArchiveItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceUnArchiveItemsDto dto) {
+		documentSpaceService.unArchiveItems(id, dto.getItemsToUnArchive());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	/**
+	 * Private helper to box up a FilePathSpecWithContents into an S3PaginationDto for the UI
+	 * @param path
+	 * @param contents
+	 * @return
+	 */
+	private S3PaginationDto convertFileSystemEntriesToDto(String path, FilePathSpecWithContents contents) {
+		List<DocumentDto> filesAndFolders = contents.getEntries().stream().map(entry ->
+			DocumentDto.builder()
+				.path(FilenameUtils.normalizeNoEndSeparator(path))
+				.size(entry.getSize())
+				.spaceId(entry.getDocumentSpaceId().toString())
+				.isFolder(entry.isFolder())
+				.key(FilenameUtils.getName(entry.getItemName()))
+				.lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
+				.lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
+				.build()
+		).collect(Collectors.toList());
+
+		return S3PaginationDto.builder()
+				.size(filesAndFolders.size())
+				.documents(filesAndFolders)
+				.currentContinuationToken(null)
+				.nextContinuationToken(null)
+				.totalElements(filesAndFolders.size())
+				.build();
 	}
 }
