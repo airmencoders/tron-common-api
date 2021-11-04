@@ -51,4 +51,8 @@ public class UserInfoDto {
 	@Getter
 	@Setter
 	private String affiliation;
+	
+	@Getter
+	@Setter
+	private Long expireTime;
 }
