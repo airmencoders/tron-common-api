@@ -394,8 +394,8 @@ public class DocumentSpaceController {
         		.ok(documentSpaceService.getRecentlyUploadedFilesByAuthUser(principal.getName(), pageable));
     }
     
-    @Operation(summary = "Download a filefrom a Document Space", 
-    		description = "Download a single file (folder now allowed) from a Document Space by parent folder id and filename")
+    @Operation(summary = "Download a file from a Document Space", 
+    		description = "Download a single file (folders not allowed) from a Document Space by parent folder id and filename")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation"),
@@ -435,10 +435,10 @@ public class DocumentSpaceController {
 				description = "Not Found - file does not exist",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "403",
-	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	        	description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
 	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+    @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/folder/{parentFolderId}/file/{filename}")
     public ResponseEntity<Void> deleteFileBySpaceAndParent(
 	    		@PathVariable UUID id,

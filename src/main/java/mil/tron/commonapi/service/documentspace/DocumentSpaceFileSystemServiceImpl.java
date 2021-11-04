@@ -668,11 +668,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 	 * @throws RecordNotFoundException throws if an ancestor no longer exists
 	 */
 	private Deque<DocumentSpaceFileSystemEntry> getAncestorHierarchy(DocumentSpaceFileSystemEntry from) throws RecordNotFoundException {
-		UUID rootId = DocumentSpaceFileSystemEntry.NIL_UUID;
 		DocumentSpaceFileSystemEntry currentEntry = from;
 		
 		Deque<DocumentSpaceFileSystemEntry> entryHierarchy = new ArrayDeque<>();
-		while (!currentEntry.getParentEntryId().equals(rootId)) {
+		while (!currentEntry.getParentEntryId().equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
 			currentEntry = repository.findByItemIdEquals(currentEntry.getParentEntryId()).orElse(null);
 			
 			// If, while going up the ancestor tree, an ancestor no longer exists then
