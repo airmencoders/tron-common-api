@@ -30,6 +30,8 @@ import mil.tron.commonapi.service.DashboardUserService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+
+import org.apache.commons.lang3.RandomStringUtils;
 import org.assertj.core.util.Lists;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
@@ -197,7 +199,7 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(
-						FilePathSpec.builder().itemId(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID)).build());
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
 		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(), Mockito.any(),
 				Mockito.anyString())).thenReturn(Optional.ofNullable(null));
 		documentService.uploadFile(entity.getId(), "", file);
@@ -229,7 +231,7 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(
-						FilePathSpec.builder().itemId(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID)).build());
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
 		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(UUID.class),
 				Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(Optional.of(DocumentSpaceFileSystemEntry.builder().documentSpaceId(entity.getId())
@@ -302,6 +304,52 @@ class DocumentSpaceServiceImplTest {
 
 			assertThat(fromS3).anyMatch(actual -> actual.getKey().equals(key));
 		}
+	}
+
+	@Test
+	void testGetFileBySpaceAndParent() throws AmazonServiceException, AmazonClientException, InterruptedException {
+		Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
+		DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
+
+		String content = "fake content";
+		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 1);
+
+		Mockito.when(
+				documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
+				.thenReturn(
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
+		S3Object downloadFile = documentService.getFile(documentSpaceDto.getId(), DocumentSpaceFileSystemEntry.NIL_UUID, fileNames.get(0));
+
+		S3Object s3Object = amazonS3.getObject(BUCKET_NAME, documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0));
+
+		assertThat(s3Object.getKey()).isEqualTo(downloadFile.getKey());
+	}
+	
+	@Test
+	void testDeleteFileBySpaceAndParent() throws AmazonServiceException, AmazonClientException, InterruptedException {
+		String content = "fake content";
+		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 1);
+
+		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
+				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0))).isTrue();
+
+		Mockito.when(
+				documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
+				.thenReturn(
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
+		
+		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(UUID.class),
+				Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(Optional.of(DocumentSpaceFileSystemEntry.builder().documentSpaceId(entity.getId())
+						.isFolder(false).itemName(fileNames.get(0)).build()));
+		
+		documentService.deleteFile(entity.getId(), DocumentSpaceFileSystemEntry.NIL_UUID, fileNames.get(0));
+
+		Mockito.verify(documentSpaceFileService).deleteDocumentSpaceFile(Mockito.any());
+		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
+				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0))).isFalse();
+		
+		Mockito.verify(documentSpaceFileSystemService).propagateModificationStateToAncestors(Mockito.any(DocumentSpaceFileSystemEntry.class));
 	}
 
 	@Test
@@ -405,6 +453,64 @@ class DocumentSpaceServiceImplTest {
 
 		assertThat(output.size()).isPositive();
 	}
+	
+	@Test
+	void testArchiveItem() {
+		Mockito.when(
+				documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
+				.thenReturn(
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
+		
+		Mockito.doNothing().when(documentSpaceFileSystemService).archiveElement(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString());
+		
+		documentService.archiveItem(UUID.randomUUID(), UUID.randomUUID(), "testfile");
+		
+		Mockito.verify(documentSpaceFileSystemService).archiveElement(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString());
+	}
+	
+	@Nested
+	class GetRecentlyUploadedFilesByUserTest {
+		List<RecentDocumentDto> generateRandomFileEntries(int size) {
+			List<RecentDocumentDto> entries = new ArrayList<>();
+			
+			for (int i = 0; i < size; i++) {
+				entries.add(new RecentDocumentDto(UUID.randomUUID(), RandomStringUtils.randomAlphanumeric(16), UUID.randomUUID(), new Date(), UUID.randomUUID(), "test document space"));
+			}
+			
+			return entries;
+		}
+		
+		private DashboardUser dashboardUser;
+
+		@BeforeEach
+		void setup() {
+			dashboardUser = DashboardUser.builder()
+					.id(UUID.randomUUID())
+					.email("dashboard@user.com")
+					.emailAsLower("dashboard@user.com")
+					.privileges(new HashSet<>(Arrays.asList(new Privilege(1L, "DASHBOARD_ADMIN"))))
+					.documentSpaces(new HashSet<>(Arrays.asList(entity)))
+					.documentSpacePrivileges(new HashSet<>(Arrays.asList(entity.getPrivileges().get(DocumentSpacePrivilegeType.READ))))
+					.build();
+		}
+		
+		@Test
+		void shouldGetFiles() {
+			Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
+			Mockito.when(documentSpaceRepo.findAllDynamicBy(Mockito.any())).thenReturn(Arrays.asList(responseDto));
+			
+			Pageable pageable = PageRequest.of(0, 100);
+	    	Slice<RecentDocumentDto> serviceResponse = new SliceImpl<>(generateRandomFileEntries(1), pageable, false);
+	    	
+			Mockito.when(documentSpaceFileService.getRecentlyUploadedFilesByUser(Mockito.anyString(), Mockito.anySet(), Mockito.any()))
+				.thenReturn(serviceResponse);
+
+			Slice<RecentDocumentDto> dtos = documentService.getRecentlyUploadedFilesByAuthUser("test user", pageable);
+			
+			assertThat(dtos).hasSize(1);
+		}
+	}
+	
 
 	@Nested
 	class AddDashboardUserToDocumentSpaceTest {

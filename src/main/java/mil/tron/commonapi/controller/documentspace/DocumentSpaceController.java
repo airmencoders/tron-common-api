@@ -24,6 +24,7 @@ import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +34,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.servlet.resource.ResourceUrlProvider;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.security.Principal;
 import java.util.*;
@@ -57,6 +57,13 @@ public class DocumentSpaceController {
 	private HttpHeaders createDownloadHeaders(String filename) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Content-disposition", "attachment; filename=\"" + filename + "\"");
+		
+		return headers;
+	}
+	
+	private HttpHeaders createPreviewHeaders(String filename) {
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Content-disposition", "inline; filename=\"" + filename + "\"");
 		
 		return headers;
 	}
@@ -292,13 +299,12 @@ public class DocumentSpaceController {
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
-        ResponseEntity.BodyBuilder responseEntity = ResponseEntity
-				.ok()
-				.contentType(MediaType.valueOf(s3Meta.getContentType()));
-        if (isDownload) {
-			responseEntity = responseEntity.headers(createDownloadHeaders(name));
-		}
-        return responseEntity.body(response);
+        
+        return ResponseEntity
+                .ok()
+                .contentType(MediaType.valueOf(s3Meta.getContentType()))
+                .headers(isDownload ? createDownloadHeaders(name) : createPreviewHeaders(name))
+                .body(response);
     }
     
     @Operation(summary = "Download chosen files from a chosen Document Space folder", description = "Downloads multiple files from the same folder into a zip file")
@@ -370,6 +376,106 @@ public class DocumentSpaceController {
 				@RequestParam(name = "limit", required = false) Integer limit) {
         return ResponseEntity
         		.ok(documentSpaceService.listFiles(id, continuation, limit));
+    }
+ 
+    @Operation(summary = "Retrieves files from all spaces that the authenticated user has recently uploaded")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Successful operation",
+                    content = @Content(schema = @Schema(implementation = RecentDocumentDtoResponseWrapper.class)))
+    })
+    @PreAuthorize("isAuthenticated() and #principal != null")
+    @WrappedEnvelopeResponse
+    @GetMapping("/spaces/files/recently-uploaded")
+    public ResponseEntity<Slice<RecentDocumentDto>> getRecentlyUploadedFilesByAuthenticatedUser(
+    		@ParameterObject Pageable pageable,
+			Principal principal) {
+        return ResponseEntity
+        		.ok(documentSpaceService.getRecentlyUploadedFilesByAuthUser(principal.getName(), pageable));
+    }
+    
+    @Operation(summary = "Download a file from a Document Space", 
+    		description = "Download a single file (folders not allowed) from a Document Space by parent folder id and filename")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - space not found",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+	@GetMapping("/spaces/{id}/folder/{parentFolderId}/file/{filename}")
+    public ResponseEntity<InputStreamResource> downloadFileBySpaceAndParent(
+	    		@PathVariable UUID id,
+	    		@PathVariable UUID parentFolderId,
+	    		@PathVariable String filename,
+	    		@RequestParam(value = "download", required = false) boolean isDownload
+    		) {
+
+        S3Object s3Data = documentSpaceService.getFile(id, parentFolderId, filename);
+        ObjectMetadata s3Meta = s3Data.getObjectMetadata();
+        
+        var response = new InputStreamResource(s3Data.getObjectContent());
+        
+        return ResponseEntity
+                .ok()
+                .contentType(MediaType.valueOf(s3Meta.getContentType()))
+                .headers(isDownload ? createDownloadHeaders(filename) : createPreviewHeaders(filename))
+                .body(response);
+    }
+    
+    @Operation(summary = "Delete from a Document Space", description = "Delete a single file from a Document Space by parent folder id and filename")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - file does not exist",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/folder/{parentFolderId}/file/{filename}")
+    public ResponseEntity<Void> deleteFileBySpaceAndParent(
+	    		@PathVariable UUID id,
+	    		@PathVariable UUID parentFolderId,
+	    		@PathVariable String filename
+    		) {
+
+        documentSpaceService.deleteFile(id, parentFolderId, filename);
+        
+        return ResponseEntity
+                .noContent()
+                .build();
+    }
+    
+    @Operation(summary = "Archive a file/folder from a Document Space", description = "Archive a single file/folder from a Document Space by parent folder id and item name")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - file does not exist",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/folder/{parentFolderId}/file/{filename}/archive")
+    public ResponseEntity<Void> deleteArchiveItemBySpaceAndParent(
+	    		@PathVariable UUID id,
+	    		@PathVariable UUID parentFolderId,
+	    		@PathVariable String filename
+    		) {
+        documentSpaceService.archiveItem(id, parentFolderId, filename);
+        
+        return ResponseEntity
+                .noContent()
+                .build();
     }
 
 	@Operation(summary = "Creates a new folder within a Document Space")

@@ -27,7 +27,7 @@ public class FilePathSpec {
     @Getter
     @Setter
     @Builder.Default
-    private UUID parentFolderId = UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID);
+    private UUID parentFolderId = DocumentSpaceFileSystemEntry.NIL_UUID;
 
     /**
      * The full 'unix-like' path string leading up to and including this element (excluding the document space UUID)
@@ -43,7 +43,7 @@ public class FilePathSpec {
     @Getter
     @Setter
     @Builder.Default
-    private List<UUID> uuidList = Lists.newArrayList(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID));
+    private List<UUID> uuidList = Lists.newArrayList(DocumentSpaceFileSystemEntry.NIL_UUID);
 
     /**
      * The owning document space

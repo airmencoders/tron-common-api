@@ -1,12 +1,18 @@
 package mil.tron.commonapi.service.documentspace;
 
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.List;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.stereotype.Service;
+
+import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 
 @Service
 public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
@@ -44,5 +50,11 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 		documentSpaceFileSystemRepository
 				.deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndItemNameNotInAndIsFolderFalse(documentSpaceId,
 						parentFolderId, excludedFilenames);
+	}
+
+	@Override
+	public Slice<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds,
+			Pageable pageable) {
+		return documentSpaceFileSystemRepository.getRecentlyUploadedFilesByUser(username, authorizedSpaceIds, pageable);
 	}
 }

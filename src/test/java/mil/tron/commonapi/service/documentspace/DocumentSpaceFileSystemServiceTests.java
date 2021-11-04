@@ -23,6 +23,7 @@ import org.springframework.test.annotation.Rollback;
 
 import javax.transaction.Transactional;
 
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -132,7 +133,7 @@ public class DocumentSpaceFileSystemServiceTests {
         DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder/");
 
         FilePathSpec firstSpec = service.convertFileSystemEntityToFilePathSpec(firstEntry);
-        assertEquals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID), firstEntry.getParentEntryId());
+        assertEquals(DocumentSpaceFileSystemEntry.NIL_UUID, firstEntry.getParentEntryId());
         assertEquals(firstEntry.getDocumentSpaceId(), firstSpec.getDocumentSpaceId());
         assertEquals(1, firstSpec.getUuidList().size());  // only itself cause root is owner
 
@@ -145,7 +146,7 @@ public class DocumentSpaceFileSystemServiceTests {
         //
         // test out getting a path spec using string paths (vs the object entities above)
         FilePathSpec firstSpecFromPath = service.parsePathToFilePathSpec(firstEntry.getDocumentSpaceId(), "some-folder/");
-        assertEquals(UUID.fromString(DocumentSpaceFileSystemEntry.NIL_UUID), firstSpecFromPath.getParentFolderId());
+        assertEquals(DocumentSpaceFileSystemEntry.NIL_UUID, firstSpecFromPath.getParentFolderId());
         assertEquals(firstEntry.getDocumentSpaceId(), firstSpecFromPath.getDocumentSpaceId());
         assertEquals(1, firstSpecFromPath.getUuidList().size());  // only itself cause root is owner
 
@@ -316,7 +317,7 @@ public class DocumentSpaceFileSystemServiceTests {
     	
     	List<DocumentSpaceFileSystemEntry> propagatedEntities = service.propagateModificationStateToAncestors(childLevel2);
     	
-    	assertThat(propagatedEntities).containsExactly(childLevel1, parent);
+    	assertThat(propagatedEntities).containsExactlyInAnyOrder(childLevel1, parent);
     }
     
     @WithMockUser(username = "test@user.com")
@@ -343,5 +344,28 @@ public class DocumentSpaceFileSystemServiceTests {
     	List<DocumentSpaceFileSystemEntry> propagatedEntities = service.propagateModificationStateToAncestors(childLevel1);
     	
     	assertThat(propagatedEntities).isEmpty();
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void getFilePathSpec_shouldReturn_whenNonRootElement() {
+    	DocumentSpaceFileSystemEntry firstEntry = service.addFolder(spaceId, "some-folder", "/");
+        DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder/");
+        
+        FilePathSpec spec = service.getFilePathSpec(spaceId, secondEntry.getItemId());
+        
+        assertThat(spec.getDocSpaceQualifiedPath()).isEqualTo(String.format("%s/%s/%s/", spaceId, firstEntry.getItemId(), secondEntry.getItemId()));
+        assertThat(spec.getFullPathSpec()).isEqualTo(Paths.get("some-folder/some-folder2").toString());
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void getFilePathSpec_shouldReturnSpecialCase_whenRootElement() {
+        FilePathSpec spec = service.getFilePathSpec(spaceId, DocumentSpaceFileSystemEntry.NIL_UUID);
+        
+        assertThat(spec.getDocSpaceQualifiedPath()).isEqualTo(String.format("%s/", spaceId));
+        assertThat(spec.getFullPathSpec()).isEqualTo(Paths.get("").toString());
     }
 }
