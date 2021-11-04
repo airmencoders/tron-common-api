@@ -452,6 +452,31 @@ public class DocumentSpaceController {
                 .noContent()
                 .build();
     }
+    
+    @Operation(summary = "Archive a file/folder from a Document Space", description = "Archive a single file/folder from a Document Space by parent folder id and item name")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204", 
+				description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found - file does not exist",
+				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+	        	description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+    @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/folder/{parentFolderId}/file/{filename}/archive")
+    public ResponseEntity<Void> deleteArchiveItemBySpaceAndParent(
+	    		@PathVariable UUID id,
+	    		@PathVariable UUID parentFolderId,
+	    		@PathVariable String filename
+    		) {
+        documentSpaceService.archiveItem(id, parentFolderId, filename);
+        
+        return ResponseEntity
+                .noContent()
+                .build();
+    }
 
 	@Operation(summary = "Creates a new folder within a Document Space")
 	@ApiResponses(value = {

@@ -342,6 +342,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			}
 		}
 	}
+	
+	@Override
+	public void archiveItem(UUID documentSpaceId, UUID parentFolderId, String name) {
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId);
+		documentSpaceFileSystemService.archiveElement(documentSpaceId, filePathSpec.getFullPathSpec(), name);
+	}
 
 	@Transactional
 	@Override

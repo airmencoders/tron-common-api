@@ -171,4 +171,13 @@ class DocumentSpaceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(result -> assertThat(result.getResponse().getContentAsString()).isEqualTo(OBJECT_MAPPER.writeValueAsString(controllerResponse)));
     }
+    
+    @Test
+    void testDeleteArchiveItemBySpaceAndParent() throws JsonProcessingException, Exception {
+    	Mockito.doNothing().when(documentSpaceService).archiveItem(Mockito.any(UUID.class), Mockito.any(UUID.class), Mockito.anyString());
+    	
+    	
+    	mockMvc.perform(delete(ENDPOINT + "/spaces/{id}/folder/{parentFolderId}/file/{filename}/archive", UUID.randomUUID(), UUID.randomUUID(), "testfile"))
+                .andExpect(status().isNoContent());
+    }
 }

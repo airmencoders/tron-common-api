@@ -454,6 +454,20 @@ class DocumentSpaceServiceImplTest {
 		assertThat(output.size()).isPositive();
 	}
 	
+	@Test
+	void testArchiveItem() {
+		Mockito.when(
+				documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
+				.thenReturn(
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
+		
+		Mockito.doNothing().when(documentSpaceFileSystemService).archiveElement(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString());
+		
+		documentService.archiveItem(UUID.randomUUID(), UUID.randomUUID(), "testfile");
+		
+		Mockito.verify(documentSpaceFileSystemService).archiveElement(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString());
+	}
+	
 	@Nested
 	class GetRecentlyUploadedFilesByUserTest {
 		List<RecentDocumentDto> generateRandomFileEntries(int size) {

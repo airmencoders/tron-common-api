@@ -37,6 +37,7 @@ public interface DocumentSpaceService {
 	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
     void deleteFile(UUID documentSpaceId, String path, String fileKey);
     void deleteFile(UUID documentSpaceId, UUID parentFolderId, String filename);
+    void archiveItem(UUID documentSpaceId, UUID parentFolderId, String name);
     void archiveItems(UUID documentSpaceId, String currentPath, List<String> items);
     void unArchiveItems(UUID documentSpaceId, List<String> items);
     void deleteItems(UUID documentSpaceId, String currentPath, List<String> items);
