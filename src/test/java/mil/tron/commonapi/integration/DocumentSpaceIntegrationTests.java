@@ -1284,7 +1284,7 @@ public class DocumentSpaceIntegrationTests {
                         .build()))
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isConflict());
     }
 
     // helper to create spaces with files
