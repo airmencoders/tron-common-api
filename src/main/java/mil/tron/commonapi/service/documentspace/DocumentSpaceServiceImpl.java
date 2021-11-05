@@ -1,7 +1,6 @@
 package mil.tron.commonapi.service.documentspace;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
@@ -23,7 +22,10 @@ import mil.tron.commonapi.repository.DashboardUserRepository;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.DashboardUserService;
-import mil.tron.commonapi.service.documentspace.util.*;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
+import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
+import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +37,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import java.io.*;
 import java.security.DigestInputStream;
@@ -43,7 +44,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.util.*;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -98,20 +98,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		this.privilegeRepository = privilegeRepository;
 		
 		this.documentSpaceFileService = documentSpaceFileService;
-	}
-
-	/**
-	 * Until we get a real minio bucket from P1... only run
-	 */
-	@PostConstruct
-	public void setupBucket() {
-		try {
-			if (!this.documentSpaceClient.doesBucketExistV2(this.bucketName))
-				this.documentSpaceClient.createBucket(this.bucketName);
-		}
-		catch (SdkClientException ex) {
-			Logger.getLogger("DocumentServiceLogger").warning(ex.getMessage());
-		}
 	}
 
 	@Override
