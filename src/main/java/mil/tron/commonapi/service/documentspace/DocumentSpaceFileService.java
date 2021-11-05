@@ -1,10 +1,15 @@
 package mil.tron.commonapi.service.documentspace;
 
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+
+import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 
 public interface DocumentSpaceFileService {
 	/**
@@ -55,4 +60,12 @@ public interface DocumentSpaceFileService {
 	 */
 	void deleteAllDocumentSpaceFilesInParentFolderExcept(UUID documentSpaceId, UUID parentFolderId,
 			Set<String> excludedFilenames);
+
+	/**
+	 * Returns a list of Files that a User has recently uploaded to any Document Space.
+	 * @param username the username of the User
+	 * @param size the amount of File records to return
+	 * @return a list of recently uploaded File entries
+	 */
+	Slice<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds, Pageable pageable);
 }
