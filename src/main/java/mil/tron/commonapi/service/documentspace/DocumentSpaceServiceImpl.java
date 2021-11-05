@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -177,12 +178,13 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public S3Object getFile(UUID documentSpaceId, String path, String key) throws RecordNotFoundException {
 		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
-		if (documentSpaceClient.doesObjectExist(bucketName, prefix + key)) {
-			return documentSpaceClient.getObject(bucketName, prefix + key);
-		}
-		else {
-			throw new RecordNotFoundException("That file does not exist");
-		}
+		return getS3Object(prefix + key);
+	}
+	
+	@Override
+	public S3Object getFile(UUID documentSpaceId, UUID parentFolderId, String filename) {
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId);
+		return getS3Object(getPathPrefix(documentSpaceId, filePathSpec.getFullPathSpec(), filePathSpec) + filename);
 	}
 
 	/**
@@ -199,6 +201,15 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return fileKeys.stream().map(
 				item -> documentSpaceClient.getObject(bucketName, prefix + item))
 				.collect(Collectors.toList());
+	}
+	
+	private S3Object getS3Object(String key) throws RecordNotFoundException {
+		if (documentSpaceClient.doesObjectExist(bucketName, key)) {
+			return documentSpaceClient.getObject(bucketName, key);
+		}
+		else {
+			throw new RecordNotFoundException("That file does not exist");
+		}
 	}
 
 	/**
@@ -317,6 +328,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			}
 		}
 	}
+	
+	@Override
+	public void archiveItem(UUID documentSpaceId, UUID parentFolderId, String name) {
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId);
+		documentSpaceFileSystemService.archiveElement(documentSpaceId, filePathSpec.getFullPathSpec(), name);
+	}
 
 	@Transactional
 	@Override
@@ -351,6 +368,23 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		
 		String fileKey = prefix + file;
 		this.deleteS3ObjectByKey(fileKey);
+	}
+	
+	@Transactional(dontRollbackOn={RecordNotFoundException.class})
+	@Override
+	public void deleteFile(UUID documentSpaceId, UUID parentFolderId, String filename) {
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId);
+		DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
+				.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), filename).orElse(null);
+		
+		if (documentSpaceFile == null) {
+			log.warn("Could not delete Document Space File: it does not exist in the database");
+		} else {
+			documentSpaceFileService.deleteDocumentSpaceFile(documentSpaceFile);
+			documentSpaceFileSystemService.propagateModificationStateToAncestors(documentSpaceFile);
+		}
+		
+		this.deleteS3ObjectByKey(getPathPrefix(documentSpaceId, filePathSpec.getFullPathSpec(), filePathSpec) + filename);
 	}
 
 	@Override
@@ -810,10 +844,17 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return dashboardUser;
 	}
 
-
 	@Override
 	public void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace) {
 		dashboardUserRepository.unsetDashboardUsersDefaultDocumentSpaceForDocumentSpace(documentSpace.getId());
+	}
+
+	@Override
+	public Slice<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername,
+			Pageable pageable) {
+		List<DocumentSpaceResponseDto> authorizedSpaces = listSpaces(authenticatedUsername);
+		Set<UUID> authorizedSpaceIds = authorizedSpaces.stream().map(DocumentSpaceResponseDto::getId).collect(Collectors.toSet());
+		return  documentSpaceFileService.getRecentlyUploadedFilesByUser(authenticatedUsername, authorizedSpaceIds, pageable);
 	}
 
 	private List<DocumentSpacePrivilegeType> mapToPrivilegeTypes(List<ExternalDocumentSpacePrivilegeType> privileges) {

@@ -37,7 +37,7 @@ public class DocumentSpaceFileSystemEntry {
     /**
      * The universal NULL UUID value - since db's cant have 'NULL' as absence of value for 'uuid' datatype
      */
-    public static final String NIL_UUID = "00000000-0000-0000-0000-000000000000";
+    public static final UUID NIL_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
     @Id
     @Builder.Default
@@ -49,7 +49,7 @@ public class DocumentSpaceFileSystemEntry {
 
     @Column(name="parent_entry_id", nullable = false)
     @Builder.Default
-    private UUID parentEntryId = UUID.fromString(NIL_UUID);
+    private UUID parentEntryId = NIL_UUID;
 
     @NotNull
     @Builder.Default
@@ -118,7 +118,7 @@ public class DocumentSpaceFileSystemEntry {
     @PrePersist
     void checkParentUUID() {
         if (this.parentEntryId == null) {
-            this.parentEntryId = UUID.fromString(NIL_UUID);
+            this.parentEntryId = NIL_UUID;
         }
 
         setCreatedOn(new Date());
@@ -128,7 +128,7 @@ public class DocumentSpaceFileSystemEntry {
     @PreUpdate
 	private void onPreUpdate() {
     	if (this.parentEntryId == null) {
-            this.parentEntryId = UUID.fromString(NIL_UUID);
+            this.parentEntryId = NIL_UUID;
         }
 
 		setLastModifiedOn(new Date());
