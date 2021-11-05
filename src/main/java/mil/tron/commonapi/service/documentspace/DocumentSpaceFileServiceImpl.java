@@ -1,20 +1,16 @@
 package mil.tron.commonapi.service.documentspace;
 
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.List;
-
+import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
-import mil.tron.commonapi.service.documentspace.util.ArchivedStatus;
-import org.springframework.data.domain.PageRequest;
+import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
-import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
