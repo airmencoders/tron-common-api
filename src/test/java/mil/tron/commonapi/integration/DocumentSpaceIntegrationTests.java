@@ -1219,6 +1219,75 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents[?(@.spaceName == 'test2')]").exists());
     }
 
+    @Transactional
+    @Rollback
+    @Test
+    void testRenameFileOps() throws Exception {
+        UUID spaceId = createSpaceWithFiles("some-space");
+
+        // should have this structure ready for us
+        // / <root>
+        // |- docs/
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+
+        // rename hello.txt to itself (allowed)
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/files/rename", spaceId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRenameFileDto.builder()
+                        .filePath("/")
+                        .existingFilename("hello.txt")
+                        .newName("hello.txt")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/files/rename", spaceId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRenameFileDto.builder()
+                        .filePath("/")
+                        .existingFilename("hello.txt")
+                        .newName("hEllO.txt")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNoContent());
+
+        // rename hello.txt to hello-world.txt
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/files/rename", spaceId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRenameFileDto.builder()
+                    .filePath("/")
+                    .existingFilename("hEllO.txt")
+                    .newName("hello-world.txt")
+                    .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNoContent());
+
+        // confirm name change
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.key == 'hello-world.txt')]").exists());
+
+        // rename /docs/names.txt to /docs/hello2.txt (conflict)
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/files/rename", spaceId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRenameFileDto.builder()
+                        .filePath("/docs")
+                        .existingFilename("names.txt")
+                        .newName("hello2.txt")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNoContent());
+    }
+
     // helper to create spaces with files
     private UUID createSpaceWithFiles(String spaceName) throws Exception {
         // create space

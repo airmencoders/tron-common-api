@@ -32,6 +32,14 @@ public interface DocumentSpaceFileService {
 	DocumentSpaceFileSystemEntry saveDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile);
 
 	/**
+	 * Renames a Document Space File
+	 * @param documentSpaceFile the file to change the name of
+	 * @param newName the new filename
+	 * @return
+	 */
+	DocumentSpaceFileSystemEntry renameDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile, String newName);
+
+	/**
 	 * Deletes a file from a Document Space
 	 * 
 	 * @param documentSpaceFile the file to delete

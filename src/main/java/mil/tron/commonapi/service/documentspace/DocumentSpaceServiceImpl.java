@@ -269,15 +269,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			throw new IllegalArgumentException("Internal error occurred while uploading file: could not generate checksum value");
 		}
 		
-		try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream());
-				DigestInputStream dis = new DigestInputStream(bis, md)) {
-			Upload upload = documentSpaceTransferManager.upload(bucketName,
-					prefix + filename, bis,
-					metaData);
-			
+		try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream())) {
+			Upload upload = documentSpaceTransferManager.upload(bucketName,prefix + filename, bis, metaData);
 			DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
 					.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), filename).orElse(null);
-			
 			upload.waitForCompletion();
 			
 			if (documentSpaceFile == null) {
@@ -299,6 +294,35 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			documentSpaceFileSystemService.propagateModificationStateToAncestors(documentSpaceFile);
 		} catch (IOException | InterruptedException e) { // NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
+		}
+	}
+
+	@Transactional(dontRollbackOn={RecordNotFoundException.class})
+	@Override
+	public void renameFile(UUID documentSpaceId, String path, String fileKey, String newName) {
+		getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
+
+		DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
+				.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), fileKey).orElse(null);
+
+		if (documentSpaceFile == null) {
+			log.warn("Could not rename Document Space File: it does not exist in the database");
+		} else {
+			documentSpaceFileService.renameDocumentSpaceFile(documentSpaceFile, newName);
+			documentSpaceFileSystemService.propagateModificationStateToAncestors(documentSpaceFile);
+		}
+
+		String s3FileKey = prefix + fileKey.trim();
+		String newS3FileKey = prefix + newName.trim();
+
+		// copy to new name at the same path
+		documentSpaceClient.copyObject(this.bucketName, s3FileKey, this.bucketName, newS3FileKey);
+
+		// delete the old file - only if we didn't just happen to copy the file back on to itself
+		if (!fileKey.equals(newName)) {
+			this.deleteS3ObjectByKey(s3FileKey);
 		}
 	}
 
