@@ -16,6 +16,7 @@ import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
+import mil.tron.commonapi.service.documentspace.DocumentSpaceUserCollectionService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
@@ -49,9 +50,12 @@ public class DocumentSpaceController {
 	public static final Pattern DOCUMENT_SPACE_PATTERN = Pattern.compile(String.format("\\/v[\\d]\\%s", ENDPOINT));
 	
 	private final DocumentSpaceService documentSpaceService;
+
+	private final DocumentSpaceUserCollectionService documentSpaceUserCollectionService;
 	
-	public DocumentSpaceController(DocumentSpaceService documentSpaceService) {
+	public DocumentSpaceController(DocumentSpaceService documentSpaceService, DocumentSpaceUserCollectionService documentSpaceUserCollectionService) {
 		this.documentSpaceService = documentSpaceService;
+		this.documentSpaceUserCollectionService = documentSpaceUserCollectionService;
 	}
 	
 	private HttpHeaders createDownloadHeaders(String filename) {
@@ -697,4 +701,68 @@ public class DocumentSpaceController {
 				.totalElements(filesAndFolders.size())
 				.build();
 	}
+
+	@Operation(summary = "Adds a new entry to a favorites collection. If no collection exists, it also creates one.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation - added",
+					content = @Content(schema = @Schema(implementation = FilePathSpec.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - user, space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Entry already exists in the favorites collection",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication) and #principal != null")
+	@PostMapping("/spaces/{id}/collection/favorite/{entryId}")
+	public ResponseEntity<Void> addEntityToFavorites(@PathVariable UUID id, @PathVariable UUID entryId, Principal principal){
+
+		documentSpaceUserCollectionService.addEntityToFavoritesFolder(principal.getName(), entryId, id);
+		return new ResponseEntity<>(HttpStatus.CREATED);
+	}
+
+	@Operation(summary = "Removes an entry from a favorites collection.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation - removed",
+					content = @Content(schema = @Schema(implementation = FilePathSpec.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - user, space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Entry already exists in the favorites collection",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication) and #principal != null")
+	@DeleteMapping("/spaces/{id}/collection/favorite/{entryId}")
+	public ResponseEntity<Void> removeEntityFromFavorites(@PathVariable UUID id, @PathVariable UUID entryId, Principal principal){
+		documentSpaceUserCollectionService.removeEntityFromFavoritesFolder(principal.getName(), entryId, id);
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Gets entries from a favorites collection. If no collection exists, returns empty list.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful",
+					content = @Content(schema = @Schema(implementation = FilePathSpec.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - user, space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication) and #principal != null")
+	@GetMapping("/spaces/{id}/collection/favorite")
+	public ResponseEntity<Set<DocumentSpaceUserCollectionResponseDto>> getFavorites(@PathVariable UUID id, Principal principal){
+		return new ResponseEntity<>(documentSpaceUserCollectionService.getFavoriteEntriesForUserInDocumentSpace(principal.getName(), id), HttpStatus.OK);
+	}
+
 }

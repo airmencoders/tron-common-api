@@ -38,17 +38,19 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     private final DocumentSpaceService documentSpaceService;
     private final DocumentSpaceFileSystemEntryRepository repository;
     private final DocumentSpaceFileService documentSpaceFileService;
+    private final DocumentSpaceUserCollectionService documentSpaceUserCollectionService;
     public static final String PATH_SEP = "/";
     private static final String BAD_PATH = "Path %s not found or is not a folder";
 
     public DocumentSpaceFileSystemServiceImpl(DocumentSpaceRepository documentSpaceRepository,
                                               DocumentSpaceFileSystemEntryRepository repository,
                                               @Lazy DocumentSpaceService documentSpaceService,
-                                              DocumentSpaceFileService documentSpaceFileService) {
+                                              DocumentSpaceFileService documentSpaceFileService, DocumentSpaceUserCollectionService documentSpaceUserCollectionService) {
         this.documentSpaceRepository = documentSpaceRepository;
         this.repository = repository;
         this.documentSpaceService = documentSpaceService;
         this.documentSpaceFileService = documentSpaceFileService;
+        this.documentSpaceUserCollectionService = documentSpaceUserCollectionService;
     }
 
     /**
@@ -470,6 +472,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         DocumentSpaceFileSystemEntry startEntry = repository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, owningFolderEntry.getItemId())
                 .orElseThrow(() -> new RecordNotFoundException("Unable to get item for archive"));
 
+        documentSpaceUserCollectionService.removeEntityFromAllCollections(startEntry.getId());
         archiveOrUnarchiveChildren(spaceId, startEntry, true);
         propagateModificationStateToAncestors(startEntry);
     }
