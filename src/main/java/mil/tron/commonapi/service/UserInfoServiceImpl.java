@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service;
 
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import mil.tron.commonapi.dto.PersonDto;
 import mil.tron.commonapi.dto.UserInfoDto;
@@ -10,7 +11,6 @@ import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.repository.PersonRepository;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.EntityNotFoundException;
 import java.util.Optional;
 
 @Service
@@ -61,6 +61,12 @@ public class UserInfoServiceImpl implements UserInfoService {
 			
 			// dodid is the last element
 			userInfo.setDodId(userCertSplit[userCertSplit.length - 1]);
+		}
+		
+		// include the expire time of the token
+		Claim expireTimeClaim = jwt.getClaim("exp");
+		if (!expireTimeClaim.isNull()) {
+			userInfo.setExpireTime(expireTimeClaim.asLong());
 		}
 		
 		return userInfo;
