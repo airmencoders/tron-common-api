@@ -959,7 +959,6 @@ class DocumentSpaceServiceImplTest {
 			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
 			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
 
-			Mockito.doReturn(true).when(documentSpaceRepo).isUserInDocumentSpace(dashboardUser.getId(), entity.getId());
 
 			entity.addDashboardUser(dashboardUser);
 			Assert.assertNull(dashboardUser.getDefaultDocumentSpaceId());
@@ -979,15 +978,6 @@ class DocumentSpaceServiceImplTest {
 					.hasMessageContaining(String.format("Requesting Document Space Dashboard User does not exist with email: ", dashboardUser.getEmail()));
 		}
 
-		@Test
-		void shouldThrow_whenDashboardUserIsNotFoundInDocumentSpace() {
-			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
-			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
-
-			assertThatThrownBy(() -> documentService.setDashboardUserDefaultDocumentSpace(documentSpaceId, dashboardUser.getEmail()))
-					.isInstanceOf(NotAuthorizedException.class)
-					.hasMessageContaining("Not Authorized to this Document Space");
-		}
 	}
 
 	@Nested
