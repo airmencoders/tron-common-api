@@ -196,7 +196,7 @@ public class DocumentSpaceController {
 	        	description = "Forbidden (Not authorized to this Document Space)",
 	            content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-    @PreAuthorize("isAuthenticated() and #principal != null")
+    @PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasReadAccess(authentication, #id)) and isAuthenticated() and #principal != null")
     @PatchMapping("/spaces/{id}/user/default")
     public ResponseEntity<Void>patchSelfDocumentSpaceDefault(@PathVariable UUID id, Principal principal) {
 		documentSpaceService.setDashboardUserDefaultDocumentSpace(id, principal.getName());

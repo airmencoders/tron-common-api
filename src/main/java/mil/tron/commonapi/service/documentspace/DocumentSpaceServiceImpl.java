@@ -826,11 +826,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 		DashboardUser dashboardUser = getDashboardUserOrElseThrow(dashboardUserEmail);
 
-
-		if(!documentSpaceRepository.isUserInDocumentSpace(dashboardUser.getId(), documentSpace.getId())){
-			throw new NotAuthorizedException("Not Authorized to this Document Space");
-		}
-		dashboardUser.setDefaultDocumentSpaceId(documentSpaceId);
+		dashboardUser.setDefaultDocumentSpaceId(documentSpace.getId());
 
 		dashboardUserRepository.save(dashboardUser);
 	}
