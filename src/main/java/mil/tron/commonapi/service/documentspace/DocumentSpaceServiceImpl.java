@@ -39,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.transaction.Transactional;
 import java.io.*;
+import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
@@ -268,7 +269,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			throw new IllegalArgumentException("Internal error occurred while uploading file: could not generate checksum value");
 		}
 		
-		try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream())) {
+		try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream());
+			 			DigestInputStream dis = new DigestInputStream(bis, md)) {
 			Upload upload = documentSpaceTransferManager.upload(bucketName,prefix + filename, bis, metaData);
 			DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
 					.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), filename).orElse(null);
