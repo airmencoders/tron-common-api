@@ -272,6 +272,26 @@ public class DocumentSpaceController {
         return result;
     }
 
+	@Operation(summary = "Renames a file")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
+	@PostMapping(value = "/spaces/{id}/files/rename")
+	public ResponseEntity<Object> renameFile(@PathVariable UUID id,
+									  @Valid @RequestBody DocumentSpaceRenameFileDto renameFileDto) {
+
+		documentSpaceService.renameFile(id, renameFileDto.getFilePath(), renameFileDto.getExistingFilename(), renameFileDto.getNewName());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
     @Operation(summary = "Download from a Document Space", description = "Download a single file from a Document Space")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 

@@ -270,14 +270,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		}
 		
 		try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream());
-				DigestInputStream dis = new DigestInputStream(bis, md)) {
-			Upload upload = documentSpaceTransferManager.upload(bucketName,
-					prefix + filename, bis,
-					metaData);
-			
+			 			DigestInputStream dis = new DigestInputStream(bis, md)) {
+			Upload upload = documentSpaceTransferManager.upload(bucketName,prefix + filename, bis, metaData);
 			DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
 					.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), filename).orElse(null);
-			
 			upload.waitForCompletion();
 			
 			if (documentSpaceFile == null) {
@@ -299,6 +295,42 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			documentSpaceFileSystemService.propagateModificationStateToAncestors(documentSpaceFile);
 		} catch (IOException | InterruptedException e) { // NOSONAR
 			throw new BadRequestException("Failed retrieving input stream");
+		}
+	}
+
+	@Transactional(dontRollbackOn={RecordNotFoundException.class})
+	@Override
+	public void renameFile(UUID documentSpaceId, String path, String fileKey, String newName) {
+		getDocumentSpaceOrElseThrow(documentSpaceId);
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
+
+		DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
+				.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), fileKey).orElse(null);
+
+		String s3FileKey = prefix + fileKey.trim();
+		String newS3FileKey = prefix + newName.trim();
+
+		if (documentSpaceFile == null) {
+			log.warn("Could not rename Document Space File: it does not exist in the database");
+		} else {
+			if (!s3FileKey.equals(newS3FileKey)) {
+				// we can allow renaming to same exact name (just like the Unix touch command)... but we dont
+				//  actually need to do anything for the name operation because it'll trigger a 409 error
+				documentSpaceFileService.renameDocumentSpaceFile(documentSpaceFile, newName);
+			}
+
+			// touch the file mod date/time
+			documentSpaceFileSystemService.propagateModificationStateToAncestors(documentSpaceFile);
+		}
+
+		// copy to new name at the same path
+		documentSpaceClient.copyObject(this.bucketName, s3FileKey, this.bucketName, newS3FileKey);
+
+		// delete the old file - only if we didn't just happen to copy the file back on to itself
+		//  otherwise we'd end up with no file at all
+		if (!fileKey.equals(newName)) {
+			this.deleteS3ObjectByKey(s3FileKey);
 		}
 	}
 

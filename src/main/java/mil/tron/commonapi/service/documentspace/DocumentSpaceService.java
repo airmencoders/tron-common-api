@@ -35,6 +35,7 @@ public interface DocumentSpaceService {
 	List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys);
 	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out);
 	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
+	void renameFile(UUID documentSpaceId, String path, String fileKey, String newName);
     void deleteFile(UUID documentSpaceId, String path, String fileKey);
     void deleteFile(UUID documentSpaceId, UUID parentFolderId, String filename);
     void archiveItem(UUID documentSpaceId, UUID parentFolderId, String name);

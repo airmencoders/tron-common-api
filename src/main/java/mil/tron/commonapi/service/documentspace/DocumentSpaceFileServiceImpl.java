@@ -1,18 +1,16 @@
 package mil.tron.commonapi.service.documentspace;
 
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.List;
-
-import org.springframework.data.domain.PageRequest;
+import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
-import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
@@ -31,6 +29,21 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 	public DocumentSpaceFileSystemEntry saveDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile) {
 		documentSpaceFile.setFolder(false);
 		
+		return documentSpaceFileSystemRepository.save(documentSpaceFile);
+	}
+
+	@Override
+	public DocumentSpaceFileSystemEntry renameDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile, String newName) {
+		// check existence of a same-named file/folder at this path
+		if (documentSpaceFileSystemRepository
+				.existsByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsDeleteArchivedEquals(documentSpaceFile.getDocumentSpaceId(),
+						documentSpaceFile.getParentEntryId(),
+						newName,
+						false)) {
+			throw new ResourceAlreadyExistsException("A file or folder at this path already exists with that name");
+		}
+
+		documentSpaceFile.setItemName(newName);
 		return documentSpaceFileSystemRepository.save(documentSpaceFile);
 	}
 
