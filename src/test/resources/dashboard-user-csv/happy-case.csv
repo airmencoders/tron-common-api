@@ -1,5 +1,5 @@
-email, read, write, membership
-1@tron.dev,yes,yes,yes
-2@tron.dev,yes,no,no
-3@test.mil,no,yes,no
-4@test.mil,no,no,yes
+email,write,membership
+1@tron.dev,yes,yes
+2@tron.dev,no,no
+3@test.mil,yes,no
+4@test.mil,no,yes
