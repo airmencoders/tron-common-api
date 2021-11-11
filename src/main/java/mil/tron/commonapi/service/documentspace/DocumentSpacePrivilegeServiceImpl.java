@@ -96,13 +96,13 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 
 			// fallthrough case for making sure we inherit the subordinate privs given a higher one
 			switch (type) {
-				case MEMBERSHIP:
+				case MEMBERSHIP: //NOSONAR
 					addSinglePrivilegeToUser(documentSpace,
 							DocumentSpacePrivilegeType.MEMBERSHIP,
 							documentSpacePrivileges.get(DocumentSpacePrivilegeType.MEMBERSHIP),
 							dashboardUser,
 							privilegesToSave);
-				case WRITE:
+				case WRITE: //NOSONAR
 					addSinglePrivilegeToUser(documentSpace,
 							DocumentSpacePrivilegeType.WRITE,
 							documentSpacePrivileges.get(DocumentSpacePrivilegeType.WRITE),
@@ -110,7 +110,7 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 							privilegesToSave);
 
 				// no matter what person gets read if adding them to a space..
-				case READ:
+				case READ: //NOSONAR
 				default:
 					addSinglePrivilegeToUser(documentSpace,
 							DocumentSpacePrivilegeType.READ,
