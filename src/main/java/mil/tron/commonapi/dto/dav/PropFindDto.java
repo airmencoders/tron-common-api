@@ -14,6 +14,7 @@ import java.util.List;
 @Builder
 public class PropFindDto {
 
+    @JacksonXmlProperty(localName = "D:response")
     @JacksonXmlElementWrapper(useWrapping = false)
     @Singular
     private List<PropFindResponse> responses;

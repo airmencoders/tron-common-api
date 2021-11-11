@@ -562,7 +562,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @param parts
      * @return
      */
-    private String joinPathParts(String... parts) {
+    public static String joinPathParts(String... parts) {
         return (PATH_SEP + String.join(PATH_SEP, parts)).replaceAll("/+", PATH_SEP);
     }
 
