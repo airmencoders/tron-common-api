@@ -831,10 +831,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			memberToAdd.setEmail(email);
 		}
 
-		if (rowLength >= 2 && parseBooleanPrivilegeValue(row[1].trim())) {
+		if (rowLength >= 3 && parseBooleanPrivilegeValue(row[2].trim())) {
 			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.WRITE);
 		}
-		if (rowLength >= 3 && parseBooleanPrivilegeValue(row[2].trim())) {
+		if (rowLength >= 4 && parseBooleanPrivilegeValue(row[3].trim())) {
 			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.MEMBERSHIP);
 		}
 
