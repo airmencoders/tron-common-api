@@ -833,18 +833,6 @@ class DocumentSpaceServiceImplTest {
 		}
 
 		@Test
-		void shouldThrow_whenInvalidReadHeadersExist() throws IOException {
-			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
-
-			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-read-header.csv"));
-
-			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
-			assertEquals(1, exceptionStrings.size());
-
-			assertEquals("Improper second CSV header: read", exceptionStrings.get(0));
-		}
-
-		@Test
 		void shouldThrow_whenInvalidWriteHeadersExist() throws IOException {
 			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
 

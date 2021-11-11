@@ -638,6 +638,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return documentSpaceId.toString() + "/";
 	}
 
+	@Transactional
 	@Override
 	public void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceDashboardMemberDto) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
@@ -806,11 +807,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 		if(!row[0].trim().equalsIgnoreCase("email")){
 			errorList.add("Improper first CSV header: email");
-		}else if(!row[1].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.READ.toString())){
-			errorList.add("Improper second CSV header: read");
-		}else if(!row[2].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.WRITE.toString())){
+		} else if(!row[1].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.WRITE.toString())){
 			errorList.add("Improper third CSV header: write");
-		}else if(!row[3].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.MEMBERSHIP.toString())){
+		} else if(!row[2].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.MEMBERSHIP.toString())){
 			errorList.add("Improper fourth CSV header: membership");
 		}
 	}

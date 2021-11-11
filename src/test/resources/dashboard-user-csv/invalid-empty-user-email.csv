@@ -1,3 +1,3 @@
-email, read, write, membership
-,yes,yes,yes
-2@tron.dev,yes,no,no
+email, write, membership
+,yes,yes
+2@tron.dev,no,no
