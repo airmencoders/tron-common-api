@@ -86,6 +86,9 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 		Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> documentSpacePrivileges = documentSpace.getPrivileges();
 		List<DocumentSpacePrivilege> privilegesToSave = new ArrayList<>();
 
+		// remove, and then we add in
+		removePrivilegesFromDashboardUser(dashboardUser, documentSpace);
+
 		privilegesToAdd.forEach(type -> {
 			DocumentSpacePrivilege privilege = documentSpacePrivileges.get(type);
 
