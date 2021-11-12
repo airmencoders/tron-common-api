@@ -47,6 +47,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import javax.transaction.Transactional;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -1371,5 +1372,119 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents[?(@.key == 'names.txt')]").exists());
 
         return spaceId;
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testBatchUserAddOps() throws Exception {
+        UUID spaceId = createSpaceWithFiles("space-test");
+        FileInputStream filestream = new FileInputStream("src/test/resources/dashboard-user-csv/happy-case.csv");
+        MockMultipartFile file = new MockMultipartFile("file", "happy-case.csv","text/csv" , filestream);
+        mockMvc.perform(multipart(ENDPOINT_V2 +"/spaces/{id}/batchUsers", spaceId.toString())
+                .file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // add the happy case list of users over the REST interface
+        mockMvc.perform(get(ENDPOINT_V2 +"/spaces/{id}/users/dashboard", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                // 4 people imported
+                .andExpect(jsonPath("$.data", hasSize(4)))
+                // user given - WRITE and MEMBERSHIP and READ explicitly
+                .andExpect(jsonPath("$.data[?(@.email == '1@tron.dev')].privileges[*].type", hasItem("WRITE")))
+                .andExpect(jsonPath("$.data[?(@.email == '1@tron.dev')].privileges[*].type", hasItem("MEMBERSHIP")))
+                .andExpect(jsonPath("$.data[?(@.email == '1@tron.dev')].privileges[*].type", hasItem("READ")))
+                // user given - READ explicitly
+                .andExpect(jsonPath("$.data[?(@.email == '2@tron.dev')].privileges[*].type", not(hasItem("WRITE"))))
+                .andExpect(jsonPath("$.data[?(@.email == '2@tron.dev')].privileges[*].type", not(hasItem("MEMBERSHIP"))))
+                .andExpect(jsonPath("$.data[?(@.email == '2@tron.dev')].privileges[*].type", hasItem("READ")))
+                //  user given just WRITE - but gets WRITE and READ
+                .andExpect(jsonPath("$.data[?(@.email == '3@test.mil')].privileges[*].type", hasItem("WRITE")))
+                .andExpect(jsonPath("$.data[?(@.email == '3@test.mil')].privileges[*].type", not(hasItem("MEMBERSHIP"))))
+                .andExpect(jsonPath("$.data[?(@.email == '3@test.mil')].privileges[*].type", hasItem("READ")))
+                //  user given just MEMBERSHIP - but gets WRITE and READ too (all three)
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("WRITE")))
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("MEMBERSHIP")))
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("READ")));
+
+        // now lets mimic doing user management from the UI
+        // demote 4@test.mil person to just have WRITE (no MEMBERSHIP privilege anymore)
+        mockMvc.perform(post(ENDPOINT_V2 +"/spaces/{id}/users", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDashboardMemberRequestDto.builder()
+                        .email("4@test.mil")
+                        .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 +"/spaces/{id}/users/dashboard", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("WRITE")))
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", not(hasItem("MEMBERSHIP"))))
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("READ")));
+
+        // demote 4@test.mil person to just have READ (no MEMBERSHIP or WRITE privilege anymore)
+        mockMvc.perform(post(ENDPOINT_V2 +"/spaces/{id}/users", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDashboardMemberRequestDto.builder()
+                        .email("4@test.mil")
+                        .privileges(Lists.newArrayList())
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 +"/spaces/{id}/users/dashboard", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", not(hasItem("WRITE"))))
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", not(hasItem("MEMBERSHIP"))))
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("READ")));
+
+        // promote 4@test.mil back to ADMIN (should get all three)
+        mockMvc.perform(post(ENDPOINT_V2 +"/spaces/{id}/users", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDashboardMemberRequestDto.builder()
+                        .email("4@test.mil")
+                        .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.MEMBERSHIP))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 +"/spaces/{id}/users/dashboard", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("WRITE")))
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("MEMBERSHIP")))
+                .andExpect(jsonPath("$.data[?(@.email == '4@test.mil')].privileges[*].type", hasItem("READ")));
+
+        // delete the member from the space
+        mockMvc.perform(delete(ENDPOINT_V2 +"/spaces/{id}/users/dashboard", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(Lists.newArrayList("4@test.mil"))))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 +"/spaces/{id}/users/dashboard", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
     }
 }

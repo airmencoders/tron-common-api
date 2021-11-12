@@ -10,12 +10,14 @@ import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceDashboardMemberPrivilegeRow;
 import mil.tron.commonapi.entity.documentspace.DocumentSpacePrivilege;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 @Slf4j
@@ -78,7 +80,8 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 	public String createPrivilegeName(UUID documentSpaceId, DocumentSpacePrivilegeType privilegeType) {
 		return String.format("DOCUMENT_SPACE_%s_%s", documentSpaceId.toString(), privilegeType);
 	}
-	
+
+	// adds privilege(s) to user and any implicit ones that come with it (e.g. MEMBERSHIP gives WRITE and READ for free)
 	@Override
 	public void addPrivilegesToDashboardUser(DashboardUser dashboardUser, DocumentSpace documentSpace,
 			List<DocumentSpacePrivilegeType> privilegesToAdd) throws IllegalArgumentException {
@@ -86,21 +89,54 @@ public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilege
 		Map<DocumentSpacePrivilegeType, DocumentSpacePrivilege> documentSpacePrivileges = documentSpace.getPrivileges();
 		List<DocumentSpacePrivilege> privilegesToSave = new ArrayList<>();
 
+		// remove, and then we add in
+		removePrivilegesFromDashboardUser(dashboardUser, documentSpace);
+
 		privilegesToAdd.forEach(type -> {
-			DocumentSpacePrivilege privilege = documentSpacePrivileges.get(type);
 
-			if (privilege == null) {
-				log.error(String.format(
-						"Error adding Document Space privileges to user. Document Space: %s (%s) missing necessary privilege type: %s",
-						documentSpace.getId(), documentSpace.getName(), type.toString()));
-				throw new IllegalArgumentException("Could not add privileges to user");
+			// fallthrough case for making sure we inherit the subordinate privs given a higher one
+			switch (type) {
+				case MEMBERSHIP: //NOSONAR
+					addSinglePrivilegeToUser(documentSpace,
+							DocumentSpacePrivilegeType.MEMBERSHIP,
+							documentSpacePrivileges.get(DocumentSpacePrivilegeType.MEMBERSHIP),
+							dashboardUser,
+							privilegesToSave);
+				case WRITE: //NOSONAR
+					addSinglePrivilegeToUser(documentSpace,
+							DocumentSpacePrivilegeType.WRITE,
+							documentSpacePrivileges.get(DocumentSpacePrivilegeType.WRITE),
+							dashboardUser,
+							privilegesToSave);
+
+				// no matter what person gets read if adding them to a space..
+				case READ: //NOSONAR
+				default:
+					addSinglePrivilegeToUser(documentSpace,
+							DocumentSpacePrivilegeType.READ,
+							documentSpacePrivileges.get(DocumentSpacePrivilegeType.READ),
+							dashboardUser,
+							privilegesToSave);
 			}
-
-			privilege.addDashboardUser(dashboardUser);
-			privilegesToSave.add(privilege);
 		});
 
 		documentSpacePrivilegeRepository.saveAll(privilegesToSave);
+	}
+
+	private void addSinglePrivilegeToUser(DocumentSpace documentSpace,
+			 							  DocumentSpacePrivilegeType type,
+			 							  @Nullable DocumentSpacePrivilege privilege,
+										  DashboardUser dashboardUser,
+										  List<DocumentSpacePrivilege> privilegesToSave) {
+		if (privilege == null) {
+			log.error(String.format(
+					"Error adding Document Space privileges to user. Document Space: %s (%s) missing necessary privilege type: %s",
+					documentSpace.getId(), documentSpace.getName(), type.toString()));
+			throw new IllegalArgumentException("Could not add privileges to user");
+		}
+
+		privilege.addDashboardUser(dashboardUser);
+		privilegesToSave.add(privilege);
 	}
 
 	@Override
