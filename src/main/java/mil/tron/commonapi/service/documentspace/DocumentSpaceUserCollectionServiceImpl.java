@@ -203,18 +203,6 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
         mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
         return mapper.map(dto, DocumentSpaceUserCollection.class);
     }
-
-    private DocumentSpaceUserCollectionResponseDto convertEntryToResponseDto(DocumentSpaceFileSystemEntry entry){
-        return DocumentSpaceUserCollectionResponseDto
-                .builder()
-                .id(entry.getId())
-                .isFolder(entry.isFolder())
-                .key(entry.getItemName())
-                .spaceId(entry.getDocumentSpaceId())
-                .parentId(entry.getParentEntryId())
-                .lastModifiedDate(entry.getLastModifiedOn())
-                .build();
-    }
     
     private DocumentSpaceUserCollectionResponseDto convertMetadataEntryToResponseDto(FileSystemEntryWithMetadata entry){
         return DocumentSpaceUserCollectionResponseDto
