@@ -51,6 +51,7 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         this.appClientUserService = appClientUserService;
         this.privRepo = privilegeRepository;
         this.scratchStorageService = scratchStorageService;
+        
         this.modelMapper = new DtoMapper();
         this.modelMapper.getConfiguration().setPropertyCondition(Conditions.isNotNull());
 
@@ -224,6 +225,17 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 			
 		return dashboardUser.get();
 		
+	}
+
+	@Override
+	public DashboardUser getDashboardUserByEmailAsLower(String email) {
+		Optional<DashboardUser> dashboardUser = dashboardUserRepository.findByEmailAsLower(email.toLowerCase());
+		
+		if (dashboardUser.isEmpty()) {
+			return null;
+		}
+			
+		return dashboardUser.get();
 	}
 
 }

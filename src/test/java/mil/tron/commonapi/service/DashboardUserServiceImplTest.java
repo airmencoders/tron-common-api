@@ -310,4 +310,16 @@ public class DashboardUserServiceImplTest {
     	Mockito.when(dashboardUserRepo.findByEmailIgnoreCase(Mockito.anyString())).thenReturn(Optional.of(testDashboardUser));
     	assertThat(dashboardUserService.getDashboardUserByEmail(testDashboardUser.getEmail())).isEqualTo(testDashboardUser);
     }
+    
+    @Test
+    void getDashboardUserByEmailAsLower_shouldReturnNull_whenNotExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailAsLower(Mockito.anyString())).thenReturn(Optional.ofNullable(null));
+    	assertThat(dashboardUserService.getDashboardUserByEmailAsLower("test@email.com")).isNull();
+    }
+    
+    @Test
+    void getDashboardUserByEmailAsLower_shouldReturnDashboardUser_whenExists() {
+    	Mockito.when(dashboardUserRepo.findByEmailAsLower(Mockito.anyString())).thenReturn(Optional.of(testDashboardUser));
+    	assertThat(dashboardUserService.getDashboardUserByEmailAsLower(testDashboardUser.getEmail())).isEqualTo(testDashboardUser);
+    }
 }

@@ -1,10 +1,12 @@
 package mil.tron.commonapi.service.documentspace;
 
+import mil.tron.commonapi.dto.documentspace.DocumentMetadata;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceUserCollectionRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceUserCollectionResponseDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceUserCollection;
+import mil.tron.commonapi.entity.documentspace.metadata.FileSystemEntryWithMetadata;
 import mil.tron.commonapi.exception.NotAuthorizedException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -35,12 +37,15 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
     private final ModelMapper mapper = new ModelMapper();
 
 
-    private static final String FAVORITES = "Favorites";
+    public static final String FAVORITES = "Favorites";
     private static final String COLLECTION_NOT_FOUND = "Collection not found";
     private static final String USER_NOT_FOUND = "User not found";
     private static final String NOT_AUTHORIZED_TO_DOC_SPACE = "Not Authorized to this Document Space";
 
-    public DocumentSpaceUserCollectionServiceImpl(DocumentSpaceUserCollectionRepository documentSpaceUserCollectionRepository, DocumentSpaceRepository documentSpaceRepository, DashboardUserService dashboardUserService, DocumentSpaceFileSystemEntryRepository documentSpaceFileSystemEntryRepository) {
+	public DocumentSpaceUserCollectionServiceImpl(
+			DocumentSpaceUserCollectionRepository documentSpaceUserCollectionRepository,
+			DocumentSpaceRepository documentSpaceRepository, DashboardUserService dashboardUserService,
+			DocumentSpaceFileSystemEntryRepository documentSpaceFileSystemEntryRepository) {
         this.documentSpaceUserCollectionRepository = documentSpaceUserCollectionRepository;
         this.documentSpaceRepository = documentSpaceRepository;
         this.dashboardUserService = dashboardUserService;
@@ -95,14 +100,10 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
         if(!userInDocumentSpace){
             throw new NotAuthorizedException(NOT_AUTHORIZED_TO_DOC_SPACE);
         }
-        Optional<DocumentSpaceUserCollection> favorites = documentSpaceUserCollectionRepository.findDocumentSpaceUserCollectionByNameAndDocumentSpaceIdAndDashboardUserId(FAVORITES, documentSpaceId, dashboardUserByEmail.getId());
 
-        if(favorites.isEmpty()){
-            throw new RecordNotFoundException("Unable to find Favorite folder");
-        }
-        Set<DocumentSpaceFileSystemEntry> entries = favorites.get().getEntries();
+		Set<FileSystemEntryWithMetadata> metadata = documentSpaceUserCollectionRepository.getAllInCollectionAsMetadata(FAVORITES, documentSpaceId, dashboardUserByEmail.getId());
 
-        return entries.stream().map(this::convertEntryToResponseDto).collect(Collectors.toSet());
+        return metadata.stream().map(this::convertMetadataEntryToResponseDto).collect(Collectors.toSet());
     }
 
     @Transactional
@@ -212,6 +213,19 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
                 .spaceId(entry.getDocumentSpaceId())
                 .parentId(entry.getParentEntryId())
                 .lastModifiedDate(entry.getLastModifiedOn())
+                .build();
+    }
+    
+    private DocumentSpaceUserCollectionResponseDto convertMetadataEntryToResponseDto(FileSystemEntryWithMetadata entry){
+        return DocumentSpaceUserCollectionResponseDto
+                .builder()
+                .id(entry.getFileEntry().getId())
+                .isFolder(entry.getFileEntry().isFolder())
+                .key(entry.getFileEntry().getItemName())
+                .spaceId(entry.getFileEntry().getDocumentSpaceId())
+                .parentId(entry.getFileEntry().getParentEntryId())
+                .lastModifiedDate(entry.getFileEntry().getLastModifiedOn())
+                .metadata(new DocumentMetadata(entry.getMetadata() == null ? null : entry.getMetadata().getLastDownloaded()))
                 .build();
     }
 }

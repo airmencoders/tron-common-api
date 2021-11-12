@@ -17,6 +17,7 @@ import java.util.UUID;
 @Repository
 public interface DashboardUserRepository extends CrudRepository<DashboardUser, UUID> {
     Optional<DashboardUser> findByEmailIgnoreCase(String name);
+    Optional<DashboardUser> findByEmailAsLower(String email);
     Page<DashboardUser> findAllByDocumentSpaces_Id(UUID documentSpaceId, Pageable pageable);
 
     @Transactional

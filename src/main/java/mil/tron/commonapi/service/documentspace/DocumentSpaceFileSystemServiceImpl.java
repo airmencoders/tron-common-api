@@ -280,7 +280,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     @Override
     public FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path) {
-        checkSpaceIsValid(spaceId);
+    	checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
         FilePathSpec entry = parsePathToFilePathSpec(spaceId, lookupPath);
         DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {
@@ -556,13 +556,8 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
     }
 
-    /**
-     * Helper to form a path of components - making sure we start and end with "/" but removing duplicate
-     * sequences of "//" with single "/"
-     * @param parts
-     * @return
-     */
-    private String joinPathParts(String... parts) {
+    @Override
+    public String joinPathParts(String... parts) {
         return (PATH_SEP + String.join(PATH_SEP, parts)).replaceAll("/+", PATH_SEP);
     }
 

@@ -26,7 +26,6 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeReposit
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
 import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeService;
-import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeType;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.apache.commons.io.FileUtils;
@@ -88,9 +87,6 @@ public class DocumentSpaceIntegrationTests {
     
     @Autowired
     private DocumentSpacePrivilegeRepository documentSpacePrivilegeRepository;
-
-    @Autowired
-    private DocumentSpacePrivilegeService documentSpacePrivilegeService;
 
     @Autowired
     private DocumentSpaceFileSystemEntryRepository fileSystemEntryRepository;
@@ -717,7 +713,7 @@ public class DocumentSpaceIntegrationTests {
         String tmpdir = Files.createTempDir().getAbsolutePath();
         File zipFile = new File(tmpdir + File.separator + "files.zip");
         FileOutputStream fos = new FileOutputStream(zipFile);
-        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/docs", Set.of("hello2.txt", "lists"), fos);
+        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/docs", Set.of("hello2.txt", "lists"), fos, admin.getEmail());
         fos.close();
 
         ZipFile zf = new ZipFile(zipFile);
@@ -745,7 +741,7 @@ public class DocumentSpaceIntegrationTests {
         tmpdir = Files.createTempDir().getAbsolutePath();
         zipFile = new File(tmpdir + File.separator + "files.zip");
         fos = new FileOutputStream(zipFile);
-        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/", Set.of("hello.txt", "hello3.txt", "docs"), fos);
+        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/", Set.of("hello.txt", "hello3.txt", "docs"), fos, admin.getEmail());
         fos.close();
 
         zf = new ZipFile(zipFile);
@@ -800,7 +796,7 @@ public class DocumentSpaceIntegrationTests {
         tmpdir = Files.createTempDir().getAbsolutePath();
         zipFile = new File(tmpdir + File.separator + "files.zip");
         fos = new FileOutputStream(zipFile);
-        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/records", Set.of("hello2.txt", "lists"), fos);
+        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/records", Set.of("hello2.txt", "lists"), fos, admin.getEmail());
         fos.close();
 
         zf = new ZipFile(zipFile);

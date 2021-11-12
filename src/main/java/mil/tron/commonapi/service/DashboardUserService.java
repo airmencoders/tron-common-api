@@ -17,6 +17,8 @@ public interface DashboardUserService {
     Iterable<DashboardUserDto> getAllDashboardUsersDto();
     @Nullable
     DashboardUser getDashboardUserByEmail(String email);
+    @Nullable
+    DashboardUser getDashboardUserByEmailAsLower(String email);
     DashboardUserDto getSelf(String email);
     // conversions
     DashboardUserDto convertToDto(DashboardUser user);

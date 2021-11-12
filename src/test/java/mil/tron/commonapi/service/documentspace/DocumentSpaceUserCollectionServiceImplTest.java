@@ -5,6 +5,8 @@ import mil.tron.commonapi.dto.documentspace.DocumentSpaceUserCollectionResponseD
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceUserCollection;
+import mil.tron.commonapi.entity.documentspace.metadata.FileSystemEntryMetadata;
+import mil.tron.commonapi.entity.documentspace.metadata.FileSystemEntryWithMetadata;
 import mil.tron.commonapi.exception.NotAuthorizedException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
@@ -210,14 +212,22 @@ class DocumentSpaceUserCollectionServiceImplTest {
                 .class, () -> collectionService.deleteCollection(entity.getId()));
     }
 
-
     @Test
     void testGetFavorites() {
         doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
-        doReturn(Optional.of(entity)).when(documentSpaceUserCollectionRepository).findDocumentSpaceUserCollectionByNameAndDocumentSpaceIdAndDashboardUserId("Favorites", docSpaceId, dashboardUserId);
         doReturn(true).when(documentSpaceRepository).isUserInDocumentSpace(dashboardUserId, docSpaceId);
+        
+        List<FileSystemEntryWithMetadata> entriesWithMetadata = new ArrayList<>();
+        entity.getEntries().forEach(entry -> {
+        	FileSystemEntryMetadata metadata = new FileSystemEntryMetadata();
+        	entriesWithMetadata.add(new FileSystemEntryWithMetadata(entry, metadata));
+        });
+        
+        Mockito.when(documentSpaceUserCollectionRepository.getAllInCollectionAsMetadata(Mockito.anyString(), Mockito.any(UUID.class), Mockito.any(UUID.class)))
+        	.thenReturn(Set.copyOf(entriesWithMetadata));
+        
         Set<DocumentSpaceUserCollectionResponseDto> favoriteEntriesForUserInDocumentSpace = collectionService.getFavoriteEntriesForUserInDocumentSpace(dashboardUser.getEmail(), docSpaceId);
-
+        
         Assertions.assertEquals(entity.getEntries().size(), favoriteEntriesForUserInDocumentSpace.size());
     }
 
@@ -227,14 +237,5 @@ class DocumentSpaceUserCollectionServiceImplTest {
 
         Assertions.assertThrows(RecordNotFoundException.class, () -> collectionService.getFavoriteEntriesForUserInDocumentSpace(dashboardUser.getEmail(), docSpaceId));
     }
-
-    @Test
-    void testGetFavorites_ThrowFavoritesNotFound() {
-        doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
-        doReturn(true).when(documentSpaceRepository).isUserInDocumentSpace(dashboardUserId, docSpaceId);
-        doReturn(Optional.empty()).when(documentSpaceUserCollectionRepository).findDocumentSpaceUserCollectionByNameAndDocumentSpaceIdAndDashboardUserId("Favorites", docSpaceId, dashboardUserId);
-        Assertions.assertThrows(RecordNotFoundException.class, () -> collectionService.getFavoriteEntriesForUserInDocumentSpace(dashboardUser.getEmail(), docSpaceId));
-    }
-
 
 }

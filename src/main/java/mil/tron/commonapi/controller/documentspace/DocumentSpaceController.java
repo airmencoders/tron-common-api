@@ -28,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.HandlerMapping;
@@ -307,7 +308,8 @@ public class DocumentSpaceController {
 	@GetMapping("/space/{id}/**")
     public ResponseEntity<InputStreamResource> downloadFile(@PathVariable UUID id,
 															@RequestParam(value = "download", required = false) boolean isDownload,
-															HttpServletRequest request) {
+															HttpServletRequest request,
+															Authentication authentication) {
 
 		// only way it seems to get the rest-of-url into a variable..
 		ResourceUrlProvider urlProvider = (ResourceUrlProvider) request
@@ -319,7 +321,7 @@ public class DocumentSpaceController {
 		String path = FilenameUtils.getPath(restOfUrl);
 		String name = FilenameUtils.getName(restOfUrl);
 
-        S3Object s3Data = documentSpaceService.getFile(id, path, name);
+        S3Object s3Data = documentSpaceService.getFile(id, path, name, authentication.getName());
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
@@ -346,8 +348,9 @@ public class DocumentSpaceController {
     @GetMapping("/spaces/{id}/files/download")
     public ResponseEntity<StreamingResponseBody> downloadFiles(@PathVariable UUID id,
                                                                @RequestParam(value = "path", defaultValue = "") String path,
-                                                               @RequestParam("files") Set<String> files) {
-        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, path, files, out);
+                                                               @RequestParam("files") Set<String> files,
+                                                               Authentication authentication) {
+        StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, path, files, out, authentication.getName());
 
         return ResponseEntity
                 .ok()
@@ -436,10 +439,11 @@ public class DocumentSpaceController {
 	    		@PathVariable UUID id,
 	    		@PathVariable UUID parentFolderId,
 	    		@PathVariable String filename,
-	    		@RequestParam(value = "download", required = false) boolean isDownload
+	    		@RequestParam(value = "download", required = false) boolean isDownload,
+	    		Authentication authentication
     		) {
 
-        S3Object s3Data = documentSpaceService.getFile(id, parentFolderId, filename);
+        S3Object s3Data = documentSpaceService.getFile(id, parentFolderId, filename, authentication.getName());
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         
         var response = new InputStreamResource(s3Data.getObjectContent());
