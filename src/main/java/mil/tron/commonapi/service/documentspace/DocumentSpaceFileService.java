@@ -1,6 +1,5 @@
 package mil.tron.commonapi.service.documentspace;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -10,6 +9,7 @@ import org.springframework.data.domain.Slice;
 
 import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 
 public interface DocumentSpaceFileService {
 	/**
@@ -22,6 +22,17 @@ public interface DocumentSpaceFileService {
 	 */
 	Optional<DocumentSpaceFileSystemEntry> getFileInDocumentSpaceFolder(UUID documentSpaceId, UUID parentFolderId,
 			String filename);
+	
+	/**
+	 * 
+	 * @param documentSpaceId the document space id that this file belongs to
+	 * @param parentFolderId the parent folder id of the file
+	 * @param filename the name of the file to find
+	 * @return the file entry
+	 * @throws RecordNotFoundException if file is not found
+	 */
+	DocumentSpaceFileSystemEntry getFileInDocumentSpaceFolderOrThrow(UUID documentSpaceId, UUID parentFolderId,
+			String filename) throws RecordNotFoundException;
 
 	/**
 	 * Saves a Document Space File

@@ -1,0 +1,22 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="Dylan" id="1636617628699-1">
+        <createTable tableName="file_system_entry_metadata">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="file_system_entry_metadataPK"/>
+            </column>
+            <column name="last_downloaded" type="TIMESTAMP WITHOUT TIME ZONE"/>
+            <column name="dashboard_user_id" type="UUID"/>
+            <column name="file_system_entry_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="Dylan" id="1636617628699-2">
+        <addUniqueConstraint columnNames="file_system_entry_id, dashboard_user_id" constraintName="UKokw35yeegpfl2dl85r1a3g8hn" tableName="file_system_entry_metadata"/>
+    </changeSet>
+    <changeSet author="Dylan" id="1636617628699-3">
+        <addForeignKeyConstraint baseColumnNames="file_system_entry_id" baseTableName="file_system_entry_metadata" constraintName="FK9kygihw8fj8x9a7yi9lwtt2l" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="file_system_entries" validate="true" onDelete="CASCADE"/>
+    </changeSet>
+    <changeSet author="Dylan" id="1636617628699-4">
+        <addForeignKeyConstraint baseColumnNames="dashboard_user_id" baseTableName="file_system_entry_metadata" constraintName="FKcpqkh1yd5xnxlx4f9rpy8keiw" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="dashboard_user" validate="true" onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>
