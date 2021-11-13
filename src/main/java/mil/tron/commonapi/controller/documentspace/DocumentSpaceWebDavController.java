@@ -4,6 +4,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import mil.tron.commonapi.WebConfig;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
+import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.webdav.WebDavService;
 import org.apache.commons.io.FilenameUtils;
@@ -26,6 +27,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api-prefix.v2}" + DocumentSpaceWebDavController.ENDPOINT)
 @IfMinioEnabledOnStagingIL4OrDevLocal
+@PreAuthorizeDashboardAdmin
 public class DocumentSpaceWebDavController {
     protected static final String ENDPOINT = "/document-space-dav";
 
