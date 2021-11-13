@@ -1,62 +1,155 @@
 package mil.tron.commonapi.service.webdav;
 
-import mil.tron.commonapi.dto.dav.*;
+import com.jamesmurty.utils.XMLBuilder;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemServiceImpl;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
-import mil.tron.commonapi.service.documentspace.DocumentSpaceServiceImpl;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.UUID;
 
+/**
+ * Rudimentary implementation of WebDAV translation, for methods that can't easily
+ * be answered in the WebDAV controller - most notably the PROPFIND response
+ */
+
 @Service
+@IfMinioEnabledOnStagingIL4OrDevLocal
 public class WebDavServiceImpl implements WebDavService {
 
     private final DocumentSpaceService documentSpaceService;
+    public static final String DT_SERVER_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSSS";
 
     public WebDavServiceImpl(DocumentSpaceService documentSpaceService) {
         this.documentSpaceService = documentSpaceService;
     }
 
+    /**
+     * Formats date time string from server into the WebDAV format for the file creation date
+     * Example output would be: 1997-12-01T18:27:21-08:00
+     * @param fromServer
+     * @return
+     */
+    private String formatCreationDateTimeString(String fromServer) {
+        if (fromServer == null || fromServer.isBlank()) return "";
+
+        DateFormat formatter = new SimpleDateFormat(DT_SERVER_FORMAT);
+        DateFormat davFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmXXX");
+        try {
+            Date dateTime = formatter.parse(fromServer);
+            return davFormat.format(dateTime);
+        }
+        catch (ParseException ex) {
+            return "";
+        }
+    }
+
+    /**
+     * Formats date time string from server into the WebDAV format for modified date
+     * Example output would be: Mon, 12 Jan 1998 09:25:56 GMT
+     * @param fromServer
+     * @return
+     */
+    private String formatModifiedDateTimeString(String fromServer) {
+        if (fromServer == null || fromServer.isBlank()) return "";
+        DateFormat formatter = new SimpleDateFormat(DT_SERVER_FORMAT);
+        DateFormat davFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss XXX");
+        try {
+            Date dateTime = formatter.parse(fromServer);
+            return davFormat.format(dateTime);
+        }
+        catch (ParseException ex) {
+            return "";
+        }
+    }
+
+    /**
+     * Performs a WebDAV PROPFIND action (directory listing)
+     * @param spaceId document space UUID
+     * @param path the path we're PROPFINDing on
+     * @param children if true then return the requested directory and all its contents (corresponds to header 'DEPTH = 1')
+     *                 otherwise just fetch/include information on the requested element (corresponds to header 'DEPTH = 0')
+     * @return
+     * @throws ParserConfigurationException
+     * @throws TransformerException
+     */
     @Override
-    public PropFindDto propFind(UUID spaceId, String path) {
+    public String propFind(UUID spaceId, String path, boolean children) throws ParserConfigurationException, TransformerException {
 
         // get the path contents from the service
         FilePathSpecWithContents content = documentSpaceService.getFolderContents(spaceId, path);
 
-        List<PropFindResponse> props = new ArrayList<>();
-        props.add(PropFindResponse.builder()
-                .propStat(PropStat.builder()
-                        .prop(Prop.builder()
-                                .contentLength(Optional.of(0L))
-                                .lastModified("")
-                                .creationDate("")
-                                .resourceType(new PropResourceType())
-                                .build())
-                        .status("HTTP/1.1 200 OK")
-                        .build())
-                .href(DocumentSpaceFileSystemServiceImpl.joinPathParts("/api/v2/document-space/space/" + spaceId + "/" + content.getFullPathSpec() + "/"))
-                .build());
+        // begin the PROPFIND response with the element requested (the root of the requested path, actual-folder)
+        XMLBuilder builder = XMLBuilder
+                .create("D:multistatus").attr("xmlns:D", "DAV:")
+                .element("D:response")
+                    .element("D:href").text(DocumentSpaceFileSystemServiceImpl.joinPathParts("/api/v2/document-space/space/" + spaceId + "/" + content.getFullPathSpec() + "/")).up()
+                        .element("D:propstat")
+                            .element("D:prop")
+                                .element("D:resourcetype")
+                                    .element("D:collection")
+                                .up()
+                            .up()
+                        .up()
+                    .element("D:status").text("HTTP/1.1 200 OK")
+                    .up()
+                .up()
+            .up();
 
-        for (DocumentSpaceFileSystemEntry entry : content.getEntries()) {
-            props.add(PropFindResponse.builder()
-                    .propStat(PropStat.builder()
-                            .prop(Prop.builder()
-                                    .contentLength(Optional.of(entry.getSize()))
-                                    .lastModified(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn().toString() : "")
-                                    .creationDate(entry.getCreatedOn() != null ? entry.getCreatedOn().toString() : "")
-                                    .resourceType(new PropResourceType())
-                                    .build())
-                            .status("HTTP/1.1 200 OK")
-                            .build())
-                    .href(DocumentSpaceFileSystemServiceImpl.joinPathParts("/api/v2/document-space/space/" + spaceId + "/" + content.getFullPathSpec() + "/" + entry.getItemName()))
-                    .build());
+        // if depth header is specified and truthy then we're supposed to include the contents of the whole folder per RFC
+        if (children) {
+            for (DocumentSpaceFileSystemEntry entry : content.getEntries()) {
+                builder = builder
+                        .element("D:response")
+                        .element("D:href").text(DocumentSpaceFileSystemServiceImpl.joinPathParts("/api/v2/document-space/space/" + spaceId + "/" + content.getFullPathSpec() + "/" + entry.getItemName()))
+                        .up()
+                        .element("D:propstat")
+                        .element("D:prop")
+                        .element("D:creationdate")
+                        .text(entry.getCreatedOn() != null ? formatCreationDateTimeString(entry.getCreatedOn().toString()) : "")
+                        .up()
+                        .element("D:getlastmodified")
+                        .text(entry.getLastModifiedOn() != null ? formatModifiedDateTimeString(entry.getLastModifiedOn().toString()) : "")
+                        .up();
+
+                if (entry.getSize() == 0) builder = builder.element("D:getcontentlength").up();
+                else builder = builder.element("D:getcontentlength").text(String.valueOf(entry.getSize())).up();
+
+                if (entry.isFolder()) builder = builder.element("D:resourcetype").element("D:collection").up().up();
+                else builder = builder.element("D:resourcetype").up();
+
+                builder = builder.up();
+                builder = builder.element("D:status").text("HTTP/1.1 200 OK").up().up();
+                builder = builder.up();
+            }
         }
-
-        return PropFindDto.builder().responses(props).build();
+        return "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" + builder.asString();
     }
+
+    /**
+     * Creates folder (make collection in webdav parlance)
+     * @param spaceId
+     * @param path
+     * @return
+     */
+    @Override
+    public String mkCol(UUID spaceId, String path) {
+
+        String folderPath = FilenameUtils.getPath(path);
+        String name = FilenameUtils.getName(path);
+        documentSpaceService.createFolder(spaceId, folderPath, name);
+
+        // if we get here, creation was successful (no throws)
+        return "Created";
+    }
+
 }

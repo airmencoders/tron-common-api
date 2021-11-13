@@ -26,7 +26,6 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpacePrivilegeReposit
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
 import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeService;
-import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeType;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.apache.commons.io.FileUtils;
@@ -38,23 +37,28 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import javax.transaction.Transactional;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.net.URI;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -1487,4 +1491,54 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(3)));
     }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testWebDavOps() throws Exception {
+        UUID spaceId = createSpaceWithFiles("some-space");
+
+        // should have this structure ready for us
+        // / <root>
+        // |- docs/
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+
+        // do a PROPFIND
+        mockMvc.perform(MockMvcRequestBuilders.request("PROPFIND", URI.create(String.format("/v2/document-space-dav/%s/", spaceId)))
+                .header("depth", "0")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isMultiStatus());
+
+        // with a depth of 1
+        // do a PROPFIND
+        mockMvc.perform(MockMvcRequestBuilders.request("PROPFIND", URI.create(String.format("/v2/document-space-dav/%s/", spaceId)))
+                .header("depth", "1")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isMultiStatus());
+
+        // do the OPTIONS fetch
+        mockMvc.perform(options(String.format("/v2/document-space-dav/%s/", spaceId))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("allow"));
+
+        // do a MKCOL
+        mockMvc.perform(MockMvcRequestBuilders.request("MKCOL", URI.create(String.format("/v2/document-space-dav/%s/test2", spaceId)))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated());
+
+        // do a GET
+        mockMvc.perform(get(String.format("/v2/document-space-dav/%s/hello.txt", spaceId))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+    }
+
 }

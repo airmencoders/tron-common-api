@@ -57,14 +57,15 @@ public class DocumentSpaceController {
 		this.documentSpaceService = documentSpaceService;
 		this.documentSpaceUserCollectionService = documentSpaceUserCollectionService;
 	}
-	
-	private HttpHeaders createDownloadHeaders(String filename) {
+
+	// stsatic helper used for file download headers -- used by the webdav controller also
+	public static HttpHeaders createDownloadHeaders(String filename) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Content-disposition", "attachment; filename=\"" + filename + "\"");
 		
 		return headers;
 	}
-	
+
 	private HttpHeaders createPreviewHeaders(String filename) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Content-disposition", "inline; filename=\"" + filename + "\"");
