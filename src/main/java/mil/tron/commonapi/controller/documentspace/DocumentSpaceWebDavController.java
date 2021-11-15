@@ -13,6 +13,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -40,6 +41,7 @@ public class DocumentSpaceWebDavController {
     // Note: In formal implementation WebDAV verbs will need to be "whitelisted" in a filter
     @RequestMapping(value = "/{spaceId}/**", produces = { "application/xml"})
     @ResponseBody public ResponseEntity<Object> processWebDavCommand(@PathVariable UUID spaceId,
+                                                                     Authentication authentication,
                                                                      HttpServletRequest request,
                                                                      HttpServletResponse response) {
         // only way it seems to get the rest-of-url into a variable..
@@ -62,7 +64,7 @@ public class DocumentSpaceWebDavController {
             return new ResponseEntity<>(HttpStatus.OK);
         }
         else if (request.getMethod().equalsIgnoreCase("GET")) {
-            return this.getFileWebDav(spaceId, folderPath, name);
+            return this.getFileWebDav(spaceId, folderPath, name, authentication);
         }
         else if (request.getMethod().equalsIgnoreCase("MKCOL")) {
             return new ResponseEntity<>(webDavService.mkCol(spaceId, restOfUrl), HttpStatus.CREATED);
@@ -72,8 +74,8 @@ public class DocumentSpaceWebDavController {
         }
     }
 
-    private ResponseEntity<Object> getFileWebDav(UUID spaceId, String path, String name) {
-        S3Object s3Data = documentSpaceService.getFile(spaceId, path, name);
+    private ResponseEntity<Object> getFileWebDav(UUID spaceId, String path, String name, Authentication authentication) {
+        S3Object s3Data = documentSpaceService.getFile(spaceId, path, name, authentication.getName());
         ObjectMetadata s3Meta = s3Data.getObjectMetadata();
         var response = new InputStreamResource(s3Data.getObjectContent());
         return ResponseEntity
