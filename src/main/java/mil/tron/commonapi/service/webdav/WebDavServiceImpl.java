@@ -36,18 +36,18 @@ public class WebDavServiceImpl implements WebDavService {
     }
 
     /**
-     * Formats date time string from server into the WebDAV format for the file creation date
+     * Formats date time from server into the WebDAV format for the file creation date
      * Example output would be: 1997-12-01T18:27:21-08:00
      * @param fromServer
      * @return
      */
-    private String formatCreationDateTimeString(String fromServer) {
-        if (fromServer == null || fromServer.isBlank()) return "";
+    private String formatCreationDateTimeString(Date fromServer) {
+        if (fromServer == null) return "";
 
         DateFormat formatter = new SimpleDateFormat(DT_SERVER_FORMAT);
         DateFormat davFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmXXX");
         try {
-            Date dateTime = formatter.parse(fromServer);
+            Date dateTime = formatter.parse(fromServer.toString());
             return davFormat.format(dateTime);
         }
         catch (ParseException ex) {
@@ -56,17 +56,17 @@ public class WebDavServiceImpl implements WebDavService {
     }
 
     /**
-     * Formats date time string from server into the WebDAV format for modified date
+     * Formats date time from server into the WebDAV format for modified date
      * Example output would be: Mon, 12 Jan 1998 09:25:56 GMT
      * @param fromServer
      * @return
      */
-    private String formatModifiedDateTimeString(String fromServer) {
-        if (fromServer == null || fromServer.isBlank()) return "";
+    private String formatModifiedDateTimeString(Date fromServer) {
+        if (fromServer == null) return "";
         DateFormat formatter = new SimpleDateFormat(DT_SERVER_FORMAT);
         DateFormat davFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss XXX");
         try {
-            Date dateTime = formatter.parse(fromServer);
+            Date dateTime = formatter.parse(fromServer.toString());
             return davFormat.format(dateTime);
         }
         catch (ParseException ex) {
@@ -122,10 +122,10 @@ public class WebDavServiceImpl implements WebDavService {
                         .element("D:propstat")
                         .element("D:prop")
                         .element("D:creationdate")
-                        .text(formatCreationDateTimeString(entry.getCreatedOn().toString()))
+                        .text(formatCreationDateTimeString(entry.getCreatedOn()))
                         .up()
                         .element("D:getlastmodified")
-                        .text(formatModifiedDateTimeString(entry.getLastModifiedOn().toString()))
+                        .text(formatModifiedDateTimeString(entry.getLastModifiedOn()))
                         .up();
 
                 if (entry.getSize() == 0) builder = builder.element("D:getcontentlength").up();
