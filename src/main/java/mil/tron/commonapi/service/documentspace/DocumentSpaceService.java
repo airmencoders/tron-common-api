@@ -29,11 +29,11 @@ public interface DocumentSpaceService {
      */
     void deleteSpace(UUID documentSpaceId);
 
-	S3Object getFile(UUID documentSpaceId, String path, String key);
-	S3Object getFile(UUID doucmentSpaceId, UUID parentFolderId, String filename);
+	S3Object getFile(UUID documentSpaceId, String path, String key, String documentSpaceUsername);
+	S3Object getFile(UUID doucmentSpaceId, UUID parentFolderId, String filename, String documentSpaceUsername);
 	void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out);
-	List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys);
-	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out);
+	List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys, String documentSpaceUsername);
+	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out, String documentSpaceUsername);
 	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
 	void renameFile(UUID documentSpaceId, String path, String fileKey, String newName);
     void deleteFile(UUID documentSpaceId, String path, String fileKey);

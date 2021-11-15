@@ -28,6 +28,7 @@ import mil.tron.commonapi.repository.PrivilegeRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.DashboardUserService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 
@@ -90,12 +91,16 @@ class DocumentSpaceServiceImplTest {
 	
 	@Mock
 	private DocumentSpaceFileService documentSpaceFileService;
+	
+	@Mock
+	private DocumentSpaceMetadataService metadataService;
 
 	private S3Mock s3Mock;
 
 	private DocumentSpaceRequestDto requestDto;
 	private DocumentSpaceResponseDto responseDto;
 	private DocumentSpace entity;
+	private DashboardUser dashboardUser;
 
 	@BeforeEach
 	void setup() {
@@ -110,7 +115,8 @@ class DocumentSpaceServiceImplTest {
 		transferManager = TransferManagerBuilder.standard().withS3Client(amazonS3).build();
 
 		documentService = new DocumentSpaceServiceImpl(amazonS3, transferManager, BUCKET_NAME, documentSpaceRepo,
-				documentSpacePrivilegeService, dashboardUserRepository, dashboardUserService, privilegeRepository, documentSpaceFileSystemService, documentSpaceFileService);
+				documentSpacePrivilegeService, dashboardUserRepository, dashboardUserService, privilegeRepository,
+				documentSpaceFileSystemService, documentSpaceFileService, metadataService);
 		s3Mock = new S3Mock.Builder().withPort(9002).withInMemoryBackend().build();
 
 		s3Mock.start();
@@ -138,6 +144,12 @@ class DocumentSpaceServiceImplTest {
 						.type(DocumentSpacePrivilegeType.MEMBERSHIP).build());
 		entity = DocumentSpace.builder().id(requestDto.getId()).name(requestDto.getName())
 				.privileges(documentSpacePrivilegesMap).build();
+		
+		dashboardUser = DashboardUser.builder()
+				.id(UUID.randomUUID())
+				.email("dashboard@user.com")
+				.emailAsLower("dashboard@user.com")
+				.build();
 	}
 
 	@AfterEach
@@ -166,26 +178,20 @@ class DocumentSpaceServiceImplTest {
 
 	@Test
 	void testListSpaces() {
-		DashboardUser dashboardUser = DashboardUser.builder()
-				.id(UUID.randomUUID())
-				.email("dashboard@user.com")
-				.emailAsLower("dashboard@user.com")
-				.build();
-
 		// Test Dashboard Admin should get all
-		Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
+		Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
 		dashboardUser.setPrivileges(Set.of(new Privilege(1L, "DASHBOARD_ADMIN")));
 		Mockito.when(documentSpaceRepo.findAllDynamicBy(DocumentSpaceResponseDto.class)).thenReturn(List.of(responseDto));
 		assertThat(documentService.listSpaces(dashboardUser.getEmail())).hasSize(1);
 
 		// Test that non-Dashboard Admin should only get by their id
-		Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
+		Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
 		dashboardUser.setPrivileges(Set.of());
 		Mockito.when(documentSpaceRepo.findAllDynamicByDashboardUsers_Id(dashboardUser.getId(), DocumentSpaceResponseDto.class)).thenReturn(List.of(responseDto));
 		assertThat(documentService.listSpaces(dashboardUser.getEmail())).hasSize(1);
 
 		// Test for exception when Dashboard User not found
-		Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(null);
+		Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(null);
 		assertThrows(RecordNotFoundException.class, () -> documentService.listSpaces(dashboardUser.getEmail()));
 	}
 
@@ -273,12 +279,24 @@ class DocumentSpaceServiceImplTest {
 		String content = "fake content";
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 20);
 
-		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		S3Object downloadFile = documentService.getFile(documentSpaceDto.getId(), "", fileNames.get(0));
+		Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
+		
+		Mockito.when(
+				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("").build());
+		
+		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolderOrThrow(Mockito.any(UUID.class), Mockito.any(UUID.class), Mockito.anyString()))
+			.thenReturn(DocumentSpaceFileSystemEntry.builder()
+					.itemName(fileNames.get(0))
+					.build());
+		
+		S3Object downloadFile = documentService.getFile(documentSpaceDto.getId(), "", fileNames.get(0), dashboardUser.getEmail());
 
 		S3Object actual = amazonS3.getObject(BUCKET_NAME,
 				documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0));
 		assertThat(downloadFile.getKey()).isEqualTo(actual.getKey());
+		Mockito.verify(metadataService).saveMetadata(Mockito.any(UUID.class), Mockito.any(DocumentSpaceFileSystemEntry.class), Mockito.any(DocumentMetadata.class), Mockito.any(DashboardUser.class));
 	}
 
 	@Test
@@ -289,8 +307,13 @@ class DocumentSpaceServiceImplTest {
 		String content = "fake content";
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 5);
 
-		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		List<S3Object> downloadFiles = documentService.getFiles(documentSpaceDto.getId(), "", Set.copyOf(fileNames));
+		Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
+		
+		Mockito.when(
+				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("").build());
+		List<S3Object> downloadFiles = documentService.getFiles(documentSpaceDto.getId(), "", Set.copyOf(fileNames), dashboardUser.getEmail());
 
 		List<S3Object> fromS3 = new ArrayList<>();
 		for (int i = 0; i < fileNames.size(); i++) {
@@ -304,6 +327,7 @@ class DocumentSpaceServiceImplTest {
 
 			assertThat(fromS3).anyMatch(actual -> actual.getKey().equals(key));
 		}
+		Mockito.verify(metadataService).saveMetadata(Mockito.any(UUID.class), Mockito.anySet(), Mockito.any(DocumentMetadata.class), Mockito.any(DashboardUser.class));
 	}
 
 	@Test
@@ -314,15 +338,24 @@ class DocumentSpaceServiceImplTest {
 		String content = "fake content";
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 1);
 
+		Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
+		
 		Mockito.when(
 				documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
 				.thenReturn(
 						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
-		S3Object downloadFile = documentService.getFile(documentSpaceDto.getId(), DocumentSpaceFileSystemEntry.NIL_UUID, fileNames.get(0));
+		
+		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolderOrThrow(Mockito.any(UUID.class), Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(DocumentSpaceFileSystemEntry.builder()
+					.itemName(fileNames.get(0))
+					.build());
+		
+		S3Object downloadFile = documentService.getFile(documentSpaceDto.getId(), DocumentSpaceFileSystemEntry.NIL_UUID, fileNames.get(0), dashboardUser.getEmail());
 
 		S3Object s3Object = amazonS3.getObject(BUCKET_NAME, documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0));
 
 		assertThat(s3Object.getKey()).isEqualTo(downloadFile.getKey());
+		Mockito.verify(metadataService).saveMetadata(Mockito.any(UUID.class), Mockito.any(DocumentSpaceFileSystemEntry.class), Mockito.any(DocumentMetadata.class), Mockito.any(DashboardUser.class));
 	}
 	
 	@Test
@@ -355,52 +388,75 @@ class DocumentSpaceServiceImplTest {
 	@Test
 	void testDownloadAndWriteCompressedFiles()
 			throws AmazonServiceException, AmazonClientException, InterruptedException {
+		Mockito.when(documentSpaceRepo.existsByName(Mockito.anyString())).thenReturn(false);
 		Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
 		DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
-
-		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
-				.thenReturn(FileSystemElementTree.builder().build());
 
 		S3ObjectSummary obj0 = new S3ObjectSummary();
 		obj0.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file0.txt");
 		S3ObjectSummary obj1 = new S3ObjectSummary();
 		obj1.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file1.txt");
-		S3ObjectSummary obj2 = new S3ObjectSummary();
-		obj2.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file2.txt");
-		S3ObjectSummary obj3 = new S3ObjectSummary();
-		obj3.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file3.txt");
-		S3ObjectSummary obj4 = new S3ObjectSummary();
-		obj4.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file4.txt");
-
-		Mockito.when(documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(Mockito.any(FileSystemElementTree.class)))
-				.thenReturn(Lists.newArrayList(
-						S3ObjectAndFilename.builder()
-								.s3Object(obj0)
-								.pathAndFilename("/file0.txt")
-								.build(),
-						S3ObjectAndFilename.builder()
-								.s3Object(obj1)
-								.pathAndFilename("/file1.txt")
-								.build(),
-						S3ObjectAndFilename.builder()
-								.s3Object(obj2)
-								.pathAndFilename("/file2.txt")
-								.build(),
-						S3ObjectAndFilename.builder()
-								.s3Object(obj3)
-								.pathAndFilename("/file3.txt")
-								.build(),
-						S3ObjectAndFilename.builder()
-								.s3Object(obj4)
-								.pathAndFilename("/file4.txt")
-								.build()));
-
-
 		String content = "fake content";
 		List<String> fileNames = uploadDummyFilesUsingTransferManager(content, 5);
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
-		documentService.downloadAndWriteCompressedFiles(documentSpaceDto.getId(), "", Set.copyOf(fileNames), output);
+		
+		List<DocumentSpaceFileSystemEntry> entries = new ArrayList<>();
+		for (String filename : fileNames) {
+			entries.add(DocumentSpaceFileSystemEntry.builder()
+										.documentSpaceId(entity.getId())
+										.isFolder(false)
+										.itemId(UUID.randomUUID())
+										.itemName(filename)
+										.build());
+		}
+		fileNames.add("folder");
+		entries.add(DocumentSpaceFileSystemEntry.builder()
+										.documentSpaceId(entity.getId())
+										.isFolder(true)
+										.itemId(UUID.randomUUID())
+										.itemName("folder")
+										.build());
+		
+		Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
+		
+		Mockito.when(
+				documentSpaceFileSystemService.getFilesAndFoldersAtPath(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(
+						FilePathSpecWithContents.builder()
+							.itemId(DocumentSpaceFileSystemEntry.NIL_UUID)
+							.fullPathSpec("")
+							.entries(entries)
+							.build()
+				);
+		
+		Mockito.when(
+				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
+				.thenReturn(
+						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("").build());
+		
+		Mockito.when(documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
+			.thenReturn(FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("/folder").build());
+		
+		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
+			.thenReturn(FileSystemElementTree.builder().build());
+		
+		Mockito.when(documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(Mockito.any(FileSystemElementTree.class)))
+		.thenReturn(Lists.newArrayList(
+				S3ObjectAndFilename.builder()
+						.s3Object(obj0)
+						.pathAndFilename("/file0.txt")
+						.build(),
+				S3ObjectAndFilename.builder()
+						.s3Object(obj1)
+						.pathAndFilename("/file1.txt")
+						.build()));
+		
+		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
+		
+		documentService.downloadAndWriteCompressedFiles(documentSpaceDto.getId(), "", Set.copyOf(fileNames), output, dashboardUser.getEmail());
+		
 		assertThat(output.size()).isPositive();
+		Mockito.verify(metadataService).saveMetadata(Mockito.any(UUID.class), Mockito.anySet(), Mockito.any(DocumentMetadata.class), Mockito.any(DashboardUser.class));
 	}
 
 	@Test
@@ -410,7 +466,11 @@ class DocumentSpaceServiceImplTest {
 		DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
 
 		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
-				.thenReturn(FileSystemElementTree.builder().build());
+				.thenReturn(FileSystemElementTree.builder()
+						.value(DocumentSpaceFileSystemEntry.builder()
+								.itemId(UUID.randomUUID())
+								.build())
+						.build());
 
 		S3ObjectSummary obj0 = new S3ObjectSummary();
 		obj0.setKey(documentService.createDocumentSpacePathPrefix(entity.getId()) + "file0.txt");
@@ -496,7 +556,7 @@ class DocumentSpaceServiceImplTest {
 		
 		@Test
 		void shouldGetFiles() {
-			Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
+			Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
 			Mockito.when(documentSpaceRepo.findAllDynamicBy(Mockito.any())).thenReturn(Arrays.asList(responseDto));
 			
 			Pageable pageable = PageRequest.of(0, 100);
@@ -584,7 +644,7 @@ class DocumentSpaceServiceImplTest {
 		@Test
 		void shouldRemoveDashboardUserFromDocumentSpace_whenDocumentSpaceExists() {
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
-			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmailAsLower(dashboardUser.getEmail());
 
 			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), new String[] {memberDto.getEmail()});
 
@@ -596,7 +656,7 @@ class DocumentSpaceServiceImplTest {
 		@Test
 		void shouldDeleteDashboardUser_whenUserHasNoMembershipAndNoOtherPrivilege() {
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
-			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmailAsLower(dashboardUser.getEmail());
 			Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
 
 			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), new String[] {memberDto.getEmail()});
@@ -613,7 +673,7 @@ class DocumentSpaceServiceImplTest {
 			dashboardUser.getPrivileges().add(dashboardAdmin);
 
 			Mockito.when(documentSpaceRepo.findById(entity.getId())).thenReturn(Optional.of(entity));
-			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmailAsLower(dashboardUser.getEmail());
 			Mockito.when(privilegeRepository.findByName(Mockito.anyString())).thenReturn(Optional.of(documentSpacePrivilege));
 
 			documentService.removeDashboardUserFromDocumentSpace(entity.getId(), new String[] {memberDto.getEmail()});
@@ -745,7 +805,7 @@ class DocumentSpaceServiceImplTest {
 		@Test
 		void shouldGetPrivileges_whenMemberOfDocumentSpace() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-			Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
+			Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
 			Mockito.when(documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(
 					Mockito.any(DocumentSpace.class), Mockito.anySet())).thenReturn(List.of(privilegeRow));
 
@@ -759,7 +819,7 @@ class DocumentSpaceServiceImplTest {
 		@Test
 		void shouldThrow_whenDashboardUserHasNoPrivilegesToDocumentSpace() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-			Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(dashboardUser);
+			Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
 			Mockito.when(documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(
 					Mockito.any(DocumentSpace.class), Mockito.anySet())).thenReturn(List.of());
 
@@ -780,7 +840,7 @@ class DocumentSpaceServiceImplTest {
 		@Test
 		void shouldThrow_whenDashboardUserNotExists() {
 			Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-			Mockito.when(dashboardUserService.getDashboardUserByEmail(Mockito.anyString())).thenReturn(null);
+			Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(null);
 
 			assertThatThrownBy(() -> documentService.getDashboardUserPrivilegesForDocumentSpace(entity.getId(), dashboardUser.getEmail()))
 				.isInstanceOf(RecordNotFoundException.class)
@@ -945,7 +1005,7 @@ class DocumentSpaceServiceImplTest {
 		@Test
 		void shouldSetDashboardUserDefaultDocumentSpaceAndSave() {
 			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
-			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
+			Mockito.doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmailAsLower(dashboardUser.getEmail());
 
 
 			entity.addDashboardUser(dashboardUser);

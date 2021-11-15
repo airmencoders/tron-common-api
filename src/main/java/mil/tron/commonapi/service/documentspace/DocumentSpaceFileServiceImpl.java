@@ -2,6 +2,7 @@ package mil.tron.commonapi.service.documentspace;
 
 import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,12 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 	@Override
 	public Optional<DocumentSpaceFileSystemEntry> getFileInDocumentSpaceFolder(UUID documentSpaceId, UUID parentFolderId, String filename) {
 		return documentSpaceFileSystemRepository.findFileByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsFolderFalse(documentSpaceId, parentFolderId, filename);
+	}
+	
+	@Override
+	public DocumentSpaceFileSystemEntry getFileInDocumentSpaceFolderOrThrow(UUID documentSpaceId, UUID parentFolderId,
+			String filename) throws RecordNotFoundException {
+		return getFileInDocumentSpaceFolder(documentSpaceId, parentFolderId, filename).orElseThrow(() -> new RecordNotFoundException("File not found: " + filename));
 	}
 
 	@Override
@@ -70,4 +77,5 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 			Pageable pageable) {
 		return documentSpaceFileSystemRepository.getRecentlyUploadedFilesByUser(username, authorizedSpaceIds, pageable);
 	}
+
 }

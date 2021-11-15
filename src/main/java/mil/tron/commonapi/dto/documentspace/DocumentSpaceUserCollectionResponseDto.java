@@ -1,7 +1,6 @@
 package mil.tron.commonapi.dto.documentspace;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -43,4 +42,7 @@ public class DocumentSpaceUserCollectionResponseDto {
 	@Getter
 	@Setter
 	private boolean isFolder;
+	
+	@NotNull
+	private DocumentMetadata metadata;
 }

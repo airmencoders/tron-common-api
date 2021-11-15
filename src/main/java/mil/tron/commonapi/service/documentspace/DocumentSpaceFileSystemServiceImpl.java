@@ -280,7 +280,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     @Override
     public FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path) {
-        checkSpaceIsValid(spaceId);
+    	checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
         FilePathSpec entry = parsePathToFilePathSpec(spaceId, lookupPath);
         DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {

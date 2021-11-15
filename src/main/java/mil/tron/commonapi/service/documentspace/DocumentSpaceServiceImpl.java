@@ -66,6 +66,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private final PrivilegeRepository privilegeRepository;
 	
 	private final DocumentSpaceFileService documentSpaceFileService;
+	private final DocumentSpaceMetadataService metadataService;
 
 	@Value("${spring.profiles.active:UNKNOWN}")
 	private String activeProfile;
@@ -81,7 +82,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			DocumentSpacePrivilegeService documentSpacePrivilegeService,
 			DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService,
 			PrivilegeRepository privilegeRepository, DocumentSpaceFileSystemService documentSpaceFileSystemService,
-			DocumentSpaceFileService documentSpaceFileService) {
+			DocumentSpaceFileService documentSpaceFileService, DocumentSpaceMetadataService metadataService) {
 
 		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
@@ -98,11 +99,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		this.privilegeRepository = privilegeRepository;
 		
 		this.documentSpaceFileService = documentSpaceFileService;
+		this.metadataService = metadataService;
 	}
 
 	@Override
 	public List<DocumentSpaceResponseDto> listSpaces(String username) {
-		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(username);
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmailAsLower(username);
 		
 		if (dashboardUser == null) {
 			throw new RecordNotFoundException(String.format("Could not find spaces. User: %s does not exist", username));
@@ -163,12 +165,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		documentSpaceRepository.deleteById(documentSpace.getId());
 	}
 
-	private String validateDocSpaceAndReturnPrefix(UUID documentSpaceId, String path) {
-		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
-		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
-		return getPathPrefix(documentSpace.getId(), path, spec);
-	}
-	
 	private String getPathPrefix(UUID documentSpaceId, String path, FilePathSpec spec) {
 		return !path.isBlank() && !spec.getDocSpaceQualifiedPath().isBlank()
 				? spec.getDocSpaceQualifiedPath()
@@ -176,14 +172,33 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public S3Object getFile(UUID documentSpaceId, String path, String key) throws RecordNotFoundException {
-		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
+	public S3Object getFile(UUID documentSpaceId, String path, String key, String documentSpaceUsername)
+			throws RecordNotFoundException {
+		DashboardUser dashboardUser = getDashboardUserOrElseThrow(documentSpaceUsername);
+
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = getPathPrefix(documentSpaceId, spec.getFullPathSpec(), spec);
+
+		DocumentSpaceFileSystemEntry fileEntry = documentSpaceFileService
+				.getFileInDocumentSpaceFolderOrThrow(documentSpaceId, spec.getItemId(), key);
+		DocumentMetadata metadata = new DocumentMetadata(new Date());
+		metadataService.saveMetadata(documentSpaceId, fileEntry, metadata, dashboardUser);
+
 		return getS3Object(prefix + key);
 	}
 	
 	@Override
-	public S3Object getFile(UUID documentSpaceId, UUID parentFolderId, String filename) {
+	public S3Object getFile(UUID documentSpaceId, UUID parentFolderId, String filename, String documentSpaceUsername)
+			throws RecordNotFoundException {
+		DashboardUser dashboardUser = getDashboardUserOrElseThrow(documentSpaceUsername);
+
 		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId);
+
+		DocumentSpaceFileSystemEntry fileEntry = documentSpaceFileService
+				.getFileInDocumentSpaceFolderOrThrow(documentSpaceId, parentFolderId, filename);
+		DocumentMetadata metadata = new DocumentMetadata(new Date());
+		metadataService.saveMetadata(documentSpaceId, fileEntry, metadata, dashboardUser);
+
 		return getS3Object(getPathPrefix(documentSpaceId, filePathSpec.getFullPathSpec(), filePathSpec) + filename);
 	}
 
@@ -196,11 +211,26 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @throws RecordNotFoundException
 	 */
 	@Override
-	public List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys) throws RecordNotFoundException {
-		String prefix = validateDocSpaceAndReturnPrefix(documentSpaceId, path);
-		return fileKeys.stream().map(
-				item -> documentSpaceClient.getObject(bucketName, prefix + item))
-				.collect(Collectors.toList());
+	public List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys, String documentSpaceUsername)
+			throws RecordNotFoundException {
+		DashboardUser dashboardUser = getDashboardUserOrElseThrow(documentSpaceUsername);
+
+		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+		String prefix = getPathPrefix(documentSpaceId, spec.getFullPathSpec(), spec);
+
+		Set<DocumentSpaceFileSystemEntry> entriesToWriteMetadata = new HashSet<>();
+		DocumentMetadata metadata = new DocumentMetadata(new Date());
+
+		List<S3Object> s3Objects = fileKeys.stream().map(item -> {
+			DocumentSpaceFileSystemEntry fileEntry = documentSpaceFileService
+					.getFileInDocumentSpaceFolderOrThrow(documentSpaceId, spec.getItemId(), item);
+			entriesToWriteMetadata.add(fileEntry);
+			return getS3Object(prefix + item);
+		}).collect(Collectors.toList());
+
+		metadataService.saveMetadata(documentSpaceId, entriesToWriteMetadata, metadata, dashboardUser);
+
+		return s3Objects;
 	}
 	
 	private S3Object getS3Object(String key) throws RecordNotFoundException {
@@ -221,30 +251,72 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @throws RecordNotFoundException
 	 */
 	@Override
-	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out)
+	public void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out,
+			String documentSpaceUsername)
 			throws RecordNotFoundException {
+		DashboardUser dashboardUser = getDashboardUserOrElseThrow(documentSpaceUsername);
 
 		// make sure given path starts with a "/"
 		String searchPath = (path.startsWith(DocumentSpaceFileSystemServiceImpl.PATH_SEP) ? "" : DocumentSpaceFileSystemServiceImpl.PATH_SEP) + path;
-		// dump all files and folders at this path and down
-		FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId, searchPath);
-		// flatten the tree
-		List<S3ObjectAndFilename> objects = documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(contentsAtPath);
-		// only take the ones we selected in the provided list (items whose prefix matches our path)
-		List<S3ObjectAndFilename> itemsToGet = objects.stream()
-				.filter(item -> {
-					for (String fileKey : fileKeys) {
-						if (item.getPathAndFilename().startsWith(searchPath +
-								(searchPath.endsWith(DocumentSpaceFileSystemServiceImpl.PATH_SEP) ? "" :  DocumentSpaceFileSystemServiceImpl.PATH_SEP)
-								+ fileKey)) {
-							return true;
-						}
-					}
-					return false;
-				})
-				.collect(Collectors.toList());
 
-		writeZipFile(out, itemsToGet);
+		// Get everything at the relative root path
+		FilePathSpecWithContents contentsAtRelativeRoot = documentSpaceFileSystemService
+				.getFilesAndFoldersAtPath(documentSpaceId, searchPath);
+
+		// Filter only the items that are requested at the relative root path
+		// Then collect items based on folder status
+		Map<Boolean, List<DocumentSpaceFileSystemEntry>> entriesFilteredByRelevantAndMappedByFolder = contentsAtRelativeRoot
+				.getEntries().stream().filter(entry -> fileKeys.contains(entry.getItemName()))
+				.collect(Collectors.groupingBy(DocumentSpaceFileSystemEntry::isFolder));
+
+		List<S3ObjectAndFilename> itemsToWrite = new ArrayList<>();
+		Set<DocumentSpaceFileSystemEntry> entriesToWriteMetadata = new HashSet<>();
+
+		// For each folder at the relative root, dump the contents
+		List<DocumentSpaceFileSystemEntry> folders = entriesFilteredByRelevantAndMappedByFolder.get(true);
+		if (folders != null) {
+			for (DocumentSpaceFileSystemEntry folderEntry : folders) {
+				FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId,
+						folderEntry.getItemId());
+				FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId,
+						filePathSpec.getFullPathSpec());
+				List<S3ObjectAndFilename> flatTree = documentSpaceFileSystemService
+						.flattenTreeToS3ObjectAndFilenameList(contentsAtPath);
+
+				itemsToWrite.addAll(flatTree);
+			}
+
+			// Add only the selected folders for metadata update
+			entriesToWriteMetadata.addAll(folders);
+		}
+
+		// Create S3ObjectAndFilename for the individual files at the relative root
+		List<DocumentSpaceFileSystemEntry> files = entriesFilteredByRelevantAndMappedByFolder.get(false);
+		if (files != null) {
+			List<S3ObjectSummary> s3summary = getAllFilesInFolder(documentSpaceId, searchPath);
+
+			for (DocumentSpaceFileSystemEntry fileEntry : files) {
+				Optional<S3ObjectSummary> summary = s3summary.stream().filter(
+						entry -> entry.getKey().equals(contentsAtRelativeRoot.getDocSpaceQualifiedPath() + fileEntry.getItemName()))
+						.findAny();
+
+				if (summary.isPresent()) {
+					S3ObjectAndFilename s3ObjAndFilename = new S3ObjectAndFilename(DocumentSpaceFileSystemServiceImpl
+							.joinPathParts(contentsAtRelativeRoot.getFullPathSpec(), fileEntry.getItemName()),
+							summary.get());
+					itemsToWrite.add(s3ObjAndFilename);
+				}
+			}
+
+			// add selected file for metadata update
+			entriesToWriteMetadata.addAll(files);
+		}
+
+		// update metadata
+		DocumentMetadata metadata = new DocumentMetadata(new Date());
+		metadataService.saveMetadata(documentSpaceId, entriesToWriteMetadata, metadata, dashboardUser);
+
+		writeZipFile(out, itemsToWrite);
 	}
 
 	@Override
@@ -677,7 +749,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		for (int i = 0; i < emails.length; i++) {
 			String email = emails[i];
 			
-			DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(email);
+			DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmailAsLower(email);
 			
 			if (dashboardUser == null) {
 				continue;
@@ -863,7 +935,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	private DashboardUser getDashboardUserOrElseThrow(String dashboardUserEmail) throws RecordNotFoundException {
-		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
+		DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmailAsLower(dashboardUserEmail);
 
 		if (dashboardUser == null) {
 			throw new RecordNotFoundException("Requesting Document Space Dashboard User does not exist with email: " + dashboardUserEmail);
