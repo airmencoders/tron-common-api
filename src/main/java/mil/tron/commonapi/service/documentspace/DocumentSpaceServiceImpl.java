@@ -301,7 +301,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 						.findAny();
 
 				if (summary.isPresent()) {
-					S3ObjectAndFilename s3ObjAndFilename = new S3ObjectAndFilename(documentSpaceFileSystemService
+					S3ObjectAndFilename s3ObjAndFilename = new S3ObjectAndFilename(DocumentSpaceFileSystemServiceImpl
 							.joinPathParts(contentsAtRelativeRoot.getFullPathSpec(), fileEntry.getItemName()),
 							summary.get());
 					itemsToWrite.add(s3ObjAndFilename);

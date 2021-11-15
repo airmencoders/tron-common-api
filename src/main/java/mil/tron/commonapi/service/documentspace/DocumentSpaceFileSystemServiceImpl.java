@@ -556,8 +556,13 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
     }
 
-    @Override
-    public String joinPathParts(String... parts) {
+    /**
+     * Helper to form a path of components - making sure we start and end with "/" but removing duplicate
+     * sequences of "//" with single "/"
+     * @param parts
+     * @return
+     */
+    public static String joinPathParts(String... parts) {
         return (PATH_SEP + String.join(PATH_SEP, parts)).replaceAll("/+", PATH_SEP);
     }
 
