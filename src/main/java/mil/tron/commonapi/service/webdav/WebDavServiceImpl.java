@@ -3,6 +3,7 @@ package mil.tron.commonapi.service.webdav;
 import com.jamesmurty.utils.XMLBuilder;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemServiceImpl;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
@@ -28,6 +29,7 @@ public class WebDavServiceImpl implements WebDavService {
 
     private final DocumentSpaceService documentSpaceService;
     public static final String DT_SERVER_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSSS";
+    public static final String RESOURCE_TYPE_TAG = "D:resourcetype";
 
     public WebDavServiceImpl(DocumentSpaceService documentSpaceService) {
         this.documentSpaceService = documentSpaceService;
@@ -78,24 +80,29 @@ public class WebDavServiceImpl implements WebDavService {
      * @param path the path we're PROPFINDing on
      * @param children if true then return the requested directory and all its contents (corresponds to header 'DEPTH = 1')
      *                 otherwise just fetch/include information on the requested element (corresponds to header 'DEPTH = 0')
-     * @return
-     * @throws ParserConfigurationException
-     * @throws TransformerException
+     * @return Serialized XML PROPFIND tree
      */
     @Override
-    public String propFind(UUID spaceId, String path, boolean children) throws ParserConfigurationException, TransformerException {
+    public String propFind(UUID spaceId, String path, boolean children) {
 
         // get the path contents from the service
         FilePathSpecWithContents content = documentSpaceService.getFolderContents(spaceId, path);
 
         // begin the PROPFIND response with the element requested (the root of the requested path, actual-folder)
-        XMLBuilder builder = XMLBuilder
-                .create("D:multistatus").attr("xmlns:D", "DAV:")
-                .element("D:response")
+        XMLBuilder builder;
+
+        try {
+            builder = XMLBuilder.create("D:multistatus").attr("xmlns:D", "DAV:");
+        }
+        catch (ParserConfigurationException ex) {
+            throw new BadRequestException("Could not create XML PROPFIND tree");
+        }
+
+        builder = builder.element("D:response")
                     .element("D:href").text(DocumentSpaceFileSystemServiceImpl.joinPathParts("/api/v2/document-space/space/" + spaceId + "/" + content.getFullPathSpec() + "/")).up()
                         .element("D:propstat")
                             .element("D:prop")
-                                .element("D:resourcetype")
+                                .element(RESOURCE_TYPE_TAG)
                                     .element("D:collection")
                                 .up()
                             .up()
@@ -115,24 +122,32 @@ public class WebDavServiceImpl implements WebDavService {
                         .element("D:propstat")
                         .element("D:prop")
                         .element("D:creationdate")
-                        .text(entry.getCreatedOn() != null ? formatCreationDateTimeString(entry.getCreatedOn().toString()) : "")
+                        .text(formatCreationDateTimeString(entry.getCreatedOn().toString()))
                         .up()
                         .element("D:getlastmodified")
-                        .text(entry.getLastModifiedOn() != null ? formatModifiedDateTimeString(entry.getLastModifiedOn().toString()) : "")
+                        .text(formatModifiedDateTimeString(entry.getLastModifiedOn().toString()))
                         .up();
 
                 if (entry.getSize() == 0) builder = builder.element("D:getcontentlength").up();
                 else builder = builder.element("D:getcontentlength").text(String.valueOf(entry.getSize())).up();
 
-                if (entry.isFolder()) builder = builder.element("D:resourcetype").element("D:collection").up().up();
-                else builder = builder.element("D:resourcetype").up();
+                if (entry.isFolder()) builder = builder.element(RESOURCE_TYPE_TAG).element("D:collection").up().up();
+                else builder = builder.element(RESOURCE_TYPE_TAG).up();
 
                 builder = builder.up();
                 builder = builder.element("D:status").text("HTTP/1.1 200 OK").up().up();
                 builder = builder.up();
             }
         }
-        return "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" + builder.asString();
+
+        try {
+            return "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" + builder.asString();
+        }
+        catch (TransformerException e) {
+            throw new BadRequestException("Error serializing PROPFIND XML result");
+        }
+
+
     }
 
     /**

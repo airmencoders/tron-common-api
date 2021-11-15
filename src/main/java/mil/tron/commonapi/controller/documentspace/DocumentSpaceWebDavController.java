@@ -41,7 +41,7 @@ public class DocumentSpaceWebDavController {
     @RequestMapping(value = "/{spaceId}/**", produces = { "application/xml"})
     @ResponseBody public ResponseEntity<Object> processWebDavCommand(@PathVariable UUID spaceId,
                                                                      HttpServletRequest request,
-                                                                     HttpServletResponse response) throws Exception {
+                                                                     HttpServletResponse response) {
         // only way it seems to get the rest-of-url into a variable..
         ResourceUrlProvider urlProvider = (ResourceUrlProvider) request
                 .getAttribute(ResourceUrlProvider.class.getCanonicalName());

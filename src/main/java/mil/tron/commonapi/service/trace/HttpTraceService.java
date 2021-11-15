@@ -157,10 +157,10 @@ public class HttpTraceService implements HttpTraceRepository {
                 return;
         	}
 
-//        	if (DocumentSpaceController.DOCUMENT_SPACE_PATTERN.asPredicate().test(trace.getRequest().getUri().toString())) {
-//        		contentTrace.setResponseBody("File IO");
-//                contentTrace.setRequestBody("File IO");
-//        	}
+        	if (DocumentSpaceController.DOCUMENT_SPACE_PATTERN.asPredicate().test(trace.getRequest().getUri().toString())) {
+        		contentTrace.setResponseBody("File IO");
+                contentTrace.setRequestBody("File IO");
+        	}
         }
     }
 }
