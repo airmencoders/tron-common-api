@@ -1113,6 +1113,57 @@ public class DocumentSpaceIntegrationTests {
     @Transactional
     @Rollback
     @Test
+    void testArchivingSameNamedElements() throws Exception {
+        UUID test1Id = createSpaceWithFiles("space");
+
+        // now archive the /docs/names.txt
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToArchive(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // upload a new names.txt to the /docs folder with old names.txt in the archived state - should be allowed
+        MockMultipartFile newNames
+                = new MockMultipartFile(
+                "file",
+                "names.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "I'm the new names.txt".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", test1Id.toString())
+                .file(newNames)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // delete the archived copy
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archived/delete", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                        .currentPath("/docs")
+                        .itemsToDelete(Lists.newArrayList("names.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // confirm our newer names.txt still exists
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.key == 'names.txt')]").exists());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
     void testGetArchivedItemsMultipleSpaces() throws Exception {
 
         // create 3 identical spaces
