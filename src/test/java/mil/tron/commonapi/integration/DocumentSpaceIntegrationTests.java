@@ -1534,4 +1534,11 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(3)));
     }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testZippingFolder() throws Exception {
+
+    }
 }
