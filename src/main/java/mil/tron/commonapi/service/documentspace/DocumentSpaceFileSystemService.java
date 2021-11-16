@@ -36,11 +36,4 @@ public interface DocumentSpaceFileSystemService {
     
     List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(DocumentSpaceFileSystemEntry propagateFrom);
     
-    /**
-     * Helper to form a path of components - making sure we start and end with "/" but removing duplicate
-     * sequences of "//" with single "/"
-     * @param parts
-     * @return
-     */
-    String joinPathParts(String... parts);
 }

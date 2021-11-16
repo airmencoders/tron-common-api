@@ -480,9 +480,17 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     @Override
     public void unArchiveElements(UUID spaceId, List<String> items) {
 
+        // get list of what's really in archived - according to the database
         List<DocumentDto> archivedItems = this.getArchivedItems(spaceId);
+
+        // make sure the requested items to restore start with a PATH_SEP
+        List<String> itemsRequested = items.stream()
+                .map(item -> item.startsWith(PATH_SEP) ? item : (PATH_SEP + item))
+                .collect(Collectors.toList());
+
+        // of those items, only take the ones that were given by user (this vets for validity as well for us)
         List<DocumentDto> itemsToUnArchive = archivedItems.stream()
-                .filter(item -> items.contains(item.getKey()))
+                .filter(item -> itemsRequested.contains(joinPathParts(item.getPath(), item.getKey())))
                 .collect(Collectors.toList());
 
         for (DocumentDto item : itemsToUnArchive) {
@@ -556,8 +564,13 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
     }
 
-    @Override
-    public String joinPathParts(String... parts) {
+    /**
+     * Helper to form a path of components - making sure we start and end with "/" but removing duplicate
+     * sequences of "//" with single "/"
+     * @param parts
+     * @return
+     */
+    public static String joinPathParts(String... parts) {
         return (PATH_SEP + String.join(PATH_SEP, parts)).replaceAll("/+", PATH_SEP);
     }
 

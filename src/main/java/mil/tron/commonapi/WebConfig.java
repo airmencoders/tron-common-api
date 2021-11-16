@@ -13,18 +13,22 @@ import java.util.Arrays;
 @PropertySource("classpath:application.properties")
 public class WebConfig implements WebMvcConfigurer {
 
+    public static final String[] allowedMethods = new String[] {
+        "GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH", "LOCK", "UNLOCK", "HEAD", "PROPFIND", "MKCOL"
+    };
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
 
         registry.addMapping("/**").allowedOriginPatterns("*").allowedHeaders("*")
-                .allowedMethods("GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH", "PROPFIND").allowCredentials(true);
+                .allowedMethods(allowedMethods).allowCredentials(true);
 
     }
 
     @Bean
     public StrictHttpFirewall httpFirewall() {
         StrictHttpFirewall firewall = new StrictHttpFirewall();
-        firewall.setAllowedHttpMethods(Arrays.asList("GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH", "PROPFIND"));
+        firewall.setAllowedHttpMethods(Arrays.asList(allowedMethods));
         return firewall;
     }
 }
