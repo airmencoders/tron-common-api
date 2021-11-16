@@ -343,9 +343,17 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		
 		try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream());
 			 			DigestInputStream dis = new DigestInputStream(bis, md)) {
-			Upload upload = documentSpaceTransferManager.upload(bucketName,prefix + filename, bis, metaData);
 			DocumentSpaceFileSystemEntry documentSpaceFile = documentSpaceFileService
 					.getFileInDocumentSpaceFolder(documentSpaceId, filePathSpec.getItemId(), filename).orElse(null);
+
+			// for now we don't allow uploading of a file who has same name/path of an item that
+			//  has archived status... because the archived file system entry and this new one would point to
+			//  the same physical file in S3 bucket, thereby not allowing any restoration of the archived file (since this action overwrites)
+			if (documentSpaceFile != null && documentSpaceFile.isDeleteArchived()) {
+				throw new ResourceAlreadyExistsException("A file with that name and path is in an archived state, purge archived version if upload is desired");
+			}
+
+			Upload upload = documentSpaceTransferManager.upload(bucketName,prefix + filename, bis, metaData);
 			upload.waitForCompletion();
 			
 			if (documentSpaceFile == null) {
@@ -668,7 +676,14 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			}
 
 			List<S3ObjectSummary> fileSummaries = objectListing.getObjectSummaries();
-			files.addAll(fileSummaries);
+
+			// only include the S3 objects that our file system database says are not archived...
+			for (S3ObjectSummary item : fileSummaries) {
+				String fileName = FilenameUtils.getName(item.getKey());
+				if (!documentSpaceFileSystemService.isArchived(documentSpaceId, spec.getItemId(), fileName)) {
+					files.add(item);
+				}
+			}
 
 			if (hasNext) {
 				request = request.withContinuationToken(objectListing.getNextContinuationToken());

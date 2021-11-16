@@ -29,6 +29,7 @@ public interface DocumentSpaceFileSystemService {
 
     DocumentSpaceFileSystemEntry addFolder(UUID spaceId, String name, @Nullable String path);
     boolean isFolder(UUID spaceId, String path, String itemName);
+    boolean isArchived(UUID spaceId, UUID parentId, String itemName);
     void archiveElement(UUID spaceId, String path, String itemName);
     void unArchiveElements(UUID spaceId, List<String> items);
     void deleteFolder(UUID spaceId, String path);
