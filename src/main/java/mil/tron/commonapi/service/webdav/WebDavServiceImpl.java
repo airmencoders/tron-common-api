@@ -16,6 +16,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.UUID;
 
 /**
@@ -64,10 +65,10 @@ public class WebDavServiceImpl implements WebDavService {
     private String formatModifiedDateTimeString(Date fromServer) {
         if (fromServer == null) return "";
         DateFormat formatter = new SimpleDateFormat(DT_SERVER_FORMAT);
-        DateFormat davFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss XXX");
+        DateFormat davFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
         try {
             Date dateTime = formatter.parse(fromServer.toString());
-            return davFormat.format(dateTime);
+            return davFormat.format(dateTime) + " GMT";
         }
         catch (ParseException ex) {
             return "";
@@ -115,6 +116,8 @@ public class WebDavServiceImpl implements WebDavService {
         // if depth header is specified and truthy then we're supposed to include the contents of the whole folder per RFC
         if (children) {
             for (DocumentSpaceFileSystemEntry entry : content.getEntries()) {
+                Date lastModified = entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() :
+                        entry.getCreatedOn();
                 builder = builder
                         .element("D:response")
                         .element("D:href").text(DocumentSpaceFileSystemServiceImpl.joinPathParts("/api/v2/document-space/space/" + spaceId + "/" + content.getFullPathSpec() + "/" + entry.getItemName()))
@@ -125,7 +128,7 @@ public class WebDavServiceImpl implements WebDavService {
                         .text(formatCreationDateTimeString(entry.getCreatedOn()))
                         .up()
                         .element("D:getlastmodified")
-                        .text(formatModifiedDateTimeString(entry.getLastModifiedOn()))
+                        .text(formatModifiedDateTimeString(lastModified))
                         .up();
 
                 if (entry.getSize() == 0) builder = builder.element("D:getcontentlength").up();
