@@ -351,10 +351,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         String lookupPath = conditionPath(path);
         FilePathSpec pathSpec = parsePathToFilePathSpec(spaceId, lookupPath);
 
-        // check no existence of duplicate (...as in no non-archived duplicate exists, a duplicate name but in archived status is allowed)
-        //  so we don't get a nasty DB exception for unique constraint violation
-        if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsDeleteArchivedEquals(spaceId, pathSpec.getItemId(), name, false)) {
-            throw new ResourceAlreadyExistsException(String.format("Folder with name %s already exists under that parent", name));
+        // check no existence of duplicate ... for now we're not even allowing an archived variant to have same name/path
+        //  the db schema technically supports it but for sake of simplicity we disallow for now
+        if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemName(spaceId, pathSpec.getItemId(), name)) {
+            throw new ResourceAlreadyExistsException(String.format("Folder with name %s already exists under that parent or is archived under that same path/name", name));
         }
 
         DocumentSpaceFileSystemEntry savedFolder = repository.save(DocumentSpaceFileSystemEntry.builder()
@@ -384,6 +384,21 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         return repository.existsByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsFolderTrue(spaceId,
                 parentFolderItemId,
                 FilenameUtils.normalizeNoEndSeparator(itemName));
+    }
+
+    /**
+     * Helper to see if a particular S3 item is considered archived according to our database
+     * @param spaceId doc space id
+     * @param parentId id of the file system element that is the part of said itemName
+     * @param itemName the file name itself
+     * @return true if archived
+     */
+    @Override
+    public boolean isArchived(UUID spaceId, UUID parentId, String itemName) {
+        Optional<DocumentSpaceFileSystemEntry> entry =
+                repository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, itemName, parentId, true);
+
+        return entry.isPresent();
     }
 
     /**

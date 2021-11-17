@@ -16,6 +16,7 @@ import java.util.UUID;
 public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<DocumentSpaceFileSystemEntry, UUID> {
 
     boolean existsByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsDeleteArchivedEquals(UUID spaceId, UUID parentEntryId, String itemName, boolean archived);
+    boolean existsByDocumentSpaceIdAndParentEntryIdAndItemName(UUID spaceId, UUID parentEntryId, String itemName);
     Optional<DocumentSpaceFileSystemEntry> findByItemIdEquals(UUID itemId);
     Optional<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(UUID spaceId, String folderName, UUID parentId);
     Optional<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(UUID spaceId, String folderName, UUID parentId, boolean archived);
