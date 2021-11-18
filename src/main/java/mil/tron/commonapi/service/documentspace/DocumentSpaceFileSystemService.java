@@ -17,7 +17,6 @@ public interface DocumentSpaceFileSystemService {
 	 * @return the {@link FilePathSpec} for item
 	 */
 	FilePathSpec getFilePathSpec(UUID documentSpaceId, UUID itemId);
-    FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path, ArchivedStatus archivedStatus);
     FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path);
     FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path);
     List<DocumentDto> getArchivedItems(UUID spaceId);
