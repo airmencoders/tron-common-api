@@ -6,6 +6,7 @@ import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,8 @@ import java.util.UUID;
 public interface DocumentSpaceService {
     List<DocumentSpaceResponseDto> listSpaces(String username);
     DocumentSpaceResponseDto createSpace(DocumentSpaceRequestDto dto);
+    
+    DocumentSpace getDocumentSpaceOrElseThrow(UUID documentSpaceId) throws RecordNotFoundException;
     
     /**
      * Deletes a space from database and all files associated with it in the bucket

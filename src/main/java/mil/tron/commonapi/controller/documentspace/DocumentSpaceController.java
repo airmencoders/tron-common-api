@@ -13,8 +13,10 @@ import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
+import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceUserCollectionService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
@@ -38,6 +40,9 @@ import org.springframework.web.servlet.resource.ResourceUrlProvider;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.security.Principal;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -46,6 +51,8 @@ import java.util.stream.Collectors;
 @RequestMapping("${api-prefix.v2}" + DocumentSpaceController.ENDPOINT)
 @IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpaceController {
+	private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("ddMMMyyyyHHmm");
+	
 	protected static final String ENDPOINT = "/document-space";
 	
 	public static final Pattern DOCUMENT_SPACE_PATTERN = Pattern.compile(String.format("\\/v[\\d]\\%s", ENDPOINT));
@@ -54,9 +61,14 @@ public class DocumentSpaceController {
 
 	private final DocumentSpaceUserCollectionService documentSpaceUserCollectionService;
 	
-	public DocumentSpaceController(DocumentSpaceService documentSpaceService, DocumentSpaceUserCollectionService documentSpaceUserCollectionService) {
+	private final DocumentSpaceFileSystemService documentSpaceFileSystemService;
+	
+	public DocumentSpaceController(DocumentSpaceService documentSpaceService,
+			DocumentSpaceUserCollectionService documentSpaceUserCollectionService,
+			DocumentSpaceFileSystemService documentSpaceFileSystemService) {
 		this.documentSpaceService = documentSpaceService;
 		this.documentSpaceUserCollectionService = documentSpaceUserCollectionService;
+		this.documentSpaceFileSystemService = documentSpaceFileSystemService;
 	}
 
 	// stsatic helper used for file download headers -- used by the webdav controller also
@@ -351,12 +363,29 @@ public class DocumentSpaceController {
                                                                @RequestParam(value = "path", defaultValue = "") String path,
                                                                @RequestParam("files") Set<String> files,
                                                                Authentication authentication) {
+    	
         StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, path, files, out, authentication.getName());
-
+        
+        String zipName = "files";
+        
+        if (files.size() == 1) {
+        	String itemName = "";
+        	for (Iterator<String> iter = files.iterator(); iter.hasNext();) {
+        		itemName = iter.next();
+        	}
+        	
+        	if (documentSpaceFileSystemService.isFolder(id, path, itemName)) {
+        		zipName = itemName;
+        	}
+        } else {
+        	OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        	zipName = now.format(DATE_FORMAT);
+        }
+        
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
-                .headers(createDownloadHeaders("files.zip"))
+                .headers(createDownloadHeaders(String.format("%s.zip", zipName)))
                 .body(response);
     }
     
@@ -374,11 +403,12 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
     @GetMapping("/spaces/{id}/files/download/all")
     public ResponseEntity<StreamingResponseBody> downloadAllFilesInSpace(@PathVariable UUID id) {
+    	DocumentSpace documentSpace = documentSpaceService.getDocumentSpaceOrElseThrow(id);
         StreamingResponseBody response = out -> documentSpaceService.downloadAllInSpaceAndCompress(id, out);
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
-                .headers(createDownloadHeaders("files.zip"))
+                .headers(createDownloadHeaders(String.format("%s.zip", documentSpace.getName())))
                 .body(response);
     }
 
