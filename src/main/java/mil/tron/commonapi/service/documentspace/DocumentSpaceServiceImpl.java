@@ -714,7 +714,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return DocumentSpaceResponseDto.builder().id(documentSpace.getId()).name(documentSpace.getName()).build();
 	}
 
-	private DocumentSpace getDocumentSpaceOrElseThrow(UUID documentSpaceId) throws RecordNotFoundException {
+	@Override
+	public DocumentSpace getDocumentSpaceOrElseThrow(UUID documentSpaceId) throws RecordNotFoundException {
 		Optional<DocumentSpace> optionalDocumentSpace = documentSpaceRepository.findById(documentSpaceId);
 
 		return optionalDocumentSpace.orElseThrow(
