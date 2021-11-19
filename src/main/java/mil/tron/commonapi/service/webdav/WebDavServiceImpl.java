@@ -16,6 +16,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.UUID;
 
 /**
@@ -64,7 +65,7 @@ public class WebDavServiceImpl implements WebDavService {
     private String formatModifiedDateTimeString(Date fromServer) {
         if (fromServer == null) return "";
         DateFormat formatter = new SimpleDateFormat(DT_SERVER_FORMAT);
-        DateFormat davFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss XXX");
+        DateFormat davFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss 'GMT'");
         try {
             Date dateTime = formatter.parse(fromServer.toString());
             return davFormat.format(dateTime);
@@ -115,18 +116,7 @@ public class WebDavServiceImpl implements WebDavService {
         // if depth header is specified and truthy then we're supposed to include the contents of the whole folder per RFC
         if (children) {
             for (DocumentSpaceFileSystemEntry entry : content.getEntries()) {
-                builder = builder
-                        .element("D:response")
-                        .element("D:href").text(DocumentSpaceFileSystemServiceImpl.joinPathParts("/api/v2/document-space/space/" + spaceId + "/" + content.getFullPathSpec() + "/" + entry.getItemName()))
-                        .up()
-                        .element("D:propstat")
-                        .element("D:prop")
-                        .element("D:creationdate")
-                        .text(formatCreationDateTimeString(entry.getCreatedOn()))
-                        .up()
-                        .element("D:getlastmodified")
-                        .text(formatModifiedDateTimeString(entry.getLastModifiedOn()))
-                        .up();
+                builder = appendStandardProps(builder, entry, spaceId, content);
 
                 if (entry.getSize() == 0) builder = builder.element("D:getcontentlength").up();
                 else builder = builder.element("D:getcontentlength").text(String.valueOf(entry.getSize())).up();
@@ -167,4 +157,22 @@ public class WebDavServiceImpl implements WebDavService {
         return "Created";
     }
 
+    private XMLBuilder appendStandardProps(XMLBuilder builder, DocumentSpaceFileSystemEntry entry, UUID spaceId,
+                                           FilePathSpecWithContents content) {
+        Date lastModified = entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() :
+                entry.getCreatedOn();
+        return builder
+                .element("D:response")
+                .element("D:href").text(DocumentSpaceFileSystemServiceImpl.joinPathParts("/api/v2/document-space/space/" +
+                        spaceId + "/" + content.getFullPathSpec() + "/" + entry.getItemName()))
+                .up()
+                .element("D:propstat")
+                .element("D:prop")
+                .element("D:creationdate")
+                .text(formatCreationDateTimeString(entry.getCreatedOn()))
+                .up()
+                .element("D:getlastmodified")
+                .text(formatModifiedDateTimeString(lastModified))
+                .up();
+    }
 }
