@@ -889,31 +889,19 @@ class DocumentSpaceServiceImplTest {
 			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
 			assertEquals(1, exceptionStrings.size());
 
-			assertEquals("Improper first CSV header: email", exceptionStrings.get(0));
+			assertEquals("Improper first CSV header: should be 'email'", exceptionStrings.get(0));
 		}
 
 		@Test
-		void shouldThrow_whenInvalidWriteHeadersExist() throws IOException {
+		void shouldThrow_whenInvalidPrivilegeHeadersExist() throws IOException {
 			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
 
-			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-write-header.csv"));
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-privilege-header.csv"));
 
 			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
 			assertEquals(1, exceptionStrings.size());
 
-			assertEquals("Improper third CSV header: write", exceptionStrings.get(0));
-		}
-
-		@Test
-		void shouldThrow_whenInvalidMembershipHeadersExist() throws IOException {
-			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
-
-			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-membership-header.csv"));
-
-			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
-			assertEquals(1, exceptionStrings.size());
-
-			assertEquals("Improper fourth CSV header: membership", exceptionStrings.get(0));
+			assertEquals("Improper second CSV header: should be 'privilege'", exceptionStrings.get(0));
 		}
 
 		@Test
@@ -932,27 +920,14 @@ class DocumentSpaceServiceImplTest {
 		void shouldThrow_whenMissingPermission() throws IOException {
 			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
 
-			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-missing-permission.csv"));
+			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/invalid-permission.csv"));
 
 			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
-			assertEquals(2, exceptionStrings.size());
+			assertEquals(3, exceptionStrings.size());
 
 			assertEquals("Improper minimum row length on row 2", exceptionStrings.get(0));
-			assertEquals("Improper minimum row length on row 4", exceptionStrings.get(1));
-		}
-
-		@Test
-		void shouldNotThrowWhenParsingValidBooleanValues() throws IOException {
-			Mockito.when(documentSpaceRepo.findById(documentSpaceId)).thenReturn(Optional.of(entity));
-			Mockito.when(documentSpacePrivilegeService.createDashboardUserWithPrivileges(Mockito.anyString(),
-					Mockito.any(DocumentSpace.class), Mockito.anyList())).thenReturn(dashboardUser);
-
-			MockMultipartFile file = new MockMultipartFile("filename.txt", new FileInputStream("src/test/resources/dashboard-user-csv/boolean-possibilities.csv"));
-
-			List<String> exceptionStrings = documentService.batchAddDashboardUserToDocumentSpace(documentSpaceId, file);
-			assertEquals(0, exceptionStrings.size());
-
-			Mockito.verify(documentSpaceRepo, times(1)).save(Mockito.any());
+			assertEquals("Invalid permission on row 3 - granted 'VIEWER'", exceptionStrings.get(1));
+			assertEquals("Improper minimum row length on row 4", exceptionStrings.get(2));
 		}
 
 		@Test

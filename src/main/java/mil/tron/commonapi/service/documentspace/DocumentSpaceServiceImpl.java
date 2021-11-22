@@ -865,17 +865,17 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 			List<String[]> strings = csvReader.readAll();
 			for (int i = 0; i < strings.size(); i++) {
-				if(i == 0){
+				if (i == 0) {
 					validateCSVHeader(strings.get(i), errorList);
-				}else if(strings.get(i).length != 0){
+				} else if(strings.get(i).length != 0) {
 					DocumentSpaceDashboardMemberRequestDto newDashboardSpaceMember = processCSVRow(strings.get(i), i, errorList);
-					if(newDashboardSpaceMember.getEmail() == null){ // case where an error was found
+					if (newDashboardSpaceMember.getEmail() == null) { // case where an error was found
 						continue;
-					}else if(membersInSpace.contains(newDashboardSpaceMember.getEmail())){ // case for email exists already
+					} else if (membersInSpace.contains(newDashboardSpaceMember.getEmail())) { // case for email exists already
 						errorList.add(String.format("Unable to add user with email %s, they are already a part of the space", newDashboardSpaceMember.getEmail()));
-					}else if(membersToAdd.stream().anyMatch(m->m.getEmail().equals(newDashboardSpaceMember.getEmail()))){ // case where email was found in the csv previously
+					} else if (membersToAdd.stream().anyMatch(m->m.getEmail().equals(newDashboardSpaceMember.getEmail()))) { // case where email was found in the csv previously
 						errorList.add("Duplicate email found on row " + (i + 1));
-					}else{
+					} else {
 						membersToAdd.add(newDashboardSpaceMember);
 					}
 				}
@@ -891,14 +891,12 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return  errorList;
 	}
 
-	private void validateCSVHeader(String[] row, List<String> errorList){
+	private void validateCSVHeader(String[] row, List<String> errorList) {
 
-		if(!row[0].trim().equalsIgnoreCase("email")){
-			errorList.add("Improper first CSV header: email");
-		} else if(!row[1].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.WRITE.toString())){
-			errorList.add("Improper third CSV header: write");
-		} else if(!row[2].trim().equalsIgnoreCase(DocumentSpacePrivilegeType.MEMBERSHIP.toString())){
-			errorList.add("Improper fourth CSV header: membership");
+		if (!row[0].trim().equalsIgnoreCase("email")) {
+			errorList.add("Improper first CSV header: should be 'email'");
+		} else if (!row[1].trim().equalsIgnoreCase("privilege")) {
+			errorList.add("Improper second CSV header: should be 'privilege'");
 		}
 	}
 
@@ -911,34 +909,33 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		}
 
 		String email = row[0].trim();
-		if(email.equals("")){
+		if (email.equals("")) {
 			errorList.add("Missing email on row " + (i + 1));
 			return memberToAdd;
-		}else{
+		} else {
 			memberToAdd.setEmail(email);
 		}
 
-		if (rowLength >= 2 && parseBooleanPrivilegeValue(row[1].trim())) {
-			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.WRITE);
+		// three possible, case-insensitve values sent from frontend
+		//  can be 'Viewer' (implicitly granted), 'Editor', 'Admin'
+		//  If someone is ADMIN then they get MEMBERSHIP and WRITE (and of course READ for free later on)
+		//  If someone is EDITOR then they get WRITE and READ
+		//  If someone is VIEWER then we don't have to do anything here
+		//  If we get an invalid privilege or blank, then we just let them know, but give the candidate READ (by virtue of doing nothing)
+		switch (row[1].trim().toUpperCase()) {
+			case "ADMIN": //NOSONAR
+				memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.MEMBERSHIP);
+			case "EDITOR": //NOSONAR
+				memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.WRITE);
+			case "VIEWER":
+				break;
+			default:
+				errorList.add("Invalid permission on row " + (i + 1) + " - granted 'VIEWER'");
+				break;
 		}
-		if (rowLength >= 3 && parseBooleanPrivilegeValue(row[2].trim())) {
-			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.MEMBERSHIP);
-		}
-
 
 		return memberToAdd;
 	}
-
-	/**
-	 * Parse possible string values as a boolean
-	 * @param privilege boolean input value as a string
-	 * @return boolean true if string is valid and parsed as true
-	 * 			else returns false
-	 */
-	private boolean parseBooleanPrivilegeValue(String privilege){
-		return privilege.equalsIgnoreCase("true") || privilege.equalsIgnoreCase("yes") || privilege.equals("1");
-	}
-
 
 	@Override
 	public void setDashboardUserDefaultDocumentSpace(UUID documentSpaceId, String dashboardUserEmail) {

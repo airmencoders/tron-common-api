@@ -1,5 +1,5 @@
-email,write,membership
-1@tron.dev,yes,yes
-2@tron.dev,no,no
-3@test.mil,yes,no
-4@test.mil,no,yes
+email,privilege
+1@tron.dev,ADMIN
+2@tron.dev,VIEWER
+3@test.mil,EDITOR
+4@test.mil,ADMIN
