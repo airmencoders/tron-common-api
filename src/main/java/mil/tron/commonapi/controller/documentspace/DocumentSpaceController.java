@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
 @IfMinioEnabledOnStagingIL4OrDevLocal
 public class DocumentSpaceController {
 	private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("ddMMMyyyyHHmm");
-	
+
 	protected static final String ENDPOINT = "/document-space";
 	
 	public static final Pattern DOCUMENT_SPACE_PATTERN = Pattern.compile(String.format("\\/v[\\d]\\%s", ENDPOINT));
@@ -60,12 +60,10 @@ public class DocumentSpaceController {
 	private final DocumentSpaceService documentSpaceService;
 
 	private final DocumentSpaceUserCollectionService documentSpaceUserCollectionService;
-	
+
 	private final DocumentSpaceFileSystemService documentSpaceFileSystemService;
-	
-	public DocumentSpaceController(DocumentSpaceService documentSpaceService,
-			DocumentSpaceUserCollectionService documentSpaceUserCollectionService,
-			DocumentSpaceFileSystemService documentSpaceFileSystemService) {
+
+	public DocumentSpaceController(DocumentSpaceService documentSpaceService, DocumentSpaceUserCollectionService documentSpaceUserCollectionService, DocumentSpaceFileSystemService documentSpaceFileSystemService) {
 		this.documentSpaceService = documentSpaceService;
 		this.documentSpaceUserCollectionService = documentSpaceUserCollectionService;
 		this.documentSpaceFileSystemService = documentSpaceFileSystemService;
@@ -201,8 +199,7 @@ public class DocumentSpaceController {
     @Operation(summary = "Sets the default Document Space privileges of the requesting user")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
-				description = "Successful operation",
-                content = @Content(schema = @Schema(implementation = DocumentSpacePrivilegeDtoResponseWrapper.class))),
+				description = "Successful operation"),
 			@ApiResponse(responseCode = "404",
 				description = "Not Found - space not found",
 				content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -363,17 +360,17 @@ public class DocumentSpaceController {
                                                                @RequestParam(value = "path", defaultValue = "") String path,
                                                                @RequestParam("files") Set<String> files,
                                                                Authentication authentication) {
-    	
+
         StreamingResponseBody response = out -> documentSpaceService.downloadAndWriteCompressedFiles(id, path, files, out, authentication.getName());
-        
+
         String zipName = "files";
-        
+
         if (files.size() == 1) {
         	String itemName = "";
         	for (Iterator<String> iter = files.iterator(); iter.hasNext();) {
         		itemName = iter.next();
         	}
-        	
+
         	if (documentSpaceFileSystemService.isFolder(id, path, itemName)) {
         		zipName = itemName;
         	}
@@ -381,7 +378,7 @@ public class DocumentSpaceController {
         	OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         	zipName = now.format(DATE_FORMAT);
         }
-        
+
         return ResponseEntity
                 .ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
@@ -669,8 +666,8 @@ public class DocumentSpaceController {
 	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/delete")
-	public ResponseEntity<Object> deleteItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
-		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete());
+	public ResponseEntity<Object> deleteItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpacePathItemsDto dto) {
+		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItems());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
@@ -688,8 +685,8 @@ public class DocumentSpaceController {
 	})
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/archived/delete")
-	public ResponseEntity<Object> deleteArchivedItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpaceDeleteItemsDto dto) {
-		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItemsToDelete());
+	public ResponseEntity<Object> deleteArchivedItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpacePathItemsDto dto) {
+		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItems());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
@@ -772,13 +769,53 @@ public class DocumentSpaceController {
 					description = "Entry already exists in the favorites collection",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 	})
-	@PreAuthorize("@accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication) and #principal != null")
+	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication))and #principal != null")
 	@PostMapping("/spaces/{id}/collection/favorite/{entryId}")
 	public ResponseEntity<Void> addEntityToFavorites(@PathVariable UUID id, @PathVariable UUID entryId, Principal principal){
 
 		documentSpaceUserCollectionService.addEntityToFavoritesFolder(principal.getName(), entryId, id);
 		return new ResponseEntity<>(HttpStatus.CREATED);
 	}
+
+	@Operation(summary = "Adds a new entry provided with a path to a favorites collection. If no collection exists, it also creates one.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "201",
+					description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - user, space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "409",
+					description = "Entry already exists in the favorites collection",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+	})
+	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication)) and #principal != null")
+	@PostMapping("/spaces/{id}/collection/favorite/")
+	public ResponseEntity<Void> addPathEntityToFavorites(@PathVariable UUID id, @Valid @RequestBody DocumentSpacePathItemsDto dto, Principal principal) {
+		documentSpaceUserCollectionService.addFileSystemEntryToCollection(principal.getName(), id, dto);
+		return new ResponseEntity<>(HttpStatus.CREATED);
+	}
+
+	@Operation(summary = "Removes an entry provided with a path from a favorites collection.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - user, space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+	})
+	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication))and #principal != null")
+	@DeleteMapping("/spaces/{id}/collection/favorite/")
+	public ResponseEntity<Void> removePathEntityFromFavorites(@PathVariable UUID id, @Valid @RequestBody DocumentSpacePathItemsDto dto, Principal principal) {
+		documentSpaceUserCollectionService.removeFileSystemEntryToCollection(principal.getName(), id, dto);
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
 
 	@Operation(summary = "Removes an entry from a favorites collection.")
 	@ApiResponses(value = {
@@ -791,11 +828,8 @@ public class DocumentSpaceController {
 			@ApiResponse(responseCode = "403",
 					description = "Forbidden",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "409",
-					description = "Entry already exists in the favorites collection",
-					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 	})
-	@PreAuthorize("@accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication) and #principal != null")
+	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication)) and #principal != null")
 	@DeleteMapping("/spaces/{id}/collection/favorite/{entryId}")
 	public ResponseEntity<Void> removeEntityFromFavorites(@PathVariable UUID id, @PathVariable UUID entryId, Principal principal){
 		documentSpaceUserCollectionService.removeEntityFromFavoritesFolder(principal.getName(), entryId, id);
@@ -806,7 +840,7 @@ public class DocumentSpaceController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful",
-					content = @Content(schema = @Schema(implementation = FilePathSpec.class))),
+					content = @Content(schema = @Schema(implementation = DocumentSpaceUserCollectionResponseDtoWrapper.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Not Found - user, space, or entry not found",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
@@ -814,10 +848,30 @@ public class DocumentSpaceController {
 					description = "Forbidden",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
 	})
-	@PreAuthorize("@accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication) and #principal != null")
+	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication)) and #principal != null")
 	@GetMapping("/spaces/{id}/collection/favorite")
-	public ResponseEntity<Set<DocumentSpaceUserCollectionResponseDto>> getFavorites(@PathVariable UUID id, Principal principal){
-		return new ResponseEntity<>(documentSpaceUserCollectionService.getFavoriteEntriesForUserInDocumentSpace(principal.getName(), id), HttpStatus.OK);
+	public ResponseEntity<DocumentSpaceUserCollectionResponseDtoWrapper> getFavorites(@PathVariable UUID id, Principal principal){
+		DocumentSpaceUserCollectionResponseDtoWrapper response = new DocumentSpaceUserCollectionResponseDtoWrapper();
+		response.setData(documentSpaceUserCollectionService.getFavoriteEntriesForUserInDocumentSpace(principal.getName(), id));
+		return ResponseEntity.ok(response);
+	}
+
+	@Operation(summary = "Gets path of entryId and document space id.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful",
+					content = @Content(schema = @Schema(implementation = String.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasDocumentSpaceAccess(authentication)) and #principal != null")
+	@GetMapping("/spaces/{id}/path/{entryId}")
+	public ResponseEntity<String> getDocumentSpaceEntryPath(@PathVariable UUID id, @PathVariable UUID entryId, Principal principal){
+		return ResponseEntity.ok(documentSpaceFileSystemService.getFilePath(id, entryId));
 	}
 
 }
