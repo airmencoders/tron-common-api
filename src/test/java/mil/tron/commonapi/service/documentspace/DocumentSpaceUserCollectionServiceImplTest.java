@@ -69,7 +69,6 @@ class DocumentSpaceUserCollectionServiceImplTest {
 
 		DocumentSpaceUserCollectionRequestDto dto = DocumentSpaceUserCollectionRequestDto.builder().documentSpaceId(docSpaceId).dashboardUserId(dashboardUserId).name("TestingName").build();
 
-		doReturn(true).when(documentSpaceRepository).isUserInDocumentSpace(dashboardUserId, docSpaceId);
 		doReturn(false).when(documentSpaceUserCollectionRepository).existsByNameAndDocumentSpaceIdAndDashboardUserId("Favorites", requestDto.getDocumentSpaceId(), requestDto.getDashboardUserId());
 
 		doReturn(entity).when(documentSpaceUserCollectionRepository).save(Mockito.any());
@@ -78,21 +77,11 @@ class DocumentSpaceUserCollectionServiceImplTest {
 	}
 
     @Test
-    void testCreateFavoriteCollection_ThrowsUserNotFound() {
-		DocumentSpaceUserCollectionRequestDto dto = DocumentSpaceUserCollectionRequestDto.builder().documentSpaceId(docSpaceId).dashboardUserId(dashboardUserId).name("TestingName").build();
-        doReturn(false).when(documentSpaceRepository).isUserInDocumentSpace(dashboardUserId, docSpaceId);
-        Assertions.assertThrows(NotAuthorizedException.class, () -> collectionService.createFavoriteCollection(dto));
-
-    }
-
-    @Test
     void testCreateFavoriteCollection_ThrowsCollectionAlreadyExists() {
 		DocumentSpaceUserCollectionRequestDto dto = DocumentSpaceUserCollectionRequestDto.builder().documentSpaceId(docSpaceId).dashboardUserId(dashboardUserId).name("TestingName").build();
-        doReturn(true).when(documentSpaceRepository).isUserInDocumentSpace(dashboardUserId, docSpaceId);
         doReturn(true).when(documentSpaceUserCollectionRepository).existsByNameAndDocumentSpaceIdAndDashboardUserId("Favorites", requestDto.getDocumentSpaceId(), requestDto.getDashboardUserId());
         Assertions.assertThrows(ResourceAlreadyExistsException.class, () -> collectionService.createFavoriteCollection(dto));
     }
-
 
     @Test
     void testGetCollectionForUser() {
@@ -215,19 +204,18 @@ class DocumentSpaceUserCollectionServiceImplTest {
     @Test
     void testGetFavorites() {
         doReturn(dashboardUser).when(dashboardUserService).getDashboardUserByEmail(dashboardUser.getEmail());
-        doReturn(true).when(documentSpaceRepository).isUserInDocumentSpace(dashboardUserId, docSpaceId);
-        
+
         List<FileSystemEntryWithMetadata> entriesWithMetadata = new ArrayList<>();
         entity.getEntries().forEach(entry -> {
         	FileSystemEntryMetadata metadata = new FileSystemEntryMetadata();
         	entriesWithMetadata.add(new FileSystemEntryWithMetadata(entry, metadata));
         });
-        
+
         Mockito.when(documentSpaceUserCollectionRepository.getAllInCollectionAsMetadata(Mockito.anyString(), Mockito.any(UUID.class), Mockito.any(UUID.class)))
         	.thenReturn(Set.copyOf(entriesWithMetadata));
-        
-        Set<DocumentSpaceUserCollectionResponseDto> favoriteEntriesForUserInDocumentSpace = collectionService.getFavoriteEntriesForUserInDocumentSpace(dashboardUser.getEmail(), docSpaceId);
-        
+
+        List<DocumentSpaceUserCollectionResponseDto> favoriteEntriesForUserInDocumentSpace = collectionService.getFavoriteEntriesForUserInDocumentSpace(dashboardUser.getEmail(), docSpaceId);
+
         Assertions.assertEquals(entity.getEntries().size(), favoriteEntriesForUserInDocumentSpace.size());
     }
 

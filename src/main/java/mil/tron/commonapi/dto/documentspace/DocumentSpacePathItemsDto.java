@@ -5,12 +5,12 @@ import lombok.*;
 import java.util.List;
 
 /**
- * Used for deleting item(s) from the current path being viewed
+ * Used for path related entries
  */
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class DocumentSpaceDeleteItemsDto {
+public class DocumentSpacePathItemsDto {
 
     @Getter
     @Setter
@@ -18,5 +18,5 @@ public class DocumentSpaceDeleteItemsDto {
 
     @Getter
     @Setter
-    private List<String> itemsToDelete;
+    private List<String> items;
 }
