@@ -922,16 +922,15 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		//  If someone is EDITOR then they get WRITE and READ
 		//  If someone is VIEWER then we don't have to do anything here
 		//  If we get an invalid privilege or blank, then we just let them know, but give the candidate READ (by virtue of doing nothing)
-		switch (row[1].trim().toUpperCase()) {
-			case "ADMIN": //NOSONAR
-				memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.MEMBERSHIP);
-			case "EDITOR": //NOSONAR
-				memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.WRITE);
-			case "VIEWER":
-				break;
-			default:
-				errorList.add("Invalid permission on row " + (i + 1) + " - granted 'VIEWER'");
-				break;
+		if (row[1].trim().equalsIgnoreCase("ADMIN")) {
+			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.MEMBERSHIP);
+			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.WRITE);
+		}
+		else if (row[1].trim().equalsIgnoreCase("EDITOR")) {
+			memberToAdd.getPrivileges().add(ExternalDocumentSpacePrivilegeType.WRITE);
+		}
+		else if (!row[1].trim().equalsIgnoreCase("VIEWER")) {
+			errorList.add("Invalid permission on row " + (i + 1) + " - granted 'VIEWER'");
 		}
 
 		return memberToAdd;
