@@ -668,7 +668,12 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 .build();
 	}
 
-	/**
+    @Override
+    public String getFilePath(UUID documentSpaceId, UUID itemId) {
+        return getFilePathSpec(documentSpaceId,itemId).getFullPathSpec();
+    }
+
+    /**
 	 * Retrieves the ancestor hierarchy from the item. The resulting order will begin from the root
 	 * and drill down to {@link from} ({@link from} is not included in the resulting hierarchy list).
 	 * @param from the starting point

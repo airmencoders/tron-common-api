@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service.documentspace;
 
 import mil.tron.commonapi.dto.documentspace.DocumentMetadata;
+import mil.tron.commonapi.dto.documentspace.DocumentSpacePathItemsDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceUserCollectionRequestDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceUserCollectionResponseDto;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -14,11 +15,14 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryR
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceUserCollectionRepository;
 import mil.tron.commonapi.service.DashboardUserService;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -28,9 +32,9 @@ import java.util.stream.Collectors;
 public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUserCollectionService {
     private final DocumentSpaceFileSystemEntryRepository documentSpaceFileSystemEntryRepository;
 
-    private final DocumentSpaceUserCollectionRepository documentSpaceUserCollectionRepository;
+    private final DocumentSpaceFileSystemService documentSpaceFileSystemService;
 
-    private final DocumentSpaceRepository documentSpaceRepository;
+    private final DocumentSpaceUserCollectionRepository documentSpaceUserCollectionRepository;
 
     private final DashboardUserService dashboardUserService;
 
@@ -40,16 +44,15 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
     public static final String FAVORITES = "Favorites";
     private static final String COLLECTION_NOT_FOUND = "Collection not found";
     private static final String USER_NOT_FOUND = "User not found";
-    private static final String NOT_AUTHORIZED_TO_DOC_SPACE = "Not Authorized to this Document Space";
 
-	public DocumentSpaceUserCollectionServiceImpl(
-			DocumentSpaceUserCollectionRepository documentSpaceUserCollectionRepository,
-			DocumentSpaceRepository documentSpaceRepository, DashboardUserService dashboardUserService,
-			DocumentSpaceFileSystemEntryRepository documentSpaceFileSystemEntryRepository) {
+    public DocumentSpaceUserCollectionServiceImpl(DocumentSpaceUserCollectionRepository documentSpaceUserCollectionRepository,
+                                                  DashboardUserService dashboardUserService,
+                                                  DocumentSpaceFileSystemEntryRepository documentSpaceFileSystemEntryRepository,
+                                                  @Lazy DocumentSpaceFileSystemService documentSpaceFileSystemService) {
         this.documentSpaceUserCollectionRepository = documentSpaceUserCollectionRepository;
-        this.documentSpaceRepository = documentSpaceRepository;
         this.dashboardUserService = dashboardUserService;
         this.documentSpaceFileSystemEntryRepository = documentSpaceFileSystemEntryRepository;
+        this.documentSpaceFileSystemService = documentSpaceFileSystemService;
     }
 
 
@@ -65,11 +68,8 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
     private DocumentSpaceUserCollection createCollection(DocumentSpaceUserCollectionRequestDto documentSpaceUserCollectionDto) {
 
         DocumentSpaceUserCollection documentSpaceUserCollectionEntity = convertDocumentSpaceUserCollectionRequestDtoToEntity(documentSpaceUserCollectionDto);
-        boolean userInDocumentSpace = documentSpaceRepository.isUserInDocumentSpace(documentSpaceUserCollectionEntity.getDashboardUserId(), documentSpaceUserCollectionEntity.getDocumentSpaceId());
         boolean collectionExistsForUserInDocumentSpace = documentSpaceUserCollectionRepository.existsByNameAndDocumentSpaceIdAndDashboardUserId(documentSpaceUserCollectionEntity.getName(), documentSpaceUserCollectionEntity.getDocumentSpaceId(), documentSpaceUserCollectionEntity.getDashboardUserId());
-        if(!userInDocumentSpace){
-            throw new NotAuthorizedException(NOT_AUTHORIZED_TO_DOC_SPACE);
-        }else if(collectionExistsForUserInDocumentSpace){
+        if(collectionExistsForUserInDocumentSpace){
             throw new ResourceAlreadyExistsException("Collection already exists");
         }
 
@@ -91,19 +91,15 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
     }
 
     @Override
-    public Set<DocumentSpaceUserCollectionResponseDto> getFavoriteEntriesForUserInDocumentSpace(String dashboardUserEmail, UUID documentSpaceId) {
+    public List<DocumentSpaceUserCollectionResponseDto> getFavoriteEntriesForUserInDocumentSpace(String dashboardUserEmail, UUID documentSpaceId) {
         DashboardUser dashboardUserByEmail = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
         if(dashboardUserByEmail == null){
             throw new RecordNotFoundException(USER_NOT_FOUND);
         }
-        boolean userInDocumentSpace = documentSpaceRepository.isUserInDocumentSpace(dashboardUserByEmail.getId(), documentSpaceId);
-        if(!userInDocumentSpace){
-            throw new NotAuthorizedException(NOT_AUTHORIZED_TO_DOC_SPACE);
-        }
 
 		Set<FileSystemEntryWithMetadata> metadata = documentSpaceUserCollectionRepository.getAllInCollectionAsMetadata(FAVORITES, documentSpaceId, dashboardUserByEmail.getId());
 
-        return metadata.stream().map(this::convertMetadataEntryToResponseDto).collect(Collectors.toSet());
+        return metadata.stream().map(this::convertMetadataEntryToResponseDto).collect(Collectors.toList());
     }
 
     @Transactional
@@ -112,10 +108,6 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
         DashboardUser dashboardUserByEmail = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
         if(dashboardUserByEmail == null){
             throw new RecordNotFoundException(USER_NOT_FOUND);
-        }
-        boolean userInDocumentSpace = documentSpaceRepository.isUserInDocumentSpace(dashboardUserByEmail.getId(), documentSpaceId);
-        if(!userInDocumentSpace){
-            throw new NotAuthorizedException(NOT_AUTHORIZED_TO_DOC_SPACE);
         }
 
         Optional<DocumentSpaceUserCollection> favorites = documentSpaceUserCollectionRepository.findDocumentSpaceUserCollectionByNameAndDocumentSpaceIdAndDashboardUserId(FAVORITES,  documentSpaceId, dashboardUserByEmail.getId());
@@ -149,14 +141,40 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
 
     @Transactional
     @Override
+    public void addFileSystemEntryToCollection(String dashboardUserEmail, UUID spaceId, DocumentSpacePathItemsDto dto) {
+
+        FilePathSpec owningFolderEntry = documentSpaceFileSystemService.parsePathToFilePathSpec(spaceId, dto.getCurrentPath());
+
+        String itemName = dto.getItems().stream().findFirst().orElseThrow(()-> new RecordNotFoundException("FileEntry not found in request"));
+
+        DocumentSpaceFileSystemEntry startEntry = documentSpaceFileSystemEntryRepository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, owningFolderEntry.getItemId())
+                .orElseThrow(() -> new RecordNotFoundException("Unable to get item"));
+
+
+        addEntityToFavoritesFolder(dashboardUserEmail, startEntry.getId(), spaceId);
+    }
+
+    @Transactional
+    @Override
+    public void removeFileSystemEntryToCollection(String dashboardUserEmail, UUID spaceId, DocumentSpacePathItemsDto dto) {
+        FilePathSpec owningFolderEntry = documentSpaceFileSystemService.parsePathToFilePathSpec(spaceId, dto.getCurrentPath());
+
+        String itemName = dto.getItems().stream().findFirst().orElseThrow(()-> new RecordNotFoundException("FileEntry not found in request"));
+
+
+        DocumentSpaceFileSystemEntry startEntry = documentSpaceFileSystemEntryRepository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, owningFolderEntry.getItemId())
+                .orElseThrow(() -> new RecordNotFoundException("Unable to get item"));
+
+
+        removeEntityFromFavoritesFolder(dashboardUserEmail, startEntry.getId(), spaceId);
+    }
+
+    @Transactional
+    @Override
     public void removeEntityFromFavoritesFolder(String dashboardUserEmail, UUID entryId, UUID documentSpaceId) {
         DashboardUser dashboardUserByEmail = dashboardUserService.getDashboardUserByEmail(dashboardUserEmail);
         if(dashboardUserByEmail == null){
             throw new RecordNotFoundException(USER_NOT_FOUND);
-        }
-        boolean userInDocumentSpace = documentSpaceRepository.isUserInDocumentSpace(dashboardUserByEmail.getId(), documentSpaceId);
-        if(!userInDocumentSpace){
-            throw new NotAuthorizedException(NOT_AUTHORIZED_TO_DOC_SPACE);
         }
         Optional<DocumentSpaceUserCollection> favorites = documentSpaceUserCollectionRepository.findDocumentSpaceUserCollectionByNameAndDocumentSpaceIdAndDashboardUserId(FAVORITES,  documentSpaceId, dashboardUserByEmail.getId());
 
@@ -203,14 +221,15 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
         mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
         return mapper.map(dto, DocumentSpaceUserCollection.class);
     }
-    
+
     private DocumentSpaceUserCollectionResponseDto convertMetadataEntryToResponseDto(FileSystemEntryWithMetadata entry){
         return DocumentSpaceUserCollectionResponseDto
                 .builder()
                 .id(entry.getFileEntry().getId())
+                .itemId(entry.getFileEntry().getItemId())
                 .isFolder(entry.getFileEntry().isFolder())
                 .key(entry.getFileEntry().getItemName())
-                .spaceId(entry.getFileEntry().getDocumentSpaceId())
+                .documentSpaceId(entry.getFileEntry().getDocumentSpaceId())
                 .parentId(entry.getFileEntry().getParentEntryId())
                 .lastModifiedDate(entry.getFileEntry().getLastModifiedOn())
                 .metadata(new DocumentMetadata(entry.getMetadata() == null ? null : entry.getMetadata().getLastDownloaded()))

@@ -261,9 +261,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
                     .currentPath("")
-                    .itemsToDelete(Lists.newArrayList("doesnotexistfile.txt"))
+                    .items(Lists.newArrayList("doesnotexistfile.txt"))
                     .build())))
                 .andExpect(status().isNotFound());
 
@@ -272,9 +272,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
                         .currentPath("")
-                        .itemsToDelete(Lists.newArrayList("hello.txt"))
+                        .items(Lists.newArrayList("hello.txt"))
                         .build())))
                 .andExpect(status().isNoContent());
     }
@@ -471,9 +471,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
                         .currentPath("/docs/notes")
-                        .itemsToDelete(Lists.newArrayList("accounts.txt"))
+                        .items(Lists.newArrayList("accounts.txt"))
                         .build())))
                 .andExpect(status().isNoContent());
 
@@ -502,9 +502,9 @@ public class DocumentSpaceIntegrationTests {
         // now delete /docs (and everything underneath it)
         mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id.toString())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
                         .currentPath("/")
-                        .itemsToDelete(Lists.newArrayList("docs"))
+                        .items(Lists.newArrayList("docs"))
                         .build()))
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
@@ -826,9 +826,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
                         .currentPath("/records")
-                        .itemsToDelete(Lists.newArrayList("lists", "hello2.txt"))
+                        .items(Lists.newArrayList("lists", "hello2.txt"))
                         .build())))
                 .andExpect(status().isNoContent());
 
@@ -847,9 +847,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
                         .currentPath("/records")
-                        .itemsToDelete(Lists.newArrayList("lists", "hello2.txt"))
+                        .items(Lists.newArrayList("lists", "hello2.txt"))
                         .build())))
                 .andExpect(status().isNotFound());
 
@@ -1066,9 +1066,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
                         .currentPath("/docs")
-                        .itemsToDelete(Lists.newArrayList("names.txt"))
+                        .items(Lists.newArrayList("names.txt"))
                         .build())))
                 .andExpect(status().isNoContent());
 
@@ -1116,9 +1116,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(MAPPER.writeValueAsString(DocumentSpaceDeleteItemsDto.builder()
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
                         .currentPath("/docs")
-                        .itemsToDelete(Lists.newArrayList("names.txt"))
+                        .items(Lists.newArrayList("names.txt"))
                         .build())))
                 .andExpect(status().isNoContent());
 
