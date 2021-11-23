@@ -1,3 +1,3 @@
-userName, write, membership
-1@tron.dev,yes,yes
-2@tron.dev,no,no
+userName, privilege
+1@tron.dev,EDITOR
+2@tron.dev,VIEWER
