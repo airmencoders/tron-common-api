@@ -609,6 +609,19 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				.totalElements(documents.size()).build();
 	}
 
+	/**
+	 * Gets an elements info/status for a given path and file name
+	 * @param documentSpaceId doc space Id
+	 * @param path the path
+	 * @param element the file name
+	 * @return its FilePathSpec (if it existed)
+	 */
+	@Override
+	public FilePathSpec statFileAtPath(UUID documentSpaceId, String path, String element) {
+		return documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId,
+				DocumentSpaceFileSystemServiceImpl.joinPathParts(path, element));
+	}
+
 	@Override
 	public void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out) throws RecordNotFoundException {
 		// dump all files and folders at this path and down
