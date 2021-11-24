@@ -16,6 +16,7 @@ import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
+import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceUserCollectionService;
@@ -28,9 +29,13 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.HandlerMapping;
@@ -575,6 +580,39 @@ public class DocumentSpaceController {
 		return new ResponseEntity<>(
 				convertFileSystemEntriesToDto(path, documentSpaceService.getFolderContents(id, path)),
 				HttpStatus.OK);
+	}
+
+	@Operation(summary = "Get info about a file(s) at given path",
+			description = "Similar to usage of the Unix stat command")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = FilePathSpecWrapper.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or part of supplied path/element does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+	@PostMapping("/spaces/{id}/stat")
+	public ResponseEntity<Object> statElementsAtPath(@PathVariable UUID id,
+														  @Valid @RequestBody DocumentSpacePathItemsDto items) {
+
+		List<FilePathSpec> fileSpecs = new ArrayList<>();
+
+		// go thru and attempt to stat each item, for those not found, we just don't add
+		//   to the response..
+		for (String item : items.getItems()) {
+			try {
+				fileSpecs.add(documentSpaceService.statFileAtPath(id, items.getCurrentPath(), item));
+			}
+			catch (RecordNotFoundException ignored) { //NOSONAR
+			}
+		}
+		return new ResponseEntity<>(fileSpecs, HttpStatus.OK);
 	}
 
 	@Operation(summary = "List folders and files that are in Archived status", description = "Lists folders and files that are archived -" +

@@ -1737,4 +1737,34 @@ public class DocumentSpaceIntegrationTests {
         assertTrue(contents.contains("docs/names.txt"));
         assertTrue(contents.contains("docs/stuff/hello.txt"));
     }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testFileStatCommand() throws Exception {
+        UUID spaceId = createSpaceWithFiles("my-space");
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{space}/stat", spaceId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
+                    .currentPath("/")
+                    .items(Lists.newArrayList())
+                    .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+       // GO path
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{space}/stat", spaceId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
+                        .currentPath("/")
+                        .items(Lists.newArrayList("hello.txt", "newFile.txt"))
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+    }
 }
