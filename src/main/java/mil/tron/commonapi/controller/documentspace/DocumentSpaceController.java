@@ -586,10 +586,10 @@ public class DocumentSpaceController {
 			description = "Similar to usage of the Unix stat command")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
-					description = "Successful operation",
+					description = "Successful operation - provided path and doc space were valid",
 					content = @Content(schema = @Schema(implementation = FilePathSpecWrapper.class))),
 			@ApiResponse(responseCode = "404",
-					description = "Not Found - space not found or part of supplied path/element does not exist",
+					description = "Not Found - space not found or supplied path does not exist",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
 			@ApiResponse(responseCode = "403",
 					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
