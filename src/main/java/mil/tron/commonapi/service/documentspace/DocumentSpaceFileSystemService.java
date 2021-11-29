@@ -25,7 +25,7 @@ public interface DocumentSpaceFileSystemService {
     String getFilePath(UUID documentSpaceId, UUID itemId);
 
     List<DocumentSpaceFileSystemEntry> getElementsUnderneath(UUID spaceId, @Nullable String path);
-    FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path);
+    FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path, boolean includeArchived);
     List<S3ObjectAndFilename> flattenTreeToS3ObjectAndFilenameList(FileSystemElementTree tree);
 
     DocumentSpaceFileSystemEntry addFolder(UUID spaceId, String name, @Nullable String path);
