@@ -161,7 +161,7 @@ public class DocumentSpaceFileSystemServiceTests {
     @Test
     void testGetMinioPath() {
         // test that we can get the minio path (ready to use) for addressing a folder in the doc space in Minio
-        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString()))
+        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString(), Mockito.anyBoolean()))
                 .thenReturn(Lists.newArrayList());
         DocumentSpaceFileSystemEntry firstEntry = service.addFolder(spaceId, "some-folder", "/");
         DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder");
@@ -175,19 +175,19 @@ public class DocumentSpaceFileSystemServiceTests {
     void testGetElementTree() {
         // test that we can dump a given location's hierarchy
 
-        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString()))
+        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString(), Mockito.anyBoolean()))
                 .thenReturn(Lists.newArrayList());
 
         service.addFolder(spaceId, "some-folder", "/");
         service.addFolder(spaceId, "some-folder2", "some-folder");
         service.addFolder(spaceId, "some-deep-folder", "/some-folder/some-folder2");
 
-        FileSystemElementTree tree = service.dumpElementTree(spaceId, "/");
+        FileSystemElementTree tree = service.dumpElementTree(spaceId, "/", false);
         assertEquals(1, tree.getNodes().size());
         assertEquals(1, tree.getNodes().get(0).getNodes().size());
         assertEquals(1, tree.getNodes().get(0).getNodes().get(0).getNodes().size());
 
-        tree = service.dumpElementTree(spaceId, "some-folder");
+        tree = service.dumpElementTree(spaceId, "some-folder", false);
         assertEquals(1, tree.getNodes().size());
         assertEquals(1, tree.getNodes().get(0).getNodes().size());
     }
@@ -196,7 +196,7 @@ public class DocumentSpaceFileSystemServiceTests {
     @Rollback
     @Test
     void testDeleteFolders() {
-        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString()))
+        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(), Mockito.anyString(), Mockito.anyBoolean()))
                 .thenReturn(Lists.newArrayList());
 
         service.addFolder(spaceId, "some-folder", "/");
@@ -204,13 +204,13 @@ public class DocumentSpaceFileSystemServiceTests {
         service.addFolder(spaceId, "some-deep-folder", "/some-folder/some-folder2");
         service.addFolder(spaceId, "some-deep-folder2", "/some-folder/some-folder2");
 
-        assertEquals(1, service.dumpElementTree(spaceId, "/some-folder").getNodes().size());
-        assertEquals(2, service.dumpElementTree(spaceId, "/some-folder/some-folder2").getNodes().size());
-        assertEquals(0, service.dumpElementTree(spaceId, "/some-folder/some-folder2/some-deep-folder2").getNodes().size());
+        assertEquals(1, service.dumpElementTree(spaceId, "/some-folder", false).getNodes().size());
+        assertEquals(2, service.dumpElementTree(spaceId, "/some-folder/some-folder2", false).getNodes().size());
+        assertEquals(0, service.dumpElementTree(spaceId, "/some-folder/some-folder2/some-deep-folder2", false).getNodes().size());
         service.deleteFolder(spaceId, "/some-folder/some-folder2/some-deep-folder2");
-        assertEquals(1, service.dumpElementTree(spaceId, "/").getNodes().size());
+        assertEquals(1, service.dumpElementTree(spaceId, "/", false).getNodes().size());
         service.deleteFolder(spaceId, "/some-folder");
-        assertEquals(0, service.dumpElementTree(spaceId, "/").getNodes().size());
+        assertEquals(0, service.dumpElementTree(spaceId, "/", false).getNodes().size());
     }
     
     @Transactional
@@ -228,7 +228,7 @@ public class DocumentSpaceFileSystemServiceTests {
         S3ObjectSummary objSummary = new S3ObjectSummary();
         objSummary.setKey("somekey");
         
-        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(UUID.class), Mockito.anyString())).thenReturn(List.of(objSummary));
+        Mockito.when(documentSpaceService.getAllFilesInFolder(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean())).thenReturn(List.of(objSummary));
         Mockito.when(documentSpaceService.deleteS3ObjectsByKey(Mockito.any())).thenReturn(List.of(deleteErr));
         
         service.deleteFolder(spaceId, "/some-folder/some-folder2/some-deep-folder2");

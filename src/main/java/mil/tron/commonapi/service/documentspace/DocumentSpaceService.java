@@ -50,7 +50,7 @@ public interface DocumentSpaceService {
     List<DeleteError> deleteS3ObjectsByKey(String[] objKeys);
     S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit);
     FilePathSpec statFileAtPath(UUID documentSpaceId, String path, String element);
-    List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix);
+    List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix, boolean includeArchived);
     FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
     FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path);
     List<DocumentDto> getArchivedContents(UUID documentSpaceId);

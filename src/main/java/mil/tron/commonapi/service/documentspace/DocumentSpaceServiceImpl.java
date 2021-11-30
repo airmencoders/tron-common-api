@@ -3,7 +3,6 @@ package mil.tron.commonapi.service.documentspace;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
@@ -132,37 +131,18 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return convertDocumentSpaceEntityToResponseDto(documentSpaceRepository.save(documentSpace));
 	}
 
+	@Transactional
 	@Override
 	public void deleteSpace(UUID documentSpaceId) throws RecordNotFoundException {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 
-		ListObjectsRequest objectRequest = new ListObjectsRequest().withBucketName(bucketName)
-				.withPrefix(createDocumentSpacePathPrefix(documentSpace.getId()));
-
-		ObjectListing objectListing = null;
-
-		do {
-			if (objectListing == null) {
-				objectListing = documentSpaceClient.listObjects(objectRequest);
-			} else {
-				objectListing = documentSpaceClient.listNextBatchOfObjects(objectListing);
-			}
-
-			if (!objectListing.getObjectSummaries().isEmpty()) {
-				List<KeyVersion> keys = objectListing.getObjectSummaries().stream()
-						.map(objectSummary -> new KeyVersion(objectSummary.getKey())).collect(Collectors.toList());
-
-				DeleteObjectsRequest multiObjectDeleteRequest = new DeleteObjectsRequest(bucketName).withKeys(keys);
-
-				documentSpaceClient.deleteObjects(multiObjectDeleteRequest);
-			}
-
-		} while (objectListing.isTruncated());
+		documentSpaceFileSystemService.deleteFolder(documentSpaceId, DocumentSpaceFileSystemServiceImpl.PATH_SEP);
 
 		unsetDashboardUsersDefaultDocumentSpace(documentSpace);
-
+		
 		documentSpacePrivilegeService.deleteAllPrivilegesBelongingToDocumentSpace(documentSpace);
 		documentSpaceRepository.deleteById(documentSpace.getId());
+
 	}
 
 	private String getPathPrefix(UUID documentSpaceId, String path, FilePathSpec spec) {
@@ -279,7 +259,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId,
 						folderEntry.getItemId());
 				FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId,
-						filePathSpec.getFullPathSpec());
+						filePathSpec.getFullPathSpec(), false);
 				List<S3ObjectAndFilename> flatTree = documentSpaceFileSystemService
 						.flattenTreeToS3ObjectAndFilenameList(contentsAtPath);
 
@@ -293,7 +273,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		// Create S3ObjectAndFilename for the individual files at the relative root
 		List<DocumentSpaceFileSystemEntry> files = entriesFilteredByRelevantAndMappedByFolder.get(false);
 		if (files != null) {
-			List<S3ObjectSummary> s3summary = getAllFilesInFolder(documentSpaceId, searchPath);
+			List<S3ObjectSummary> s3summary = getAllFilesInFolder(documentSpaceId, searchPath, false);
 
 			for (DocumentSpaceFileSystemEntry fileEntry : files) {
 				Optional<S3ObjectSummary> summary = s3summary.stream().filter(
@@ -625,7 +605,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out) throws RecordNotFoundException {
 		// dump all files and folders at this path and down
-		FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId, DocumentSpaceFileSystemServiceImpl.PATH_SEP);
+		FileSystemElementTree contentsAtPath = documentSpaceFileSystemService.dumpElementTree(documentSpaceId, DocumentSpaceFileSystemServiceImpl.PATH_SEP, false);
 		// flatten the tree
 		List<S3ObjectAndFilename> objects = documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(contentsAtPath);
 		writeZipFile(out, objects);
@@ -671,7 +651,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * @return list of S3 objects (files)
 	 */
 	@Override
-	public List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix) {
+	public List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix, boolean includeArchived) {
 		List<S3ObjectSummary> files = new ArrayList<>();
 		getDocumentSpaceOrElseThrow(documentSpaceId);
 		FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, prefix);
@@ -693,7 +673,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			// only include the S3 objects that our file system database says are not archived...
 			for (S3ObjectSummary item : fileSummaries) {
 				String fileName = FilenameUtils.getName(item.getKey());
-				if (!documentSpaceFileSystemService.isArchived(documentSpaceId, spec.getItemId(), fileName)) {
+				if (includeArchived || !documentSpaceFileSystemService.isArchived(documentSpaceId, spec.getItemId(), fileName)) {
 					files.add(item);
 				}
 			}

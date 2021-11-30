@@ -261,7 +261,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @return linked list of DocumentSpaceFileSystemEntry objects
      */
     @Override
-    public FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path) {
+    public FileSystemElementTree dumpElementTree(UUID spaceId, @Nullable String path, boolean includeArchived) {
     	checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
         FilePathSpec entry = parsePathToFilePathSpec(spaceId, lookupPath);
@@ -281,10 +281,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         FileSystemElementTree tree = new FileSystemElementTree();
         tree.setValue(element);
-        List<S3ObjectSummary> files = documentSpaceService.getAllFilesInFolder(spaceId, lookupPath);
+        List<S3ObjectSummary> files = documentSpaceService.getAllFilesInFolder(spaceId, lookupPath, includeArchived);
         tree.setFilePathSpec(entry);
         tree.setFiles(files);
-        return buildTree(spaceId, element, tree);
+        return buildTree(spaceId, element, tree, includeArchived);
     }
 
     /**
@@ -292,9 +292,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @param spaceId space UUID
      * @param element the current DocumentSpaceFileSystemEntry
      * @param tree the tree we're building
+     * @param includeArchived true if archived files should be included
      * @return FileSystemElementTree
      */
-    private FileSystemElementTree buildTree(UUID spaceId, DocumentSpaceFileSystemEntry element, FileSystemElementTree tree) {
+    private FileSystemElementTree buildTree(UUID spaceId, DocumentSpaceFileSystemEntry element, FileSystemElementTree tree, boolean includeArchived) {
 
         List<DocumentSpaceFileSystemEntry> children = repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsFolderTrue(spaceId, element.getItemId());
         if (children.isEmpty()) {
@@ -303,10 +304,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         if (tree.getNodes() == null) tree.setNodes(new ArrayList<>());
         for (DocumentSpaceFileSystemEntry entry : children) {
-            FileSystemElementTree subTree = buildTree(spaceId, entry, new FileSystemElementTree());
+            FileSystemElementTree subTree = buildTree(spaceId, entry, new FileSystemElementTree(), includeArchived);
             subTree.setValue(entry);
             FilePathSpec spec = convertFileSystemEntityToFilePathSpec(entry);
-            List<S3ObjectSummary> files = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec());
+            List<S3ObjectSummary> files = documentSpaceService.getAllFilesInFolder(spaceId, spec.getFullPathSpec(), includeArchived);
             subTree.setFilePathSpec(spec);
             subTree.setFiles(files);
             tree.addNode(subTree);
@@ -390,7 +391,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     @Override
     public void deleteFolder(UUID spaceId, String path) {
-        FileSystemElementTree tree = dumpElementTree(spaceId, path);
+        FileSystemElementTree tree = dumpElementTree(spaceId, path, true);
         deleteParentDirectories(tree);
         
         propagateModificationStateToAncestors(tree.getValue());

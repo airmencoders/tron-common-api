@@ -437,7 +437,7 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
 			.thenReturn(FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("/folder").build());
 		
-		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
+		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean()))
 			.thenReturn(FileSystemElementTree.builder().build());
 		
 		Mockito.when(documentSpaceFileSystemService.flattenTreeToS3ObjectAndFilenameList(Mockito.any(FileSystemElementTree.class)))
@@ -465,7 +465,7 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(documentSpaceRepo.save(Mockito.any(DocumentSpace.class))).thenReturn(entity);
 		DocumentSpaceResponseDto documentSpaceDto = documentService.createSpace(requestDto);
 
-		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString()))
+		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean()))
 				.thenReturn(FileSystemElementTree.builder()
 						.value(DocumentSpaceFileSystemEntry.builder()
 								.itemId(UUID.randomUUID())
