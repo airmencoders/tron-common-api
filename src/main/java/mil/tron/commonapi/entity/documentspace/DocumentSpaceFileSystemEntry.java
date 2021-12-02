@@ -89,6 +89,9 @@ public class DocumentSpaceFileSystemEntry {
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date createdOn;
 
+	@Transient
+    boolean hasNonArchivedContents;
+
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date lastModifiedOn;
 

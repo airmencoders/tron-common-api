@@ -58,4 +58,9 @@ public class DocumentDto {
 	@Getter
 	@Setter
 	private boolean isFolder;
+
+	@Getter
+	@Setter
+	private boolean hasContents;
+
 }
