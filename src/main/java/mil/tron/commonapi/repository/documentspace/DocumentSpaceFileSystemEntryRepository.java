@@ -37,6 +37,7 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
      * File Methods
      */
     List<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdAndParentEntryIdAndIsFolderFalse(UUID spaceId, UUID parentId);
+    boolean existsByParentEntryIdAndIsDeleteArchivedFalse(UUID parentId);
     Optional<DocumentSpaceFileSystemEntry> findFileByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsFolderFalse(UUID documentSpaceId, UUID parentId, String itemName);
     void deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndIsFolderFalse(UUID documentSpaceId, UUID parentId);
     void deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndItemNameNotInAndIsFolderFalse(UUID documentSpaceId, UUID parentId, Set<String> excludedFilenames);

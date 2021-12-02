@@ -73,7 +73,7 @@ public class DocumentSpaceController {
 		this.documentSpaceFileSystemService = documentSpaceFileSystemService;
 	}
 
-	// stsatic helper used for file download headers -- used by the webdav controller also
+	// static helper used for file download headers -- used by the webdav controller also
 	public static HttpHeaders createDownloadHeaders(String filename) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Content-disposition", "attachment; filename=\"" + filename + "\"");
@@ -779,6 +779,7 @@ public class DocumentSpaceController {
 				.key(FilenameUtils.getName(entry.getItemName()))
 				.lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
 				.lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
+				.hasContents(entry.isHasNonArchivedContents())
 				.build()
 		).collect(Collectors.toList());
 
