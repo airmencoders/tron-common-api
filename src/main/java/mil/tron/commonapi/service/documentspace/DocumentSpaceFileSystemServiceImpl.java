@@ -9,6 +9,7 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.documentspace.FolderDepthException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.util.*;
@@ -41,6 +42,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     private final DocumentSpaceUserCollectionService documentSpaceUserCollectionService;
     public static final String PATH_SEP = "/";
     private static final String BAD_PATH = "Path %s not found or is not a folder";
+    protected static final int MAX_FOLDER_DEPTH = 20;
 
     public DocumentSpaceFileSystemServiceImpl(DocumentSpaceRepository documentSpaceRepository,
                                               DocumentSpaceFileSystemEntryRepository repository,
@@ -336,6 +338,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         String lookupPath = conditionPath(path);
         FilePathSpec pathSpec = parsePathToFilePathSpec(spaceId, lookupPath);
+        
+        // Check if adding this folder would violate the max folder depth
+        if (pathSpec.getUuidList().size() + 1 > MAX_FOLDER_DEPTH) {
+        	throw new FolderDepthException(MAX_FOLDER_DEPTH);
+        }
 
         // check no existence of duplicate ... for now we're not even allowing an archived variant to have same name/path
         //  the db schema technically supports it but for sake of simplicity we disallow for now

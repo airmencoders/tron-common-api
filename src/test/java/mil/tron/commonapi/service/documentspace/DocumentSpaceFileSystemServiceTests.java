@@ -7,6 +7,7 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
+import mil.tron.commonapi.exception.documentspace.FolderDepthException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
@@ -120,6 +121,20 @@ public class DocumentSpaceFileSystemServiceTests {
 
         // croak on bad path
         assertThrows(RecordNotFoundException.class, () -> service.getElementsUnderneath(spaceId, "secondfolder/invalidfolder"));
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void addFolder_shouldThrow_whenExceedsMaxFolderDepth() {
+    	final StringBuilder path = new StringBuilder();
+    	path.append("");
+    	for (int i = 0; i < DocumentSpaceFileSystemServiceImpl.MAX_FOLDER_DEPTH; i++) {
+    		service.addFolder(spaceId, Integer.toString(i), path.toString());
+			path.append("/" + Integer.toString(i));
+    	}
+    	
+    	assertThrows(FolderDepthException.class, () -> service.addFolder(spaceId, "exceeds max depth", path.toString()));
     }
 
     @Transactional
