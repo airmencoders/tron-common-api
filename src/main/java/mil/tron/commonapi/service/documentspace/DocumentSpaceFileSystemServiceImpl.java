@@ -340,7 +340,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         // check no existence of duplicate ... for now we're not even allowing an archived variant to have same name/path
         //  the db schema technically supports it but for sake of simplicity we disallow for now
         if (repository.existsByDocumentSpaceIdAndParentEntryIdAndItemName(spaceId, pathSpec.getItemId(), name)) {
-            throw new ResourceAlreadyExistsException(String.format("Folder with name %s already exists under that parent or is archived under that same path/name", name));
+            throw new ResourceAlreadyExistsException(String.format("File or folder with name %s already exists here or is archived under that same path/name", name));
         }
 
         DocumentSpaceFileSystemEntry savedFolder = repository.save(DocumentSpaceFileSystemEntry.builder()
