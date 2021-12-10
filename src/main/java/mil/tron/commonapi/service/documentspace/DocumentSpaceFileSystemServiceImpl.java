@@ -627,7 +627,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         // by first splitting it and passing it through the path parts joiner
         //  we ensure it starts with a PATH_SEP, has no dupe PATH_SEPS, and doesn't
         //  end with a PATH_SEP so that way we dont get incorrect count
-        return joinPathParts(path.split(PATH_SEP)).replaceAll(PATH_SEP + "+$", "").split(PATH_SEP).length - 1;
+        return joinPathParts(path.split(PATH_SEP)).replaceAll("(/+)$", "").split(PATH_SEP).length - 1;
     }
 
 
