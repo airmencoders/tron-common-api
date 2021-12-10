@@ -43,6 +43,6 @@ public class MetricsConfig {
 
     @Bean
     public MeterFilter meterFilter() {
-        return MeterFilter.denyUnless((id) -> id.getName().startsWith("gateway"));
+        return MeterFilter.denyUnless(id -> id.getName().startsWith("gateway"));
     }
 }

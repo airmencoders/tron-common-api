@@ -145,9 +145,9 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         FilePathSpecWithContents contents = new DtoMapper().map(spec, FilePathSpecWithContents.class);
         contents.setEntries(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, spec.getItemId(), false));
 
-        contents.getEntries().forEach(entry->{
-            entry.setHasNonArchivedContents(repository.existsByParentEntryIdAndIsDeleteArchivedFalse(entry.getItemId()));
-        });
+        contents.getEntries().forEach(entry -> 
+            entry.setHasNonArchivedContents(repository.existsByParentEntryIdAndIsDeleteArchivedFalse(entry.getItemId()))
+        );
         return contents;
     }
 

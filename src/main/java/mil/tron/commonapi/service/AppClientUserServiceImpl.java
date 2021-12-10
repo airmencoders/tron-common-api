@@ -514,10 +514,10 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 		boolean hasPersonEdit = privileges.stream().anyMatch(privilege -> privilege.getName().equals("PERSON_EDIT"));
 		boolean hasOrgEdit = privileges.stream().anyMatch(privilege -> privilege.getName().equals("ORGANIZATION_EDIT"));
 
-		List<PrivilegeDto> privilegesToBeSanitized = privileges.stream().filter(privilege -> {
-			return (!hasPersonEdit && privilege.getName().startsWith("Person-")) || 
-					(!hasOrgEdit && privilege.getName().startsWith("Organization-"));
-		}).collect(Collectors.toList());
+		List<PrivilegeDto> privilegesToBeSanitized = privileges.stream().filter(privilege -> 
+			(!hasPersonEdit && privilege.getName().startsWith("Person-")) || 
+					(!hasOrgEdit && privilege.getName().startsWith("Organization-"))
+		).collect(Collectors.toList());
 		
 		privileges.removeAll(privilegesToBeSanitized);
 	}

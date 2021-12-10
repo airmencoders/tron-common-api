@@ -58,7 +58,7 @@ public class CommonApiApplication {
     @Bean
     public ApplicationRunner init(AppSourceService appSourceService, AppSourceRepository appSourceRepository) {
 
-        return (args) -> {
+        return args -> {
             List<AppSource> appSources = appSourceRepository.findAll();
             for (AppSource appSource : appSources) {
                 appSourceService.registerAppReporting(appSource);
