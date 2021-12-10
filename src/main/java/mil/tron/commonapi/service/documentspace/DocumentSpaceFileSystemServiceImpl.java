@@ -16,6 +16,8 @@ import mil.tron.commonapi.service.documentspace.util.*;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.file.PathUtils;
+import org.assertj.core.util.Lists;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -110,6 +112,12 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         DocumentSpaceFileSystemEntry entry = null;
         
         Path asPath = Paths.get(lookupPath);
+
+        // if we're allowed to create folders on this call, then
+        // first check we won't exceed max folder depth
+        if (createFolders && countPathDepth(lookupPath) > MAX_FOLDER_DEPTH) {
+            throw new FolderDepthException("Requested path exceeded the MAX FOLDER DEPTH of " + MAX_FOLDER_DEPTH);
+        }
 
         for (Iterator<Path> currentPathItem = asPath.iterator(); currentPathItem.hasNext();) {
             String currentPathItemAsString = currentPathItem.next().toString();
@@ -605,6 +613,21 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     public static String joinPathParts(String... parts) {
         return (PATH_SEP + String.join(PATH_SEP, parts)).replaceAll("/+", PATH_SEP);
+    }
+
+    /**
+     * Helper to count the depth of a given path for depth checks
+     * @param path the path to analyze
+     * @return count of path segments
+     */
+    public static int countPathDepth(@Nullable String path) {
+
+        if (path == null) return 0;
+
+        // by first splitting it and passing it through the path parts joiner
+        //  we ensure it starts with a PATH_SEP, has no dupe PATH_SEPS, and doesn't
+        //  end with a PATH_SEP so that way we dont get incorrect count
+        return joinPathParts(path.split(PATH_SEP)).replaceAll(PATH_SEP + "+$", "").split(PATH_SEP).length - 1;
     }
 
 

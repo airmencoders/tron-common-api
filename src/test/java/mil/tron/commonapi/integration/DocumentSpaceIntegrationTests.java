@@ -1824,7 +1824,7 @@ public class DocumentSpaceIntegrationTests {
                 "file",
                 "hello-world3.txt",
                 MediaType.TEXT_PLAIN_VALUE,
-                "Hello, World2!".getBytes()
+                "Hello, World3!".getBytes()
         );
         mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/deep/path/within/the", spaceId.toString()).file(file3)
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
@@ -1838,5 +1838,18 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.documents", hasSize(2)))
                 .andExpect(jsonPath("$.documents[*].key", hasItem("hello-world3.txt")));
+
+        // confirm the MAX_DEPTH restriction is enforced
+        MockMultipartFile file4
+                = new MockMultipartFile(
+                "file",
+                "hello-world4.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World4!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/deep/path/within/the/space/that/is/very/very/long/indeed/and/should/fail/the/depth/test/that/is/in/place", spaceId.toString()).file(file4)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isBadRequest());
     }
 }
