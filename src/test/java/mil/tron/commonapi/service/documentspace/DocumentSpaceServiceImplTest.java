@@ -203,7 +203,7 @@ class DocumentSpaceServiceImplTest {
 
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
 		Mockito.when(
-				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
+				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean()))
 				.thenReturn(
 						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
 		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(), Mockito.any(),
