@@ -302,7 +302,9 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) throws RecordNotFoundException {
 		getDocumentSpaceOrElseThrow(documentSpaceId);
-		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
+
+		// get the location to which we want to upload this file too - and create folders if they don't exist
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path, true);
 		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
 		
 		ObjectMetadata metaData = new ObjectMetadata();

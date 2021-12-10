@@ -18,6 +18,7 @@ public interface DocumentSpaceFileSystemService {
 	 */
 	FilePathSpec getFilePathSpec(UUID documentSpaceId, UUID itemId);
     FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path);
+    FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path, boolean createFolders);
     FilePathSpecWithContents getFilesAndFoldersAtPath(UUID spaceId, @Nullable String path);
     List<DocumentDto> getArchivedItems(UUID spaceId);
     FilePathSpec convertFileSystemEntityToFilePathSpec(DocumentSpaceFileSystemEntry entry);

@@ -79,6 +79,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         }
     }
 
+    @Override
+    public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path) {
+        return this.parsePathToFilePathSpec(spaceId, path, false);
+    }
+
     /**
      * Utility to find out more information about a given path within a space. The
      * given space is of a unix-like path relative to a doc space (prefix slash is
@@ -86,10 +91,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * 
      * @param spaceId UUID of the space
      * @param path    path to find out about
+     * @param createFolders true to create folders along the path if they do not exist
      * @return the FilePathSpec describing this path
      */
     @Override
-    public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path) {
+    public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path, boolean createFolders) {
 
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
@@ -107,14 +113,33 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         for (Iterator<Path> currentPathItem = asPath.iterator(); currentPathItem.hasNext();) {
             String currentPathItemAsString = currentPathItem.next().toString();
-            
+
             pathAccumulator.append(currentPathItemAsString).append(PATH_SEP);
 
-            entry = repository
+            Optional<DocumentSpaceFileSystemEntry> possibleEntry = repository
                     .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId,
-                            currentPathItemAsString, parentFolderId)
-                    .orElseThrow(
-                            () -> new RecordNotFoundException(String.format(BAD_PATH, pathAccumulator.toString())));
+                            currentPathItemAsString, parentFolderId);
+
+            if (createFolders && possibleEntry.isEmpty()) {
+                // we did want to create missing folders, and the entry didn't exist, then create it
+                DocumentSpaceFileSystemEntry newEntry = DocumentSpaceFileSystemEntry.builder()
+                        .isFolder(true)
+                        .parentEntryId(parentFolderId)
+                        .documentSpaceId(spaceId)
+                        .itemName(currentPathItemAsString)
+                        .etag(createFolderETag(spaceId, parentFolderId, currentPathItemAsString))
+                        .build();
+
+                entry = repository.save(newEntry);
+            }
+            else if (possibleEntry.isPresent()) {
+                // the element is present, so who cares about createFolder flag, just unwrap the element and proceed
+                entry = possibleEntry.get();
+            }
+            else {
+                // we get here, should mean that we didn't want to create folders, and the element didn't exist so throw
+                throw new RecordNotFoundException(String.format(BAD_PATH, pathAccumulator.toString()));
+            }
 
             if (currentPathItem.hasNext()) parentFolderId = entry.getItemId();  // update parent ID for the next depth iteration
             uuidList.add(entry.getItemId());
