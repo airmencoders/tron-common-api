@@ -627,7 +627,19 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         // by first splitting it and passing it through the path parts joiner
         //  we ensure it starts with a PATH_SEP, has no dupe PATH_SEPS, and doesn't
         //  end with a PATH_SEP so that way we dont get incorrect count
-        return joinPathParts(path.split(PATH_SEP)).replaceAll("/+?$", "").split(PATH_SEP).length - 1;
+        return removeTrailingSlashes(joinPathParts(path.split(PATH_SEP))).split(PATH_SEP).length - 1;
+    }
+
+    public static String removeTrailingSlashes(@Nullable String input) {
+        if (input == null) return "";
+
+        int index = input.length() - 1;
+        while (index >= 0) {
+            if (input.charAt(index) == '/') index--;
+            else break;
+        }
+
+        return input.substring(0, index+1);
     }
 
 
