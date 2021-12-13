@@ -5,6 +5,7 @@ import mil.tron.commonapi.validations.ValidDocSpaceFolderOrFilename;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
 /**
  * Used for folder renaming
@@ -26,6 +27,7 @@ public class DocumentSpaceRenameFileDto {
     /**
      * The proposed new file name
      */
+    @Size(max = 255)
     @ValidDocSpaceFolderOrFilename
     @NotNull
     @NotBlank

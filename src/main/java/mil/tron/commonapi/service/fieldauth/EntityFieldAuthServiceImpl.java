@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
-import javax.transaction.Transactional.TxType;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
