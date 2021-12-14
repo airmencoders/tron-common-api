@@ -275,11 +275,6 @@ public class DocumentSpaceController {
                                       @RequestParam(value = "path", defaultValue = "") String path,
                                       @RequestPart("file") MultipartFile file) {
 
-		DocSpaceFolderOrFilenameValidator validator = new DocSpaceFolderOrFilenameValidator();
-		if (!validator.isValid(file.getOriginalFilename(), null)) {
-			throw new BadRequestException("Invalid filename");
-		}
-
 		documentSpaceService.uploadFile(id, path, file);
 		 
         Map<String, String> result = new HashMap<>();

@@ -14,6 +14,7 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryR
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.util.*;
 
+import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.file.PathUtils;
@@ -129,7 +130,12 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                             currentPathItemAsString, parentFolderId);
 
             if (createFolders && possibleEntry.isEmpty()) {
-                // we did want to create missing folders, and the entry didn't exist, then create it
+                // we did want to create missing folders, and the entry didn't exist, then create it (after validation)
+                DocSpaceFolderOrFilenameValidator validator = new DocSpaceFolderOrFilenameValidator();
+                if (!validator.isValid(currentPathItemAsString, null)) {
+                    throw new BadRequestException(String.format("Invalid folder name - %s", currentPathItemAsString));
+                }
+
                 DocumentSpaceFileSystemEntry newEntry = DocumentSpaceFileSystemEntry.builder()
                         .isFolder(true)
                         .parentEntryId(parentFolderId)

@@ -536,11 +536,24 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isBadRequest());
 
-        // try to upload a filename with a / - should 400
-        MockMultipartFile invalidFile
+        // try to upload a filename with a / - should 200 because we can create folders on-the-fly because of folder upload
+        MockMultipartFile validFile
                 = new MockMultipartFile(
                 "file",
                 "new/file.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Invalid!!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", test1Id.toString()).file(validFile)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // but this should fail
+        MockMultipartFile invalidFile
+                = new MockMultipartFile(
+                "file",
+                "new/fil..e.txt",
                 MediaType.TEXT_PLAIN_VALUE,
                 "Invalid!!".getBytes()
         );
@@ -650,6 +663,27 @@ public class DocumentSpaceIntegrationTests {
                 .contentType(MediaType.TEXT_PLAIN))
                 .andExpect(status().isNotFound());
 
+        // upload a file with no extension to /docs and download it
+        MockMultipartFile noExt
+                = new MockMultipartFile(
+                "file",
+                "words",
+                MediaType.TEXT_PLAIN_VALUE,
+                "words".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", test1Id.toString())
+                .file(noExt)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+        mockMvc.perform(get(ENDPOINT_V2 + "/space/{id}/docs/words", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.TEXT_PLAIN))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("words")));
+
+
         // make new folder within /docs named "lists"
         mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", test1Id)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -704,7 +738,7 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.documents", hasSize(5)));
+                .andExpect(jsonPath("$.documents", hasSize(6)));
 
         // download and zip all the files from /docs which should just be one file and the folder "lists" with its one file
         // should have structure like this in the zip file
@@ -759,6 +793,7 @@ public class DocumentSpaceIntegrationTests {
         assertTrue(contents.contains("hello3.txt"));
         assertTrue(contents.contains("docs/lists/lists.txt"));
         assertTrue(contents.contains("docs/hello2.txt"));
+        assertTrue(contents.contains("docs/words"));
         assertTrue(contents.contains("docs/names.txt"));
 
         // test downloading the whole space - check directory integrity
@@ -791,6 +826,7 @@ public class DocumentSpaceIntegrationTests {
         assertTrue(contents.contains("docs/lists/lists.txt"));
         assertTrue(contents.contains("docs/hello2.txt"));
         assertTrue(contents.contains("docs/names.txt"));
+        assertTrue(contents.contains("docs/words"));
 
         // rename "/docs" to "records"
         assertThrows(ResourceAlreadyExistsException.class, () -> documentSpaceService.renameFolder(test1Id, "/docs", "docs"));
@@ -838,9 +874,10 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents", hasSize(2)))
                 .andExpect(jsonPath("$.documents[?(@.folder == true)]", hasSize(0)))
-                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")));
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("words")));
 
         // re-issuing this should fail due to files not existing
         mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id)
@@ -1839,6 +1876,20 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents", hasSize(2)))
                 .andExpect(jsonPath("$.documents[*].key", hasItem("hello-world3.txt")));
 
+        // do same thing but put trailing slash on the path to be created
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/deep/path/within/the/newspace/", spaceId.toString()).file(file3)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // confirm the operation
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/some/deep/path/within/the/newspace", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello-world3.txt")));
+
         // confirm the MAX_DEPTH restriction is enforced
         MockMultipartFile file4
                 = new MockMultipartFile(
@@ -1848,6 +1899,12 @@ public class DocumentSpaceIntegrationTests {
                 "Hello, World4!".getBytes()
         );
         mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/deep/path/within/the/space/that/is/very/very/long/indeed/and/should/fail/the/depth/test/that/is/in/place", spaceId.toString()).file(file4)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isBadRequest());
+
+        // confirm that we validate new folder names
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/deep/path/invalid.folder.name.with.dots/the/space", spaceId.toString()).file(file4)
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isBadRequest());
