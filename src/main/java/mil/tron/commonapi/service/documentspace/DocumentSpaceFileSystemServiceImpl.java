@@ -14,8 +14,11 @@ import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryR
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
 import mil.tron.commonapi.service.documentspace.util.*;
 
+import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.file.PathUtils;
+import org.assertj.core.util.Lists;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -79,6 +82,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         }
     }
 
+    @Override
+    public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path) {
+        return this.parsePathToFilePathSpec(spaceId, path, false);
+    }
+
     /**
      * Utility to find out more information about a given path within a space. The
      * given space is of a unix-like path relative to a doc space (prefix slash is
@@ -86,10 +94,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * 
      * @param spaceId UUID of the space
      * @param path    path to find out about
+     * @param createFolders true to create folders along the path if they do not exist
      * @return the FilePathSpec describing this path
      */
     @Override
-    public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path) {
+    public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path, boolean createFolders) {
 
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
@@ -105,16 +114,46 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         
         Path asPath = Paths.get(lookupPath);
 
+        // if we're allowed to create folders on this call, then
+        // first check we won't exceed max folder depth
+        if (createFolders && countPathDepth(lookupPath) > MAX_FOLDER_DEPTH) {
+            throw new FolderDepthException("Requested path exceeded the MAX FOLDER DEPTH of " + MAX_FOLDER_DEPTH);
+        }
+
         for (Iterator<Path> currentPathItem = asPath.iterator(); currentPathItem.hasNext();) {
             String currentPathItemAsString = currentPathItem.next().toString();
-            
+
             pathAccumulator.append(currentPathItemAsString).append(PATH_SEP);
 
-            entry = repository
+            Optional<DocumentSpaceFileSystemEntry> possibleEntry = repository
                     .findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId,
-                            currentPathItemAsString, parentFolderId)
-                    .orElseThrow(
-                            () -> new RecordNotFoundException(String.format(BAD_PATH, pathAccumulator.toString())));
+                            currentPathItemAsString, parentFolderId);
+
+            if (createFolders && possibleEntry.isEmpty()) {
+                // we did want to create missing folders, and the entry didn't exist, then create it (after validation)
+                DocSpaceFolderOrFilenameValidator validator = new DocSpaceFolderOrFilenameValidator();
+                if (!validator.isValid(currentPathItemAsString, null)) {
+                    throw new BadRequestException(String.format("Invalid folder name - %s", currentPathItemAsString));
+                }
+
+                DocumentSpaceFileSystemEntry newEntry = DocumentSpaceFileSystemEntry.builder()
+                        .isFolder(true)
+                        .parentEntryId(parentFolderId)
+                        .documentSpaceId(spaceId)
+                        .itemName(currentPathItemAsString)
+                        .etag(createFolderETag(spaceId, parentFolderId, currentPathItemAsString))
+                        .build();
+
+                entry = repository.save(newEntry);
+            }
+            else if (possibleEntry.isPresent()) {
+                // the element is present, so who cares about createFolder flag, just unwrap the element and proceed
+                entry = possibleEntry.get();
+            }
+            else {
+                // we get here, should mean that we didn't want to create folders, and the element didn't exist so throw
+                throw new RecordNotFoundException(String.format(BAD_PATH, pathAccumulator.toString()));
+            }
 
             if (currentPathItem.hasNext()) parentFolderId = entry.getItemId();  // update parent ID for the next depth iteration
             uuidList.add(entry.getItemId());
@@ -580,6 +619,33 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      */
     public static String joinPathParts(String... parts) {
         return (PATH_SEP + String.join(PATH_SEP, parts)).replaceAll("/+", PATH_SEP);
+    }
+
+    /**
+     * Helper to count the depth of a given path for depth checks
+     * @param path the path to analyze
+     * @return count of path segments
+     */
+    public static int countPathDepth(@Nullable String path) {
+
+        if (path == null) return 0;
+
+        // by first splitting it and passing it through the path parts joiner
+        //  we ensure it starts with a PATH_SEP, has no dupe PATH_SEPS, and doesn't
+        //  end with a PATH_SEP so that way we dont get incorrect count
+        return removeTrailingSlashes(joinPathParts(path.split(PATH_SEP))).split(PATH_SEP).length - 1;
+    }
+
+    public static String removeTrailingSlashes(@Nullable String input) {
+        if (input == null) return "";
+
+        int index = input.length() - 1;
+        while (index >= 0) {
+            if (input.charAt(index) == '/') index--;
+            else break;
+        }
+
+        return input.substring(0, index+1);
     }
 
 

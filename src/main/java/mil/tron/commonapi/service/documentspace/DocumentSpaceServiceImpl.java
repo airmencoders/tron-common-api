@@ -25,6 +25,7 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
+import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -302,14 +303,31 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) throws RecordNotFoundException {
 		getDocumentSpaceOrElseThrow(documentSpaceId);
-		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, path);
-		String prefix = getPathPrefix(documentSpaceId, path, filePathSpec);
+
+		// we need to build these out here because on a folder upload, the file "names" will actually contain paths
+		//  relative to wherever the user currently is in the tree (so "path" from now one is really 'path' (the arg) + 'additionalPath' extracted from filename)
+		//  if its just a file, no harm no foul, the 'additionalPath' is just blank
+		String additionalPath = FilenameUtils.getPath(file.getOriginalFilename());
+		String filename = FilenameUtils.getName(file.getOriginalFilename());
+
+		DocSpaceFolderOrFilenameValidator validator = new DocSpaceFolderOrFilenameValidator();
+		if (!validator.isValid(filename, null)) {
+			throw new BadRequestException("Invalid filename");
+		}
+
+		// get the location to which we want to upload this file too - and create folders if they don't exist
+		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId,
+				DocumentSpaceFileSystemServiceImpl.joinPathParts(path, additionalPath),
+				true);
+
+		String prefix = getPathPrefix(documentSpaceId,
+				DocumentSpaceFileSystemServiceImpl.joinPathParts(path, additionalPath),
+				filePathSpec);
 		
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
 		metaData.setContentLength(file.getSize());
 		
-		String filename = file.getOriginalFilename();
 		if (filename == null) {
 			throw new BadRequestException("Uploaded file is missing a filename");
 		}

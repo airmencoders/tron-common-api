@@ -198,20 +198,21 @@ class DocumentSpaceServiceImplTest {
 	@Test
 	void testUploadFile() {
 		String fakeContent = "fake content";
-		MockMultipartFile file = new MockMultipartFile("filename.txt", "filename.txt", "multipart/form-data",
-				fakeContent.getBytes());
+		FilePathSpec mockSpec = FilePathSpec.builder()
+				.documentSpaceId(entity.getId())
+				.parentFolderId(DocumentSpaceFileSystemEntry.NIL_UUID)
+				.fullPathSpec("")
+				.itemId(DocumentSpaceFileSystemEntry.NIL_UUID)
+				.uuidList(new ArrayList<>())
+				.itemName("")
+				.build();
 
+		MockMultipartFile file = new MockMultipartFile("filename.txt", "filename.txt", "multipart/form-data", fakeContent.getBytes());
 		Mockito.when(documentSpaceRepo.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(entity));
-		Mockito.when(
-				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
-				.thenReturn(
-						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
-		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(), Mockito.any(),
-				Mockito.anyString())).thenReturn(Optional.ofNullable(null));
+		Mockito.when(documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean())).thenReturn(mockSpec);
+		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(), Mockito.any(), Mockito.anyString())).thenReturn(Optional.ofNullable(null));
 		documentService.uploadFile(entity.getId(), "", file);
-
-		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
-				documentService.createDocumentSpacePathPrefix(entity.getId()) + "filename.txt")).isTrue();
+		assertThat(amazonS3.doesObjectExist(BUCKET_NAME, entity.getId() + "/filename.txt")).isTrue();
 		Mockito.verify(documentSpaceFileService).saveDocumentSpaceFile(Mockito.any(DocumentSpaceFileSystemEntry.class));
 		Mockito.verify(documentSpaceFileSystemService).propagateModificationStateToAncestors(Mockito.any(DocumentSpaceFileSystemEntry.class));
 	}
