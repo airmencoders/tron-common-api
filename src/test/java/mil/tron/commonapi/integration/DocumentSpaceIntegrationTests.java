@@ -1909,4 +1909,29 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isBadRequest());
     }
+
+    // Doc Space Mobile aggregation endpoints
+
+    @Transactional
+    @Rollback
+    @Test
+    void testMobileSpaceFetch() throws Exception {
+
+        // test we can get list of spaces that user can access along with their privs to it
+        //  and the default space (if its set)
+
+        UUID space1 = createSpaceWithFiles("space1");
+        UUID space2 = createSpaceWithFiles("space2");
+        UUID space3 = createSpaceWithFiles("space3");
+
+        // test that a DASHBOARD_ADMIN can see all spaces and is listed as ADMIN in all of them
+        mockMvc.perform(get("/v2/document-space-mobile/spaces")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.spaces[0].privilege", equalTo("ADMIN")))
+                .andExpect(jsonPath("$.spaces[1].privilege", equalTo("ADMIN")))
+                .andExpect(jsonPath("$.spaces[2].privilege", equalTo("ADMIN")));
+
+    }
 }
