@@ -1915,7 +1915,7 @@ public class DocumentSpaceIntegrationTests {
     @Transactional
     @Rollback
     @Test
-    void testMobileSpaceFetch() throws Exception {
+    void testMobileSpaceOps() throws Exception {
 
         // test we can get list of spaces that user can access along with their privs to it
         //  and the default space (if its set)
@@ -1932,6 +1932,87 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.spaces[0].privilege", equalTo("ADMIN")))
                 .andExpect(jsonPath("$.spaces[1].privilege", equalTo("ADMIN")))
                 .andExpect(jsonPath("$.spaces[2].privilege", equalTo("ADMIN")));
+
+        // create a new user that can only access spaces - 1 and 2
+        DashboardUser someUser = DashboardUser.builder()
+                .email("dude@test.gov")
+                .privileges(Set.of(
+                        privRepo.findByName("DOCUMENT_SPACE_USER").orElseThrow(() -> new RecordNotFoundException("No Document Space User Priv")),
+                        privRepo.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))
+                ))
+                .build();
+
+        someUser = dashRepo.save(someUser);
+        documentSpaceService.addDashboardUserToDocumentSpace(space1, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("dude@test.gov")
+                .privileges(Lists.newArrayList())
+                .build());
+        documentSpaceService.addDashboardUserToDocumentSpace(space2, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("dude@test.gov")
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                .build());
+
+        // test that a new user can see spaces 1 and 2 and is just a viewer to space 1 and editor to space 2
+        mockMvc.perform(get("/v2/document-space-mobile/spaces")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.spaces", hasSize(2)))
+                .andExpect(jsonPath("$.defaultSpace", equalTo(null)))
+                .andExpect(jsonPath("$.spaces[0].privilege", equalTo("VIEWER")))
+                .andExpect(jsonPath("$.spaces[1].privilege", equalTo("EDITOR")));
+
+        someUser.setDefaultDocumentSpaceId(space2);
+        dashRepo.save(someUser);
+
+        // check default space saved
+        mockMvc.perform(get("/v2/document-space-mobile/spaces")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.spaces", hasSize(2)))
+                .andExpect(jsonPath("$.defaultSpace.id", equalTo(space2.toString())))
+                .andExpect(jsonPath("$.defaultSpace.privilege", equalTo("EDITOR")))
+                .andExpect(jsonPath("$.spaces[0].privilege", equalTo("VIEWER")))
+                .andExpect(jsonPath("$.spaces[1].privilege", equalTo("EDITOR")));
+
+        //
+        // test we can get list of a space's directory and see what of it we have as a favorite(s)
+
+        // look in the /docs folder, should not be any favorites
+        mockMvc.perform(get("/v2/document-space-mobile/spaces/{id}/contents?path=/docs", space2.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.favorite == true)]", hasSize(0)));
+
+        // make some names.txt a favorite
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/collection/favorite/", space2.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
+                    .currentPath("/docs")
+                    .items(Lists.newArrayList("names.txt"))
+                    .build())))
+                .andExpect(status().isCreated());
+
+        // verify its reflected as such in the api response for that directory for that user
+        mockMvc.perform(get("/v2/document-space-mobile/spaces/{id}/contents?path=/docs", space2.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.favorite == true)]", hasSize(1)));
+
+        // ask same endpoint but as ADMIN - item should not be a favorite
+        mockMvc.perform(get("/v2/document-space-mobile/spaces/{id}/contents?path=/docs", space2.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[?(@.favorite == true)]", hasSize(0)));
 
     }
 }
