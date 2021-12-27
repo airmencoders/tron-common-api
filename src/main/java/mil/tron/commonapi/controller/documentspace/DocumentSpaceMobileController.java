@@ -57,6 +57,40 @@ public class DocumentSpaceMobileController {
         this.dashboardUserService = dashboardUserService;
     }
 
+    private List<DocumentSpaceMobileResponseDto.SpaceInfo> extractUserPrivFromSpace(DocumentSpaceResponseDto space, Principal principal) {
+        List<DocumentSpaceMobileResponseDto.SpaceInfo> spacesWithPrivs = new ArrayList<>();
+        List<DocumentSpacePrivilegeDto> privs = documentSpaceService.getDashboardUserPrivilegesForDocumentSpace(space.getId(), principal.getName());
+        boolean hasMembership = false;
+        boolean hasWrite = false;
+        for (DocumentSpacePrivilegeDto priv : privs) {
+            if (priv.getType().equals(DocumentSpacePrivilegeType.MEMBERSHIP)) hasMembership = true;
+            else if (priv.getType().equals(DocumentSpacePrivilegeType.WRITE)) hasWrite = true;
+        }
+
+        if (hasMembership && hasWrite) {
+            spacesWithPrivs.add(DocumentSpaceMobileResponseDto.SpaceInfo.builder()
+                    .id(space.getId())
+                    .name(space.getName())
+                    .privilege(DocumentSpaceMobileResponseDto.DocumentSpaceShortPrivilege.ADMIN)
+                    .build());
+        }
+        else if (hasWrite) {
+            spacesWithPrivs.add(DocumentSpaceMobileResponseDto.SpaceInfo.builder()
+                    .id(space.getId())
+                    .name(space.getName())
+                    .privilege(DocumentSpaceMobileResponseDto.DocumentSpaceShortPrivilege.EDITOR)
+                    .build());
+        }
+        else {
+            spacesWithPrivs.add(DocumentSpaceMobileResponseDto.SpaceInfo.builder()
+                    .id(space.getId())
+                    .name(space.getName())
+                    .privilege(DocumentSpaceMobileResponseDto.DocumentSpaceShortPrivilege.VIEWER)
+                    .build());
+        }
+
+        return spacesWithPrivs;
+    }
 
     @Operation(summary = "Retrieves all document spaces that the requesting user can access, and their default space (if any)")
     @ApiResponses(value = {
@@ -73,7 +107,7 @@ public class DocumentSpaceMobileController {
         DocumentSpaceMobileResponseDto dto = new DocumentSpaceMobileResponseDto();
         DashboardUserDto userDto = dashboardUserService.getSelf(principal.getName());
         List<DocumentSpaceResponseDto> spaces = documentSpaceService.listSpaces(principal.getName());
-        List<DocumentSpaceMobileResponseDto.SpaceInfo> spacesWithPrivs = new ArrayList();
+        List<DocumentSpaceMobileResponseDto.SpaceInfo> spacesWithPrivs = new ArrayList<>();
         for (DocumentSpaceResponseDto space : spaces) {
 
             // if dashboard_admin - we're an admin for this space - move to next
@@ -87,36 +121,7 @@ public class DocumentSpaceMobileController {
                 continue;
             }
 
-
-            List<DocumentSpacePrivilegeDto> privs = documentSpaceService.getDashboardUserPrivilegesForDocumentSpace(space.getId(), principal.getName());
-            boolean hasMembership = false;
-            boolean hasWrite = false;
-            for (DocumentSpacePrivilegeDto priv : privs) {
-                if (priv.getType().equals(DocumentSpacePrivilegeType.MEMBERSHIP)) hasMembership = true;
-                else if (priv.getType().equals(DocumentSpacePrivilegeType.WRITE)) hasWrite = true;
-            }
-
-            if (hasMembership && hasWrite) {
-                spacesWithPrivs.add(DocumentSpaceMobileResponseDto.SpaceInfo.builder()
-                    .id(space.getId())
-                    .name(space.getName())
-                    .privilege(DocumentSpaceMobileResponseDto.DocumentSpaceShortPrivilege.ADMIN)
-                    .build());
-            }
-            else if (hasWrite) {
-                spacesWithPrivs.add(DocumentSpaceMobileResponseDto.SpaceInfo.builder()
-                        .id(space.getId())
-                        .name(space.getName())
-                        .privilege(DocumentSpaceMobileResponseDto.DocumentSpaceShortPrivilege.EDITOR)
-                        .build());
-            }
-            else {
-                spacesWithPrivs.add(DocumentSpaceMobileResponseDto.SpaceInfo.builder()
-                        .id(space.getId())
-                        .name(space.getName())
-                        .privilege(DocumentSpaceMobileResponseDto.DocumentSpaceShortPrivilege.VIEWER)
-                        .build());
-            }
+            spacesWithPrivs.addAll(extractUserPrivFromSpace(space, principal));
         }
 
         dto.setSpaces(spacesWithPrivs);
