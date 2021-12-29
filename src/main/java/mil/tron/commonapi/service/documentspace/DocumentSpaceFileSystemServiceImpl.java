@@ -5,6 +5,7 @@ import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 
 import liquibase.pro.packaged.S;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceFolderInfoDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -784,7 +785,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 	}
 
     @Override
-    public DocumentSpaceFileSystemEntry getFolderTotalSizeFromElement(FilePathSpec pathSpec) {
+    public DocumentSpaceFolderInfoDto getFolderTotalSizeFromElement(FilePathSpec pathSpec) {
         DocumentSpaceFileSystemEntry entry;
         if (!pathSpec.getFullPathSpec().isBlank()) {
             entry = repository.findByItemIdEquals(pathSpec.getItemId()).orElseThrow(
@@ -814,6 +815,11 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         }
 
         entry.setSize(size);
-        return entry;
+        return DocumentSpaceFolderInfoDto.builder()
+                .documentSpaceId(pathSpec.getDocumentSpaceId())
+                .size(size)
+                .itemId(entry.getItemId())
+                .itemName(entry.getItemName())
+                .build();
     }
 }

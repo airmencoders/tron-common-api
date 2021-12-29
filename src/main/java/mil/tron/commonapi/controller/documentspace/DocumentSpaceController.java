@@ -614,7 +614,7 @@ public class DocumentSpaceController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200",
 					description = "Successful operation - provided path and doc space were valid",
-					content = @Content(schema = @Schema(implementation = DocumentSpaceFileSystemEntry.class))),
+					content = @Content(schema = @Schema(implementation = DocumentSpaceFolderInfoDto.class))),
 			@ApiResponse(responseCode = "404",
 					description = "Not Found - space not found or supplied path does not exist",
 					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),

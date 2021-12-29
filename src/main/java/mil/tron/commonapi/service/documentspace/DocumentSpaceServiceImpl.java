@@ -624,10 +624,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	 * Gets a folders total size on disk
 	 * @param documentSpaceId doc space id
 	 * @param pathWithFolderName path including our folder name
-	 * @return DocumentSpaceFileSystemEntry with item's info and its size in the size field
+	 * @return DocumentSpaceFolderInfoDto with item's info and its size in the size field
 	 */
 	@Override
-	public DocumentSpaceFileSystemEntry getFolderSize(UUID documentSpaceId, String pathWithFolderName) {
+	public DocumentSpaceFolderInfoDto getFolderSize(UUID documentSpaceId, String pathWithFolderName) {
 		return documentSpaceFileSystemService.getFolderTotalSizeFromElement(documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, pathWithFolderName));
 	}
 
