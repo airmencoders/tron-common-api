@@ -14,6 +14,7 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -608,6 +609,27 @@ public class DocumentSpaceController {
 		}
 		return new ResponseEntity<>(fileSpecs, HttpStatus.OK);
 	}
+
+	@Operation(summary = "Get a folder's total size")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation - provided path and doc space were valid",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceFileSystemEntry.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found or supplied path does not exist",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Read privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+	@GetMapping("/spaces/{id}/folder-size")
+	public ResponseEntity<Object> getFolderSize(@PathVariable UUID id,
+													 @RequestParam(defaultValue = "") String path) {
+
+		return new ResponseEntity<>(documentSpaceService.getFolderSize(id, path), HttpStatus.OK);
+	}
+
 
 	@Operation(summary = "List folders and files that are in Archived status", description = "Lists folders and files that are archived -" +
 			"folders/sub-folders cannot be navigated into while in archived status - just folder name is shown")

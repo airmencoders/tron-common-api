@@ -38,5 +38,5 @@ public interface DocumentSpaceFileSystemService {
     void renameFolder(UUID spaceId, String existingPath, String newFolderName);
     
     List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(DocumentSpaceFileSystemEntry propagateFrom);
-    
+    DocumentSpaceFileSystemEntry getFolderTotalSizeFromElement(FilePathSpec pathSpec);
 }
