@@ -818,6 +818,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         return DocumentSpaceFolderInfoDto.builder()
                 .documentSpaceId(pathSpec.getDocumentSpaceId())
                 .size(size)
+                .count(items.size())
                 .itemId(entry.getItemId())
                 .itemName(entry.getItemName())
                 .build();

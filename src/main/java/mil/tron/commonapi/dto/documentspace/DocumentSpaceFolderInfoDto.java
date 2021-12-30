@@ -20,6 +20,10 @@ public class DocumentSpaceFolderInfoDto {
     @Builder.Default
     private long size = 0L;
 
+    @NotNull
+    @Builder.Default
+    private long count = 0L;
+
     @NotBlank
     @NotNull
     @Column(name="item_name", nullable = false)
