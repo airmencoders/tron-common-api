@@ -620,6 +620,17 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				DocumentSpaceFileSystemServiceImpl.joinPathParts(path, element));
 	}
 
+	/**
+	 * Gets a folders total size on disk
+	 * @param documentSpaceId doc space id
+	 * @param pathWithFolderName path including our folder name
+	 * @return DocumentSpaceFolderInfoDto with item's info and its size in the size field
+	 */
+	@Override
+	public DocumentSpaceFolderInfoDto getFolderSize(UUID documentSpaceId, String pathWithFolderName) {
+		return documentSpaceFileSystemService.getFolderTotalSizeFromElement(documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId, pathWithFolderName));
+	}
+
 	@Override
 	public void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out) throws RecordNotFoundException {
 		// dump all files and folders at this path and down
