@@ -174,6 +174,7 @@ public class DocumentSpaceMobileController {
                         .size(entry.getSize())
                         .spaceId(entry.getDocumentSpaceId().toString())
                         .isFolder(entry.isFolder())
+                        .parentId(entry.getParentEntryId())
                         .isFavorite(!favs.stream().filter(item -> item.getItemId().equals(entry.getItemId())).findAny().isEmpty())
                         .elementUniqueId(entry.getItemId())
                         .key(FilenameUtils.getName(entry.getItemName()))
