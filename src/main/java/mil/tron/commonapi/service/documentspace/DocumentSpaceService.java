@@ -6,6 +6,7 @@ import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
@@ -50,6 +51,7 @@ public interface DocumentSpaceService {
     List<DeleteError> deleteS3ObjectsByKey(String[] objKeys);
     S3PaginationDto listFiles(UUID documentSpaceId, String continuationToken, Integer limit);
     FilePathSpec statFileAtPath(UUID documentSpaceId, String path, String element);
+    DocumentSpaceFolderInfoDto getFolderSize(UUID documentSpaceId, String pathWithFolderName);
     List<S3ObjectSummary> getAllFilesInFolder(UUID documentSpaceId, String prefix, boolean includeArchived);
     FilePathSpec createFolder(UUID documentSpaceId, String path, String name);
     FilePathSpecWithContents getFolderContents(UUID documentSpaceId, String path);

@@ -1910,8 +1910,6 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isBadRequest());
     }
 
-    // Doc Space Mobile aggregation endpoints
-
     @Transactional
     @Rollback
     @Test
@@ -1993,9 +1991,9 @@ public class DocumentSpaceIntegrationTests {
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
-                    .currentPath("/docs")
-                    .items(Lists.newArrayList("names.txt"))
-                    .build())))
+                        .currentPath("/docs")
+                        .items(Lists.newArrayList("names.txt"))
+                        .build())))
                 .andExpect(status().isCreated());
 
         // verify its reflected as such in the api response for that directory for that user
@@ -2013,6 +2011,167 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.documents", hasSize(2)))
                 .andExpect(jsonPath("$.documents[?(@.favorite == true)]", hasSize(0)));
+
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testGetFolderSize() throws Exception {
+        UUID spaceId = UUID.randomUUID();
+
+        // create an empty space
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces").contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto.builder().id(spaceId).name("test1").build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.name", equalTo("test1")));
+
+        // create a new folder named "docs"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", spaceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("docs")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fullPathSpec", equalTo("docs")));
+
+        // add a file to "docs" named "hello2.txt" - note its size - should be 20bytes
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "hello2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!!!!!!!!".getBytes()
+        );
+        // upload it
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs", spaceId.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // verify its size - 20 bytes
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/folder-size?path=/docs", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size", equalTo(20)));
+
+        // now get a root listing and verify the "docs" folder is 20 bytes contained therein
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].key", equalTo("docs")))
+                .andExpect(jsonPath("$.documents[0].folder", equalTo(true)))
+                .andExpect(jsonPath("$.documents[0].size", equalTo(20)));
+
+        // create a new folder named "stuff" within "docs"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", spaceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("stuff")
+                        .path("/docs")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fullPathSpec", equalTo("docs/stuff")));
+
+        // add a file to "/docs/stuff" named "hello3.txt" - note its size - should be 30bytes
+        MockMultipartFile file2
+                = new MockMultipartFile(
+                "file",
+                "hello3.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!!!!!!!!!!!!!!!!!!".getBytes()
+        );
+        // upload it
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/docs/stuff", spaceId.toString()).file(file2)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // now get a listing of "/docs" and verify the "stuff" folder is 30 bytes contained therein
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/folder-size?path=/docs/stuff", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size", equalTo(30)));
+
+        // now get a listing of "/" and verify the "docs" folder is 50 bytes contained therein
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/folder-size?path=/", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size", equalTo(50)));
+
+        // now add a file at the root level
+        MockMultipartFile file3
+                = new MockMultipartFile(
+                "file",
+                "hello_root.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello".getBytes()
+        );
+        // upload it
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", spaceId.toString()).file(file3)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // root listing now 55 bytes
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/folder-size?path=/", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size", equalTo(55)));
+
+        // so now lets archive the file that's inside /docs/stuff (hello3.txt)
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("/docs/stuff")
+                        .itemsToArchive(Lists.newArrayList("hello3.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify the /docs/stuff folder is 0 bytes
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/folder-size?path=/docs/stuff", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size", equalTo(0)));
+
+        // verify the root listing reports /docs as just 20 bytes now
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/folder-size?path=/docs", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size", equalTo(20)));
+
+        // now unarchive that file and make sure it goes back up
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/unarchive", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceUnArchiveItemsDto.builder()
+                        .itemsToUnArchive(Lists.newArrayList("/docs/stuff/hello3.txt"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // verify the /docs back to 50 bytes now
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/folder-size?path=/docs", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size", equalTo(50)));
 
     }
 }

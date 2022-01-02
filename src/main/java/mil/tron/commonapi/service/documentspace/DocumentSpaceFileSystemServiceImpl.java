@@ -3,7 +3,9 @@ package mil.tron.commonapi.service.documentspace;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 
+import liquibase.pro.packaged.S;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceFolderInfoDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.BadRequestException;
@@ -35,6 +37,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry.NIL_UUID;
 
 @Service
 public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSystemService {
@@ -103,7 +107,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
         String lookupPath = conditionPath(path);
 
-        UUID parentFolderId = DocumentSpaceFileSystemEntry.NIL_UUID;
+        UUID parentFolderId = NIL_UUID;
         List<UUID> uuidList = new ArrayList<>();
         StringBuilder pathAccumulator = new StringBuilder();
 
@@ -161,7 +165,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
         return FilePathSpec.builder()
                 .documentSpaceId(spaceId)
-                .itemId(uuidList.isEmpty() ? DocumentSpaceFileSystemEntry.NIL_UUID : uuidList.get(uuidList.size() - 1))
+                .itemId(uuidList.isEmpty() ? NIL_UUID : uuidList.get(uuidList.size() - 1))
                 .itemName(entry != null ? entry.getItemName() : "")
                 .fullPathSpec(pathAccumulator.toString())
                 .uuidList(uuidList)
@@ -197,7 +201,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         checkSpaceIsValid(spaceId);
         FilePathSpec entry = parsePathToFilePathSpec(spaceId, PATH_SEP);
         DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {
-            if (entry.getItemId().equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
+            if (entry.getItemId().equals(NIL_UUID)) {
                 // this is the root of the document space - so make a new element called "root" to base off of
                 return DocumentSpaceFileSystemEntry.builder()
                         .documentSpaceId(spaceId)
@@ -261,7 +265,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         uuidList.add(entity.getItemId());
 
         // traverse up in the tree to the root of the space (if we're not already at the root...)
-        while (!parentFolderId.equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
+        while (!parentFolderId.equals(NIL_UUID)) {
 
             // get current item's parent entry from the db
             DocumentSpaceFileSystemEntry entry = repository
@@ -310,7 +314,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         String lookupPath = conditionPath(path);
         FilePathSpec entry = parsePathToFilePathSpec(spaceId, lookupPath);
         DocumentSpaceFileSystemEntry element = repository.findByItemIdEquals(entry.getItemId()).orElseGet(() -> {
-            if (entry.getItemId().equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
+            if (entry.getItemId().equals(NIL_UUID)) {
                 // this is the root of the document space - so make a new element called "root" to base off of
                 return DocumentSpaceFileSystemEntry.builder()
                         .documentSpaceId(spaceId)
@@ -323,12 +327,16 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             }
         });
 
+        return this.dumpElementTreeFromElementEntry(element, entry, lookupPath, includeArchived);
+    }
+
+    private FileSystemElementTree dumpElementTreeFromElementEntry(DocumentSpaceFileSystemEntry element, FilePathSpec entry, String lookupPath, boolean includeArchived) {
         FileSystemElementTree tree = new FileSystemElementTree();
         tree.setValue(element);
-        List<S3ObjectSummary> files = documentSpaceService.getAllFilesInFolder(spaceId, lookupPath, includeArchived);
+        List<S3ObjectSummary> files = documentSpaceService.getAllFilesInFolder(element.getDocumentSpaceId(), lookupPath, includeArchived);
         tree.setFilePathSpec(entry);
         tree.setFiles(files);
-        return buildTree(spaceId, element, tree, includeArchived);
+        return buildTree(element.getDocumentSpaceId(), element, tree, includeArchived);
     }
 
     /**
@@ -545,7 +553,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             FilePathSpec owningElement = parsePathToFilePathSpec(spaceId, item.getPath());
 
             // if parent is not ROOT..
-            if (!owningElement.getItemId().equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
+            if (!owningElement.getItemId().equals(NIL_UUID)) {
                 // refuse to unarchive if its parent is archived (like mac os)
                 DocumentSpaceFileSystemEntry parentElem = repository.findByItemIdEquals(owningElement.getItemId())
                         .orElseThrow(() -> new RecordNotFoundException("Cannot find that parent folder record"));
@@ -704,14 +712,14 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 	@Override
 	public FilePathSpec getFilePathSpec(UUID documentSpaceId, UUID itemId) throws RecordNotFoundException {
 		// Special case for files living at the root directory
-		if (itemId.equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
+		if (itemId.equals(NIL_UUID)) {
 			return FilePathSpec.builder()
 	                .documentSpaceId(documentSpaceId)
-	                .itemId(DocumentSpaceFileSystemEntry.NIL_UUID)
+	                .itemId(NIL_UUID)
 	                .itemName("")
 	                .fullPathSpec("")
 	                .uuidList(new ArrayList<>())
-	                .parentFolderId(DocumentSpaceFileSystemEntry.NIL_UUID)
+	                .parentFolderId(NIL_UUID)
 	                .build();
 		}
 		
@@ -761,7 +769,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 		DocumentSpaceFileSystemEntry currentEntry = from;
 		
 		Deque<DocumentSpaceFileSystemEntry> entryHierarchy = new ArrayDeque<>();
-		while (!currentEntry.getParentEntryId().equals(DocumentSpaceFileSystemEntry.NIL_UUID)) {
+		while (!currentEntry.getParentEntryId().equals(NIL_UUID)) {
 			currentEntry = repository.findByItemIdEquals(currentEntry.getParentEntryId()).orElse(null);
 			
 			// If, while going up the ancestor tree, an ancestor no longer exists then
@@ -775,4 +783,44 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 		
 		return entryHierarchy;
 	}
+
+    @Override
+    public DocumentSpaceFolderInfoDto getFolderTotalSizeFromElement(FilePathSpec pathSpec) {
+        DocumentSpaceFileSystemEntry entry;
+        if (!pathSpec.getFullPathSpec().isBlank()) {
+            entry = repository.findByItemIdEquals(pathSpec.getItemId()).orElseThrow(
+                    () -> new RecordNotFoundException(String.format("Unable to lookup the item %s in the database", pathSpec.getItemName()))
+            );
+        } else {
+            entry = DocumentSpaceFileSystemEntry.builder()
+                    .documentSpaceId(pathSpec.getDocumentSpaceId())
+                    .parentEntryId(NIL_UUID)
+                    .itemId(NIL_UUID)
+                    .isFolder(true)
+                    .isDeleteArchived(false)
+                    .build();
+        }
+
+        if (!entry.isFolder()) {
+            throw new BadRequestException("Referenced item is not a folder");
+        }
+
+        FileSystemElementTree tree = this.dumpElementTreeFromElementEntry(entry, pathSpec, conditionPath(pathSpec.getFullPathSpec()), false);
+
+        // get total size of the tree now...
+        long size = 0;
+        List<S3ObjectAndFilename> items = this.flattenTreeToS3ObjectAndFilenameList(tree);
+        for (S3ObjectAndFilename item : items) {
+            size += item.getS3Object().getSize();
+        }
+
+        entry.setSize(size);
+        return DocumentSpaceFolderInfoDto.builder()
+                .documentSpaceId(pathSpec.getDocumentSpaceId())
+                .size(size)
+                .count(items.size())
+                .itemId(entry.getItemId())
+                .itemName(entry.getItemName())
+                .build();
+    }
 }

@@ -1,6 +1,7 @@
 package mil.tron.commonapi.service.documentspace;
 
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceFolderInfoDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.service.documentspace.util.*;
 
@@ -38,5 +39,5 @@ public interface DocumentSpaceFileSystemService {
     void renameFolder(UUID spaceId, String existingPath, String newFolderName);
     
     List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(DocumentSpaceFileSystemEntry propagateFrom);
-    
+    DocumentSpaceFolderInfoDto getFolderTotalSizeFromElement(FilePathSpec pathSpec);
 }
