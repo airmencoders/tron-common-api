@@ -39,10 +39,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.transaction.Transactional;
 import java.io.*;
+import java.nio.file.attribute.FileTime;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
+import java.text.SimpleDateFormat;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -655,6 +659,13 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				//  unzip on some systems - signature of possible zip-slip exploit
 				ZipEntry entry = new ZipEntry(item.getPathAndFileNameWithoutLeadingSlash());
 				S3Object object = documentSpaceClient.getObject(bucketName, item.getS3Object().getKey());
+
+				// workaround to get our zip entries to stay in UTC time, otherwise according to its javadoc (and confirmed it does)
+				//  it will coerce given last modification date to the systems default... which SHOULD be UTC on the servers
+				//  but here we make sure and it helps too on dev machines
+				LocalDateTime ldt = object.getObjectMetadata().getLastModified().toInstant().atZone(ZoneOffset.UTC).toLocalDateTime();
+				entry.setTimeLocal(ldt);
+
 				try (S3ObjectInputStream dataStream = object.getObjectContent()) {
 					zipOut.putNextEntry(entry);
 					dataStream.transferTo(zipOut);
