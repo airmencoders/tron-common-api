@@ -33,6 +33,10 @@ public class DocumentSpaceUserCollectionResponseDto {
 	@Getter
 	@Setter
 	private String key;
+
+	@Getter
+	@Setter
+	private String path;
 	
 	@Getter
 	@Setter
