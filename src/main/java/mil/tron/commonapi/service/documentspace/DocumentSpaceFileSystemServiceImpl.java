@@ -1,9 +1,7 @@
 package mil.tron.commonapi.service.documentspace;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
-
-import liquibase.pro.packaged.S;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceFolderInfoDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
@@ -14,28 +12,20 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.exception.documentspace.FolderDepthException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceRepository;
-import mil.tron.commonapi.service.documentspace.util.*;
-
+import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
+import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
+import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
+import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.file.PathUtils;
-import org.assertj.core.util.Lists;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry.NIL_UUID;
@@ -487,9 +477,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 		if (errors.isEmpty()) {
 			documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolder(
 					tree.getFilePathSpec().getDocumentSpaceId(), tree.getValue().getItemId());
-			
+
 			repository.deleteByDocumentSpaceIdEqualsAndItemIdEquals(tree.getValue().getDocumentSpaceId(),
 					tree.getValue().getItemId());
+			repository.flush();
 		} else {
 			documentSpaceFileService.deleteAllDocumentSpaceFilesInParentFolderExcept(
 					tree.getFilePathSpec().getDocumentSpaceId(), tree.getValue().getItemId(),
@@ -689,10 +680,93 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
     	return DigestUtils.md5Hex(String.format("%s/%s/%s", documentSpaceId.toString(), parentFolderId.toString(), folderName));
     }
 
+    @Override
+    public void saveItem(DocumentSpaceFileSystemEntry entry) {
+        repository.saveAndFlush(entry);
+    }
+
+    @Override
+    public DocumentSpaceFileSystemEntry getElementByItemId(UUID itemId) {
+        return repository.findByItemIdEquals(itemId).orElseThrow(() -> new RecordNotFoundException("No item with that Item Id Exists"));
+    }
+
+    @Override
+    public Optional<DocumentSpaceFileSystemEntry> getByParentIdAndItemName(UUID spaceId, UUID parentId, String itemName) {
+        return repository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, parentId);
+    }
+
+    /**
+     * For cross space moves, we need to go thru each element and change the document space ID... just changing its parent
+     * earlier does no good... we can end up with orphaned entries
+     * @param destinationSpaceId
+     * @param startingEntry
+     * @param newParentId
+     */
+    @Override
+    public void moveFileSystemEntryTree(UUID destinationSpaceId, DocumentSpaceFileSystemEntry startingEntry, UUID newParentId) {
+
+        // we don't need to do this logic if moving within same document space
+        if (destinationSpaceId.equals(startingEntry.getDocumentSpaceId())) return;
+
+        // see if this entry contains children (if its a parent to anyone)
+        List<DocumentSpaceFileSystemEntry> children = repository
+                .findByDocumentSpaceIdEqualsAndParentEntryIdEquals(startingEntry.getDocumentSpaceId(), startingEntry.getItemId());
+
+        if (children.isEmpty()) return;
+
+        for (DocumentSpaceFileSystemEntry child : children) {
+            child.setDocumentSpaceId(destinationSpaceId);
+            child = repository.saveAndFlush(child);
+            duplicateFileSystemEntryTree(destinationSpaceId, child, child.getItemId()); // recurse
+        }
+    }
+
+    /**
+     * Copies the contents contained underneath the given file system entry (if it contains children).  This is
+     * used for folder copy operations before we make the actual copies of the physical files pointed to within S3.
+     * @param destinationSpaceId what space ID we're copying to
+     * @param startingEntry the file system entry to look at, see if it contains children, and then recurse into copying each
+     *                      entry to its own, new entry
+     * @param newParentId the new parent (changes on each re-cursed call) to assign the current child
+     */
+    @Override
+    public void duplicateFileSystemEntryTree(UUID destinationSpaceId, DocumentSpaceFileSystemEntry startingEntry, UUID newParentId) {
+
+        // see if this entry contains children (if its a parent to anyone)
+        List<DocumentSpaceFileSystemEntry> children = repository
+                .findByDocumentSpaceIdEqualsAndParentEntryIdEquals(startingEntry.getDocumentSpaceId(), startingEntry.getItemId());
+
+        if (children.isEmpty()) return;
+
+        for (DocumentSpaceFileSystemEntry child : children) {
+            DocumentSpaceFileSystemEntry childCopy = DocumentSpaceFileSystemEntry.builder()
+                    .id(UUID.randomUUID())
+                    .isFolder(child.isFolder())
+                    .isDeleteArchived(child.isDeleteArchived())
+                    .lastModifiedOn(child.getLastModifiedOn())
+                    .lastModifiedBy(child.getLastModifiedBy())
+                    .parentEntryId(newParentId)
+                    .itemId(UUID.randomUUID())
+                    .hasNonArchivedContents(child.isHasNonArchivedContents())
+                    .size(child.getSize())
+                    .documentSpaceId(destinationSpaceId)
+                    .createdBy(child.getCreatedBy())
+                    .createdOn(child.getCreatedOn())
+                    .etag(child.getEtag())
+                    .itemName(child.getItemName())
+                    .build();
+
+            childCopy = repository.saveAndFlush(childCopy);
+            duplicateFileSystemEntryTree(destinationSpaceId, childCopy, childCopy.getItemId()); // recurse
+        }
+    }
+
 	@Override
 	public List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(
 			DocumentSpaceFileSystemEntry propagateFrom) {
 		Deque<DocumentSpaceFileSystemEntry> entitiesToPropagateTo = null;
+		Date lastModifiedDate = repository.findMostRecentModifiedDateAmongstSiblings(propagateFrom.getDocumentSpaceId(), propagateFrom.getParentEntryId())
+                .orElse(new Date());
 		
 		try {
 			entitiesToPropagateTo = getAncestorHierarchy(propagateFrom);
@@ -704,7 +778,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 			return new ArrayList<>();
 		}
 		
-		entitiesToPropagateTo.forEach(entity -> entity.setLastModifiedOn(new Date()));
+		entitiesToPropagateTo.forEach(entity -> entity.setLastModifiedOn(lastModifiedDate));
 		
 		return repository.saveAll(entitiesToPropagateTo);
 	}

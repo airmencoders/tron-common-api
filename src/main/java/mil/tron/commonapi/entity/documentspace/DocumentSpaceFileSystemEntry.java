@@ -134,7 +134,11 @@ public class DocumentSpaceFileSystemEntry {
             this.parentEntryId = NIL_UUID;
         }
 
-		setLastModifiedOn(new Date());
+    	// respect if the last mod'd date is already populated
+        //  so as to preserve some semblance of a version
+    	if (this.lastModifiedOn == null) {
+            setLastModifiedOn(new Date());
+        }
 		setLastModifiedBy(getCurrentAuditor());
 	}
 }

@@ -7,6 +7,7 @@ import mil.tron.commonapi.service.documentspace.util.*;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface DocumentSpaceFileSystemService {
@@ -37,6 +38,11 @@ public interface DocumentSpaceFileSystemService {
     void unArchiveElements(UUID spaceId, List<String> items);
     void deleteFolder(UUID spaceId, String path);
     void renameFolder(UUID spaceId, String existingPath, String newFolderName);
+    void saveItem(DocumentSpaceFileSystemEntry entry);
+    void moveFileSystemEntryTree(UUID destinationSpaceId, DocumentSpaceFileSystemEntry startingEntry, UUID newParentId);
+    void duplicateFileSystemEntryTree(UUID destinationSpaceId, DocumentSpaceFileSystemEntry startingEntry, UUID newParentId);
+    DocumentSpaceFileSystemEntry getElementByItemId(UUID itemId);
+    Optional<DocumentSpaceFileSystemEntry> getByParentIdAndItemName(UUID spaceId, UUID parentId, String itemName);
     
     List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(DocumentSpaceFileSystemEntry propagateFrom);
     DocumentSpaceFolderInfoDto getFolderTotalSizeFromElement(FilePathSpec pathSpec);

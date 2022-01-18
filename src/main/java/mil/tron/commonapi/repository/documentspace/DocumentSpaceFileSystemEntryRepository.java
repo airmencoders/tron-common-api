@@ -6,12 +6,11 @@ import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import javax.transaction.Transactional;
+import java.util.*;
 
 public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<DocumentSpaceFileSystemEntry, UUID> {
 
@@ -25,8 +24,16 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
     List<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndParentEntryIdEquals(UUID spaceId, UUID parentId);
     List<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(UUID spaceId, UUID parentId, boolean archived);
 
+    /*
+     * Finds the most recent Date (last modified date) given space Id and parent Id (folder) - so basically most recent mod date inside given folder
+     */
+    @Query(value = "select max(last_modified_on) from file_system_entries where doc_space_id = :spaceId and parent_entry_id = :parentId", nativeQuery = true)
+    Optional<Date> findMostRecentModifiedDateAmongstSiblings(UUID spaceId, UUID parentId);
+
+    @Modifying
+    @Transactional
     void deleteByDocumentSpaceIdEqualsAndItemIdEquals(UUID spaceId, UUID itemId);
-    
+
     /*
      * Folder methods
      */
@@ -39,7 +46,13 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
     List<DocumentSpaceFileSystemEntry> findByDocumentSpaceIdAndParentEntryIdAndIsFolderFalse(UUID spaceId, UUID parentId);
     boolean existsByParentEntryIdAndIsDeleteArchivedFalse(UUID parentId);
     Optional<DocumentSpaceFileSystemEntry> findFileByDocumentSpaceIdAndParentEntryIdAndItemNameAndIsFolderFalse(UUID documentSpaceId, UUID parentId, String itemName);
+
+    @Modifying
+    @Transactional
     void deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndIsFolderFalse(UUID documentSpaceId, UUID parentId);
+
+    @Modifying
+    @Transactional
     void deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndItemNameNotInAndIsFolderFalse(UUID documentSpaceId, UUID parentId, Set<String> excludedFilenames);
     
     /**

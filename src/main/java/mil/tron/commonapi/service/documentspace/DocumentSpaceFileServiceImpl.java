@@ -57,11 +57,13 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 	@Override
 	public void deleteDocumentSpaceFile(DocumentSpaceFileSystemEntry documentSpaceFile) {
 		documentSpaceFileSystemRepository.delete(documentSpaceFile);
+		documentSpaceFileSystemRepository.flush();
 	}
 
 	@Override
 	public void deleteAllDocumentSpaceFilesInParentFolder(UUID documentSpaceId, UUID parentId) {
 		documentSpaceFileSystemRepository.deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndIsFolderFalse(documentSpaceId, parentId);
+		documentSpaceFileSystemRepository.flush();
 	}
 
 	@Override
@@ -70,6 +72,7 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 		documentSpaceFileSystemRepository
 				.deleteAllEntriesByDocumentSpaceIdAndParentEntryIdAndItemNameNotInAndIsFolderFalse(documentSpaceId,
 						parentFolderId, excludedFilenames);
+		documentSpaceFileSystemRepository.flush();
 	}
 
 	@Override
