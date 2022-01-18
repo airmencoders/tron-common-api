@@ -14,8 +14,6 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
@@ -23,7 +21,6 @@ import mil.tron.commonapi.service.documentspace.DocumentSpaceService;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceUserCollectionService;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
-import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.apache.commons.io.FilenameUtils;
 import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
@@ -259,7 +256,9 @@ public class DocumentSpaceController {
 
 	}
 
-    @Operation(summary = "Uploads a file to a Document Space", description = "Uploads a file to a Document Space")
+    @Operation(summary = "Uploads a file to a Document Space", description = "Uploads a file to a Document Space. " +
+			"API will attempt to use the `Last-Modified` date (formatted as long epoch date) in the header in order to keep" +
+			" the uploaded copy's modified date to track its origin.  If that header is not given, then current date/time will be used.")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", 
 				description = "Successful operation"),
@@ -273,10 +272,20 @@ public class DocumentSpaceController {
     @PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@PostMapping(value = "/spaces/{id}/files/upload", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public Map<String, String> upload(@PathVariable UUID id,
+                                      HttpServletRequest request,
                                       @RequestParam(value = "path", defaultValue = "") String path,
                                       @RequestPart("file") MultipartFile file) {
 
-		documentSpaceService.uploadFile(id, path, file);
+		// attempt to preserve the last modified date the client sent us (if it did) in the Last-Modified header
+		Date lastModified = new Date();
+		if (request.getHeader("last-modified") != null) {
+			try {
+				lastModified = new Date(Long.parseLong(request.getHeader("Last-Modified")));
+			} catch (NumberFormatException e) {
+				lastModified = new Date();
+			}
+		}
+		documentSpaceService.uploadFile(id, path, file, lastModified);
 		 
         Map<String, String> result = new HashMap<>();
         result.put("key", file.getOriginalFilename());
@@ -927,6 +936,62 @@ public class DocumentSpaceController {
 	@GetMapping("/spaces/{id}/path/{entryId}")
 	public ResponseEntity<String> getDocumentSpaceEntryPath(@PathVariable UUID id, @PathVariable UUID entryId, Principal principal){
 		return ResponseEntity.ok(documentSpaceFileSystemService.getFilePath(id, entryId));
+	}
+
+	@Operation(summary = "Moves file(s)/folders(s) from one location in a document space to another within same space.",
+			description = "Moves files either within the same space (if sourceSpaceId is equal to the destination space 'id').  If moving cross-space, " +
+					"then the user must have READ privileges at a minimum on the source space ID - and obviously needs at least WRITE at the destination")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') || " +
+			"(@accessCheckDocumentSpace.hasReadAccess(authentication, #sourceSpaceId ?: #id) and @accessCheckDocumentSpace.hasWriteAccess(authentication, #id) and #principal != null)")
+	@PostMapping("/spaces/{id}/move")
+	public ResponseEntity<Object> moveFiles(@Parameter(name = "id", description = "UUID of the destination space", required=true) @PathVariable UUID id,
+											Principal principal,
+											@RequestBody Map<String, String> files,
+											@Parameter(name = "sourceSpaceId", description = "UUID of the source space (if cross space moving) - otherwise uses current space")
+												@RequestParam(required=false) UUID sourceSpaceId) {
+
+		for (Map.Entry<String, String> entry : files.entrySet()) {
+			documentSpaceService.moveFile(id, sourceSpaceId, entry.getKey(), entry.getValue());
+		}
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Copies file(s)/folders(s) from one location in a document space to another within same space.",
+	description = "Copies files either within the same space (if sourceSpaceId is equal to the destination space 'id').  If copying cross-space, " +
+			"then the user must have READ privileges at a minimum on the source space ID - and obviously needs at least WRITE at the destination")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') || " +
+			"(@accessCheckDocumentSpace.hasReadAccess(authentication, #sourceSpaceId ?: #id) and @accessCheckDocumentSpace.hasWriteAccess(authentication, #id) and #principal != null)")
+	@PostMapping("/spaces/{id}/copy")
+	public ResponseEntity<Object> copyFiles(@Parameter(name="id", description="Destination Space UUID", required=true) @PathVariable UUID id,
+											Principal principal,
+											@RequestBody Map<String, String> files,
+											@Parameter(name = "sourceSpaceId", description = "UUID of the source space (if cross space copying) - otherwise uses current space")
+												@RequestParam(required=false) UUID sourceSpaceId) {
+
+		for (Map.Entry<String, String> entry : files.entrySet()) {
+			documentSpaceService.copyFile(id, sourceSpaceId, entry.getKey(), entry.getValue());
+		}
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
 }

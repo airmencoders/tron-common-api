@@ -15,8 +15,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.OutputStream;
 import java.security.Principal;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -38,11 +41,15 @@ public interface DocumentSpaceService {
 	void downloadAllInSpaceAndCompress(UUID documentSpaceId, OutputStream out);
 	List<S3Object> getFiles(UUID documentSpaceId, String path, Set<String> fileKeys, String documentSpaceUsername);
 	void downloadAndWriteCompressedFiles(UUID documentSpaceId, String path, Set<String> fileKeys, OutputStream out, String documentSpaceUsername);
+	void uploadFile(UUID documentSpaceId, String path, MultipartFile file, @NotNull Date lastModified);
 	void uploadFile(UUID documentSpaceId, String path, MultipartFile file);
 	void renameFile(UUID documentSpaceId, String path, String fileKey, String newName);
     void deleteFile(UUID documentSpaceId, String path, String fileKey);
     void deleteFile(UUID documentSpaceId, UUID parentFolderId, String filename);
     void archiveItem(UUID documentSpaceId, UUID parentFolderId, String name);
+    void moveOrCopyFile(UUID documentSpaceId, UUID sourceSpaceId, String source, String dest, boolean copy);
+    void moveFile(UUID documentSpaceId, @Nullable UUID sourceSpaceId, String source, String dest);
+    void copyFile(UUID documentSpaceId, @Nullable UUID sourceSpaceId, String source, String dest);
     void archiveItems(UUID documentSpaceId, String currentPath, List<String> items);
     void unArchiveItems(UUID documentSpaceId, List<String> items);
     void deleteItems(UUID documentSpaceId, String currentPath, List<String> items);

@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry.NIL_UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
@@ -148,7 +149,7 @@ public class DocumentSpaceFileSystemServiceTests {
         DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder/");
 
         FilePathSpec firstSpec = service.convertFileSystemEntityToFilePathSpec(firstEntry);
-        assertEquals(DocumentSpaceFileSystemEntry.NIL_UUID, firstEntry.getParentEntryId());
+        assertEquals(NIL_UUID, firstEntry.getParentEntryId());
         assertEquals(firstEntry.getDocumentSpaceId(), firstSpec.getDocumentSpaceId());
         assertEquals(1, firstSpec.getUuidList().size());  // only itself cause root is owner
 
@@ -161,7 +162,7 @@ public class DocumentSpaceFileSystemServiceTests {
         //
         // test out getting a path spec using string paths (vs the object entities above)
         FilePathSpec firstSpecFromPath = service.parsePathToFilePathSpec(firstEntry.getDocumentSpaceId(), "some-folder/");
-        assertEquals(DocumentSpaceFileSystemEntry.NIL_UUID, firstSpecFromPath.getParentFolderId());
+        assertEquals(NIL_UUID, firstSpecFromPath.getParentFolderId());
         assertEquals(firstEntry.getDocumentSpaceId(), firstSpecFromPath.getDocumentSpaceId());
         assertEquals(1, firstSpecFromPath.getUuidList().size());  // only itself cause root is owner
 
@@ -182,6 +183,56 @@ public class DocumentSpaceFileSystemServiceTests {
         DocumentSpaceFileSystemEntry secondEntry = service.addFolder(spaceId, "some-folder2", "some-folder");
         FilePathSpec spec = service.convertFileSystemEntityToFilePathSpec(secondEntry);
         assertEquals(String.format("%s/%s/%s/", spaceId, firstEntry.getItemId(), secondEntry.getItemId()), spec.getDocSpaceQualifiedPath());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testGetMinioPathOfFile() {
+        // test that we can get the minio path (ready to use) for addressing a file in the doc space in Minio
+        UUID spaceId = UUID.randomUUID();
+        UUID grandParent = UUID.randomUUID();
+        UUID parent = UUID.randomUUID();
+
+        DocumentSpace docSpace = DocumentSpace.builder()
+                .id(spaceId)
+                .name("TestSpace")
+                .build();
+        documentSpaceRepository.save(docSpace);
+
+        DocumentSpaceFileSystemEntry entry1 = DocumentSpaceFileSystemEntry.builder()
+                .documentSpaceId(spaceId)
+                .parentEntryId(NIL_UUID)
+                .isFolder(true)
+                .itemId(grandParent)
+                .itemName("grandparent")
+                .etag("etag1")
+                .build();
+        documentSpaceFileSystemRepository.save(entry1);
+
+        DocumentSpaceFileSystemEntry entry2 = DocumentSpaceFileSystemEntry.builder()
+                .documentSpaceId(spaceId)
+                .parentEntryId(grandParent)
+                .isFolder(true)
+                .itemId(parent)
+                .etag("etag2")
+                .itemName("parent")
+                .build();
+        documentSpaceFileSystemRepository.save(entry2);
+
+        DocumentSpaceFileSystemEntry entry3 = DocumentSpaceFileSystemEntry.builder()
+                .documentSpaceId(spaceId)
+                .parentEntryId(parent)
+                .isFolder(false)
+                .itemId(UUID.randomUUID())
+                .etag("etag3")
+                .itemName("names.txt")
+                .build();
+        documentSpaceFileSystemRepository.save(entry3);
+
+        FilePathSpec spec = service.parsePathToFilePathSpec(spaceId, "grandparent/parent/names.txt");
+
+        assertEquals(String.format("%s/%s/%s/%s", spaceId, grandParent, parent, entry3.getItemName()), spec.getDocSpaceQualifiedFilePath());
     }
 
     @Transactional
@@ -378,7 +429,7 @@ public class DocumentSpaceFileSystemServiceTests {
     @Rollback
     @Test
     void getFilePathSpec_shouldReturnSpecialCase_whenRootElement() {
-        FilePathSpec spec = service.getFilePathSpec(spaceId, DocumentSpaceFileSystemEntry.NIL_UUID);
+        FilePathSpec spec = service.getFilePathSpec(spaceId, NIL_UUID);
         
         assertThat(spec.getDocSpaceQualifiedPath()).isEqualTo(String.format("%s/", spaceId));
         assertThat(spec.getFullPathSpec()).isEqualTo(Paths.get("").toString());

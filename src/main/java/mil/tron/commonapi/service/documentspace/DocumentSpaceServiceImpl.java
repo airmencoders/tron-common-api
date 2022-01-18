@@ -8,6 +8,7 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
 import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -28,6 +29,7 @@ import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
 import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FilenameUtils;
+import org.assertj.core.util.Lists;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -38,19 +40,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.transaction.Transactional;
+import javax.validation.constraints.NotNull;
 import java.io.*;
-import java.nio.file.attribute.FileTime;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
-import java.text.SimpleDateFormat;
 import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import static mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemServiceImpl.joinPathParts;
 
 @Slf4j
 @Service
@@ -286,8 +288,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 						.findAny();
 
 				if (summary.isPresent()) {
-					S3ObjectAndFilename s3ObjAndFilename = new S3ObjectAndFilename(DocumentSpaceFileSystemServiceImpl
-							.joinPathParts(contentsAtRelativeRoot.getFullPathSpec(), fileEntry.getItemName()),
+					S3ObjectAndFilename s3ObjAndFilename = new S3ObjectAndFilename(joinPathParts(contentsAtRelativeRoot.getFullPathSpec(), fileEntry.getItemName()),
 							summary.get());
 					itemsToWrite.add(s3ObjAndFilename);
 				}
@@ -305,7 +306,13 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) throws RecordNotFoundException {
+	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file) {
+		// overload for when the last modified date isn't given
+		this.uploadFile(documentSpaceId, path, file, new Date());
+	}
+
+	@Override
+	public void uploadFile(UUID documentSpaceId, String path, MultipartFile file, @NotNull Date lastModified) throws RecordNotFoundException {
 		getDocumentSpaceOrElseThrow(documentSpaceId);
 
 		// we need to build these out here because on a folder upload, the file "names" will actually contain paths
@@ -321,17 +328,24 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 		// get the location to which we want to upload this file too - and create folders if they don't exist
 		FilePathSpec filePathSpec = documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId,
-				DocumentSpaceFileSystemServiceImpl.joinPathParts(path, additionalPath),
+				joinPathParts(path, additionalPath),
 				true);
 
 		String prefix = getPathPrefix(documentSpaceId,
-				DocumentSpaceFileSystemServiceImpl.joinPathParts(path, additionalPath),
+				joinPathParts(path, additionalPath),
 				filePathSpec);
 		
 		ObjectMetadata metaData = new ObjectMetadata();
 		metaData.setContentType(file.getContentType());
+		metaData.setLastModified(lastModified);  // attempt to preserve file last modified date
 		metaData.setContentLength(file.getSize());
-		
+
+		// but also stash the last modified (as epoch milli) into metadata - S3 does not let you set the last modified date
+		// but rather uses the date it was uploaded/changed from thereon.. but helps us in no way for wanting to upload
+		// older files from someones computer - we'll attempt to fetch this value too when writing out ZipFileEntries so as
+		// to make sure the date is preserved to the downloaded/unzipped item
+		metaData.setUserMetadata(Map.of("lastModified", String.valueOf(lastModified.toInstant().toEpochMilli())));
+
 		if (filename == null) {
 			throw new BadRequestException("Uploaded file is missing a filename");
 		}
@@ -364,12 +378,14 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 						.parentEntryId(filePathSpec.getItemId())
 						.isFolder(false)
 						.itemName(filename)
+						.lastModifiedOn(lastModified)
 						.size(file.getSize())
 						.etag(Hex.encodeHexString(md.digest()))
 						.isDeleteArchived(false)
 						.build();
 			} else {
 				documentSpaceFile.setSize(file.getSize());
+				documentSpaceFile.setLastModifiedOn(lastModified);
 				documentSpaceFile.setEtag(Hex.encodeHexString(md.digest()));
 			}
 			
@@ -442,7 +458,266 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			}
 		}
 	}
-	
+
+	/**
+	 * Moves file from one location to another within given space
+	 * @param documentSpaceId
+	 * @param sourceSpaceId (optionally null) the source space where we're moving from (if null assumes documentSpaceId is source)
+	 * @param source
+	 * @param dest
+	 */
+	@Override
+	public void moveFile(UUID documentSpaceId, @javax.annotation.Nullable UUID sourceSpaceId, String source, String dest) {
+		if (sourceSpaceId == null) {
+			sourceSpaceId = documentSpaceId;
+		}
+
+		this.moveOrCopyFile(documentSpaceId, sourceSpaceId, source, dest, false);
+	}
+
+	/**
+	 * Copies file from one location to another within given space
+	 * @param documentSpaceId
+	 * @param sourceSpaceId (optionally null) the source space where we're copying from (if null assumes documentSpaceId is source)
+	 * @param source
+	 * @param dest
+	 */
+	@Override
+	public void copyFile(UUID documentSpaceId, @javax.annotation.Nullable UUID sourceSpaceId, String source, String dest) {
+		if (sourceSpaceId == null) {
+			sourceSpaceId = documentSpaceId;
+		}
+
+		this.moveOrCopyFile(documentSpaceId, sourceSpaceId, source, dest, true);
+	}
+
+	/**
+	 * Move or copies a file or folder from one location to another within the given space
+	 * @param destinationSpaceId - document space UUID we're doing this operation in (the destination for copying or moving)
+	 * @param sourceSpaceId - source space files are coming from
+	 * @param source - the source path string (including path and final file or folder name)
+	 * @param dest - the destination path string (including path and final file or folder name)
+	 * @param copy - true if this is a copy operation
+	 */
+	@Transactional
+	@Override
+	public void moveOrCopyFile(UUID destinationSpaceId, UUID sourceSpaceId, String source, String dest, boolean copy) {
+		// first make sure the source file exists and get a handle to its file system entry
+		FilePathSpec sourceSpecification = documentSpaceFileSystemService.parsePathToFilePathSpec(sourceSpaceId, source);
+		DocumentSpaceFileSystemEntry sourceEntry = documentSpaceFileSystemService.getElementByItemId(sourceSpecification.getItemId());
+
+		// break down the source into its path and name components
+		String sourcePath = FilenameUtils.getPath(source);
+		String sourceFileName = FilenameUtils.getName(source);
+
+		// break down the destination into its path and name components
+		String destPath = FilenameUtils.getPath(dest);
+		String destItemName = FilenameUtils.getName(dest);
+
+		// validate the new destination name
+		DocSpaceFolderOrFilenameValidator validator = new DocSpaceFolderOrFilenameValidator();
+		if (!validator.isValid(destItemName, null)) {
+			throw new BadRequestException("Invalid filename");
+		}
+
+		// check that we're not copying or writing over onto the source itself (within the same space)
+		if (sourceSpaceId.equals(destinationSpaceId) && sourcePath.equals(destPath) && sourceFileName.equals(destItemName) && !copy) {
+			throw new BadRequestException("Cannot move file onto itself - choose different path or destination name");
+		}
+
+		// get the location in the space to which we want to move this file too - and create folders if they don't exist
+		//  any new folders created will have their names validated within the method called here
+		FilePathSpec destinationSpecification = documentSpaceFileSystemService
+				.parsePathToFilePathSpec(destinationSpaceId, destPath, true);
+
+		// see if there's an item that exists already at the destination
+		Optional<DocumentSpaceFileSystemEntry> existingElement = documentSpaceFileSystemService
+				.getByParentIdAndItemName(destinationSpaceId, destinationSpecification.getItemId(), destItemName);
+
+		// check destination for like-named item, generate a new one with "Copy" suffix if needed
+		if (copy) {
+			destItemName = generateCopyFileName(destinationSpaceId, destItemName, destinationSpecification);
+		}
+
+		if (!copy) {
+			// if moving..
+			moveDbItems(destinationSpaceId, sourceEntry, dest, destItemName, sourceSpecification, destinationSpecification, existingElement);
+		} else {
+			// if copying...
+			copyDbItems(destinationSpaceId, sourceEntry, destItemName, sourceSpecification, destinationSpecification);
+		}
+	}
+
+	/**
+	 * Little helper to generate a new file name for copy names that conflict
+	 * @param destinationSpaceId
+	 * @param destItemName
+	 * @param destinationSpecification
+	 * @return
+	 */
+	private String generateCopyFileName(UUID destinationSpaceId, String destItemName, FilePathSpec destinationSpecification) {
+		String fileName = FilenameUtils.getBaseName(destItemName);
+		String ext = FilenameUtils.getExtension(destItemName);
+		int countCandidate = 1;
+		final int maxCopies = 1000;
+
+		// no existing filename exists, no need to mangle it
+		if (documentSpaceFileSystemService
+				.getByParentIdAndItemName(destinationSpaceId, destinationSpecification.getItemId(), destItemName).isEmpty()) {
+			return destItemName;
+		}
+
+		// iterate thru the copy numbers to get a suitable suffix to add to the file name
+		do {
+			String possibleName = fileName + " - (Copy " + countCandidate + ")" + (ext.isBlank() ? "" : "." + ext);
+			if (documentSpaceFileSystemService
+					.getByParentIdAndItemName(destinationSpaceId, destinationSpecification.getItemId(), possibleName).isEmpty()) {
+				destItemName = possibleName;
+				break;
+			} else {
+				countCandidate++;
+			}
+		} while (countCandidate < maxCopies);
+
+		if (countCandidate >= maxCopies) {
+			throw new BadRequestException("Could not copy file - too many copies of same file present");
+		}
+		return destItemName;
+	}
+
+	/**
+	 * Private helper to manage the onerous task of copying db entries and s3 objects for a file/folder COPY operation
+	 * @param destinationSpaceId
+	 * @param sourceEntry
+	 * @param destItemName
+	 * @param sourceSpecification
+	 * @param destinationSpecification
+	 */
+	private void copyDbItems(UUID destinationSpaceId, DocumentSpaceFileSystemEntry sourceEntry, String destItemName,
+							 FilePathSpec sourceSpecification, FilePathSpec destinationSpecification) {
+
+		// create a new DocumentSpaceFileSystemEntry..
+		DocumentSpaceFileSystemEntry destEntry = new DocumentSpaceFileSystemEntry();
+
+		destEntry.setDocumentSpaceId(destinationSpaceId);
+		destEntry.setItemId(UUID.randomUUID());
+		destEntry.setItemName(destItemName);
+		destEntry.setEtag(sourceEntry.getEtag());
+		destEntry.setFolder(sourceEntry.isFolder());
+		destEntry.setParentEntryId(destinationSpecification.getItemId());
+		destEntry.setLastModifiedOn(sourceEntry.getLastModifiedOn());
+		destEntry.setDeleteArchived(sourceEntry.isDeleteArchived());
+		destEntry.setSize(sourceEntry.getSize());
+		destEntry.setHasNonArchivedContents(sourceEntry.isHasNonArchivedContents());
+		documentSpaceFileSystemService.saveItem(destEntry);
+
+		// must copy all the db system entries that were attached to the original element
+		// so that we can duplicate everything contained therein (if it had children, e.g. it was a folder) within the filesystem database
+		// IF we don't do this, all our item "copies" contained within the new folder will actually "point" back to the original
+		// file... so basically have two file system entries pointing to the same physical file - which is no bueno
+		documentSpaceFileSystemService.duplicateFileSystemEntryTree(destinationSpaceId, sourceEntry, destEntry.getItemId());
+
+		// done with the db mayhem, now for the S3, physical file stuff
+		if (!sourceEntry.isFolder()) {
+			// since there is no "rename" feature where we can just renamed a key or a portion of a key we must...
+			// get the S3 object and change its prefix/key by COPYING it to new home - then deleting the old
+			CopyObjectRequest copyObjRequest = new CopyObjectRequest(
+					bucketName,
+					sourceSpecification.getDocSpaceQualifiedFilePath(),
+					bucketName,
+					destinationSpecification.getDocSpaceQualifiedPath() + destItemName);
+
+			documentSpaceClient.copyObject(copyObjRequest);
+		} else {
+			// if its a folder, little more complicated - we need to copy all the elements with a same
+			// prefix to the new prefix
+			ListObjectsV2Request request = new ListObjectsV2Request()
+					.withBucketName(bucketName)
+					.withPrefix(sourceSpecification.getDocSpaceQualifiedPath());
+
+			ListObjectsV2Result items = documentSpaceClient.listObjectsV2(request);
+			for (val item : items.getObjectSummaries()) {
+
+				FilePathSpec spec = documentSpaceFileSystemService.convertFileSystemEntityToFilePathSpec(destEntry);
+
+				// formulate the copy request to copy the existing key in S3
+				CopyObjectRequest copyObjRequest = new CopyObjectRequest(
+						bucketName,
+						item.getKey(),
+						bucketName,
+						spec.getDocSpaceQualifiedPath() + item.getKey().replaceFirst(sourceSpecification.getDocSpaceQualifiedPath(), ""));
+
+				documentSpaceClient.copyObject(copyObjRequest);
+			}
+		}
+	}
+
+	/**
+	 * Private helper to manage the onerous task of moving db entries and s3 objects for a file/folder MOVE operation
+	 * @param destinationSpaceId
+	 * @param sourceEntry
+	 * @param destItemName
+	 * @param sourceSpecification
+	 * @param destinationSpecification
+	 * @param existingElement
+	 */
+	private void moveDbItems(UUID destinationSpaceId, DocumentSpaceFileSystemEntry sourceEntry, String destinationPath, String destItemName,
+							 FilePathSpec sourceSpecification, FilePathSpec destinationSpecification, Optional<DocumentSpaceFileSystemEntry> existingElement) {
+
+		// change the source element's parent Id to its new home (effectively "deleting" it from its old location in the db)
+		// update the db file system entry with new parent/new name
+		if (existingElement.isPresent()) {
+			// moving over existing item... delete the existing entry first from the database
+			this.deleteItems(destinationSpaceId, destinationSpecification.getFullPathSpec(), Lists.newArrayList(destItemName));
+		}
+
+		// must modify all the db system entries that were attached to the original element
+		// to have the document space of the destination as their owning document space now...
+		// otherwise we'll orphan everything that was underneath destEntry
+		documentSpaceFileSystemService.moveFileSystemEntryTree(destinationSpaceId, sourceEntry, sourceEntry.getItemId());
+
+		// reparent the top-level item of the move (change its parent and document space id [may or may not have changed])
+		sourceEntry.setDocumentSpaceId(destinationSpaceId);
+		sourceEntry.setParentEntryId(destinationSpecification.getItemId());
+		sourceEntry.setItemName(destItemName);
+		documentSpaceFileSystemService.saveItem(sourceEntry);
+
+		if (!sourceEntry.isFolder()) {
+			// since there is no "rename" feature where we can just renamed a key or a portion of a key we must...
+			// get the S3 object and change its prefix/key by COPYING it to new home - then deleting the old
+			CopyObjectRequest copyObjRequest = new CopyObjectRequest(
+					bucketName,
+					sourceSpecification.getDocSpaceQualifiedFilePath(),
+					bucketName,
+					destinationSpecification.getDocSpaceQualifiedPath() + destItemName);
+
+			documentSpaceClient.copyObject(copyObjRequest);
+			documentSpaceClient.deleteObject(new DeleteObjectRequest(bucketName, sourceSpecification.getDocSpaceQualifiedFilePath()));
+		} else {
+			// if its a folder, little more complicated - we need to copy all the elements with a same
+			// prefix to the new prefix
+			ListObjectsV2Request request = new ListObjectsV2Request()
+					.withBucketName(bucketName)
+					.withPrefix(sourceSpecification.getDocSpaceQualifiedPath());
+
+			ListObjectsV2Result items = documentSpaceClient.listObjectsV2(request);
+			for (val item : items.getObjectSummaries()) {
+
+				FilePathSpec spec = documentSpaceFileSystemService.parsePathToFilePathSpec(destinationSpaceId, destinationPath);
+
+				// formulate the copy request to copy the existing key in S3
+				CopyObjectRequest copyObjRequest = new CopyObjectRequest(
+						bucketName,
+						item.getKey(),
+						bucketName,
+						spec.getDocSpaceQualifiedPath() + item.getKey().replaceFirst(sourceSpecification.getDocSpaceQualifiedPath(), ""));
+
+				documentSpaceClient.copyObject(copyObjRequest);
+				documentSpaceClient.deleteObject(new DeleteObjectRequest(bucketName, item.getKey()));
+			}
+		}
+	}
+
 	@Override
 	public void archiveItem(UUID documentSpaceId, UUID parentFolderId, String name) {
 		FilePathSpec filePathSpec = documentSpaceFileSystemService.getFilePathSpec(documentSpaceId, parentFolderId);
@@ -621,7 +896,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public FilePathSpec statFileAtPath(UUID documentSpaceId, String path, String element) {
 		return documentSpaceFileSystemService.parsePathToFilePathSpec(documentSpaceId,
-				DocumentSpaceFileSystemServiceImpl.joinPathParts(path, element));
+				joinPathParts(path, element));
 	}
 
 	/**
@@ -663,7 +938,19 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				// workaround to get our zip entries to stay in UTC time, otherwise according to its javadoc (and confirmed it does)
 				//  it will coerce given last modification date to the systems default... which SHOULD be UTC on the servers
 				//  but here we make sure and it helps too on dev machines
-				LocalDateTime ldt = object.getObjectMetadata().getLastModified().toInstant().atZone(ZoneOffset.UTC).toLocalDateTime();
+				LocalDateTime ldt;
+				try {
+					ldt = new Date(Long.parseLong(object.getObjectMetadata()
+							.getUserMetadata()
+							.get("lastModified")))
+							.toInstant()
+							.atZone(ZoneOffset.UTC)
+							.toLocalDateTime();
+				} catch (Exception e) { //NOSONAR
+					// catch any thing that goes wrong getting metadata (i.e. doesnt exist, format wrong, etc)
+					ldt = object.getObjectMetadata().getLastModified().toInstant().atZone(ZoneOffset.UTC).toLocalDateTime();
+				}
+
 				entry.setTimeLocal(ldt);
 
 				try (S3ObjectInputStream dataStream = object.getObjectContent()) {

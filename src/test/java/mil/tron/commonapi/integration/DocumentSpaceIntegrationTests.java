@@ -49,6 +49,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.URI;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -2173,5 +2177,966 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size", equalTo(50)));
 
+    }
+
+    @Test
+    @Rollback
+    @Transactional
+    void testMoveFile() throws Exception {
+
+        // test we can move files within the space
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // moving files should create directories on-the-fly within the space if they don't exist
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"new-docs/new-names.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify old file is "gone"
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)));
+
+        // moved to new location and name
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("new-names.txt")));
+
+        // should be able to move to a new file within the same folder location (essentially a fancy re-name)
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"new-docs/new-names.txt\" : \"new-docs/new-names2.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("new-names2.txt")));
+
+        // get file size of original file before we copy over it
+        S3PaginationDto dto = documentSpaceService.listFiles(space1, null, Integer.MAX_VALUE);
+        int count0 = dto.getDocuments().size();
+        long size0 = dto.getDocuments().stream().filter(item -> item.getKey().contains("hello2.txt")).findFirst().get().getSize();
+
+        // should be able to move an item on top (over) an existing item
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"new-docs/new-names2.txt\" : \"docs/hello2.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify gone from old location
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(0)));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello2.txt")));
+
+        dto = documentSpaceService.listFiles(space1, null, Integer.MAX_VALUE);
+        int count1 = dto.getDocuments().size();
+        long size1 = dto.getDocuments().stream().filter(item -> item.getKey().contains("hello2.txt")).findFirst().get().getSize();
+
+        // make sure we copied over the old file (ensure that we really did replace the file with different contents)
+        // and that there is one fewer file in our space now since this was a move operation
+        assertTrue(size0 != size1);
+        assertEquals(count0 - 1, count1);
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testMovingFilesAroundAtRootLevelOfSpace() throws Exception {
+        // test we can move files within the space, at the root level, where some weirdness can happen since the "root"
+        // level is a special type of "folder"
+
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // upload another file to the root level named data.txt
+        MockMultipartFile data
+                = new MockMultipartFile(
+                "file",
+                "data.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "I am Data, Destroyer of Worlds".getBytes()
+        );
+        // upload it
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space1.toString()).file(data)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // move "hello.txt" to "hello-new.txt"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"hello.txt\" : \"hello-new.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(3)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello-new.txt")))
+                .andExpect(jsonPath("$.documents[*].key", not(hasItem("hello.txt"))));
+
+        // get file size of original file before we copy over it
+        S3PaginationDto dto = documentSpaceService.listFiles(space1, null, Integer.MAX_VALUE);
+        int count0 = dto.getDocuments().size();
+        long size0 = dto.getDocuments().stream().filter(item -> item.getKey().contains("data.txt")).findFirst().get().getSize();
+
+        // move "hello-new.txt" to "data.txt" (an existent file)
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"hello-new.txt\" : \"data.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", not(hasItem("hello-new.txt"))))
+                .andExpect(jsonPath("$.documents[*].key", not(hasItem("hello.txt"))))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("data.txt")));
+
+        dto = documentSpaceService.listFiles(space1, null, Integer.MAX_VALUE);
+        int count1 = dto.getDocuments().size();
+        long size1 = dto.getDocuments().stream().filter(item -> item.getKey().contains("data.txt")).findFirst().get().getSize();
+
+        // make sure we copied over the old file (ensure that we really did replace the file with different contents)
+        // and that there is one fewer file in our space now since this was a move operation
+        assertTrue(size0 != size1);
+        assertEquals(count0 - 1, count1);
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testMoveFileWithInvalidNamesFails() throws Exception {
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // should fail to move to invalid new folder names
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"new...docs/new-names.txt\" }"))
+                .andExpect(status().isBadRequest());
+
+        // should fail to move to invalid filename
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"new-docs/new..%names.txt\" }"))
+                .andExpect(status().isBadRequest());
+
+        // should fail to move onto itself (otherwise you end up with nothing stored in S3)
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"docs/names.txt\" }"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testMultiMoveFilesAreTransactional() throws Exception {
+
+        // test moving multiple files with a failure in the middle of process doesn't
+        // void the ones that successfully transferred before the exception
+        //
+        // this test covers copying files too since those all go through the same code path...
+
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // should have this structure ready for us
+        // / <root>
+        // |- docs/
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+
+        // move hello.txt to the docs/ folder so we have 3 files in there
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"hello.txt\" : \"docs/hello.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(3)));
+
+        // now move the 3 files inside docs/ to a folder named new-folder/ but make the moving
+        // of names.txt fails
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"/docs/hello2.txt\" : \"new-folder/hello2.txt\", \"/docs/names.txt\" : \"/new-folder/nam$%es....txt\", \"/docs/hello.txt\" : \"/new-folder/hello.txt\" }"))
+                .andExpect(status().isBadRequest());
+
+        // but make sure we copied over hello2 txt to new-folder (before we had the next file fail)
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-folder", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testMovingWholeFoldersWorks() throws Exception {
+        // test moving entire folders along with discrete files works to another folder
+
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // should have this structure ready for us
+        // / <root>
+        // |- docs/
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+
+        // make a new folder called - "old" - and move docs/ and the hello.txt file to it
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", space1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("old")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs\" : \"old/docs\", \"hello.txt\" : \"old/hello.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].key", equalTo("old")));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/old", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("docs")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")));
+    }
+
+    @Test
+    @Rollback
+    @Transactional
+    void testMoveWholeFolderOverExistingFolder() throws Exception {
+        // test we can move a whole folder over and replace an existing folder with its own contents
+        //  that will then get erased
+
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // create a new folder named "other"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", space1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("other")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated());
+
+        // put file into other/
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "other-file.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Other data file!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/other", space1.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // create a new folder inside other/ named "other-sub-folder/"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", space1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("other-sub-folder")
+                        .path("/other")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated());
+
+        // put file into other/other-sub-folder
+        MockMultipartFile file2
+                = new MockMultipartFile(
+                "file",
+                "other-file2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Other data file2!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/other/other-sub-folder", space1.toString()).file(file2)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // should have this structure ready for us
+        // / <root>
+        // |- other/
+        // |  |- other-file.txt
+        // |  |- other-sub-folder/
+        // |  |   |- other-file2.txt
+        // |- docs/
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+
+        // now move docs/ over top of other/  -- all of other original contents should go away
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs\" : \"other\" }"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("other")))
+                .andExpect(jsonPath("$.documents[*].key", not(hasItem("hello"))));
+
+        // now make sure there's no trace of what was in other/ folder before in S3
+        S3PaginationDto dto = documentSpaceService.listFiles(space1, null, Integer.MAX_VALUE);
+        assertFalse(dto.getDocuments().stream().anyMatch(item -> item.getKey().contains("other-file.txt")));
+        assertFalse(dto.getDocuments().stream().anyMatch(item -> item.getKey().contains("other-file2.txt")));
+
+    }
+
+    @Test
+    @Rollback
+    @Transactional
+    void testCopyFile() throws Exception {
+
+        // test we can copy files within the space..
+
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // grant go@army.mil to the destination space as an editor
+        DashboardUser someUser = DashboardUser.builder()
+                .email("go@army.mil")
+                .privileges(Set.of(
+                        privRepo.findByName("DOCUMENT_SPACE_USER").orElseThrow(() -> new RecordNotFoundException("No Document Space User Priv")),
+                        privRepo.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))
+                ))
+                .build();
+        dashRepo.save(someUser);
+
+        documentSpaceService.addDashboardUserToDocumentSpace(space1, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("go@army.mil")
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                .build());
+
+        // copying files should create directories on-the-fly within the space if they don't exist
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"new-docs/new-names.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify old file is still there
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)));
+
+        // copied to new location and name
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("new-names.txt")));
+
+        // should be able to copy to a new file within the same folder location
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"new-docs/new-names.txt\" : \"new-docs/new-names2.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("new-names2.txt")));
+
+        // test copy file to another folder but already like-named file there
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"new-docs/names.txt\" }"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"new-docs/names.txt\" }"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names - (Copy 1).txt")));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testCopyingToSameLocationIsOk() throws Exception {
+
+        // test copying to same path and with same proposed name is OK - just we have to append a copy # to it
+        UUID space1 = createSpaceWithFiles("space1");
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"docs/names.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names - (Copy 1).txt")));
+
+        // do it again
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"docs/names.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names - (Copy 1).txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names - (Copy 2).txt")));
+
+        // but this should work (Copying to a whole new name)
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"docs/new-names.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // get file size of original file before we copy over it
+        S3PaginationDto dto = documentSpaceService.listFiles(space1, null, Integer.MAX_VALUE);
+        int count0 = dto.getDocuments().size();
+        long size0 = dto.getDocuments().stream().filter(item -> item.getKey().contains("hello2.txt")).findFirst().get().getSize();
+
+        // as should this too (copying over some OTHER file)
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"docs/hello2.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        dto = documentSpaceService.listFiles(space1, null, Integer.MAX_VALUE);
+        int count1 = dto.getDocuments().size();
+        long size1 = dto.getDocuments().stream().filter(item -> item.getKey().contains("hello2.txt")).findFirst().get().getSize();
+
+        // make sure we didn't copy over the old file
+        // and that the number in the S3 bin is +1
+        assertTrue(size0 == size1);
+        assertEquals(count0 + 1, count1);
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testCopyingWholeFoldersWorks() throws Exception {
+        // test copying entire folders along with discrete files works to another folder
+
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // should have this structure ready for us
+        // / <root>
+        // |- docs/
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+
+        // make a new folder called - "old" - and COPY docs/ and the hello.txt file to it
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", space1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("old")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs\" : \"old/docs\", \"hello.txt\" : \"old/hello.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(3)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("old")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("docs")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/old", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("docs")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")));
+
+        // dig in and really make sure our copies happened correctly
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/old/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello2.txt")))
+                .andExpect(jsonPath("$.documents[?(@.key == 'hello2.txt')].folder", hasItem(false)))
+                .andExpect(jsonPath("$.documents[?(@.key == 'names.txt')].folder", hasItem(false)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")));
+
+        // should have two of these file names present
+        S3PaginationDto dto = documentSpaceService.listFiles(space1, null, Integer.MAX_VALUE);
+        assertEquals(2, (int) dto.getDocuments().stream().filter(item -> item.getKey().contains("hello2.txt")).count());
+        assertEquals(2, dto.getDocuments().stream().filter(item -> item.getKey().contains("names.txt")).count());
+    }
+
+    @Test
+    @Rollback
+    @Transactional
+    void testCopyWholeFolderOverExistingFolder() throws Exception {
+        // test we can COPY a whole folder over and replace an existing folder with its own contents
+        //  that will then get erased by virtue of being copied over
+
+        UUID space1 = createSpaceWithFiles("space1");
+
+        // create a new folder named "other"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", space1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("other")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated());
+
+        // put file into other/
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "other-file.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Other data file!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/other", space1.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // create a new folder inside other/ named "other-sub-folder/"
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", space1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("other-sub-folder")
+                        .path("/other")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated());
+
+        // put file into other/other-sub-folder
+        MockMultipartFile file2
+                = new MockMultipartFile(
+                "file",
+                "other-file2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Other data file2!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/other/other-sub-folder", space1.toString()).file(file2)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // should have this structure ready for us
+        // / <root>
+        // |- other/
+        // |  |- other-file.txt
+        // |  |- other-sub-folder/
+        // |  |   |- other-file2.txt
+        // |- docs/
+        // |  |- hello2.txt
+        // |  |- names.txt
+        // |- hello.txt
+
+        // now COPY docs/ over top of other/  -- but really a "docs - (Copy 1)/" is made
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs\" : \"other\" }"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(4)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("docs")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("other - (Copy 1)")))
+                .andExpect(jsonPath("$.documents[?(@.key == 'other - (Copy 1)')].folder", hasItem(true)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("other")));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello2.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/other", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("other-file.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("other-sub-folder")));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/other - (Copy 1)", space1.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello2.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testCrossSpaceMoving() throws Exception {
+
+        // test that we can move folders and files across space so long as permissions allow it
+
+        UUID sourceSpace = createSpaceWithFiles("space1");
+
+        // create new empty space
+        MvcResult result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
+                        .builder()
+                        .name("space2")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name", equalTo("space2")))
+                .andReturn();
+
+        UUID destinationSpace = UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.id"));
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move?sourceSpaceId={source}", destinationSpace, sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs\" : \"new-docs\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify old file is "gone" in source
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNotFound());
+
+        // verify file was NOT moved within the source space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNotFound());
+
+        // moved to new location in destination space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", destinationSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello2.txt")));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testCrossSpaceMovingBadActorUser() throws Exception {
+
+        // test that we cannot move folders and files across space if we only have privs to the destination space
+        //  tests that we can be sneaky and use an API call to an arbitrary doc space and copy files from it
+
+        UUID sourceSpace = createSpaceWithFiles("space1");
+
+        // create new empty space
+        MvcResult result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
+                        .builder()
+                        .name("space2")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name", equalTo("space2")))
+                .andReturn();
+
+        UUID destinationSpace = UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.id"));
+
+        // grant go_boilers@purdue.edu to the destination space as an editor
+        DashboardUser someUser = DashboardUser.builder()
+                .email("go_boilers@purdue.edu")
+                .privileges(Set.of(
+                        privRepo.findByName("DOCUMENT_SPACE_USER").orElseThrow(() -> new RecordNotFoundException("No Document Space User Priv")),
+                        privRepo.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))
+                ))
+                .build();
+        dashRepo.save(someUser);
+
+        documentSpaceService.addDashboardUserToDocumentSpace(destinationSpace, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("go_boilers@purdue.edu")
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                .build());
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move?sourceSpaceId={source}", destinationSpace, sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs\" : \"new-docs\" }"))
+                .andExpect(status().isForbidden());
+
+        // now bless with viewer on the source space and it should work
+        documentSpaceService.addDashboardUserToDocumentSpace(sourceSpace, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("go_boilers@purdue.edu")
+                .privileges(Lists.newArrayList())
+                .build());
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/move?sourceSpaceId={source}", destinationSpace, sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs\" : \"new-docs\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify old file is "gone" in source
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/docs", sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNotFound());
+
+        // verify file was NOT moved within the source space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNotFound());
+
+        // moved to new location in destination space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", destinationSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("names.txt")))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello2.txt")));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testCrossSpaceCopying() throws Exception {
+
+        // test that we can copy folders and files across space so long as permissions allow it
+
+        UUID sourceSpace = createSpaceWithFiles("space1");
+
+        // create new empty space
+        MvcResult result = mockMvc.perform(post(ENDPOINT_V2 + "/spaces")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceRequestDto
+                        .builder()
+                        .name("space2")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name", equalTo("space2")))
+                .andReturn();
+
+        UUID destinationSpace = UUID.fromString(JsonPath.read(result.getResponse().getContentAsString(), "$.id"));
+
+        // moving files should create directories on-the-fly within the space if they don't exist
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/copy?sourceSpaceId={source}", destinationSpace, sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"docs/names.txt\" : \"new-docs/new-names.txt\" }"))
+                .andExpect(status().isNoContent());
+
+        // verify folder was NOT placed within the source space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", sourceSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNotFound());
+
+        // moved to new location in destination space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", destinationSpace)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("new-names.txt")));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testLastModifiedDateWorksOnUploadsAndDownloads() throws Exception {
+
+        // probably one of the most important tests - test that we can preserve a file's date modified
+        //  on uploads and downloads
+
+        UUID test1Id = createSpaceWithFiles("space1");
+
+        // update file to space
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "coolfile.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Cool, World!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/new-docs", test1Id.toString()).file(file)
+                .header("Last-Modified", String.valueOf(Instant.from(OffsetDateTime.of(LocalDateTime.of(2014 , 2 , 11, 4, 44, 44), ZoneOffset.UTC)).toEpochMilli()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // check file in space test1
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/new-docs", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[*].key", hasItem("coolfile.txt")))
+                .andExpect(jsonPath("$.documents[?(@.key == 'coolfile.txt')].lastModifiedDate", hasItem("2014-02-11T04:44:44.000Z")));
+
+        // dont check the date modified on a single file download right now, since there seems to be no easy way to do
+        //  this unless the browser respects the Last-Modified date
+
+        // but we can control the entries in a zip file and the OS that unzips it will respect the dates on those entries on the extraction
+        // so, go ahead and download it as a zip file, make sure its date is still the same
+        String tmpdir = Files.createTempDir().getAbsolutePath();
+        File zipFile = new File(tmpdir + File.separator + "file.zip");
+        FileOutputStream fos = new FileOutputStream(zipFile);
+        documentSpaceService.downloadAndWriteCompressedFiles(test1Id, "/new-docs", Set.of("coolfile.txt"), fos, admin.getEmail());
+        fos.close();
+
+        ZipFile zf = new ZipFile(zipFile);
+        Enumeration<? extends ZipEntry> entries = zf.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            assertEquals(Instant.from(OffsetDateTime.of(LocalDateTime.of(2014 , 2 , 11, 4, 44, 44), ZoneOffset.UTC)).toEpochMilli(),
+                    Instant.from(OffsetDateTime.of(entry.getTimeLocal(), ZoneOffset.UTC)).toEpochMilli());
+        }
+        zf.close();
+        FileUtils.deleteDirectory(new File(tmpdir));
+
+        // make sure parent folder (in this case the root folder) reports new-docs folder last mod date as the newest date
+        //  contained therein (in this case the old 2014 date)
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", test1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[*].key", hasItem("new-docs")))
+                .andExpect(jsonPath("$.documents[?(@.key == 'new-docs')].lastModifiedDate", hasItem("2014-02-11T04:44:44.000Z")));
     }
 }
