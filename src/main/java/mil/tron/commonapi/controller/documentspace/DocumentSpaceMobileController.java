@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
 import mil.tron.commonapi.dto.DashboardUserDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceResponseDto;
@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api-prefix.v2}" + DocumentSpaceMobileController.ENDPOINT)
-@IfMinioEnabledOnStagingIL4OrDevLocal
+@IfMinioEnabledOnIL4OrDevLocal
 public class DocumentSpaceMobileController {
     protected static final String ENDPOINT = "/document-space-mobile";
     private final DocumentSpaceService documentSpaceService;

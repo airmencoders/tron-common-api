@@ -9,14 +9,14 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import lombok.extern.slf4j.Slf4j;
-import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Slf4j
 @Configuration
-@IfMinioEnabledOnStagingIL4OrDevLocal
+@IfMinioEnabledOnIL4OrDevLocal
 public class DocumentSpaceConfig {
 
 	@Value("${minio.connection-string}")
