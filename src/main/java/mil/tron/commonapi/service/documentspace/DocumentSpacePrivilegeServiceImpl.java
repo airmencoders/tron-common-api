@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service.documentspace;
 
 import lombok.extern.slf4j.Slf4j;
-import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
 import mil.tron.commonapi.dto.documentspace.DocumentSpacePrivilegeDto;
 import mil.tron.commonapi.dto.mapper.DtoMapper;
 import mil.tron.commonapi.entity.AppClientUser;
@@ -21,7 +21,7 @@ import java.util.*;
 
 @Slf4j
 @Service
-@IfMinioEnabledOnStagingIL4OrDevLocal
+@IfMinioEnabledOnIL4OrDevLocal
 public class DocumentSpacePrivilegeServiceImpl implements DocumentSpacePrivilegeService {
 	private static final ModelMapper MODEL_MAPPER = new DtoMapper();
 

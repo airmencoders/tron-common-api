@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api-prefix.v2}" + DocumentSpaceController.ENDPOINT)
-@IfMinioEnabledOnStagingIL4OrDevLocal
+@IfMinioEnabledOnIL4OrDevLocal
 public class DocumentSpaceController {
 	private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("ddMMMyyyyHHmm");
 

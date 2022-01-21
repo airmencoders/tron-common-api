@@ -9,7 +9,7 @@ import com.amazonaws.services.s3.transfer.Upload;
 import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
@@ -56,7 +56,7 @@ import static mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemSe
 
 @Slf4j
 @Service
-@IfMinioEnabledOnStagingIL4OrDevLocal
+@IfMinioEnabledOnIL4OrDevLocal
 public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	public static final String DOCUMENT_SPACE_USER_PRIVILEGE = "DOCUMENT_SPACE_USER";
 	

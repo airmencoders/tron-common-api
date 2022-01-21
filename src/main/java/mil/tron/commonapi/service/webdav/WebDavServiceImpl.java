@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service.webdav;
 
 import com.jamesmurty.utils.XMLBuilder;
-import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnStagingIL4OrDevLocal;
+import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemServiceImpl;
@@ -16,7 +16,6 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TimeZone;
 import java.util.UUID;
 
 /**
@@ -25,7 +24,7 @@ import java.util.UUID;
  */
 
 @Service
-@IfMinioEnabledOnStagingIL4OrDevLocal
+@IfMinioEnabledOnIL4OrDevLocal
 public class WebDavServiceImpl implements WebDavService {
 
     private final DocumentSpaceService documentSpaceService;
