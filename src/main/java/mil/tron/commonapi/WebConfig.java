@@ -38,17 +38,19 @@ public class WebConfig implements WebMvcConfigurer {
         return firewall;
     }
 
+    /**
+     * Log to the console any firewall rejected events
+     * @return
+     */
     @Bean
     public RequestRejectedHandler requestRejectedHandler() {
         return (httpServletRequest, httpServletResponse, e) -> {
             log.warn(
-                    "request_rejected: remote={}, queryParms={}, jwt={}, user_agent={}, request_url={}",
+                    "request_rejected: remote={}, user_agent={}, request_url={}, exception={}",
                     httpServletRequest.getRemoteHost(),
-                    httpServletRequest.getQueryString(),
-                    httpServletRequest.getHeader("authorization"),
                     httpServletRequest.getHeader(HttpHeaders.USER_AGENT),
                     httpServletRequest.getRequestURL(),
-                    e
+                    e.getMessage()
             );
             httpServletResponse.sendError(HttpServletResponse.SC_BAD_REQUEST);
         };
