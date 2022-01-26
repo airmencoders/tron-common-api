@@ -35,7 +35,6 @@ public class WebConfig implements WebMvcConfigurer {
     public StrictHttpFirewall httpFirewall() {
         StrictHttpFirewall firewall = new StrictHttpFirewall();
         firewall.setAllowSemicolon(true);
-        firewall.setAllowedHeaderNames(s -> Objects.equals(s, "sec-ch-ua"));
         firewall.setAllowedHttpMethods(Arrays.asList(allowedMethods));
         return firewall;
     }
