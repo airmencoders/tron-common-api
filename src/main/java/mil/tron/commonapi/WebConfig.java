@@ -12,7 +12,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
-import java.util.Objects;
 
 @Configuration
 @Slf4j
@@ -31,13 +30,10 @@ public class WebConfig implements WebMvcConfigurer {
 
     }
 
+
     @Bean
     public StrictHttpFirewall httpFirewall() {
         StrictHttpFirewall firewall = new StrictHttpFirewall();
-        firewall.setAllowedHeaderNames((header) -> true);
-        firewall.setAllowedHeaderValues((header) -> true);
-        firewall.setAllowedParameterNames((parameter) -> true);
-        firewall.setAllowSemicolon(true);
         firewall.setAllowedHttpMethods(Arrays.asList(allowedMethods));
         return firewall;
     }
