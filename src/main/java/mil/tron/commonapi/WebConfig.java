@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.web.firewall.HttpStatusRequestRejectedHandler;
 import org.springframework.security.web.firewall.RequestRejectedHandler;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -13,6 +12,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
+import java.util.Objects;
 
 @Configuration
 @Slf4j
@@ -34,6 +34,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Bean
     public StrictHttpFirewall httpFirewall() {
         StrictHttpFirewall firewall = new StrictHttpFirewall();
+        firewall.setAllowSemicolon(true);
+        firewall.setAllowedHeaderNames(s -> Objects.equals(s, "sec-ch-ua"));
         firewall.setAllowedHttpMethods(Arrays.asList(allowedMethods));
         return firewall;
     }
