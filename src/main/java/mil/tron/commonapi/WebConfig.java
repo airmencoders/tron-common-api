@@ -34,6 +34,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Bean
     public StrictHttpFirewall httpFirewall() {
         StrictHttpFirewall firewall = new StrictHttpFirewall();
+        firewall.setAllowedHeaderNames((header) -> true);
+        firewall.setAllowedHeaderValues((header) -> true);
+        firewall.setAllowedParameterNames((parameter) -> true);
         firewall.setAllowSemicolon(true);
         firewall.setAllowedHttpMethods(Arrays.asList(allowedMethods));
         return firewall;
