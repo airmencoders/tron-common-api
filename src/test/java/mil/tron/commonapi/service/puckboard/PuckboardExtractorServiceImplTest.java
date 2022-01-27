@@ -93,7 +93,7 @@ public class PuckboardExtractorServiceImplTest {
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
         assertEquals(unitCount, result.get("orgs").size());
-        assertEquals(peopleCount, result.get("people").size());
+        assertEquals(peopleCount-1, result.get("people").size());  // minus one for the placeHolder person
 
     }
 
@@ -114,7 +114,7 @@ public class PuckboardExtractorServiceImplTest {
         Map<String, Map<UUID, String>> result = puckboardExtractorService.persistOrgsAndMembers(orgNodes, peopleNodes, branchNodes);
 
         assertEquals(unitCount, result.get("orgs").size());
-        assertEquals(peopleCount, result.get("people").size());
+        assertEquals(peopleCount-1, result.get("people").size());
     }
 
     @Test
@@ -139,7 +139,8 @@ public class PuckboardExtractorServiceImplTest {
         assertEquals(unitCount, result.get("orgs").size());
 
         // # people "created" should be one less since we threw exception on first item attempted to be created
-        assertEquals(peopleCount-1, (int) result
+        // and minus another for the isPlaceholder
+        assertEquals(peopleCount-2, (int) result
                                                 .get("people")
                                                 .values()
                                                 .stream()

@@ -198,6 +198,10 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
         // go thru each person and add/update to Common
         for (int i = 0; i < peopleInfo.size(); i++) {
             JsonNode node = peopleInfo.get(i);
+
+            // skip placeholder people
+            if (node.has("isPlaceholder") && !node.get("isPlaceholder").isNull() && node.get("isPlaceholder").asBoolean()) continue;
+
             PersonDto personDto = convertToPersonDto(node, rankLookup);
 
             try {

@@ -9,6 +9,7 @@
       "contactNumber": null,
       "email": null,
       "dodId": 123456789,
+      "isPlaceholder": null,
       "rankId": null,
       "organizationStatus": {
         "d2265748-fde4-4ddc-bfda-72ca88d8a7f6": {
@@ -35,6 +36,7 @@
       "callSign": "Snoopy",
       "lastName": "Freeman",
       "firstName": "Lucy",
+      "isPlaceholder": true,
       "contactNumber": "(808) 422-2222",
       "email": null,
       "dodId": null,
@@ -59,6 +61,7 @@
       "callSign": "Battery",
       "lastName": "Adams",
       "firstName": "Allison",
+      "isPlaceholder": false,
       "contactNumber": "(808) 221-1212",
       "email": null,
       "dodId": null,
