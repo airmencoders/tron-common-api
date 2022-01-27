@@ -48,6 +48,7 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
     private static final String PERSON_RANK_FIELD = "rankId";
     private static final String PERSON_RANK_ABBR_FIELD = "rankAbbr";
     private static final String PERSON_PRIMARY_ORG_FIELD = "primaryOrganizationId";
+    private static final String PLACEHOLDER_FIELD_NAME = "isPlaceholder";
 
     private static final Branch[] branchMapping = {
             Branch.OTHER, // 0
@@ -198,6 +199,10 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
         // go thru each person and add/update to Common
         for (int i = 0; i < peopleInfo.size(); i++) {
             JsonNode node = peopleInfo.get(i);
+
+            // skip placeholder people
+            if (node.has(PLACEHOLDER_FIELD_NAME) && !node.get(PLACEHOLDER_FIELD_NAME).isNull() && node.get(PLACEHOLDER_FIELD_NAME).asBoolean()) continue;
+
             PersonDto personDto = convertToPersonDto(node, rankLookup);
 
             try {
