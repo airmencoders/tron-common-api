@@ -240,6 +240,10 @@ public class PuckboardExtractorServiceImpl implements PuckboardExtractorService 
 
     private void assignPersonToOrg(JsonNode node, UUID id) {
         // now go thru each puckboard org person was in - either add or remove depending on active status
+
+        // if not primary og defined, just skip orgs assignments for now
+        if (node.get(PERSON_PRIMARY_ORG_FIELD).isNull()) return;
+
         UUID primaryOrg = UUID.fromString(node.get(PERSON_PRIMARY_ORG_FIELD).textValue());
         for (JsonNode org : Lists.newArrayList(node.get(ORG_STATUS_FIELD).elements())) {
             UUID orgId = UUID.fromString(org.get(ORG_ID_FIELD).textValue());
