@@ -26,8 +26,9 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
 
     /*
      * Finds the most recent Date (last modified date) given space Id and parent Id (folder) - so basically most recent mod date inside given folder
+     * and ignores archived state entries
      */
-    @Query(value = "select max(last_modified_on) from file_system_entries where doc_space_id = :spaceId and parent_entry_id = :parentId", nativeQuery = true)
+    @Query(value = "select max(last_modified_on) from file_system_entries where doc_space_id = :spaceId and parent_entry_id = :parentId and is_delete_archived = false", nativeQuery = true)
     Optional<Date> findMostRecentModifiedDateAmongstSiblings(UUID spaceId, UUID parentId);
 
     @Modifying

@@ -1,7 +1,7 @@
 package mil.tron.commonapi.service.documentspace;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.Lists;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
@@ -23,8 +23,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
 
 import javax.transaction.Transactional;
-
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -433,5 +434,58 @@ public class DocumentSpaceFileSystemServiceTests {
         
         assertThat(spec.getDocSpaceQualifiedPath()).isEqualTo(String.format("%s/", spaceId));
         assertThat(spec.getFullPathSpec()).isEqualTo(Paths.get("").toString());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testNearestSiblings() {
+
+        // test that when computing most recent modified date in a folder and propogating it up to ancestors
+        //  make sure we disregard files that are archived
+
+        DocumentSpaceFileSystemEntry parentFolder = DocumentSpaceFileSystemEntry.builder()
+                .itemName("Parent")
+                .documentSpaceId(spaceId)
+                .etag("blah")
+                .isFolder(true)
+                .build();
+
+        documentSpaceFileSystemRepository.save(parentFolder);
+
+        DocumentSpaceFileSystemEntry file1 = DocumentSpaceFileSystemEntry.builder()
+                .itemName("File1")
+                .documentSpaceId(spaceId)
+                .parentEntryId(parentFolder.getItemId())
+                .etag("blah")
+                .lastModifiedOn(Date.from(LocalDateTime.of(2022, 1, 14, 12, 0).toInstant(ZoneOffset.UTC)))
+                .isFolder(false)
+                .build();
+
+        DocumentSpaceFileSystemEntry file2 = DocumentSpaceFileSystemEntry.builder()
+                .itemName("File2")
+                .documentSpaceId(spaceId)
+                .parentEntryId(parentFolder.getItemId())
+                .etag("blah")
+                .lastModifiedOn(Date.from(LocalDateTime.of(2022, 1, 15, 12, 0).toInstant(ZoneOffset.UTC)))
+                .isFolder(false)
+                .build();
+
+        // this one should get ignored
+        DocumentSpaceFileSystemEntry archivedFile = DocumentSpaceFileSystemEntry.builder()
+                .itemName("Archived")
+                .documentSpaceId(spaceId)
+                .parentEntryId(parentFolder.getItemId())
+                .lastModifiedOn(new Date())
+                .isFolder(false)
+                .etag("blah")
+                .isDeleteArchived(true)
+                .build();
+
+        documentSpaceFileSystemRepository.saveAll(Lists.newArrayList(file1, file2, archivedFile));
+
+        assertEquals(file2.getLastModifiedOn(),
+                documentSpaceFileSystemRepository.findMostRecentModifiedDateAmongstSiblings(file1.getDocumentSpaceId(), file1.getParentEntryId())
+                        .orElse(new Date()));
     }
 }
