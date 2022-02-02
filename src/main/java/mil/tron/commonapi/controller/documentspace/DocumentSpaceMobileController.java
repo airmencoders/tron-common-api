@@ -34,6 +34,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_ADMIN_PRIV;
+
 /**
  * Select endpoints for document space that allow less calls to the backend to get
  * information about a user's privs, spaces, and favorites within a given space/path
@@ -111,7 +113,7 @@ public class DocumentSpaceMobileController {
         for (DocumentSpaceResponseDto space : spaces) {
 
             // if dashboard_admin - we're an admin for this space - move to next
-            if (userDto.getPrivileges().stream().map(item -> item.getName()).collect(Collectors.toList()).contains("DASHBOARD_ADMIN")) {
+            if (userDto.getPrivileges().stream().map(item -> item.getName()).collect(Collectors.toList()).contains(DASHBOARD_ADMIN_PRIV)) {
                 spacesWithPrivs.add(DocumentSpaceMobileResponseDto.SpaceInfo.builder()
                         .id(space.getId())
                         .name(space.getName())

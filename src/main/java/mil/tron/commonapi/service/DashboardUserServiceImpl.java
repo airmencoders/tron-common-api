@@ -29,6 +29,9 @@ import java.util.stream.StreamSupport;
 
 @Service
 public class DashboardUserServiceImpl implements DashboardUserService {
+    public static final String DASHBOARD_ADMIN_PRIV = "DASHBOARD_ADMIN";
+    public static final String DASHBOARD_USER_PRIV = "DASHBOARD_USER";
+
     private DashboardUserRepository dashboardUserRepository;
     private DashboardUserUniqueChecksService userChecksService;
     private static final String RESOURCE_NOT_FOUND_MSG = "User with the ID: %s does not exist.";
@@ -84,7 +87,7 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         }
 
         Privilege dashBoardUserPriv = privRepo
-                .findByName("DASHBOARD_USER")
+                .findByName(DASHBOARD_USER_PRIV)
                 .orElseThrow(() -> new RecordNotFoundException("Cannot find the DASHBOARD_USER privilege"));
 
         // should have at least the DASHBOARD_USER priv
@@ -237,5 +240,18 @@ public class DashboardUserServiceImpl implements DashboardUserService {
 			
 		return dashboardUser.get();
 	}
+
+    /**
+     * Helper to tell if a user has DASHBOARD_ADMIN privs
+     * @param user the user entity to check
+     * @return true if admin otherwise false
+     */
+	@Override
+    public boolean dashboardUserIsAdmin(DashboardUser user) {
+        if (user == null) return false;
+        else {
+            return user.getPrivileges().stream().anyMatch(item -> item.getName().equals(DASHBOARD_ADMIN_PRIV));
+        }
+    }
 
 }

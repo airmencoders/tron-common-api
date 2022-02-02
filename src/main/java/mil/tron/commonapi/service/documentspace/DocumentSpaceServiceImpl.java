@@ -52,6 +52,8 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_ADMIN_PRIV;
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_USER_PRIV;
 import static mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemServiceImpl.joinPathParts;
 
 @Slf4j
@@ -116,7 +118,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			throw new RecordNotFoundException(String.format("Could not find spaces. User: %s does not exist", username));
 		}
 		
-		if (dashboardUser.getPrivileges().stream().anyMatch(privilege -> privilege.getName().equalsIgnoreCase("DASHBOARD_ADMIN"))) {
+		if (dashboardUser.getPrivileges().stream().anyMatch(privilege -> privilege.getName().equalsIgnoreCase(DASHBOARD_ADMIN_PRIV))) {
 			return documentSpaceRepository.findAllDynamicBy(DocumentSpaceResponseDto.class);
 		}
 		
@@ -1108,7 +1110,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			
 			if(privileges.size() == 1){
 				Optional<Privilege> first = privileges.stream().findFirst();
-				if(first.isPresent() && first.get().getName().equals("DASHBOARD_USER")){
+				if(first.isPresent() && first.get().getName().equals(DASHBOARD_USER_PRIV)){
 					dashboardUserService.deleteDashboardUser(dashboardUser.getId());
 				}
 			}
@@ -1156,7 +1158,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 		DashboardUser dashboardUser = getDashboardUserOrElseThrow(dashboardUserEmail);
 
-
 		List<DocumentSpaceDashboardMemberPrivilegeRow> dashboardUserDocumentSpacePrivilegeRows =
 				documentSpacePrivilegeService.getAllDashboardMemberPrivilegeRowsForDocumentSpace(documentSpace, Set.of(dashboardUser.getId()));
 
@@ -1165,10 +1166,20 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			return new DocumentSpacePrivilegeDto(privilege.getId(), privilege.getType());
 		}).collect(Collectors.toList());
 
-		if (dashboardUserDocumentSpacePrivileges.isEmpty()) {
+		if (dashboardUserDocumentSpacePrivileges.isEmpty() && !dashboardUserService.dashboardUserIsAdmin(dashboardUser)) {
+			// if we dont have privs and we're not an admin, throw access denied
 			throw new NotAuthorizedException("Not Authorized to this Document Space");
+
+		} else if (dashboardUserDocumentSpacePrivileges.isEmpty() && dashboardUserService.dashboardUserIsAdmin(dashboardUser)) {
+			// if we have no privs, and if we're a dashboard admin, return all possible privs for this document space
+			//  and just list the null UUID (all zeros) for the priv id, since there's no real persisted priv
+			//  if we're not explicitly assigned to this space..
+			return Arrays.stream(DocumentSpacePrivilegeType.values())
+					.map(item -> new DocumentSpacePrivilegeDto(DocumentSpaceFileSystemEntry.NIL_UUID, item))
+					.collect(Collectors.toList());
 		}
 
+		// else return the privs we got from the database
 		return dashboardUserDocumentSpacePrivileges;
 	}
 

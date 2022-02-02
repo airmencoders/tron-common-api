@@ -31,13 +31,14 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_ADMIN_PRIV;
+
 @RestController
 public class AppClientController {
 	
 	private AppClientUserService appClientService;
 	private PrivilegeService privilegeService;
 
-	private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
 	private static final String APP_CLIENT_DEVELOPER_PRIV = "APP_CLIENT_DEVELOPER";
 	private static final String INVALID_PERMS = "Invalid User Permissions";
 	
@@ -51,7 +52,7 @@ public class AppClientController {
 		return !SecurityContextHolder.getContext().getAuthentication()
 				.getAuthorities()
 				.stream()
-				.filter(item -> item.getAuthority().equals(DASHBOARD_ADMIN))
+				.filter(item -> item.getAuthority().equals(DASHBOARD_ADMIN_PRIV))
 				.collect(Collectors.toList())
 				.isEmpty();
 	}

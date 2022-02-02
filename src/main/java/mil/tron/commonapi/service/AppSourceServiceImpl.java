@@ -55,6 +55,7 @@ import java.util.stream.StreamSupport;
 
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_USER_PRIV;
 
 @org.springframework.cache.annotation.CacheConfig(cacheManager=CacheConfig.SERVICE_ENTITY_CACHE_MANAGER)
 @Service("appSourceService")
@@ -541,7 +542,7 @@ public class AppSourceServiceImpl implements AppSourceService {
     private boolean privSetHasPrivsOtherThanAppSource(Set<Privilege> privs) {
         for (Privilege priv : privs) {
             if (!priv.getName().equals(APP_SOURCE_ADMIN_PRIV) &&
-                !priv.getName().equals("DASHBOARD_USER")) return true;
+                !priv.getName().equals(DASHBOARD_USER_PRIV)) return true;
         }
         return false;
     }

@@ -20,6 +20,7 @@ public interface DashboardUserService {
     @Nullable
     DashboardUser getDashboardUserByEmailAsLower(String email);
     DashboardUserDto getSelf(String email);
+    boolean dashboardUserIsAdmin(DashboardUser user);
     // conversions
     DashboardUserDto convertToDto(DashboardUser user);
     DashboardUser convertToEntity(DashboardUserDto dto);

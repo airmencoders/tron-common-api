@@ -3139,4 +3139,38 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.documents[*].key", hasItem("new-docs")))
                 .andExpect(jsonPath("$.documents[?(@.key == 'new-docs')].lastModifiedDate", hasItem("2014-02-11T04:44:44.000Z")));
     }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testDashboardAdminDoesNotGet403ForSpace() throws Exception {
+
+        // tests that DASHBOARD_ADMIN (who can do anything in the doc spaces)
+        //  can do a GET to the /api/v2/document-space/spaces/{id}/users/dashboard/privileges/self
+        //  and not get a 403 because they're not explicitly assigned to the space... should be a 200
+
+        UUID space1Id = createSpaceWithFiles("space1");
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/users/dashboard/privileges/self", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].type", hasItem("MEMBERSHIP")))
+                .andExpect(jsonPath("$.data[*].type", hasItem("WRITE")))
+                .andExpect(jsonPath("$.data[*].type", hasItem("READ")));
+
+        // now explicitly an entity to the space - and we'll honor that (even tho admins can always do anything)
+        //  otherwise could be confusing on the UI
+        documentSpaceService.addDashboardUserToDocumentSpace(space1Id, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email(admin.getEmail())
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                .build());
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/users/dashboard/privileges/self", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].type", not(hasItem("MEMBERSHIP"))))
+                .andExpect(jsonPath("$.data[*].type", hasItem("WRITE")))
+                .andExpect(jsonPath("$.data[*].type", hasItem("READ")));
+    }
 }

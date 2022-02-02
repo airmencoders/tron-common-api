@@ -28,9 +28,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_ADMIN_PRIV;
+
 @Service
 public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
-	private static final SimpleGrantedAuthority DASHBOARD_ADMIN_AUTHORITY = new SimpleGrantedAuthority("DASHBOARD_ADMIN");
+	private static final SimpleGrantedAuthority DASHBOARD_ADMIN_AUTHORITY = new SimpleGrantedAuthority(DASHBOARD_ADMIN_PRIV);
 	
     private final PrivilegeRepository privilegeRepository;
     private final OrganizationRepository organizationRepository;

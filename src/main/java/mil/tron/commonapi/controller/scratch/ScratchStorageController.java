@@ -39,12 +39,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_ADMIN_PRIV;
+
 @RestController
 public class ScratchStorageController {
     private ScratchStorageService scratchStorageService;
     private PrivilegeService privilegeService;
     private JsonDbService jsonDbService;
-    private static final String DASHBOARD_ADMIN = "DASHBOARD_ADMIN";
     private static final String INVALID_PERMS = "Invalid User Permissions";
     private static final String NO_AUTH_INFO_ERROR = "There is no authentication information found";
     private static final String JSONPATH_ID_QUERY = "$[?(@.id == '%s')]";
@@ -60,7 +61,7 @@ public class ScratchStorageController {
         List<GrantedAuthority> auths = authentication
                 .getAuthorities()
                 .stream()
-                .filter(item -> item.getAuthority().equals(DASHBOARD_ADMIN))
+                .filter(item -> item.getAuthority().equals(DASHBOARD_ADMIN_PRIV))
                 .collect(Collectors.toList());
 
         if (auths.isEmpty()) {
