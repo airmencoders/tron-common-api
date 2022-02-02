@@ -176,10 +176,8 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         }
 
         // see if requester is the person identified in the person record (editing their own stuff)
-        boolean isOwnUser = false;
-        if (existingPerson.getEmail() != null && existingPerson.getEmail().equalsIgnoreCase(requester.getName())) {
-            isOwnUser = true;
-        }
+        boolean isOwnUser = seeIfRequesterIsSelf(existingPerson, requester);
+
         
         // Must have EDIT privilege by this point to proceed
         // Or the authenticated user must be editing their own record
@@ -225,6 +223,10 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
     			.modifiedEntity(incomingPerson)
     			.deniedFields(deniedFields)
     			.build();
+    }
+
+    private boolean seeIfRequesterIsSelf(Person existingPerson, Authentication requester) {
+        return existingPerson.getEmail() != null && existingPerson.getEmail().equalsIgnoreCase(requester.getName());
     }
 
     /**
