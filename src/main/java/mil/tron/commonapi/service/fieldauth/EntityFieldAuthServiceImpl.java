@@ -174,8 +174,12 @@ public class EntityFieldAuthServiceImpl implements EntityFieldAuthService {
         			.modifiedEntity(incomingPerson)
         			.build();
         }
-        
-        boolean isOwnUser = existingPerson.getEmail().equalsIgnoreCase(requester.getName());
+
+        // see if requester is the person identified in the person record (editing their own stuff)
+        boolean isOwnUser = false;
+        if (existingPerson.getEmail() != null && existingPerson.getEmail().equalsIgnoreCase(requester.getName())) {
+            isOwnUser = true;
+        }
         
         // Must have EDIT privilege by this point to proceed
         // Or the authenticated user must be editing their own record
