@@ -490,6 +490,35 @@ class EntityFieldAuthIntegrationTests {
                 .andExpect(jsonPath("$.dodid", equalTo(null)));
     }
 
+    @Test
+    void testUserCanEditOwnDataWithNullValues() throws Exception {
+        var dashboardUserOnly = DashboardUser.builder()
+                .id(UUID.randomUUID())
+                .email("some-dashboard@user.com")
+                .privileges(Set.of(
+                        privilegeRepository.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))))
+                .build();
+
+        dashboardUserRepository.save(dashboardUserOnly);
+
+        var dashboardPerson = PersonDto.builder()
+                .id(UUID.randomUUID())
+                .firstName("dashboard")
+                .lastName("user")
+                .email(null)
+                .rank("Capt")
+                .branch(Branch.USAF)
+                .build();
+
+        mockMvc.perform(post("/v2/person")
+                .header(AUTH_HEADER_NAME, createToken(adminUser.getEmail()))
+                .header(XFCC_HEADER_NAME, generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dashboardPerson)))
+                .andExpect(status().isCreated());
+
+    }
+
     String generateXfccHeader(String namespace) {
         String XFCC_BY = "By=spiffe://cluster/ns/" + namespace + "/sa/default";
         String XFCC_H = "FAKE_H=12345";
