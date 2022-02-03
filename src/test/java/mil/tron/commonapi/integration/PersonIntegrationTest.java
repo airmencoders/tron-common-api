@@ -970,6 +970,28 @@ public class PersonIntegrationTest {
                 .andExpect(jsonPath("$.branch", equalTo("OTHER")));
     }
 
+    @Test
+    @Transactional
+    @Rollback
+    void testMappingOfRankIsCaseInsensitive() throws Exception {
+        PersonDto person = new PersonDto();
+        person.setId(UUID.randomUUID());
+        person.setFirstName("Monty");
+        person.setMiddleName("A");
+        person.setLastName("Burns");
+        person.setEmail("monty@springfieldnuclear.gov");
+        person.setTitle("Boss");
+        person.setRank("Civ");
+        person.setBranch(Branch.USAF);
+
+        mockMvc.perform(post(ENDPOINT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(person)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rank", equalTo("CIV")))
+                .andExpect(jsonPath("$.branch", equalTo("USAF")));
+    }
+
     private static String resource(String name) throws IOException {
         return Resources.toString(Resources.getResource("integration/" + name), StandardCharsets.UTF_8);
     }

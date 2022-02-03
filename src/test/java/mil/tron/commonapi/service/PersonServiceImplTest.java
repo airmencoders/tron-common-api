@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 
 import mil.tron.commonapi.dto.PersonDto;
-import mil.tron.commonapi.entity.Organization;
 import mil.tron.commonapi.entity.Person;
 import mil.tron.commonapi.entity.PersonMetadata;
 import mil.tron.commonapi.entity.branches.Branch;
@@ -120,7 +119,7 @@ class PersonServiceImplTest {
 		@Test
 	    void successfulCreate() {
 	    	// Test successful save
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	        Mockito.when(repository.save(Mockito.any(Person.class))).thenReturn(testPerson);
 	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 	        Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
@@ -133,7 +132,7 @@ class PersonServiceImplTest {
 		@Test
 		void idAlreadyExists() {
 			// Test id already exists
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	        Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(true);
 	        assertThrows(ResourceAlreadyExistsException.class, () -> personService.createPerson(testDto));
 		}
@@ -144,7 +143,7 @@ class PersonServiceImplTest {
 	        Person existingPersonWithEmail = new Person();
 	    	existingPersonWithEmail.setEmail(testPerson.getEmail());
 
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
 	    	assertThatExceptionOfType(ResourceAlreadyExistsException.class).isThrownBy(() -> {
@@ -158,7 +157,7 @@ class PersonServiceImplTest {
 			Person existingPersonWithEmail = new Person();
 			existingPersonWithEmail.setEmail(testPerson.getEmail());
 
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(false);
@@ -170,7 +169,7 @@ class PersonServiceImplTest {
 		@Test
 		void invalidProperty() {
 			testDto.setMetaProperty("blahblah", "value");
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
@@ -211,7 +210,7 @@ class PersonServiceImplTest {
 					.build();
 
 			Mockito.when(rankRepository
-					.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any()))
+					.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any()))
 					.thenReturn(Optional.empty())
 					.thenReturn(Optional.of(unknownRank))
 					.thenReturn(Optional.empty())
@@ -234,7 +233,7 @@ class PersonServiceImplTest {
 		@Test
 		void idNotExist() {
 			// Test id not exist
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.ofNullable(null));
 	    	assertThrows(RecordNotFoundException.class, () -> personService.updatePerson(testPerson.getId(), testDto));
 		}
@@ -252,7 +251,7 @@ class PersonServiceImplTest {
 	    	Person existingPersonWithEmail = new Person();
 	    	existingPersonWithEmail.setEmail(newPerson.getEmail());
 
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
 	    	assertThatExceptionOfType(InvalidRecordUpdateRequest.class).isThrownBy(() -> {
@@ -263,7 +262,7 @@ class PersonServiceImplTest {
 		@Test
 		void successfulUpdate() {
 			// Successful update
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 	    	Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 	    	Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
@@ -278,7 +277,7 @@ class PersonServiceImplTest {
 		@Test
 		void invalidProperty() {
 			testDto.setMetaProperty("blahblah", "value");
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
@@ -344,7 +343,7 @@ class PersonServiceImplTest {
 			Person tempTestPerson = testPerson;
 			tempTestPerson.setFirstName("patchFirst");
 
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Mockito.when(repository.findById(Mockito.any())).thenReturn(Optional.of(tempTestPerson));
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
 			Mockito.when(uniqueChecksService.personDodidIsUnique(Mockito.any(Person.class))).thenReturn(true);
@@ -395,7 +394,7 @@ class PersonServiceImplTest {
 			JsonNode newNode = objectMapper.readTree(contentArr.toString());
 			patch = JsonPatch.fromJson(newNode);
 
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Mockito.when(repository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(testPerson));
 			Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(false);
 
@@ -487,7 +486,7 @@ class PersonServiceImplTest {
 
     @Test
 	void bulkCreatePersonTest() {
-		Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+		Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 		Mockito.when(repository.save(Mockito.any(Person.class))).then(returnsFirstArg());
 		Mockito.when(repository.existsById(Mockito.any(UUID.class))).thenReturn(false);
 		Mockito.when(uniqueChecksService.personEmailIsUnique(Mockito.any(Person.class))).thenReturn(true);
@@ -560,7 +559,7 @@ class PersonServiceImplTest {
 
 		@Test
 		void rank() {
-			Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
+			Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any())).thenReturn(Optional.of(testPerson.getRank()));
 			Person person = personService.convertToEntity(PersonDto.builder()
 					.rank("Capt")
 					.branch(Branch.USAF)
