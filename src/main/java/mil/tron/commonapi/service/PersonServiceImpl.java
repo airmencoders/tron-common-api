@@ -207,7 +207,7 @@ public class PersonServiceImpl implements PersonService {
 				.stream()
 				.filter(item -> item.getPayGrade().equals(dto.getRank()) && item.getBranchType().equals(personDto.getBranch()))
 				.findFirst()
-					.orElse(rankRepository.findByAbbreviationAndBranchType("Unk", Branch.OTHER)
+					.orElse(rankRepository.findByAbbreviationIgnoringCaseAndBranchType("Unk", Branch.OTHER)
 					.orElseThrow(() -> new RecordNotFoundException("Unable to find rank match")))
 				.getAbbreviation());
 
@@ -499,8 +499,8 @@ public class PersonServiceImpl implements PersonService {
 	@Override
 	public Person convertToEntity(PersonDto dto) {
 		Person entity = modelMapper.map(dto, Person.class);
-		entity.setRank(rankRepository.findByAbbreviationAndBranchType(dto.getRank(), dto.getBranch())
-				.orElse(rankRepository.findByAbbreviationAndBranchType("Unk", Branch.OTHER)
+		entity.setRank(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(dto.getRank(), dto.getBranch())
+				.orElse(rankRepository.findByAbbreviationIgnoringCaseAndBranchType("Unk", Branch.OTHER)
 						.orElseThrow(() -> new RecordNotFoundException("Unable to find rank match"))));
 		return entity;
 	}

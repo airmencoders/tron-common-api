@@ -159,7 +159,7 @@ public class RankServiceImplTest {
     class GetRankTest {
         @Test
         void validRank() {
-            Mockito.when(rankRepository.findByAbbreviationAndBranchType("Gen", Branch.USAF))
+            Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType("Gen", Branch.USAF))
                     .thenReturn(Optional.of(Rank.builder()
                             .abbreviation("Gen")
                             .branchType(Branch.USAF)
@@ -173,7 +173,7 @@ public class RankServiceImplTest {
 
         @Test
         void invalidRank() {
-            Mockito.when(rankRepository.findByAbbreviationAndBranchType(Mockito.any(), Mockito.any()))
+            Mockito.when(rankRepository.findByAbbreviationIgnoringCaseAndBranchType(Mockito.any(), Mockito.any()))
                     .thenReturn(Optional.empty());
 
             assertThrows(RecordNotFoundException.class, () -> rankService.getRank("does not exist", Branch.OTHER));

@@ -11,5 +11,5 @@ import java.util.UUID;
 @Repository
 public interface RankRepository extends CrudRepository<Rank, UUID> {
     Iterable<Rank> findAllByBranchType(Branch branchType);
-    Optional<Rank> findByAbbreviationAndBranchType(String abbreviation, Branch branchType);
+    Optional<Rank> findByAbbreviationIgnoringCaseAndBranchType(String abbreviation, Branch branchType);
 }

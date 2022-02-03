@@ -104,6 +104,6 @@ public class RankServiceImpl implements RankService {
 
     @Override
     public Rank getRank(String abbreviation, Branch branch) {
-        return repository.findByAbbreviationAndBranchType(abbreviation, branch).orElseThrow(() -> new RecordNotFoundException(branch.name() + " Rank '" + abbreviation + "' does not exist."));
+        return repository.findByAbbreviationIgnoringCaseAndBranchType(abbreviation, branch).orElseThrow(() -> new RecordNotFoundException(branch.name() + " Rank '" + abbreviation + "' does not exist."));
     }
 }
