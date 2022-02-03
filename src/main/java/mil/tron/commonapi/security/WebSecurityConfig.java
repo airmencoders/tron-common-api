@@ -13,6 +13,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.access.ExceptionTranslationFilter;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_ADMIN_PRIV;
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_USER_PRIV;
+
 @Configuration
 @ConditionalOnProperty(name = "security.enabled", havingValue="true")
 @EnableWebSecurity
@@ -43,9 +46,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/api-docs/**").permitAll()
         		.antMatchers("/api-docs**").permitAll()
 				.antMatchers("/actuator/httptrace").denyAll() // deny viewing http trace (have to look in db)
-				.antMatchers("/actuator/health/**").hasAuthority("DASHBOARD_USER")
-				.antMatchers("/actuator/logfile").hasAuthority("DASHBOARD_ADMIN")
-				.antMatchers("/puckboard/**").hasAuthority("DASHBOARD_ADMIN")
+				.antMatchers("/actuator/health/**").hasAuthority(DASHBOARD_USER_PRIV)
+				.antMatchers("/actuator/logfile").hasAuthority(DASHBOARD_ADMIN_PRIV)
+				.antMatchers("/puckboard/**").hasAuthority(DASHBOARD_ADMIN_PRIV)
 	            .anyRequest()
 	            	.authenticated()
             .and()

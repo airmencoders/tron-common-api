@@ -41,6 +41,8 @@ import java.util.TimeZone;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_ADMIN_PRIV;
+
 /**
  * Allows RESTful creation and management of event subscriptions
  */
@@ -92,7 +94,7 @@ public class SubscriberController {
                                 .stream()
                                 .map(GrantedAuthority::getAuthority)
                                 .collect(Collectors.toList())
-                                    .contains("DASHBOARD_ADMIN")
+                                    .contains(DASHBOARD_ADMIN_PRIV)
                             || appClientUserService  // or user is the developer for said application subscription
                                         .userIsAppClientDeveloperForAppSubscription(item.getId(), authentication.getName()))
                 .peek(item -> item.setSecret(""))  // sanitize the secret from going outbound

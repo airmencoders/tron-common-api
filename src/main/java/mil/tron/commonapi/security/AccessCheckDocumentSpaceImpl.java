@@ -9,6 +9,8 @@ import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeService;
 import mil.tron.commonapi.service.documentspace.DocumentSpacePrivilegeType;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceServiceImpl;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_ADMIN_PRIV;
+
 public class AccessCheckDocumentSpaceImpl implements AccessCheckDocumentSpace {
 	private final DocumentSpacePrivilegeService documentSpacePrivilegeService;
 	
@@ -62,7 +64,7 @@ public class AccessCheckDocumentSpaceImpl implements AccessCheckDocumentSpace {
 	}
 	
 	private boolean isDashboardAdmin(GrantedAuthority authority) {
-		return authority.getAuthority().equalsIgnoreCase("DASHBOARD_ADMIN");
+		return authority.getAuthority().equalsIgnoreCase(DASHBOARD_ADMIN_PRIV);
 	}
 
 }

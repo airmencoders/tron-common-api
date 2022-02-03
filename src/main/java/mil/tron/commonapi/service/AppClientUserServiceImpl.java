@@ -39,6 +39,8 @@ import java.util.stream.StreamSupport;
 
 import javax.transaction.Transactional;
 
+import static mil.tron.commonapi.service.DashboardUserServiceImpl.DASHBOARD_USER_PRIV;
+
 @Service
 public class AppClientUserServiceImpl implements AppClientUserService {
 	private static final DtoMapper MODEL_MAPPER = new DtoMapper();
@@ -468,7 +470,7 @@ public class AppClientUserServiceImpl implements AppClientUserService {
 	private boolean privSetHasPrivsOtherThanAppClient(Set<Privilege> privs) {
 		for (Privilege priv : privs) {
 			if (!priv.getName().equals(APP_CLIENT_DEVELOPER_PRIV)
-					&& !priv.getName().equals("DASHBOARD_USER")) return true;
+					&& !priv.getName().equals(DASHBOARD_USER_PRIV)) return true;
 		}
 		return false;
 	}
