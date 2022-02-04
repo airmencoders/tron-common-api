@@ -231,16 +231,7 @@ public class DocumentSpaceController {
     public ResponseEntity<Object> removeUserFromDocumentSpace(
     		@PathVariable UUID id,
     		@Valid @RequestBody String[] emails) {
-
-		List<String> trimmedEmails = Arrays.stream(emails)
-				.map(item -> item != null ? item.trim() : null)
-				.collect(Collectors.toList());
-
-		if (trimmedEmails.size() > 0) {
-			String[] trimmedEmailArray = new String[trimmedEmails.size()];
-			documentSpaceService.removeDashboardUserFromDocumentSpace(id, trimmedEmails.toArray(trimmedEmailArray));
-		}
-
+		documentSpaceService.removeDashboardUserFromDocumentSpace(id, emails);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
