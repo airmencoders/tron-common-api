@@ -27,6 +27,11 @@ public class DocumentSpaceCreateFolderDto {
     @NotNull
     @NotBlank
     @Getter
-    @Setter
     private String folderName;
+
+    public void setFolderName(String name) { //NOSONAR
+        if (name != null) {
+            this.folderName = name.trim();
+        }
+    }
 }

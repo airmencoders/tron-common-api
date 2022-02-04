@@ -1082,23 +1082,26 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 	@Override
 	public void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String[] emails) throws RecordNotFoundException {
+
+		List<String> trimmedEmails = Arrays.stream(emails)
+				.map(item -> item != null ? item.trim() : null)
+				.collect(Collectors.toList());
+
 		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
 
-		for (int i = 0; i < emails.length; i++) {
-			String email = emails[i];
-			
+		for (String email : trimmedEmails) {
 			DashboardUser dashboardUser = dashboardUserService.getDashboardUserByEmailAsLower(email);
-			
+
 			if (dashboardUser == null) {
 				continue;
 			}
-			
+
 			documentSpacePrivilegeService.removePrivilegesFromDashboardUser(dashboardUser, documentSpace);
-			
+
 			documentSpace.removeDashboardUser(dashboardUser);
-			
+
 			Set<Privilege> privileges = dashboardUser.getPrivileges();
-			
+
 			if (dashboardUser.getDocumentSpaces().isEmpty()) {
 				Optional<Privilege> documentSpaceGlobalPrivilege = privilegeRepository.findByName(DOCUMENT_SPACE_USER_PRIVILEGE);
 				documentSpaceGlobalPrivilege.ifPresentOrElse(
@@ -1107,10 +1110,10 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 								"Could not remove Global Document Space Privilege (%s) from user because it is is missing",
 								DOCUMENT_SPACE_USER_PRIVILEGE)));
 			}
-			
-			if(privileges.size() == 1){
+
+			if (privileges.size() == 1) {
 				Optional<Privilege> first = privileges.stream().findFirst();
-				if(first.isPresent() && first.get().getName().equals(DASHBOARD_USER_PRIV)){
+				if (first.isPresent() && first.get().getName().equals(DASHBOARD_USER_PRIV)) {
 					dashboardUserService.deleteDashboardUser(dashboardUser.getId());
 				}
 			}

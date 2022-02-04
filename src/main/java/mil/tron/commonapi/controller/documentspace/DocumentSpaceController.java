@@ -14,6 +14,7 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
+import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
@@ -230,7 +231,7 @@ public class DocumentSpaceController {
     public ResponseEntity<Object> removeUserFromDocumentSpace(
     		@PathVariable UUID id,
     		@Valid @RequestBody String[] emails) {
-	    documentSpaceService.removeDashboardUserFromDocumentSpace(id, emails);
+		documentSpaceService.removeDashboardUserFromDocumentSpace(id, emails);
 	    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -730,25 +731,6 @@ public class DocumentSpaceController {
 	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
 	@DeleteMapping("/spaces/{id}/delete")
 	public ResponseEntity<Object> deleteItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpacePathItemsDto dto) {
-		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItems());
-		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-	}
-
-	@Operation(summary = "Deletes item(s) that are already in the archived state", description = "Deletes selected files/folder" +
-			" from a Document Space that are already archived")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "204",
-					description = "Successful operation"),
-			@ApiResponse(responseCode = "404",
-					description = "Not Found - space not found, file not found",
-					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
-			@ApiResponse(responseCode = "403",
-					description = "Forbidden (Requires Write privilege to document space, or DASHBOARD_ADMIN)",
-					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
-	})
-	@PreAuthorize("@accessCheckDocumentSpace.hasWriteAccess(authentication, #id)")
-	@DeleteMapping("/spaces/{id}/archived/delete")
-	public ResponseEntity<Object> deleteArchivedItems(@PathVariable UUID id, @Valid @RequestBody DocumentSpacePathItemsDto dto) {
 		documentSpaceService.deleteItems(id, dto.getCurrentPath(), dto.getItems());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}

@@ -60,6 +60,7 @@ import java.util.zip.ZipFile;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = { "security.enabled=true",
@@ -1153,7 +1154,7 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isConflict());
 
         // delete the archived copy
-        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archived/delete", test1Id.toString())
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", test1Id.toString())
                 .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                 .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -3172,5 +3173,57 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.data[*].type", not(hasItem("MEMBERSHIP"))))
                 .andExpect(jsonPath("$.data[*].type", hasItem("WRITE")))
                 .andExpect(jsonPath("$.data[*].type", hasItem("READ")));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testSpacesAreTrimmedFromFileAndFolderNames() throws Exception {
+
+        // if I create a folder or I renamed a file/folder and have whitespace on it, the API
+        // should trim it before persisting it, because we could end up with files/folder we can't get rid of
+
+        UUID space1Id = createSpaceWithFiles("space1");
+
+        // make folder with space on then end, should get trimmed off
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", space1Id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("dir-with-space ")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fullPathSpec", equalTo("dir-with-space")));
+
+        // list it - should appear having been persisted with no spaces at the end
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[*].key", hasItem("dir-with-space")));
+
+        // now archive it
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                        .currentPath("")
+                        .itemsToArchive(Lists.newArrayList("dir-with-space"))
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // purge it
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/delete", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpacePathItemsDto.builder()
+                        .currentPath("")
+                        .items(Lists.newArrayList("dir-with-space"))
+                        .build())))
+                .andExpect(status().isNoContent());
     }
 }
