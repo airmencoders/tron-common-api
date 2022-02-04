@@ -28,4 +28,14 @@ public class DocumentSpaceRequestDto {
     @Size(max = 255)
     private String name;
 
+    // trim whitespace
+    public void setName(String name) {
+        if (name != null) {
+            this.name = name.trim();
+        } else {
+            this.name = null;
+        }
+    }
+
+
 }

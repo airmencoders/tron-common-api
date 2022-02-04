@@ -27,6 +27,11 @@ public class DocumentSpaceRenameFolderDto {
     @NotNull
     @NotBlank
     @Getter
-    @Setter
     private String newName;
+
+    public void setNewName(String name) {
+        if (name != null) {
+            this.newName = name.trim();
+        }
+    }
 }

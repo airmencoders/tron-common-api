@@ -18,6 +18,12 @@ public class DocumentSpaceDashboardMemberRequestDto {
 	@NotNull
 	@Email(regexp = ".+@.+\\..+$", message = "Malformed email address")
 	private String email;
+
+	public void setName(String email) {
+		if (email != null) {
+			this.email = email.trim();
+		}
+	}
 	
 	@NotNull
 	private List<ExternalDocumentSpacePrivilegeType> privileges;
