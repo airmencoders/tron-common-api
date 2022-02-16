@@ -3342,4 +3342,113 @@ public class DocumentSpaceIntegrationTests {
         assertTrue(OffsetDateTime.ofInstant(lastActivity.toInstant(), ZoneOffset.UTC).isBefore(now.plusMinutes(1)));
     }
 
+
+    @Test
+    @Transactional
+    @Rollback
+    void testRecentActivityByUserAndSpace() throws Exception {
+
+        // test the endpoints of a user requesting their upload activity across the spaces they have access to
+        //  then test the endpoints for checking recent activity according to space (provided they have read access)
+
+        // create 3 spaces that each have 3 files in them
+        UUID space1Id = createSpaceWithFiles("space1");
+        UUID space2Id = createSpaceWithFiles("space2");
+        UUID space3Id = createSpaceWithFiles("space3");
+
+        // grant user write access to spaces 2 and 3
+        DashboardUser someUser = DashboardUser.builder()
+                .email("someUser@test.gov")
+                .privileges(Set.of(
+                        privRepo.findByName("DOCUMENT_SPACE_USER").orElseThrow(() -> new RecordNotFoundException("No Document Space User Priv")),
+                        privRepo.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))
+                ))
+                .build();
+
+        dashRepo.save(someUser);
+        documentSpaceService.addDashboardUserToDocumentSpace(space2Id, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("someUser@test.gov")
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                .build());
+        documentSpaceService.addDashboardUserToDocumentSpace(space3Id, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("someUser@test.gov")
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                .build());
+
+        // as our user, request recent upload activity for themselves (should be nothing)
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/files/recently-uploaded")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // but for admin it should be 9 elements (each of the spaces got 3 files placed there each for us on creation -- by admin)
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/files/recently-uploaded")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(9)));
+
+        // as user, upload a file to all three spaces
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "hello.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space1Id.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space2Id.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space3Id.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // as our user, request recent upload activity for themselves (should be 2)
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/files/recently-uploaded")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
+
+        // now test activity by space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space2Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space3Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space2Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space3Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+
+
+    }
 }

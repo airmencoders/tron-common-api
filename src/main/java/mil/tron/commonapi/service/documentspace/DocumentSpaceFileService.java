@@ -87,4 +87,13 @@ public interface DocumentSpaceFileService {
 	 * @return a list of recently uploaded File entries
 	 */
 	Slice<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds, Pageable pageable);
+
+	/**
+	 * Returns a list of Files that a space has most recently had updated/uploaded.  Assumes requester
+	 * has already been vetted for read access to the provided space.
+	 * @param spaceId the UUID of the document space
+	 * @param size the amount of File records to return
+	 * @return a list of recently uploaded File entries
+	 */
+	Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Pageable pageable);
 }

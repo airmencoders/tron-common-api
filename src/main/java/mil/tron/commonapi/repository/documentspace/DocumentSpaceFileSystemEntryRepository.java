@@ -68,13 +68,32 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
      * @return a {@link Slice} containing the retrieved entries
      */
     @Query("select new mil.tron.commonapi.dto.documentspace.RecentDocumentDto("
-    		+ "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastModifiedOn, entry.createdOn), documentSpace.id, documentSpace.name)"
+    		+ "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn), documentSpace.id, documentSpace.name)"
     		+ " from DocumentSpaceFileSystemEntry entry, DocumentSpace documentSpace"
     		+ " where (entry.lastModifiedBy = :username OR entry.createdBy = :username) and"
     		+ " entry.isFolder = false and"
     		+ " entry.isDeleteArchived = false and "
     		+ " entry.documentSpaceId = documentSpace.id and"
     		+ " documentSpace.id in :authorizedSpaceIds"
-    		+ " order by coalesce(entry.lastModifiedOn, entry.createdOn) desc")
+    		+ " order by coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn) desc")
     Slice<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds, Pageable pageable);
+
+    /**
+     * Finds all Entries in which the last modified by or created by fields are equal to {@link spaceId}.
+     * The Entries retrieved must:
+     * not be a folder,
+     * must not be delete archived
+     * @param spaceId the username to find entries by
+     * @param pageable page information
+     * @return a {@link Slice} containing the retrieved entries
+     */
+    @Query("select new mil.tron.commonapi.dto.documentspace.RecentDocumentDto("
+            + "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn), documentSpace.id, documentSpace.name)"
+            + " from DocumentSpaceFileSystemEntry entry, DocumentSpace documentSpace"
+            + " where entry.isFolder = false and "
+            + " entry.isDeleteArchived = false and "
+            + " entry.documentSpaceId = :spaceId and "
+            + " entry.documentSpaceId = documentSpace.id "
+            + " order by coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn) desc")
+    Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Pageable pageable);
 }

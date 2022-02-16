@@ -1302,6 +1302,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		return  documentSpaceFileService.getRecentlyUploadedFilesByUser(authenticatedUsername, authorizedSpaceIds, pageable);
 	}
 
+	@Override
+	public Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Pageable pageable) {
+		return documentSpaceFileService.getRecentlyUploadedFilesBySpace(spaceId, pageable);
+	}
+
 	private List<DocumentSpacePrivilegeType> mapToPrivilegeTypes(List<ExternalDocumentSpacePrivilegeType> privileges) {
 		if (privileges == null) {
 			return new ArrayList<>();
