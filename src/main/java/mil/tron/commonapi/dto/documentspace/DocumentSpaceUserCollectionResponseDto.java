@@ -47,6 +47,12 @@ public class DocumentSpaceUserCollectionResponseDto {
 	@Getter
 	@Setter
 	private Date lastModifiedDate;
+
+	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+	@NotNull
+	@Getter
+	@Setter
+	private Date lastActivity;
 	
 	@Getter
 	@Setter

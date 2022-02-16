@@ -14,7 +14,6 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
-import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
@@ -787,6 +786,7 @@ public class DocumentSpaceController {
 				.key(FilenameUtils.getName(entry.getItemName()))
 				.lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
 				.lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
+				.lastActivity(entry.getLastActivity() != null ? entry.getLastActivity() : entry.getCreatedOn())
 				.hasContents(entry.isHasNonArchivedContents())
 				.build()
 		).collect(Collectors.toList());
