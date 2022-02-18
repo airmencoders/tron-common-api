@@ -68,7 +68,7 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
      * @return a {@link Slice} containing the retrieved entries
      */
     @Query("select new mil.tron.commonapi.dto.documentspace.RecentDocumentDto("
-    		+ "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn), entry.lastModifiedBy, documentSpace.id, documentSpace.name)"
+    		+ "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn), coalesce(entry.lastModifiedBy, entry.createdBy), documentSpace.id, documentSpace.name)"
     		+ " from DocumentSpaceFileSystemEntry entry, DocumentSpace documentSpace"
     		+ " where (entry.lastModifiedBy = :username OR entry.createdBy = :username) and"
     		+ " entry.isFolder = false and"
@@ -90,7 +90,7 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
      * @return a {@link Slice} containing the retrieved entries
      */
     @Query("select new mil.tron.commonapi.dto.documentspace.RecentDocumentDto("
-            + "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn), entry.lastModifiedBy, documentSpace.id, documentSpace.name)"
+            + "entry.id, entry.itemName, entry.parentEntryId, coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn), coalesce(entry.lastModifiedBy, entry.createdBy), documentSpace.id, documentSpace.name)"
             + " from DocumentSpaceFileSystemEntry entry, DocumentSpace documentSpace"
             + " where entry.isFolder = false and "
             + " entry.isDeleteArchived = false and "
