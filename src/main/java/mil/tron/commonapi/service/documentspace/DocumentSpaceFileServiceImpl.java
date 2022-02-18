@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service.documentspace;
 
+import com.google.common.collect.Lists;
 import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -7,11 +8,11 @@ import mil.tron.commonapi.exception.ResourceAlreadyExistsException;
 import mil.tron.commonapi.repository.documentspace.DocumentSpaceFileSystemEntryRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import javax.annotation.Nullable;
+import java.util.*;
 
 @Service
 public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
@@ -82,8 +83,11 @@ public class DocumentSpaceFileServiceImpl implements DocumentSpaceFileService {
 	}
 
 	@Override
-	public Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Pageable pageable) {
-		return documentSpaceFileSystemRepository.getRecentlyUploadedFilesBySpace(spaceId, pageable);
+	public Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, @Nullable Date date, Pageable pageable) {
+		if (date == null) {  // if somehow null for date, then use now
+			date = new Date();
+		}
+		return documentSpaceFileSystemRepository.getRecentlyUploadedFilesBySpace(spaceId, date, pageable);
 	}
 
 }

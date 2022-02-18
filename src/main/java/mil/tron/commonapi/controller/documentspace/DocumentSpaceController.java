@@ -993,7 +993,12 @@ public class DocumentSpaceController {
 	@WrappedEnvelopeResponse
 	@GetMapping("/spaces/{id}/recents")
 	public ResponseEntity<Slice<RecentDocumentDto>> getRecentsForSpace(@Parameter(name="id", description="Space UUID", required=true) @PathVariable UUID id,
-																	   @ParameterObject Pageable pageable) {
-		return new ResponseEntity<>(documentSpaceService.getRecentlyUploadedFilesBySpace(id, pageable), HttpStatus.OK);
+											   @Parameter(name="date", description="ISO UTC date/time to search from looking back") @RequestParam(required=false) Date date,
+											   @ParameterObject Pageable pageable) {
+		if (date == null) {
+			date = new Date();
+		}
+
+		return new ResponseEntity<>(documentSpaceService.getRecentlyUploadedFilesBySpace(id, date, pageable), HttpStatus.OK);
 	}
 }

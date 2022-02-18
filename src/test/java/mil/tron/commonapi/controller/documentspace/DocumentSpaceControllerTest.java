@@ -152,7 +152,7 @@ class DocumentSpaceControllerTest {
     @WithMockUser(username = "testuser")
     @Test
     void testGetRecentlyUploadedFiles() throws JsonProcessingException, Exception {
-    	RecentDocumentDto documentDto = new RecentDocumentDto(UUID.randomUUID(), "testfile.txt", UUID.randomUUID(), new Date(), UUID.randomUUID(), "test document space");
+    	RecentDocumentDto documentDto = new RecentDocumentDto(UUID.randomUUID(), "testfile.txt", UUID.randomUUID(), new Date(), "", UUID.randomUUID(), "test document space");
     	
     	RecentDocumentDtoResponseWrapper response = new RecentDocumentDtoResponseWrapper();
     	response.setData(Arrays.asList(documentDto));

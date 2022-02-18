@@ -1303,8 +1303,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Pageable pageable) {
-		return documentSpaceFileService.getRecentlyUploadedFilesBySpace(spaceId, pageable);
+	public Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable) {
+		return documentSpaceFileService.getRecentlyUploadedFilesBySpace(spaceId, date, pageable);
 	}
 
 	private List<DocumentSpacePrivilegeType> mapToPrivilegeTypes(List<ExternalDocumentSpacePrivilegeType> privileges) {
