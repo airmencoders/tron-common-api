@@ -60,7 +60,6 @@ import java.util.zip.ZipFile;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = { "security.enabled=true",
@@ -3225,5 +3224,230 @@ public class DocumentSpaceIntegrationTests {
                         .items(Lists.newArrayList("dir-with-space"))
                         .build())))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testLastActivityIndication() throws Exception {
+
+        // newly uploaded/updated files should have their last activity timestamp updated
+        //  this is different than the last modified timestamp
+
+        UUID space1Id = createSpaceWithFiles("space1");
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/folders", space1Id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceCreateFolderDto.builder()
+                        .folderName("some-directory")
+                        .path("/")
+                        .build()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isCreated());
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        // update file to space
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "valentines.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Happy Valentines Day!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=some-directory", space1Id.toString()).file(file)
+                .header("Last-Modified", String.valueOf(Instant.from(OffsetDateTime.of(LocalDateTime.of(2014 , 2 , 14, 4, 44, 44), ZoneOffset.UTC)).toEpochMilli()))
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        MvcResult result = mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=some-directory", space1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].key", equalTo("valentines.txt")))
+                .andExpect(jsonPath("$.documents[0].lastModifiedDate", equalTo("2014-02-14T04:44:44.000Z")))
+                .andReturn();
+
+        Date lastActivity = new ObjectMapper().readValue(result.getResponse().getContentAsString(), S3PaginationDto.class).getDocuments().get(0).getLastActivity();
+
+        // check reported last activity is within 1 min (giving some leeway here for JUnit test)
+        assertTrue(OffsetDateTime.ofInstant(lastActivity.toInstant(), ZoneOffset.UTC).isAfter(now.minusMinutes(1)));
+        assertTrue(OffsetDateTime.ofInstant(lastActivity.toInstant(), ZoneOffset.UTC).isBefore(now.plusMinutes(1)));
+
+        now = OffsetDateTime.now();
+
+        // update another file to space with no last modified date
+        MockMultipartFile file2
+                = new MockMultipartFile(
+                "file",
+                "valentines2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Happy Valentines Day Again!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=some-directory", space1Id.toString()).file(file2)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        result = mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=some-directory", space1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andReturn();
+
+        lastActivity = new ObjectMapper().readValue(result.getResponse().getContentAsString(), S3PaginationDto.class).getDocuments().stream()
+                .filter(item -> item.getKey().contains("valentines2.txt"))
+                .findFirst()
+                .get()
+                .getLastActivity();
+
+        // not affected by us not providing a last modified date/time
+        // check reported last activity is within 1 min (giving some leeway here for JUnit test)
+        assertTrue(OffsetDateTime.ofInstant(lastActivity.toInstant(), ZoneOffset.UTC).isAfter(now.minusMinutes(1)));
+        assertTrue(OffsetDateTime.ofInstant(lastActivity.toInstant(), ZoneOffset.UTC).isBefore(now.plusMinutes(1)));
+
+        // mark the 2 files as favorites
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/collection/favorite/", space1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(DocumentSpacePathItemsDto.builder()
+                    .currentPath("some-directory")
+                    .items(Lists.newArrayList("valentines.txt", "valentines2.txt"))
+                    .build())))
+                .andExpect(status().isCreated());
+
+        // verify
+        // make sure that the favorites dump supports/reports this last activity indication as well
+        result = mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/collection/favorite", space1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[*].key", hasItems("valentines.txt", "valentines2.txt")))
+                .andReturn();
+
+        lastActivity = new ObjectMapper().readValue(result.getResponse().getContentAsString(), DocumentSpaceUserCollectionResponseDtoWrapper.class).getData()
+                .stream()
+                .filter(item -> item.getKey().contains("valentines2.txt"))
+                .findFirst()
+                .get()
+                .getLastActivity();
+
+        assertTrue(OffsetDateTime.ofInstant(lastActivity.toInstant(), ZoneOffset.UTC).isAfter(now.minusMinutes(1)));
+        assertTrue(OffsetDateTime.ofInstant(lastActivity.toInstant(), ZoneOffset.UTC).isBefore(now.plusMinutes(1)));
+    }
+
+
+    @Test
+    @Transactional
+    @Rollback
+    void testRecentActivityByUserAndSpace() throws Exception {
+
+        // test the endpoints of a user requesting their upload activity across the spaces they have access to
+        //  then test the endpoints for checking recent activity according to space (provided they have read access)
+
+        // create 3 spaces that each have 3 files in them
+        UUID space1Id = createSpaceWithFiles("space1");
+        UUID space2Id = createSpaceWithFiles("space2");
+        UUID space3Id = createSpaceWithFiles("space3");
+
+        // grant user write access to spaces 2 and 3
+        DashboardUser someUser = DashboardUser.builder()
+                .email("someUser@test.gov")
+                .privileges(Set.of(
+                        privRepo.findByName("DOCUMENT_SPACE_USER").orElseThrow(() -> new RecordNotFoundException("No Document Space User Priv")),
+                        privRepo.findByName("DASHBOARD_USER").orElseThrow(() -> new RecordNotFoundException("No DASH_BOARD USER"))
+                ))
+                .build();
+
+        dashRepo.save(someUser);
+        documentSpaceService.addDashboardUserToDocumentSpace(space2Id, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("someUser@test.gov")
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                .build());
+        documentSpaceService.addDashboardUserToDocumentSpace(space3Id, DocumentSpaceDashboardMemberRequestDto.builder()
+                .email("someUser@test.gov")
+                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                .build());
+
+        // as our user, request recent upload activity for themselves (should be nothing)
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/files/recently-uploaded")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // but for admin it should be 9 elements (each of the spaces got 3 files placed there each for us on creation -- by admin)
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/files/recently-uploaded")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(9)));
+
+        // as user, upload a file to all three spaces
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "hello.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space1Id.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space2Id.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space3Id.toString()).file(file)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // as our user, request recent upload activity for themselves (should be 2)
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/files/recently-uploaded")
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
+
+        // now test activity by space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space2Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space3Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(someUser.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space1Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space2Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/recents", space3Id)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+
     }
 }

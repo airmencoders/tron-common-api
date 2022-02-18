@@ -143,13 +143,15 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
 
         FilePathSpec owningFolderEntry = documentSpaceFileSystemService.parsePathToFilePathSpec(spaceId, dto.getCurrentPath());
 
-        String itemName = dto.getItems().stream().findFirst().orElseThrow(()-> new RecordNotFoundException("FileEntry not found in request"));
+        if (dto.getItems() == null || dto.getItems().isEmpty()) throw new RecordNotFoundException("FileEntry not found in request");
 
-        DocumentSpaceFileSystemEntry startEntry = documentSpaceFileSystemEntryRepository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, owningFolderEntry.getItemId())
-                .orElseThrow(() -> new RecordNotFoundException("Unable to get item"));
+        for (String itemName : dto.getItems()) {
+            DocumentSpaceFileSystemEntry startEntry = documentSpaceFileSystemEntryRepository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, owningFolderEntry.getItemId())
+                    .orElseThrow(() -> new RecordNotFoundException("Unable to get item"));
 
 
-        addEntityToFavoritesFolder(dashboardUserEmail, startEntry.getId(), spaceId);
+            addEntityToFavoritesFolder(dashboardUserEmail, startEntry.getId(), spaceId);
+        }
     }
 
     @Transactional
@@ -157,14 +159,14 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
     public void removeFileSystemEntryToCollection(String dashboardUserEmail, UUID spaceId, DocumentSpacePathItemsDto dto) {
         FilePathSpec owningFolderEntry = documentSpaceFileSystemService.parsePathToFilePathSpec(spaceId, dto.getCurrentPath());
 
-        String itemName = dto.getItems().stream().findFirst().orElseThrow(()-> new RecordNotFoundException("FileEntry not found in request"));
+        if (dto.getItems() == null || dto.getItems().isEmpty()) throw new RecordNotFoundException("FileEntry not found in request");
 
+        for (String itemName : dto.getItems()) {
+            DocumentSpaceFileSystemEntry startEntry = documentSpaceFileSystemEntryRepository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, owningFolderEntry.getItemId())
+                    .orElseThrow(() -> new RecordNotFoundException("Unable to get item"));
 
-        DocumentSpaceFileSystemEntry startEntry = documentSpaceFileSystemEntryRepository.findByDocumentSpaceIdEqualsAndItemNameEqualsAndParentEntryIdEquals(spaceId, itemName, owningFolderEntry.getItemId())
-                .orElseThrow(() -> new RecordNotFoundException("Unable to get item"));
-
-
-        removeEntityFromFavoritesFolder(dashboardUserEmail, startEntry.getId(), spaceId);
+            removeEntityFromFavoritesFolder(dashboardUserEmail, startEntry.getId(), spaceId);
+        }
     }
 
     @Transactional
@@ -232,6 +234,7 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
                 .path(documentSpaceFileSystemService.getFilePathSpec(entry.getFileEntry().getDocumentSpaceId(),
                         entry.getFileEntry().getParentEntryId()).getFullPathSpec())
                 .lastModifiedDate(entry.getFileEntry().getLastModifiedOn())
+                .lastActivity(entry.getFileEntry().getLastActivity())
                 .metadata(new DocumentMetadata(entry.getMetadata() == null ? null : entry.getMetadata().getLastDownloaded()))
                 .build();
     }

@@ -85,4 +85,5 @@ public interface DocumentSpaceService {
     void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace);
     
     Slice<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername, Pageable pageable);
+    Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable);
 }

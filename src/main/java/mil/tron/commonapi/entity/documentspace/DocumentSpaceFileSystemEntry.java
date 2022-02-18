@@ -92,8 +92,22 @@ public class DocumentSpaceFileSystemEntry {
 	@Transient
     boolean hasNonArchivedContents;
 
+    /**
+     * Last modified date of the file, hopefully given
+     * by the uploaded client application so that it can track
+     * with the last mod date of the orginal file, otherwise
+     * we'll decide the date ourselves - which will likely coincide
+     * with the last activity date
+     */
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date lastModifiedOn;
+
+    /**
+     * Indicates last time this file was created or updated
+     * Hibernate will change this for us automagically on updates
+     */
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date lastActivity;
 
 	private String getCurrentAuditor() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -118,6 +132,9 @@ public class DocumentSpaceFileSystemEntry {
         return Objects.hash(documentSpaceId, parentEntryId, itemName);
     }
 
+    /**
+     * Actions on a new record/row
+     */
     @PrePersist
     void checkParentUUID() {
         if (this.parentEntryId == null) {
@@ -126,19 +143,27 @@ public class DocumentSpaceFileSystemEntry {
 
         setCreatedOn(new Date());
 		setCreatedBy(getCurrentAuditor());
+
+		// last activity will be the creation date in this case
+		setLastActivity(this.getCreatedOn());
     }
 
+    /**
+     * Actions on an update to an existing record/row
+     */
     @PreUpdate
 	private void onPreUpdate() {
     	if (this.parentEntryId == null) {
             this.parentEntryId = NIL_UUID;
         }
 
-    	// respect if the last mod'd date is already populated
-        //  so as to preserve some semblance of a version
+    	// respect if the last mod'd date is already populated by the client app
+        //  so as to preserve some resemblance of a version control...
     	if (this.lastModifiedOn == null) {
             setLastModifiedOn(new Date());
         }
+
+    	setLastActivity(new Date());
 		setLastModifiedBy(getCurrentAuditor());
 	}
 }

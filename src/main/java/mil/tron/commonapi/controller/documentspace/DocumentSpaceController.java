@@ -14,7 +14,6 @@ import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
-import mil.tron.commonapi.exception.BadRequestException;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.RecordNotFoundException;
 import mil.tron.commonapi.service.documentspace.DocumentSpaceFileSystemService;
@@ -787,6 +786,7 @@ public class DocumentSpaceController {
 				.key(FilenameUtils.getName(entry.getItemName()))
 				.lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
 				.lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
+				.lastActivity(entry.getLastActivity() != null ? entry.getLastActivity() : entry.getCreatedOn())
 				.hasContents(entry.isHasNonArchivedContents())
 				.build()
 		).collect(Collectors.toList());
@@ -976,4 +976,29 @@ public class DocumentSpaceController {
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
+	@Operation(summary = "Gets provided space's recently uploaded files/updated files activity",
+			description = "Requester must have at least READ access to provided Space.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful",
+					content = @Content(schema = @Schema(implementation = RecentDocumentDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
+	@WrappedEnvelopeResponse
+	@GetMapping("/spaces/{id}/recents")
+	public ResponseEntity<Slice<RecentDocumentDto>> getRecentsForSpace(@Parameter(name="id", description="Space UUID", required=true) @PathVariable UUID id,
+											   @Parameter(name="date", description="ISO UTC date/time to search from looking back") @RequestParam(required=false) Date date,
+											   @ParameterObject Pageable pageable) {
+		if (date == null) {
+			date = new Date();
+		}
+
+		return new ResponseEntity<>(documentSpaceService.getRecentlyUploadedFilesBySpace(id, date, pageable), HttpStatus.OK);
+	}
 }

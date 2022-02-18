@@ -1,5 +1,6 @@
 package mil.tron.commonapi.service.documentspace;
 
+import java.util.Date;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -83,8 +84,19 @@ public interface DocumentSpaceFileService {
 	/**
 	 * Returns a list of Files that a User has recently uploaded to any Document Space.
 	 * @param username the username of the User
-	 * @param size the amount of File records to return
+	 * @param authorizedSpaceIds list of spaceIds user can at least read from
+	 * @param pageable pageable object
 	 * @return a list of recently uploaded File entries
 	 */
 	Slice<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds, Pageable pageable);
+
+	/**
+	 * Returns a list of Files that a space has most recently had updated/uploaded.  Assumes requester
+	 * has already been vetted for read access to the provided space.
+	 * @param spaceId the UUID of the document space
+	 * @param date the date to start search from (looking back)
+	 * @param pageable the pageable object
+	 * @return a list of recently uploaded File entries
+	 */
+	Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable);
 }

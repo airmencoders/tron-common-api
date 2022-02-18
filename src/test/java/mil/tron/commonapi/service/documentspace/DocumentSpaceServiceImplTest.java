@@ -535,7 +535,7 @@ class DocumentSpaceServiceImplTest {
 			List<RecentDocumentDto> entries = new ArrayList<>();
 			
 			for (int i = 0; i < size; i++) {
-				entries.add(new RecentDocumentDto(UUID.randomUUID(), RandomStringUtils.randomAlphanumeric(16), UUID.randomUUID(), new Date(), UUID.randomUUID(), "test document space"));
+				entries.add(new RecentDocumentDto(UUID.randomUUID(), RandomStringUtils.randomAlphanumeric(16), UUID.randomUUID(), new Date(), "", UUID.randomUUID(), "test document space"));
 			}
 			
 			return entries;

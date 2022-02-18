@@ -19,10 +19,11 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode
 public class RecentDocumentDto {
 	public RecentDocumentDto(@NotNull UUID id, @NotNull String key, @NotNull UUID parentFolderId, @NotNull Date lastModifiedDate,
-			@NotNull UUID documentSpaceId, @NotNull String documentSpaceName) {
+			String lastActivityBy, @NotNull UUID documentSpaceId, @NotNull String documentSpaceName) {
 		super();
 		this.id = id;
 		this.key = key;
+		this.lastActivityBy = lastActivityBy;
 		this.parentFolderId = parentFolderId;
 		this.lastModifiedDate = lastModifiedDate;
 		this.documentSpace = new DocumentSpaceResponseDto(documentSpaceId, documentSpaceName);
@@ -33,10 +34,16 @@ public class RecentDocumentDto {
 	
 	@NotNull
 	private String key;
+
+	private String lastActivityBy = "Unknown";
 	
 	@NotNull
 	private UUID parentFolderId;
-	
+
+	/**
+	 * This field becomes the last activity date, or last modified date, or the creation date (which
+	 * ever is non-null first) as determined in the JPQL query
+	 */
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 	@NotNull
 	private Date lastModifiedDate;
