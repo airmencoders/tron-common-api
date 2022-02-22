@@ -5,7 +5,10 @@ import mil.tron.commonapi.dto.HttpLogEntryDetailsDto;
 import mil.tron.commonapi.dto.HttpLogEntryDto;
 import mil.tron.commonapi.entity.HttpLogEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.logging.CommonApiLogger;
 import mil.tron.commonapi.repository.HttpLogsRepository;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.modelmapper.ModelMapper;
 import org.springframework.boot.actuate.trace.http.HttpTrace;
 import org.springframework.boot.actuate.trace.http.HttpTraceRepository;
@@ -29,7 +32,7 @@ import java.util.*;
 @Profile("production | development | staging | local")
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class HttpTraceService implements HttpTraceRepository {
-
+    private final Log traceLogger = LogFactory.getLog(CommonApiLogger.class);
     private ModelMapper modelMapper = new ModelMapper();
     private final Object lockObj = new Object();
 
@@ -151,6 +154,22 @@ public class HttpTraceService implements HttpTraceRepository {
                 && contentTrace != null) {
         	
         	if (trace.getRequest().getUri().toString().contains("app/arms-gateway")) {
+
+        	    String requestBody = contentTrace.getRequestBody();
+        	    if (requestBody != null) {
+        	        traceLogger.warn(sanatizeBody(requestBody));
+                } else {
+        	        traceLogger.warn("Request Body was null");
+                }
+
+                String responseBody = contentTrace.getResponseBody();
+                if (responseBody != null) {
+                    traceLogger.warn(sanatizeBody(responseBody));
+                } else {
+                    traceLogger.warn("Response Body was null");
+                }
+
+                // for the db log, we still redact
         		contentTrace.setResponseBody("Redacted");
                 contentTrace.setRequestBody("Redacted");
                 
@@ -162,6 +181,15 @@ public class HttpTraceService implements HttpTraceRepository {
                 contentTrace.setRequestBody("File IO");
         	}
         }
+    }
+
+    private String sanatizeBody(String content) {
+        content = content.replaceAll("[0-9]{9}", ""); // anything like a flyer id gone
+        content = content.replaceAll("[\\d]{4}-[\\d]{2}-[\\d]{2}:[\\d]{6}", "");  // all dates gone
+        content = content.replaceAll("[\\d]{2}-[\\w]{3}-[\\d]{2}", "");  // all dates gone
+        content = content.replaceAll("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+\\w+", ""); // all ISO formatted dates
+        content = content.replaceAll("\\d\\..+?E\\d+", "");  // replace SCI NOTATION'd ID's
+        return content;
     }
 }
 
