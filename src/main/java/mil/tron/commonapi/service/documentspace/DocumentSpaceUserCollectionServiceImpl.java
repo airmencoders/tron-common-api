@@ -234,7 +234,7 @@ public class DocumentSpaceUserCollectionServiceImpl implements DocumentSpaceUser
                 .path(documentSpaceFileSystemService.getFilePathSpec(entry.getFileEntry().getDocumentSpaceId(),
                         entry.getFileEntry().getParentEntryId()).getFullPathSpec())
                 .lastModifiedDate(entry.getFileEntry().getLastModifiedOn())
-                .lastActivity(entry.getFileEntry().getLastActivity())
+                .lastActivity(entry.getFileEntry().getLastActivity() != null ? entry.getFileEntry().getLastActivity() : entry.getFileEntry().getCreatedOn())
                 .metadata(new DocumentMetadata(entry.getMetadata() == null ? null : entry.getMetadata().getLastDownloaded()))
                 .build();
     }
