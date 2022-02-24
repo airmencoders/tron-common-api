@@ -182,6 +182,7 @@ public class DocumentSpaceMobileController {
                         .key(FilenameUtils.getName(entry.getItemName()))
                         .lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
                         .lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
+                        .lastActivity(entry.getLastActivity() != null ? entry.getLastActivity() : entry.getCreatedOn())
                         .hasContents(entry.isHasNonArchivedContents())
                         .build()
         ).collect(Collectors.toList());
