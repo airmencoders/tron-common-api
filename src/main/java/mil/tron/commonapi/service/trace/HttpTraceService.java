@@ -183,12 +183,14 @@ public class HttpTraceService implements HttpTraceRepository {
         }
     }
 
-    private String sanatizeBody(String content) {
+    public String sanatizeBody(String content) {
         content = content.replaceAll("[0-9]{9}", ""); // anything like a flyer id gone
+        content = content.replaceAll("\"flyeruniqueid\":\"\\d+\"", "\"flyeruniqueid\":\"\""); // some ids are <9 digits since they're a long and starts with a zero
+        content = content.replaceAll("\"flyerUniqueId\":\"\\d+\"", "\"flyerUniqueId\":\"\""); // some ids are <9 digits since they're a long and starts with a zero
         content = content.replaceAll("[\\d]{4}-[\\d]{2}-[\\d]{2}:[\\d]{6}", "");  // all dates gone
         content = content.replaceAll("[\\d]{2}-[\\w]{3}-[\\d]{2}", "");  // all dates gone
         content = content.replaceAll("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+\\w+", ""); // all ISO formatted dates
-        content = content.replaceAll("\\d\\..+?E\\d+", "");  // replace SCI NOTATION'd ID's
+        content = content.replaceAll("\\d\\.\\d+?E\\d", "");  // replace SCI NOTATION'd ID's
         return content;
     }
 }
