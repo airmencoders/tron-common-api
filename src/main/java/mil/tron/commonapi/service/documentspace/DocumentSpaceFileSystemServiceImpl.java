@@ -761,9 +761,13 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         }
     }
 
+    /**
+     * For each file added or updated, go back up its ancestry and update (possibly) the last modified date of the folders
+     * @param propagateFrom file system entry to start from
+     * @return all the updated ancestors
+     */
 	@Override
-	public List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(
-			DocumentSpaceFileSystemEntry propagateFrom) {
+	public List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(DocumentSpaceFileSystemEntry propagateFrom) {
 		Deque<DocumentSpaceFileSystemEntry> entitiesToPropagateTo = null;
 		Date lastModifiedDate = repository.findMostRecentModifiedDateAmongstSiblings(propagateFrom.getDocumentSpaceId(), propagateFrom.getParentEntryId())
                 .orElse(new Date());
@@ -777,10 +781,19 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 		if (entitiesToPropagateTo.isEmpty()) {
 			return new ArrayList<>();
 		}
-		
-		entitiesToPropagateTo.forEach(entity -> entity.setLastModifiedOn(lastModifiedDate));
-		
-		return repository.saveAll(entitiesToPropagateTo);
+
+		// only propagate up to ancestors with an older last mod date
+		List<DocumentSpaceFileSystemEntry> updatedEntities = entitiesToPropagateTo.stream()
+            .filter(entity -> {
+                if (entity.getLastModifiedOn() == null) {
+                    return true;
+                }
+                return lastModifiedDate.getTime() > entity.getLastModifiedOn().getTime();
+            })
+            .collect(Collectors.toList());
+
+		updatedEntities.forEach(entity -> entity.setLastModifiedOn(lastModifiedDate));
+		return repository.saveAll(updatedEntities);
 	}
 
 	@Override
