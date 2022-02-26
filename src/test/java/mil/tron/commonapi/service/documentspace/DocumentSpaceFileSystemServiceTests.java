@@ -25,6 +25,7 @@ import org.springframework.test.annotation.Rollback;
 import javax.transaction.Transactional;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.List;
@@ -411,6 +412,71 @@ public class DocumentSpaceFileSystemServiceTests {
     	List<DocumentSpaceFileSystemEntry> propagatedEntities = service.propagateModificationStateToAncestors(childLevel1);
     	
     	assertThat(propagatedEntities).isEmpty();
+    }
+
+    @WithMockUser(username = "test@user.com")
+    @Transactional
+    @Rollback
+    @Test
+    void propagateModificationStateOnlyDoesOlderAncestors() {
+
+         // Tests that we only propagate the most recent date in a folder up to parents that have an older date than that
+
+        Date newestDate = Date.from(OffsetDateTime.of(2022, 12, 1, 12, 12, 12, 0, ZoneOffset.UTC).toInstant());
+        DocumentSpaceFileSystemEntry parent = service.addFolder(spaceId, "some-folder", "/");  // this one shouldn't
+        parent.setLastModifiedOn(Date.from(OffsetDateTime.of(2022, 12, 1, 12, 12, 12, 0, ZoneOffset.UTC).toInstant()));
+        documentSpaceFileSystemRepository.save(parent);
+
+        DocumentSpaceFileSystemEntry childLevel1 = service.addFolder(spaceId, "testFolder", "/some-folder");  // this one should get updated
+        childLevel1.setLastModifiedOn(Date.from(OffsetDateTime.of(2022, 11, 1, 12, 12, 12, 0, ZoneOffset.UTC).toInstant()));
+        documentSpaceFileSystemRepository.save(childLevel1);
+
+        DocumentSpaceFileSystemEntry childLevel2 = service.addFolder(spaceId, "testFolder2", "/some-folder/testFolder");  // this one should get updated
+        childLevel2.setLastModifiedOn(Date.from(OffsetDateTime.of(2022, 11, 1, 12, 12, 12, 0, ZoneOffset.UTC).toInstant()));
+        documentSpaceFileSystemRepository.save(childLevel2);
+
+        DocumentSpaceFileSystemEntry file = DocumentSpaceFileSystemEntry.builder()
+                .documentSpaceId(spaceId)
+                .parentEntryId(childLevel2.getItemId())
+                .etag("blah")
+                .itemName("someFile")
+                .isDeleteArchived(false)
+                .createdBy("dude")
+                .createdOn(new Date())
+                .isFolder(false)
+                .build();
+
+        documentSpaceFileSystemRepository.save(file);
+        Date fileDate = Date.from(OffsetDateTime.of(2022, 11, 15, 12, 12, 12, 0, ZoneOffset.UTC).toInstant());
+        file.setLastModifiedOn(fileDate);
+        documentSpaceFileSystemRepository.save(file);
+        service.propagateModificationStateToAncestors(file);
+
+        assertEquals(fileDate, childLevel2.getLastModifiedOn());
+        assertEquals(fileDate, childLevel1.getLastModifiedOn());
+        assertEquals(newestDate, parent.getLastModifiedOn());
+
+        // add another file but its not newer than the one we just added thus nothing should change with the parent folder(s)
+        DocumentSpaceFileSystemEntry file2 = DocumentSpaceFileSystemEntry.builder()
+                .documentSpaceId(spaceId)
+                .parentEntryId(childLevel2.getItemId())
+                .etag("blah")
+                .itemName("someFile2")
+                .isDeleteArchived(false)
+                .createdBy("dude")
+                .createdOn(new Date())
+                .isFolder(false)
+                .build();
+
+        documentSpaceFileSystemRepository.save(file2);
+        Date fileDate2 = Date.from(OffsetDateTime.of(2022, 11, 14, 12, 12, 12, 0, ZoneOffset.UTC).toInstant());
+        file2.setLastModifiedOn(fileDate2);
+        documentSpaceFileSystemRepository.save(file2);
+        service.propagateModificationStateToAncestors(file2);
+
+        assertEquals(fileDate, childLevel2.getLastModifiedOn());
+        assertEquals(fileDate, childLevel1.getLastModifiedOn());
+        assertEquals(newestDate, parent.getLastModifiedOn());
     }
     
     @Transactional
