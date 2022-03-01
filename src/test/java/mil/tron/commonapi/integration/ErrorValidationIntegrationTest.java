@@ -210,4 +210,39 @@ public class ErrorValidationIntegrationTest {
         assertTrue(response.body().contains("Cannot JSON Patch the field"));
     }
 
+    @Test
+    void testDbExceptionCaught() throws Exception {
+
+        PersonDto person = PersonDto.builder()
+                .id(UUID.randomUUID())
+                .firstName("John")
+                .lastName("Hero")
+                .email("jhero@test.com")
+                .rank("CIV")
+                .branch(Branch.USAF)
+                .dodid("12345")
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person", randomServerPort)))
+                .POST(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
+                .header("content-type", "application/json")
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.CREATED.value(), response.statusCode());
+
+
+        person.setPrimaryOrganizationId(UUID.randomUUID());
+
+        // verify we get a 400 now
+        request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%d/api/v2/person/%s", randomServerPort, person.getId().toString())))
+                .PUT(HttpRequest.BodyPublishers.ofString(OBJECT_MAPPER.writeValueAsString(person)))
+                .header("content-type", "application/json")
+                .build();
+
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
+    }
 }

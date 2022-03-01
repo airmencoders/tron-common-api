@@ -601,14 +601,15 @@ public class InputFuzzer {
                             "}"))
                     .andExpect(status().isBadRequest());
 
-            // app-client POST/PATCH throws exception for over 255 chars for name
-            assertThrows(Exception.class, () -> mockMvc.perform(post(ENDPOINT)
+            // app-client POST/PATCH for over 255 chars for name
+            mockMvc.perform(post(ENDPOINT)
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\n" +
                             "    \"name\": \"" + StringUtils.repeat('J', 256) +"\"" +
-                            "}")));
+                            "}"))
+                    .andExpect(status().isBadRequest());
         }
     }
 
@@ -645,14 +646,15 @@ public class InputFuzzer {
                             "}"))
                     .andExpect(status().isUnsupportedMediaType());
 
-            // scratch storage POST/PUT throws exception for over 255 chars for name
-            assertThrows(Exception.class, () -> mockMvc.perform(post(ENDPOINT)
+            // scratch storage POST/PUT for over 255 chars for name
+            mockMvc.perform(post(ENDPOINT)
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\n" +
                             "    \"appName\": \"" + StringUtils.repeat('J', 256) +"\"" +
-                            "}")));
+                            "}"))
+                    .andExpect(status().isBadRequest());
 
             // scratch storage POST only accepts valid boolean
             mockMvc.perform(post(ENDPOINT)
@@ -789,13 +791,14 @@ public class InputFuzzer {
                     .andExpect(status().isBadRequest());
 
             // app source POST only accepts name string less than 255 chars
-            assertThrows(Exception.class, () -> mockMvc.perform(post(ENDPOINT)
+            mockMvc.perform(post(ENDPOINT)
                     .header(AUTH_HEADER_NAME, createToken(admin.getEmail()))
                     .header(XFCC_HEADER_NAME, XFCC_HEADER)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\n" +
                             "    \"name\": \"" + StringUtils.repeat('J', 256) +"\"" +
-                            "}")));
+                            "}"))
+                    .andExpect(status().isBadRequest());
         }
     }
 
