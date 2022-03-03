@@ -91,6 +91,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @param createFolders true to create folders along the path if they do not exist
      * @return the FilePathSpec describing this path
      */
+    @java.lang.SuppressWarnings("squid:S03776")  // SQ complains of Cog Cmplx but this is a false positive
     @Override
     public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path, boolean createFolders) {
 
