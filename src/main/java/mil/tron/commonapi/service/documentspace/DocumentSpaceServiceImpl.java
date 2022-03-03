@@ -366,7 +366,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 
 			// for now we don't allow uploading of a file who has same name/path of an item that
 			//  has archived status... because the archived file system entry and this new one would point to
-			//  the same physical file in S3 bucket, thereby not allowing any restoration of the archived file (since this action overwrites)
+			//  the same physical file in S3 bucket, thereby not allowing any restoration of the archived file (since this action could overwrite)
 			if (documentSpaceFile != null && documentSpaceFile.isDeleteArchived()) {
 				throw new ResourceAlreadyExistsException("A file with that name and path is in an archived state, purge archived version if upload is desired");
 			}

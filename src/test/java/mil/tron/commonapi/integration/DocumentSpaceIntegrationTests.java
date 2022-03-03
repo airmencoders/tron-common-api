@@ -3450,4 +3450,83 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(jsonPath("$.data", hasSize(3)));
 
     }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testUploadFolderThatHasVersionInArchivedState() throws Exception {
+
+        // tests that we can upload a folder of stuff that has a like-named folder
+        //  already in the archived state (trash can)
+
+        // test that we can create paths (folders of which) on the fly that don't exist
+        UUID spaceId = createSpaceWithFiles("space1");
+
+        // send up the file
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "hello-world.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/path", spaceId.toString()).file(file)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // confirm the operation
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/some/path", spaceId.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].key", equalTo("hello-world.txt")));
+
+        // upload another file to that same location
+        MockMultipartFile file2
+                = new MockMultipartFile(
+                "file",
+                "hello-world2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World2!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/path", spaceId.toString()).file(file2)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // confirm the operation
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/some/path", spaceId.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)))
+                .andExpect(jsonPath("$.documents[*].key", hasItem("hello-world2.txt")));
+
+        // now archive the /some/path folder
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/archive", spaceId.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceArchiveItemsDto.builder()
+                                .currentPath("/")
+                                .itemsToArchive(Lists.newArrayList("some"))
+                                .build())))
+                .andExpect(status().isNoContent());
+
+        // now try to upload a /some/path folder again but with different stuff in it - this should not be allowed since
+        // the "some" folder is already archived since this upload request would normally create the path /some/path
+        MockMultipartFile file3
+                = new MockMultipartFile(
+                "file",
+                "hello-world3.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World3!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/path", spaceId.toString()).file(file3)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isConflict());
+    }
 }
