@@ -81,6 +81,14 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         return this.parsePathToFilePathSpec(spaceId, path, false);
     }
 
+    private void checkCreateButAlreadyArchived(boolean createFolders, DocumentSpaceFileSystemEntry entry) {
+
+        // if we're supposed to create folders and that folder already exists in the archived state, throw conflict exception
+        if (createFolders && entry.isDeleteArchived()) {
+            throw new ResourceAlreadyExistsException("The target folder path already exists in an archived state, clear the archive to allow");
+        }
+    }
+
     /**
      * Utility to find out more information about a given path within a space. The
      * given space is of a unix-like path relative to a doc space (prefix slash is
@@ -141,8 +149,9 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 entry = repository.save(newEntry);
             }
             else if (possibleEntry.isPresent()) {
-                // the element is present, so who cares about createFolder flag, just unwrap the element and proceed
+                // the element is present, unwrap the element and proceed
                 entry = possibleEntry.get();
+                checkCreateButAlreadyArchived(createFolders, entry);
             }
             else {
                 // we get here, should mean that we didn't want to create folders, and the element didn't exist so throw
@@ -672,7 +681,8 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             propagateModificationStateToAncestors(entry);
         }
         else {
-            throw new ResourceAlreadyExistsException("A folder with that name already exists at this level");
+            throw new ResourceAlreadyExistsException(String.format("A folder with that name already exists at this level%s",
+                    existingEntry.get().isDeleteArchived() ? ", it is in an archived state" : ""));
         }
     }
     
