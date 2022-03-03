@@ -81,6 +81,14 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         return this.parsePathToFilePathSpec(spaceId, path, false);
     }
 
+    private void checkCreateButAlreadyArchived(boolean createFolders, DocumentSpaceFileSystemEntry entry) {
+
+        // if we're supposed to create folders and that folder already exists in the archived state, throw conflict exception
+        if (createFolders && entry.isDeleteArchived()) {
+            throw new ResourceAlreadyExistsException("The target folder path already exists in an archived state, clear the archive to allow");
+        }
+    }
+
     /**
      * Utility to find out more information about a given path within a space. The
      * given space is of a unix-like path relative to a doc space (prefix slash is
@@ -91,7 +99,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
      * @param createFolders true to create folders along the path if they do not exist
      * @return the FilePathSpec describing this path
      */
-    @java.lang.SuppressWarnings("squid:S03776")  // SQ complains of Cog Cmplx but this is a false positive
     @Override
     public FilePathSpec parsePathToFilePathSpec(UUID spaceId, @Nullable String path, boolean createFolders) {
 
@@ -144,11 +151,7 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
             else if (possibleEntry.isPresent()) {
                 // the element is present, unwrap the element and proceed
                 entry = possibleEntry.get();
-
-                // if we're supposed to create folders and that folder already exists in the archived state, throw conflict exception
-                if (createFolders && entry.isDeleteArchived()) {
-                    throw new ResourceAlreadyExistsException("The target folder path already exists in an archived state, clear the archive to allow");
-                }
+                checkCreateButAlreadyArchived(createFolders, entry);
             }
             else {
                 // we get here, should mean that we didn't want to create folders, and the element didn't exist so throw
