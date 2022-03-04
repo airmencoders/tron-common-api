@@ -3529,4 +3529,95 @@ public class DocumentSpaceIntegrationTests {
                         .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
                 .andExpect(status().isConflict());
     }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testDocumentSpaceSearch() throws Exception {
+
+        // test that we can search a space
+
+        UUID spaceId = createSpaceWithFiles("space1");
+
+        // send up the file
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "hello-world.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/path", spaceId.toString()).file(file)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // confirm the operation
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/some/path", spaceId.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].key", equalTo("hello-world.txt")));
+
+        // upload another file to that same location
+        MockMultipartFile file2
+                = new MockMultipartFile(
+                "file",
+                "hello-world2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World2!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload?path=/some/path", spaceId.toString()).file(file2)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+
+        // search
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/search", spaceId.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(DocumentSpaceSearchDto.builder()
+                        .query("world")
+                        .build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/search", spaceId.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(DocumentSpaceSearchDto.builder()
+                                .query("world2")
+                                .build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/search", spaceId.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(DocumentSpaceSearchDto.builder()
+                                .query("blah")
+                                .build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/search", spaceId.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(DocumentSpaceSearchDto.builder()
+                                .query("")
+                                .build())))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/search", spaceId.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
+    }
 }

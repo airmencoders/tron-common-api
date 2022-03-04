@@ -2,7 +2,7 @@ package mil.tron.commonapi.repository.documentspace;
 
 import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -99,4 +99,10 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
             + " coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn) <= :fromDate "
             + " order by coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn) desc")
     Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date fromDate, Pageable pageable);
+
+    /**
+     * Search file system entries for filename, excluding archived items
+     */
+    @Query("select h from DocumentSpaceFileSystemEntry h where h.documentSpaceId = :spaceId and lower(h.itemName) like lower(:itemName) and h.isDeleteArchived = false")
+    Page<DocumentSpaceFileSystemEntry> findFilesInSpaceLike(UUID spaceId, String itemName, Pageable page);
 }

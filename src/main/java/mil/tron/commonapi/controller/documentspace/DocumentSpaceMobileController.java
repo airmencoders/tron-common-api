@@ -170,22 +170,9 @@ public class DocumentSpaceMobileController {
     private S3MobilePaginationDto convertFileSystemEntriesToDto(UUID space, String path, Principal principal, FilePathSpecWithContents contents) {
         List<DocumentSpaceUserCollectionResponseDto> favs = documentSpaceUserCollectionService.getFavoriteEntriesForUserInDocumentSpace(principal.getName(), space);
 
-        List<DocumentMobileDto> filesAndFolders = contents.getEntries().stream().map(entry ->
-                DocumentMobileDto.builder()
-                        .path(FilenameUtils.normalizeNoEndSeparator(path))
-                        .size(entry.getSize())
-                        .spaceId(entry.getDocumentSpaceId().toString())
-                        .isFolder(entry.isFolder())
-                        .parentId(entry.getParentEntryId())
-                        .isFavorite(!favs.stream().filter(item -> item.getItemId().equals(entry.getItemId())).findAny().isEmpty())
-                        .elementUniqueId(entry.getItemId())
-                        .key(FilenameUtils.getName(entry.getItemName()))
-                        .lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
-                        .lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
-                        .lastActivity(entry.getLastActivity() != null ? entry.getLastActivity() : entry.getCreatedOn())
-                        .hasContents(entry.isHasNonArchivedContents())
-                        .build()
-        ).collect(Collectors.toList());
+        List<DocumentMobileDto> filesAndFolders = contents.getEntries().stream()
+                .map(entry -> documentSpaceService.convertFileSystemEntryToMobileDto(space, entry, favs, principal))
+                .collect(Collectors.toList());
 
         return S3MobilePaginationDto.builder()
                 .size(filesAndFolders.size())

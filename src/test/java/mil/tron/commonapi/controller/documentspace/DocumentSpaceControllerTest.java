@@ -2,12 +2,9 @@ package mil.tron.commonapi.controller.documentspace;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceCreateFolderDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpacePathDto;
-import mil.tron.commonapi.dto.documentspace.DocumentSpaceRenameFolderDto;
-import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
-import mil.tron.commonapi.dto.documentspace.RecentDocumentDtoResponseWrapper;
+import com.google.common.collect.Lists;
+import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.dto.response.pagination.Pagination;
 import mil.tron.commonapi.dto.response.pagination.PaginationLink;
 import mil.tron.commonapi.dto.response.pagination.PaginationWrappedResponse;
@@ -22,10 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -36,10 +30,14 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.io.FileInputStream;
+import java.security.Principal;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -179,5 +177,48 @@ class DocumentSpaceControllerTest {
     	
     	mockMvc.perform(delete(ENDPOINT + "/spaces/{id}/folder/{parentFolderId}/file/{filename}/archive", UUID.randomUUID(), UUID.randomUUID(), "testfile"))
                 .andExpect(status().isNoContent());
+    }
+
+    @WithMockUser(username = "testuser")
+    @Test
+    void testDocumentSpaceSearch() throws Exception {
+
+        Mockito.when(documentSpaceService.findFilesInSpaceLike(Mockito.any(UUID.class), Mockito.anyString(), Mockito.any(Pageable.class), Mockito.any(Principal.class)))
+                        .thenReturn(new PageImpl<>(Lists.newArrayList(DocumentMobileDto.builder()
+                                        .key("sdfsdf")
+                                        .spaceId(UUID.randomUUID().toString())
+                                        .path("")
+                                        .size(0L)
+                                        .lastModifiedDate(new Date())
+                                        .lastModifiedBy("me")
+                                        .isFolder(false)
+                                        .build()), Pageable.ofSize(10), 1L));
+
+        mockMvc.perform(post(ENDPOINT + "/spaces/{id}/search", UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(DocumentSpaceSearchDto.builder()
+                        .query("somefile")
+                        .build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(greaterThan(0))));
+
+        // test null query is 400
+        mockMvc.perform(post(ENDPOINT + "/spaces/{id}/search", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
+        // test blank query is 400
+        mockMvc.perform(post(ENDPOINT + "/spaces/{id}/search", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(DocumentSpaceSearchDto.builder()
+                                .query("")
+                                .build())))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(ENDPOINT + "/spaces/{id}/search", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(DocumentSpaceSearchDto.builder()
+                                .query("    ")
+                                .build())))
+                .andExpect(status().isBadRequest());
     }
 }
