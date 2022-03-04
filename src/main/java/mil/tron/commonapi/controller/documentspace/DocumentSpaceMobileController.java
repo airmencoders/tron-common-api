@@ -157,17 +157,18 @@ public class DocumentSpaceMobileController {
                                                                     Principal principal,
                                                                     @RequestParam(value = "path", defaultValue = "") String path) {
         return new ResponseEntity<>(
-                convertFileSystemEntriesToDto(id, path, principal, documentSpaceService.getFolderContents(id, path)),
+                convertFileSystemEntriesToDto(id, principal, documentSpaceService.getFolderContents(id, path)),
                 HttpStatus.OK);
     }
 
     /**
      * Private helper to box up a FilePathSpecWithContents into an S3PaginationDto for the UI
-     * @param path
-     * @param contents
+     * @param space space UUID
+     * @param the user principal object
+     * @param contents the FilePathSpec objects return from the service's database call
      * @return
      */
-    private S3MobilePaginationDto convertFileSystemEntriesToDto(UUID space, String path, Principal principal, FilePathSpecWithContents contents) {
+    private S3MobilePaginationDto convertFileSystemEntriesToDto(UUID space, Principal principal, FilePathSpecWithContents contents) {
         List<DocumentSpaceUserCollectionResponseDto> favs = documentSpaceUserCollectionService.getFavoriteEntriesForUserInDocumentSpace(principal.getName(), space);
 
         List<DocumentMobileDto> filesAndFolders = contents.getEntries().stream()

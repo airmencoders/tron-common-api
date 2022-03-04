@@ -925,7 +925,6 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
 
     @Override
     public Page<DocumentSpaceFileSystemEntry> findFilesInSpaceLike(UUID spaceId, String filename, Pageable pageable) {
-        String a = String.format("%%%s%%", filename);
         return repository.findFilesInSpaceLike(spaceId, String.format("%%%s%%", filename), pageable);
     }
 }
