@@ -1001,4 +1001,15 @@ public class DocumentSpaceController {
 
 		return new ResponseEntity<>(documentSpaceService.getRecentlyUploadedFilesBySpace(id, date, pageable), HttpStatus.OK);
 	}
+
+	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasReadAccess(authentication, #id)) and #principal != null")
+	@WrappedEnvelopeResponse
+	@PostMapping("/spaces/{id}/search")
+	public ResponseEntity<Object> searchDocumentSpace(@Parameter(name="id", description="Space UUID", required=true) @PathVariable UUID id,
+													  @Valid @RequestBody DocumentSpaceSearchDto searchDto,
+													  @ParameterObject Pageable pageable,
+													  Principal principal) {
+
+		return new ResponseEntity<>(documentSpaceService.findFilesInSpaceLike(id, searchDto.getQuery(), pageable, principal), HttpStatus.OK);
+	}
 }

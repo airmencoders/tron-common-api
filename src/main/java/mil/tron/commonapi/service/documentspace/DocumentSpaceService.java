@@ -1,10 +1,10 @@
 package mil.tron.commonapi.service.documentspace;
 
+import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
-
 import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -86,4 +86,7 @@ public interface DocumentSpaceService {
     
     Slice<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername, Pageable pageable);
     Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable);
+
+    Page<DocumentMobileDto> findFilesInSpaceLike(UUID spaceId, String filename, Pageable pageable, Principal principal);
+    DocumentMobileDto convertFileSystemEntryToMobileDto(UUID spaceId, DocumentSpaceFileSystemEntry entry, List<DocumentSpaceUserCollectionResponseDto> favs, Principal principal);
 }

@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Rollback;
 
@@ -553,5 +555,67 @@ public class DocumentSpaceFileSystemServiceTests {
         assertEquals(file2.getLastModifiedOn(),
                 documentSpaceFileSystemRepository.findMostRecentModifiedDateAmongstSiblings(file1.getDocumentSpaceId(), file1.getParentEntryId())
                         .orElse(new Date()));
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testDocSpaceSearch() {
+
+        DocumentSpaceFileSystemEntry parentFolder = DocumentSpaceFileSystemEntry.builder()
+                .itemName("Parent")
+                .documentSpaceId(spaceId)
+                .etag("blah")
+                .isFolder(true)
+                .build();
+
+        documentSpaceFileSystemRepository.save(parentFolder);
+
+        DocumentSpaceFileSystemEntry file1 = DocumentSpaceFileSystemEntry.builder()
+                .itemName("File1")
+                .documentSpaceId(spaceId)
+                .parentEntryId(parentFolder.getItemId())
+                .etag("blah")
+                .lastModifiedOn(Date.from(LocalDateTime.of(2022, 1, 14, 12, 0).toInstant(ZoneOffset.UTC)))
+                .isFolder(false)
+                .build();
+
+        DocumentSpaceFileSystemEntry file2 = DocumentSpaceFileSystemEntry.builder()
+                .itemName("File2")
+                .documentSpaceId(spaceId)
+                .parentEntryId(parentFolder.getItemId())
+                .etag("blah")
+                .lastModifiedOn(Date.from(LocalDateTime.of(2022, 1, 15, 12, 0).toInstant(ZoneOffset.UTC)))
+                .isFolder(false)
+                .build();
+
+        // this one should get ignored
+        DocumentSpaceFileSystemEntry archivedFile = DocumentSpaceFileSystemEntry.builder()
+                .itemName("Archived")
+                .documentSpaceId(spaceId)
+                .parentEntryId(parentFolder.getItemId())
+                .lastModifiedOn(new Date())
+                .isFolder(false)
+                .etag("blah")
+                .isDeleteArchived(true)
+                .build();
+
+        documentSpaceFileSystemRepository.saveAll(Lists.newArrayList(file1, file2, archivedFile));
+
+        // finds a file by name
+        Page<DocumentSpaceFileSystemEntry> results = service.findFilesInSpaceLike(spaceId, "File2", Pageable.ofSize(10));
+        assertEquals(1, results.getContent().size());
+
+        // can take portion of file name
+        results = service.findFilesInSpaceLike(spaceId, "ile2", Pageable.ofSize(10));
+        assertEquals(1, results.getContent().size());
+
+        // is case-insensitive
+        results = service.findFilesInSpaceLike(spaceId, "ILE2", Pageable.ofSize(10));
+        assertEquals(1, results.getContent().size());
+
+        // can't search ones that are in archived state
+        results = service.findFilesInSpaceLike(spaceId, "Archived", Pageable.ofSize(10));
+        assertEquals(0, results.getContent().size());
     }
 }

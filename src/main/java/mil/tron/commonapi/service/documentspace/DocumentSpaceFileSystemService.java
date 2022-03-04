@@ -2,8 +2,11 @@ package mil.tron.commonapi.service.documentspace;
 
 import mil.tron.commonapi.dto.documentspace.DocumentDto;
 import mil.tron.commonapi.dto.documentspace.DocumentSpaceFolderInfoDto;
+import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
 import mil.tron.commonapi.service.documentspace.util.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -46,4 +49,6 @@ public interface DocumentSpaceFileSystemService {
     
     List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(DocumentSpaceFileSystemEntry propagateFrom);
     DocumentSpaceFolderInfoDto getFolderTotalSizeFromElement(FilePathSpec pathSpec);
+
+    Page<DocumentSpaceFileSystemEntry> findFilesInSpaceLike(UUID spaceId, String filename, Pageable pageable);
 }

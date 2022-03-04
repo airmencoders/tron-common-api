@@ -15,6 +15,7 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
@@ -31,7 +32,6 @@ import mil.tron.commonapi.service.documentspace.util.FilePathSpec;
 import mil.tron.commonapi.service.documentspace.util.FilePathSpecWithContents;
 import mil.tron.commonapi.service.documentspace.util.FileSystemElementTree;
 import mil.tron.commonapi.service.documentspace.util.S3ObjectAndFilename;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.assertj.core.util.Lists;
 import org.junit.Assert;
@@ -53,9 +53,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry.NIL_UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
@@ -95,6 +97,9 @@ class DocumentSpaceServiceImplTest {
 	@Mock
 	private DocumentSpaceMetadataService metadataService;
 
+	@Mock
+	private DocumentSpaceUserCollectionService documentSpaceUserCollectionService;
+
 	private S3Mock s3Mock;
 
 	private DocumentSpaceRequestDto requestDto;
@@ -116,7 +121,7 @@ class DocumentSpaceServiceImplTest {
 
 		documentService = new DocumentSpaceServiceImpl(amazonS3, transferManager, BUCKET_NAME, documentSpaceRepo,
 				documentSpacePrivilegeService, dashboardUserRepository, dashboardUserService, privilegeRepository,
-				documentSpaceFileSystemService, documentSpaceFileService, metadataService);
+				documentSpaceFileSystemService, documentSpaceFileService, metadataService, documentSpaceUserCollectionService);
 		s3Mock = new S3Mock.Builder().withPort(9002).withInMemoryBackend().build();
 
 		s3Mock.start();
@@ -200,9 +205,9 @@ class DocumentSpaceServiceImplTest {
 		String fakeContent = "fake content";
 		FilePathSpec mockSpec = FilePathSpec.builder()
 				.documentSpaceId(entity.getId())
-				.parentFolderId(DocumentSpaceFileSystemEntry.NIL_UUID)
+				.parentFolderId(NIL_UUID)
 				.fullPathSpec("")
-				.itemId(DocumentSpaceFileSystemEntry.NIL_UUID)
+				.itemId(NIL_UUID)
 				.uuidList(new ArrayList<>())
 				.itemName("")
 				.build();
@@ -238,7 +243,7 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(
-						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
+						FilePathSpec.builder().itemId(NIL_UUID).build());
 		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(UUID.class),
 				Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(Optional.of(DocumentSpaceFileSystemEntry.builder().documentSpaceId(entity.getId())
@@ -285,7 +290,7 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(
-						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("").build());
+						FilePathSpec.builder().itemId(NIL_UUID).fullPathSpec("").build());
 		
 		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolderOrThrow(Mockito.any(UUID.class), Mockito.any(UUID.class), Mockito.anyString()))
 			.thenReturn(DocumentSpaceFileSystemEntry.builder()
@@ -313,7 +318,7 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(
-						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("").build());
+						FilePathSpec.builder().itemId(NIL_UUID).fullPathSpec("").build());
 		List<S3Object> downloadFiles = documentService.getFiles(documentSpaceDto.getId(), "", Set.copyOf(fileNames), dashboardUser.getEmail());
 
 		List<S3Object> fromS3 = new ArrayList<>();
@@ -344,14 +349,14 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
 				.thenReturn(
-						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
+						FilePathSpec.builder().itemId(NIL_UUID).build());
 		
 		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolderOrThrow(Mockito.any(UUID.class), Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(DocumentSpaceFileSystemEntry.builder()
 					.itemName(fileNames.get(0))
 					.build());
 		
-		S3Object downloadFile = documentService.getFile(documentSpaceDto.getId(), DocumentSpaceFileSystemEntry.NIL_UUID, fileNames.get(0), dashboardUser.getEmail());
+		S3Object downloadFile = documentService.getFile(documentSpaceDto.getId(), NIL_UUID, fileNames.get(0), dashboardUser.getEmail());
 
 		S3Object s3Object = amazonS3.getObject(BUCKET_NAME, documentService.createDocumentSpacePathPrefix(entity.getId()) + fileNames.get(0));
 
@@ -370,14 +375,14 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
 				.thenReturn(
-						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
+						FilePathSpec.builder().itemId(NIL_UUID).build());
 		
 		Mockito.when(documentSpaceFileService.getFileInDocumentSpaceFolder(Mockito.any(UUID.class),
 				Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(Optional.of(DocumentSpaceFileSystemEntry.builder().documentSpaceId(entity.getId())
 						.isFolder(false).itemName(fileNames.get(0)).build()));
 		
-		documentService.deleteFile(entity.getId(), DocumentSpaceFileSystemEntry.NIL_UUID, fileNames.get(0));
+		documentService.deleteFile(entity.getId(), NIL_UUID, fileNames.get(0));
 
 		Mockito.verify(documentSpaceFileService).deleteDocumentSpaceFile(Mockito.any());
 		assertThat(amazonS3.doesObjectExist(BUCKET_NAME,
@@ -424,7 +429,7 @@ class DocumentSpaceServiceImplTest {
 				documentSpaceFileSystemService.getFilesAndFoldersAtPath(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(
 						FilePathSpecWithContents.builder()
-							.itemId(DocumentSpaceFileSystemEntry.NIL_UUID)
+							.itemId(NIL_UUID)
 							.fullPathSpec("")
 							.entries(entries)
 							.build()
@@ -433,10 +438,10 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.parsePathToFilePathSpec(Mockito.any(UUID.class), Mockito.anyString()))
 				.thenReturn(
-						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("").build());
+						FilePathSpec.builder().itemId(NIL_UUID).fullPathSpec("").build());
 		
 		Mockito.when(documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
-			.thenReturn(FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).fullPathSpec("/folder").build());
+			.thenReturn(FilePathSpec.builder().itemId(NIL_UUID).fullPathSpec("/folder").build());
 		
 		Mockito.when(documentSpaceFileSystemService.dumpElementTree(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyBoolean()))
 			.thenReturn(FileSystemElementTree.builder().build());
@@ -520,7 +525,7 @@ class DocumentSpaceServiceImplTest {
 		Mockito.when(
 				documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
 				.thenReturn(
-						FilePathSpec.builder().itemId(DocumentSpaceFileSystemEntry.NIL_UUID).build());
+						FilePathSpec.builder().itemId(NIL_UUID).build());
 		
 		Mockito.doNothing().when(documentSpaceFileSystemService).archiveElement(Mockito.any(UUID.class), Mockito.anyString(), Mockito.anyString());
 		
@@ -1028,6 +1033,70 @@ class DocumentSpaceServiceImplTest {
 			assertNotNull(dashboardUser.getDefaultDocumentSpaceId());
 			documentService.unsetDashboardUsersDefaultDocumentSpace(entity);
 			Mockito.verify(dashboardUserRepository, times(1)).unsetDashboardUsersDefaultDocumentSpaceForDocumentSpace(entity.getId());
+		}
+	}
+
+	@Nested
+	class SearchDocumentSpace {
+
+		UUID spaceId = UUID.randomUUID();
+
+		@Test
+		void returnsResultsForSearchQueryAsDocumentMobileDtos() {
+
+			UUID item1 = UUID.randomUUID();
+			UUID item2 = UUID.randomUUID();
+			UUID item3 = UUID.randomUUID();
+
+			List<DocumentSpaceUserCollectionResponseDto> favs = Lists.newArrayList(DocumentSpaceUserCollectionResponseDto.builder()
+					.documentSpaceId(spaceId)
+					.key("some-file2.txt")
+					.itemId(item1)
+					.build());
+
+			List<DocumentSpaceFileSystemEntry> files = Lists.newArrayList(DocumentSpaceFileSystemEntry.builder()
+					.documentSpaceId(spaceId)
+					.itemId(item1)
+					.itemName("some-file2.txt")
+					.etag("some-file2")
+					.build(),
+				DocumentSpaceFileSystemEntry.builder()
+					.documentSpaceId(spaceId)
+					.itemId(item2)
+					.itemName("another-file.txt")
+					.etag("sdfsf")
+					.build(),
+				DocumentSpaceFileSystemEntry.builder()
+					.documentSpaceId(spaceId)
+					.itemId(item3)
+					.itemName("file2")
+					.isDeleteArchived(false)
+					.etag("sdfsdfsdf")
+					.build());
+
+			Mockito.when(documentSpaceFileSystemService.findFilesInSpaceLike(Mockito.any(UUID.class), Mockito.anyString(), Mockito.any(Pageable.class)))
+					.thenReturn(new PageImpl<>(Lists.newArrayList(files.get(0), files.get(2))));
+
+			Mockito.when(documentSpaceUserCollectionService.getFavoriteEntriesForUserInDocumentSpace(Mockito.anyString(), Mockito.any(UUID.class)))
+					.thenReturn(favs);
+
+			Mockito.when(documentSpaceFileSystemService.getFilePathSpec(Mockito.any(UUID.class), Mockito.any(UUID.class)))
+					.thenAnswer(args -> {
+						UUID id = args.getArgument(0);
+						return FilePathSpec.builder()
+								.itemId(NIL_UUID)
+								.documentSpaceId(id)
+								.fullPathSpec("/")
+								.build();
+					});
+
+			Principal principal = () -> "dude@test.mil";
+
+			Page<DocumentMobileDto> results = documentService.findFilesInSpaceLike(spaceId, "file2", Pageable.ofSize(10), principal);
+			assertEquals(2, results.getContent().size());
+			assertTrue(results.getContent().get(0).isFavorite());
+			assertFalse(results.getContent().get(1).isFavorite());
+
 		}
 	}
 

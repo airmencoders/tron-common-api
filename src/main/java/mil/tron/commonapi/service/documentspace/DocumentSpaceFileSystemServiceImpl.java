@@ -20,6 +20,8 @@ import mil.tron.commonapi.validations.DocSpaceFolderOrFilenameValidator;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
@@ -919,5 +921,10 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
                 .itemId(entry.getItemId())
                 .itemName(entry.getItemName())
                 .build();
+    }
+
+    @Override
+    public Page<DocumentSpaceFileSystemEntry> findFilesInSpaceLike(UUID spaceId, String filename, Pageable pageable) {
+        return repository.findFilesInSpaceLike(spaceId, String.format("%%%s%%", filename), pageable);
     }
 }

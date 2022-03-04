@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
 import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.Privilege;
 import mil.tron.commonapi.entity.documentspace.*;
@@ -84,6 +85,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	private String enclaveLevel;
 
 	private final DashboardUserService dashboardUserService;
+	private final DocumentSpaceUserCollectionService documentSpaceUserCollectionService;
 
 	@SuppressWarnings("squid:S00107")
 	public DocumentSpaceServiceImpl(AmazonS3 documentSpaceClient, TransferManager documentSpaceTransferManager,
@@ -91,7 +93,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			DocumentSpacePrivilegeService documentSpacePrivilegeService,
 			DashboardUserRepository dashboardUserRepository, DashboardUserService dashboardUserService,
 			PrivilegeRepository privilegeRepository, DocumentSpaceFileSystemService documentSpaceFileSystemService,
-			DocumentSpaceFileService documentSpaceFileService, DocumentSpaceMetadataService metadataService) {
+			DocumentSpaceFileService documentSpaceFileService, DocumentSpaceMetadataService metadataService,
+			DocumentSpaceUserCollectionService documentSpaceUserCollectionService) {
 
 		this.documentSpaceClient = documentSpaceClient;
 		this.documentSpaceTransferManager = documentSpaceTransferManager;
@@ -109,6 +112,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 		
 		this.documentSpaceFileService = documentSpaceFileService;
 		this.metadataService = metadataService;
+
+		this.documentSpaceUserCollectionService = documentSpaceUserCollectionService;
 	}
 
 	@Override
@@ -1326,5 +1331,52 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			}
 			return mappedType;
 		}).collect(Collectors.toList());
+	}
+
+	/**
+	 * Perform the filename search query over the document space
+	 * @param spaceId space UUID
+	 * @param filename the filename query
+	 * @param pageable the pagination information passed in from the controller
+	 * @param principal the user principal id
+	 * @return a pageable of DocumentMobileDto to return
+	 */
+	@Override
+	public Page<DocumentMobileDto> findFilesInSpaceLike(UUID spaceId, String filename, Pageable pageable, Principal principal) {
+		Page<DocumentSpaceFileSystemEntry> results = documentSpaceFileSystemService.findFilesInSpaceLike(spaceId, filename, pageable);
+		List<DocumentSpaceUserCollectionResponseDto> favs = documentSpaceUserCollectionService.getFavoriteEntriesForUserInDocumentSpace(principal.getName(), spaceId);
+		return new PageImpl<>(results.stream()
+				.map(item -> convertFileSystemEntryToMobileDto(spaceId, item, favs, principal))
+				.collect(Collectors.toList()), pageable, results.getSize());
+	}
+
+	/**
+	 * Helper method to map a DocumentSpaceFileSystemEntry over to a DocumentMobileDto (same as a DocumentDto but with extras included)
+	 * @param spaceId the space UUID
+	 * @param entry the doc space entry to convert
+	 * @param principal the principal id (so we can get favorites)
+	 * @return the document mobile dto
+	 */
+	@Override
+	public DocumentMobileDto convertFileSystemEntryToMobileDto(UUID spaceId, DocumentSpaceFileSystemEntry entry,
+															   List<DocumentSpaceUserCollectionResponseDto> favs,
+															   Principal principal) {
+		FilePathSpec spec = documentSpaceFileSystemService.getFilePathSpec(spaceId, entry.getParentEntryId());
+
+
+		return DocumentMobileDto.builder()
+				.path(FilenameUtils.normalizeNoEndSeparator(spec.getFullPathSpec()))
+				.size(entry.getSize())
+				.spaceId(entry.getDocumentSpaceId().toString())
+				.isFolder(entry.isFolder())
+				.parentId(entry.getParentEntryId())
+				.isFavorite(favs.stream().anyMatch(item -> item.getItemId().equals(entry.getItemId())))
+				.elementUniqueId(entry.getItemId())
+				.key(FilenameUtils.getName(entry.getItemName()))
+				.lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
+				.lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
+				.lastActivity(entry.getLastActivity() != null ? entry.getLastActivity() : entry.getCreatedOn())
+				.hasContents(entry.isHasNonArchivedContents())
+				.build();
 	}
 }
