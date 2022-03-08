@@ -1305,12 +1305,30 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 			Pageable pageable) {
 		List<DocumentSpaceResponseDto> authorizedSpaces = listSpaces(authenticatedUsername);
 		Set<UUID> authorizedSpaceIds = authorizedSpaces.stream().map(DocumentSpaceResponseDto::getId).collect(Collectors.toSet());
-		return  documentSpaceFileService.getRecentlyUploadedFilesByUser(authenticatedUsername, authorizedSpaceIds, pageable);
+		Slice<RecentDocumentDto> results = documentSpaceFileService.getRecentlyUploadedFilesByUser(authenticatedUsername, authorizedSpaceIds, pageable);
+
+		// now map the results to populate its string path
+		results.forEach(item -> {
+			FilePathSpec spec = documentSpaceFileSystemService.getFilePathSpec(item.getDocumentSpace().getId(), item.getParentFolderId());
+			String path = FilenameUtils.normalizeNoEndSeparator(spec.getFullPathSpec());
+			item.setPath(path.isBlank() ? "/" : path);
+		});
+
+		return results;
 	}
 
 	@Override
 	public Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable) {
-		return documentSpaceFileService.getRecentlyUploadedFilesBySpace(spaceId, date, pageable);
+		Slice<RecentDocumentDto> results =  documentSpaceFileService.getRecentlyUploadedFilesBySpace(spaceId, date, pageable);
+
+		// now map the results to populate its string path
+		results.forEach(item -> {
+				FilePathSpec spec = documentSpaceFileSystemService.getFilePathSpec(item.getDocumentSpace().getId(), item.getParentFolderId());
+				String path = FilenameUtils.normalizeNoEndSeparator(spec.getFullPathSpec());
+				item.setPath(path.isBlank() ? "/" : path);
+		});
+
+		return results;
 	}
 
 	private List<DocumentSpacePrivilegeType> mapToPrivilegeTypes(List<ExternalDocumentSpacePrivilegeType> privileges) {

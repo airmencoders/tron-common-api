@@ -13,6 +13,7 @@ import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDtoResponseWrapper;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.ExceptionResponse;
 import mil.tron.commonapi.exception.RecordNotFoundException;
@@ -1002,6 +1003,19 @@ public class DocumentSpaceController {
 		return new ResponseEntity<>(documentSpaceService.getRecentlyUploadedFilesBySpace(id, date, pageable), HttpStatus.OK);
 	}
 
+	@Operation(summary = "Search a document space for a filename or part of a filename",
+			description = "Requester must have at least READ access to provided Space.  Query is case-insensitive and is treated like a filename that 'contains'...")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful",
+					content = @Content(schema = @Schema(implementation = DocumentMobileDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space, or entry not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
 	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasReadAccess(authentication, #id)) and #principal != null")
 	@WrappedEnvelopeResponse
 	@PostMapping("/spaces/{id}/search")

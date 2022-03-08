@@ -564,6 +564,12 @@ class DocumentSpaceServiceImplTest {
 		void shouldGetFiles() {
 			Mockito.when(dashboardUserService.getDashboardUserByEmailAsLower(Mockito.anyString())).thenReturn(dashboardUser);
 			Mockito.when(documentSpaceRepo.findAllDynamicBy(Mockito.any())).thenReturn(Arrays.asList(responseDto));
+			Mockito.when(documentSpaceFileSystemService.getFilePathSpec(Mockito.any(), Mockito.any(UUID.class))).thenReturn(FilePathSpec.builder()
+					.documentSpaceId(UUID.randomUUID())
+					.itemId(UUID.randomUUID())
+					.itemName("")
+					.fullPathSpec("/")
+					.build());
 			
 			Pageable pageable = PageRequest.of(0, 100);
 	    	Slice<RecentDocumentDto> serviceResponse = new SliceImpl<>(generateRandomFileEntries(1), pageable, false);
