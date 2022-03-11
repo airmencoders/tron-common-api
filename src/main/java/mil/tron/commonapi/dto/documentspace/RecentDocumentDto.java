@@ -40,6 +40,9 @@ public class RecentDocumentDto {
 	@NotNull
 	private UUID parentFolderId;
 
+	@NotNull
+	private String path;  // the resolved path of the parentFolderId
+
 	/**
 	 * This field becomes the last activity date, or last modified date, or the creation date (which
 	 * ever is non-null first) as determined in the JPQL query
