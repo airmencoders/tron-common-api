@@ -190,9 +190,19 @@ public class DocumentSpaceFileSystemServiceImpl implements DocumentSpaceFileSyst
         contents.setEntries(repository.findByDocumentSpaceIdEqualsAndParentEntryIdEqualsAndIsDeleteArchivedEquals(spaceId, spec.getItemId(), false));
 
         contents.getEntries().forEach(entry -> 
-            entry.setHasNonArchivedContents(repository.existsByParentEntryIdAndIsDeleteArchivedFalse(entry.getItemId()))
+            entry.setHasNonArchivedContents(checkIfItemHasContents(entry.getItemId()))
         );
         return contents;
+    }
+
+    /**
+     * Helper to basically check if a given UUID is a parent to something else (meaning its a directory and has contents in it)
+     * @param itemId
+     * @return
+     */
+    @Override
+    public boolean checkIfItemHasContents(UUID itemId) {
+        return repository.existsByParentEntryIdAndIsDeleteArchivedFalse(itemId);
     }
 
     @Override

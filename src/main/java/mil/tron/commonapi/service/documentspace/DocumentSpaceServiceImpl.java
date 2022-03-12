@@ -1381,7 +1381,6 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 															   Principal principal) {
 		FilePathSpec spec = documentSpaceFileSystemService.getFilePathSpec(spaceId, entry.getParentEntryId());
 
-
 		return DocumentMobileDto.builder()
 				.path(FilenameUtils.normalizeNoEndSeparator(spec.getFullPathSpec()))
 				.size(entry.getSize())
@@ -1394,7 +1393,7 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 				.lastModifiedBy(entry.getLastModifiedBy() != null ? entry.getLastModifiedBy() : entry.getCreatedBy())
 				.lastModifiedDate(entry.getLastModifiedOn() != null ? entry.getLastModifiedOn() : entry.getCreatedOn())
 				.lastActivity(entry.getLastActivity() != null ? entry.getLastActivity() : entry.getCreatedOn())
-				.hasContents(entry.isHasNonArchivedContents())
+				.hasContents(documentSpaceFileSystemService.checkIfItemHasContents(entry.getItemId()))
 				.build();
 	}
 }
