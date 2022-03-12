@@ -49,6 +49,6 @@ public interface DocumentSpaceFileSystemService {
     
     List<DocumentSpaceFileSystemEntry> propagateModificationStateToAncestors(DocumentSpaceFileSystemEntry propagateFrom);
     DocumentSpaceFolderInfoDto getFolderTotalSizeFromElement(FilePathSpec pathSpec);
-
+    boolean checkIfItemHasContents(UUID itemId);
     Page<DocumentSpaceFileSystemEntry> findFilesInSpaceLike(UUID spaceId, String filename, Pageable pageable);
 }
