@@ -572,12 +572,12 @@ class DocumentSpaceServiceImplTest {
 					.build());
 			
 			Pageable pageable = PageRequest.of(0, 100);
-	    	Slice<RecentDocumentDto> serviceResponse = new SliceImpl<>(generateRandomFileEntries(1), pageable, false);
+	    	Page<RecentDocumentDto> serviceResponse = new PageImpl<>(generateRandomFileEntries(1), pageable, 1);
 	    	
 			Mockito.when(documentSpaceFileService.getRecentlyUploadedFilesByUser(Mockito.anyString(), Mockito.anySet(), Mockito.any()))
 				.thenReturn(serviceResponse);
 
-			Slice<RecentDocumentDto> dtos = documentService.getRecentlyUploadedFilesByAuthUser("test user", pageable);
+			Page<RecentDocumentDto> dtos = documentService.getRecentlyUploadedFilesByAuthUser("test user", pageable);
 			
 			assertThat(dtos).hasSize(1);
 		}

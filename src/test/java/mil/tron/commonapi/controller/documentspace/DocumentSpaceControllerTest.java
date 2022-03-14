@@ -156,13 +156,13 @@ class DocumentSpaceControllerTest {
     	response.setData(Arrays.asList(documentDto));
     	
     	Pageable pageable = PageRequest.of(0, 100);
-    	Slice<RecentDocumentDto> serviceResponse = new SliceImpl<>(response.getData(), pageable, false);
+    	Page<RecentDocumentDto> serviceResponse = new PageImpl<>(response.getData(), pageable, response.getData().size());
     	Mockito.when(documentSpaceService.getRecentlyUploadedFilesByAuthUser(Mockito.anyString(), Mockito.eq(pageable)))
     		.thenReturn(serviceResponse);
     	
     	PaginationWrappedResponse<List<RecentDocumentDto>> controllerResponse = PaginationWrappedResponse.<List<RecentDocumentDto>>builder()
     			.data(response.getData())
-    			.pagination(new Pagination(0, 100, null, null, new PaginationLink()))
+    			.pagination(new Pagination(0, 100, 1L, 1, new PaginationLink()))
     			.build();
     	
     	mockMvc.perform(get(ENDPOINT +"/spaces/files/recently-uploaded?page=0&size=100"))

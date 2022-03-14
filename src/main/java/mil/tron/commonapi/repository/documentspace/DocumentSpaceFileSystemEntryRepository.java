@@ -76,7 +76,7 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
     		+ " entry.documentSpaceId = documentSpace.id and"
     		+ " documentSpace.id in :authorizedSpaceIds"
     		+ " order by coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn) desc")
-    Slice<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds, Pageable pageable);
+    Page<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds, Pageable pageable);
 
     /**
      * Finds all Entries in which the last modified by or created by fields are equal to {@link spaceId}.
@@ -98,7 +98,7 @@ public interface DocumentSpaceFileSystemEntryRepository extends JpaRepository<Do
             + " entry.documentSpaceId = documentSpace.id and "
             + " coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn) <= :fromDate "
             + " order by coalesce(entry.lastActivity, entry.lastModifiedOn, entry.createdOn) desc")
-    Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date fromDate, Pageable pageable);
+    Page<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date fromDate, Pageable pageable);
 
     /**
      * Search file system entries for filename, excluding archived items

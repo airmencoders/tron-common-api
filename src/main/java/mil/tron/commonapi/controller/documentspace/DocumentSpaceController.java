@@ -13,6 +13,7 @@ import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
 import mil.tron.commonapi.dto.documentspace.*;
+import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDtoResponseWrapper;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
 import mil.tron.commonapi.exception.ExceptionResponse;
@@ -27,7 +28,6 @@ import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -452,7 +452,7 @@ public class DocumentSpaceController {
     @PreAuthorize("isAuthenticated() and #principal != null")
     @WrappedEnvelopeResponse
     @GetMapping("/spaces/files/recently-uploaded")
-    public ResponseEntity<Slice<RecentDocumentDto>> getRecentlyUploadedFilesByAuthenticatedUser(
+    public ResponseEntity<Page<RecentDocumentDto>> getRecentlyUploadedFilesByAuthenticatedUser(
     		@ParameterObject Pageable pageable,
 			Principal principal) {
         return ResponseEntity
@@ -993,7 +993,7 @@ public class DocumentSpaceController {
 	@PreAuthorize("hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasReadAccess(authentication, #id)")
 	@WrappedEnvelopeResponse
 	@GetMapping("/spaces/{id}/recents")
-	public ResponseEntity<Slice<RecentDocumentDto>> getRecentsForSpace(@Parameter(name="id", description="Space UUID", required=true) @PathVariable UUID id,
+	public ResponseEntity<Page<RecentDocumentDto>> getRecentsForSpace(@Parameter(name="id", description="Space UUID", required=true) @PathVariable UUID id,
 											   @Parameter(name="date", description="ISO UTC date/time to search from looking back") @RequestParam(required=false) Date date,
 											   @ParameterObject Pageable pageable) {
 		if (date == null) {
@@ -1019,10 +1019,10 @@ public class DocumentSpaceController {
 	@PreAuthorize("(hasAuthority('DASHBOARD_ADMIN') || @accessCheckDocumentSpace.hasReadAccess(authentication, #id)) and #principal != null")
 	@WrappedEnvelopeResponse
 	@PostMapping("/spaces/{id}/search")
-	public ResponseEntity<Object> searchDocumentSpace(@Parameter(name="id", description="Space UUID", required=true) @PathVariable UUID id,
-													  @Valid @RequestBody DocumentSpaceSearchDto searchDto,
-													  @ParameterObject Pageable pageable,
-													  Principal principal) {
+	public ResponseEntity<Page<DocumentMobileDto>> searchDocumentSpace(@Parameter(name="id", description="Space UUID", required=true) @PathVariable UUID id,
+																	   @Valid @RequestBody DocumentSpaceSearchDto searchDto,
+																	   @ParameterObject Pageable pageable,
+																	   Principal principal) {
 
 		return new ResponseEntity<>(documentSpaceService.findFilesInSpaceLike(id, searchDto.getQuery(), pageable, principal), HttpStatus.OK);
 	}

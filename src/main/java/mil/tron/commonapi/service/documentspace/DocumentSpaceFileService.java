@@ -1,16 +1,15 @@
 package mil.tron.commonapi.service.documentspace;
 
+import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
+import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.Date;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
-
-import mil.tron.commonapi.dto.documentspace.RecentDocumentDto;
-import mil.tron.commonapi.entity.documentspace.DocumentSpaceFileSystemEntry;
-import mil.tron.commonapi.exception.RecordNotFoundException;
 
 public interface DocumentSpaceFileService {
 	/**
@@ -88,7 +87,7 @@ public interface DocumentSpaceFileService {
 	 * @param pageable pageable object
 	 * @return a list of recently uploaded File entries
 	 */
-	Slice<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds, Pageable pageable);
+	Page<RecentDocumentDto> getRecentlyUploadedFilesByUser(String username, Set<UUID> authorizedSpaceIds, Pageable pageable);
 
 	/**
 	 * Returns a list of Files that a space has most recently had updated/uploaded.  Assumes requester
@@ -98,5 +97,5 @@ public interface DocumentSpaceFileService {
 	 * @param pageable the pageable object
 	 * @return a list of recently uploaded File entries
 	 */
-	Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable);
+	Page<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable);
 }
