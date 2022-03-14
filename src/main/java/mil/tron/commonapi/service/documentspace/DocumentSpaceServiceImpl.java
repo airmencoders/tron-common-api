@@ -35,7 +35,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -1301,11 +1300,11 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public Slice<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername,
+	public Page<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername,
 			Pageable pageable) {
 		List<DocumentSpaceResponseDto> authorizedSpaces = listSpaces(authenticatedUsername);
 		Set<UUID> authorizedSpaceIds = authorizedSpaces.stream().map(DocumentSpaceResponseDto::getId).collect(Collectors.toSet());
-		Slice<RecentDocumentDto> results = documentSpaceFileService.getRecentlyUploadedFilesByUser(authenticatedUsername, authorizedSpaceIds, pageable);
+		Page<RecentDocumentDto> results = documentSpaceFileService.getRecentlyUploadedFilesByUser(authenticatedUsername, authorizedSpaceIds, pageable);
 
 		// now map the results to populate its string path
 		results.forEach(item -> {
@@ -1318,8 +1317,8 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	}
 
 	@Override
-	public Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable) {
-		Slice<RecentDocumentDto> results =  documentSpaceFileService.getRecentlyUploadedFilesBySpace(spaceId, date, pageable);
+	public Page<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable) {
+		Page<RecentDocumentDto> results =  documentSpaceFileService.getRecentlyUploadedFilesBySpace(spaceId, date, pageable);
 
 		// now map the results to populate its string path
 		results.forEach(item -> {

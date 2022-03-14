@@ -84,8 +84,8 @@ public interface DocumentSpaceService {
 
     void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace);
     
-    Slice<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername, Pageable pageable);
-    Slice<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable);
+    Page<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername, Pageable pageable);
+    Page<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable);
 
     Page<DocumentMobileDto> findFilesInSpaceLike(UUID spaceId, String filename, Pageable pageable, Principal principal);
     DocumentMobileDto convertFileSystemEntryToMobileDto(UUID spaceId, DocumentSpaceFileSystemEntry entry, List<DocumentSpaceUserCollectionResponseDto> favs, Principal principal);
