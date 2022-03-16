@@ -12,6 +12,7 @@ import com.google.common.io.Files;
 import com.jayway.jsonpath.JsonPath;
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.JwtUtils;
+import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
@@ -77,6 +78,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class DocumentSpaceIntegrationTests {
 
     public static final String ENDPOINT_V2 = "/v2/document-space";
+    public static final String APP_CLIENT_ENDPOINT_V2 = "/v2/app-client";
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Autowired
@@ -3620,5 +3622,224 @@ public class DocumentSpaceIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
 
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void testAppClientDocSpaceAccess() throws Exception {
+
+        // runs tests to check if an app client can access the spaces it's allowed to
+
+        UUID space1Id = createSpaceWithFiles("space1");
+        UUID space2Id = createSpaceWithFiles("space2");
+
+        // make an app client "app1"
+        AppClientUserDto app1 = AppClientUserDto.builder()
+                .id(UUID.randomUUID())
+                .name("App1")
+                .appClientDeveloperEmails(Lists.newArrayList(admin.getEmail()))
+                .build();
+
+        MvcResult app1Result = mockMvc.perform(post(APP_CLIENT_ENDPOINT_V2)
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID app1Id = MAPPER.readValue(app1Result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+        app1.setId(app1Id);
+
+        // make another app client "app2"
+        AppClientUserDto app2 = AppClientUserDto.builder()
+                .id(UUID.randomUUID())
+                .name("App2")
+                .appClientDeveloperEmails(Lists.newArrayList(admin.getEmail()))
+                .build();
+
+        MvcResult app2Result = mockMvc.perform(post(APP_CLIENT_ENDPOINT_V2)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(app2)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID app2Id = MAPPER.readValue(app1Result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+        app2.setId(app2Id);
+
+        // try to get files from space1 as app1
+        // should fail 403
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
+                .andExpect(status().isForbidden());
+
+        // now add app1 to space1 as a reader
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/app-client", space1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(DocumentSpaceAppClientMemberRequestDto.builder()
+                        .appClientId(app1Id)
+                        .privileges(Lists.newArrayList())
+                        .build())))
+                .andExpect(status().isNoContent());
+
+        // try to get files from space1 as app1
+        // should be 200
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
+                .andExpect(status().isOk());
+
+        // try to upload a file
+        // should be 403 since we only have READ access
+        MockMultipartFile file
+                = new MockMultipartFile(
+                "file",
+                "hello.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Hello, World!".getBytes()
+        );
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space1Id.toString()).file(file)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
+                .andExpect(status().isForbidden());
+
+        // grant WRITE
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/app-client", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceAppClientMemberRequestDto.builder()
+                                .appClientId(app1Id)
+                                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                                .build())))
+                .andExpect(status().isNoContent());
+
+        // upload should work now
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space1Id.toString()).file(file)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
+                .andExpect(status().isOk());
+
+        // test membership
+        // should fail
+        mockMvc.perform(post(ENDPOINT_V2 +"/spaces/{id}/users", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceDashboardMemberRequestDto.builder()
+                                .email("airman@test.mil")
+                                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                                .build())))
+                .andExpect(status().isForbidden());
+
+        // grant ADMIN privs
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/app-client", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceAppClientMemberRequestDto.builder()
+                                .appClientId(app1Id)
+                                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.MEMBERSHIP))
+                                .build())))
+                .andExpect(status().isNoContent());
+
+        // can assign people now
+        mockMvc.perform(post(ENDPOINT_V2 +"/spaces/{id}/users", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceDashboardMemberRequestDto.builder()
+                                .email("airman@test.mil")
+                                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                                .build())))
+                .andExpect(status().isNoContent());
+
+        // check can't cross read into other spaces (not sure why this would be though)....
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space2Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
+                .andExpect(status().isForbidden());
+
+        // can still upload
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space1Id.toString()).file(file)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
+                .andExpect(status().isOk());
+
+        // check that doc space has App1 assigned to it with the correct privs
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/app-clients", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1))) // should be just App1
+                .andExpect(jsonPath("$.data[0].appClientId", equalTo(app1.getId().toString())))
+                .andExpect(jsonPath("$.data[0].appClientName", equalTo("App1")))
+                .andExpect(jsonPath("$.data[0].privileges", hasItems("READ", "WRITE", "MEMBERSHIP")));
+
+        // check that doc space only has 1 additional possible app client to choose from
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/available-app-clients", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3))) // should be puckboard, guardian-angel, and App2
+                .andExpect(jsonPath("$.data[*].name", hasItem("App2")));
+
+        // now remove privileges
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}/app-client?appClientId={appId}", space1Id.toString(), app1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNoContent());
+
+        // can't upload anymore
+        mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space1Id.toString()).file(file)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
+                .andExpect(status().isForbidden());
+
+        // cant assign people either
+        mockMvc.perform(post(ENDPOINT_V2 +"/spaces/{id}/users", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceDashboardMemberRequestDto.builder()
+                                .email("airman@test.mil")
+                                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                                .build())))
+                .andExpect(status().isForbidden());
+
+        // cant read either/access
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
+                .andExpect(status().isForbidden());
+
+        // assign an access (ADMIN) to space #2
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/app-client", space2Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceAppClientMemberRequestDto.builder()
+                                .appClientId(app1Id)
+                                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.MEMBERSHIP))
+                                .build())))
+                .andExpect(status().isNoContent());
+
+        // then delete the doc space to make sure no constraint issues
+        mockMvc.perform(delete(ENDPOINT_V2 + "/spaces/{id}", space2Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isNoContent());
+
+        // delete App Client that's still tied to space1 to make sure constraint issues
+        mockMvc.perform(delete(APP_CLIENT_ENDPOINT_V2 + "/{id}", app1Id)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
     }
 }

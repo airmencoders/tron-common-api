@@ -2,6 +2,7 @@ package mil.tron.commonapi.service.documentspace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +12,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import mil.tron.commonapi.dto.documentspace.DocumentSpaceAppClientResponseDto;
+import mil.tron.commonapi.exception.RecordNotFoundException;
+import mil.tron.commonapi.repository.AppClientUserRespository;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +45,9 @@ class DocumentSpacePrivilegeServiceImplTest {
 	
 	@Mock
 	private PrivilegeRepository privilegeRepository;
+
+	@Mock
+	private AppClientUserRespository appClientUserRespository;
 	
 	@InjectMocks
 	private DocumentSpacePrivilegeServiceImpl documentSpacePrivilegeService;
@@ -145,6 +153,51 @@ class DocumentSpacePrivilegeServiceImplTest {
 		assertThat(read.getDashboardUsers()).contains(dashboardUser);
 		assertThat(write.getDashboardUsers()).contains(dashboardUser);
 		assertThat(memberships.getDashboardUsers()).contains(dashboardUser);
+	}
+
+	@Test
+	void shouldAddPrivilegeToAppClientUser() {
+		DocumentSpacePrivilege read = documentSpace.getPrivileges().get(DocumentSpacePrivilegeType.READ);
+		DocumentSpacePrivilege write = documentSpace.getPrivileges().get(DocumentSpacePrivilegeType.WRITE);
+		DocumentSpacePrivilege memberships = documentSpace.getPrivileges().get(DocumentSpacePrivilegeType.MEMBERSHIP);
+		Mockito.when(appClientUserRespository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(appClientUser));
+
+		assertThat(appClientUser.getDocumentSpacePrivileges()).containsOnly(read);
+
+		documentSpacePrivilegeService.addPrivilegesToAppClientUser(documentSpace, appClientUser.getId(),
+				new ArrayList<>(Arrays.asList(DocumentSpacePrivilegeType.WRITE, DocumentSpacePrivilegeType.MEMBERSHIP, DocumentSpacePrivilegeType.READ)));
+
+		assertThat(appClientUser.getDocumentSpacePrivileges()).contains(read, write, memberships);
+
+		assertThat(read.getAppClientUsers()).contains(appClientUser);
+		assertThat(write.getAppClientUsers()).contains(appClientUser);
+		assertThat(memberships.getAppClientUsers()).contains(appClientUser);
+
+		// test invalid ID croaks
+		Mockito.when(appClientUserRespository.findById(Mockito.any(UUID.class))).thenReturn(Optional.empty());
+		Assertions.assertThrows(RecordNotFoundException.class, () -> documentSpacePrivilegeService.addPrivilegesToAppClientUser(documentSpace, appClientUser.getId(),
+				new ArrayList<>(Arrays.asList(DocumentSpacePrivilegeType.WRITE, DocumentSpacePrivilegeType.MEMBERSHIP))));
+	}
+
+	@Test
+	void shouldRemovePrivilegeFromAppClientUser() {
+		DocumentSpacePrivilege read = documentSpace.getPrivileges().get(DocumentSpacePrivilegeType.READ);
+		Mockito.when(appClientUserRespository.findById(Mockito.any(UUID.class))).thenReturn(Optional.of(appClientUser));
+		documentSpacePrivilegeService.removePrivilegesFromAppClientUser(documentSpace, appClientUser.getId());
+
+		assertThat(appClientUser.getDocumentSpacePrivileges()).doesNotContain(read);
+		assertThat(read.getAppClientUsers()).doesNotContain(appClientUser);
+
+		// test invalid ID croaks
+		Mockito.when(appClientUserRespository.findById(Mockito.any(UUID.class))).thenReturn(Optional.empty());
+		Assertions.assertThrows(RecordNotFoundException.class, () -> documentSpacePrivilegeService.removePrivilegesFromAppClientUser(documentSpace, appClientUser.getId()));
+	}
+
+	@Test
+	void shouldListAppClientPrivsForSpace() {
+		List<DocumentSpaceAppClientResponseDto> appClients = documentSpacePrivilegeService.getAppClientsForDocumentSpace(documentSpace);
+		assertEquals(1, appClients.size());
+		assertEquals(DocumentSpacePrivilegeType.READ, appClients.get(0).getPrivileges().get(0));
 	}
 	
 	@Test
