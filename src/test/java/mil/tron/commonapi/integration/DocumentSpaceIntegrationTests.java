@@ -3720,11 +3720,35 @@ public class DocumentSpaceIntegrationTests {
                                 .build())))
                 .andExpect(status().isNoContent());
 
+        // verify
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/app-clients", space1Id.toString())
+                .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].privileges", hasItems("READ", "WRITE")));
+
         // upload should work now
         mockMvc.perform(multipart(ENDPOINT_V2 + "/spaces/{id}/files/upload", space1Id.toString()).file(file)
                         .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app2")))
+                .andExpect(status().isForbidden());
+
+        // make sure app2 can't read
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                         .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1")))
                 .andExpect(status().isOk());
+
+        // make sure app2 can't write
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/app-client", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app2"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceAppClientMemberRequestDto.builder()
+                                .appClientId(app1Id)
+                                .privileges(Lists.newArrayList(ExternalDocumentSpacePrivilegeType.WRITE))
+                                .build())))
+                .andExpect(status().isForbidden());
 
         // test membership
         // should fail
