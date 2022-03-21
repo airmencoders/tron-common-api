@@ -12,6 +12,9 @@ import com.google.common.io.Files;
 import com.jayway.jsonpath.JsonPath;
 import io.findify.s3mock.S3Mock;
 import mil.tron.commonapi.JwtUtils;
+import mil.tron.commonapi.dto.PrivilegeDto;
+import mil.tron.commonapi.dto.ScratchStorageAppUserPrivDto;
+import mil.tron.commonapi.dto.ScratchStorageUserDto;
 import mil.tron.commonapi.dto.appclient.AppClientUserDto;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -33,6 +36,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -55,6 +59,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -66,7 +71,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = { "security.enabled=true",
         "efa-enabled=false",
         "minio.enabled=true",
-        "minio.connection-string=http://localhost:9002",
+        "minio.connection-string=http://localhost:9005",
         "minio.access-key=admin",
         "minio.secret-key=admin",
         "minio.bucket-name=testbucket",
@@ -135,14 +140,14 @@ public class DocumentSpaceIntegrationTests {
         ClientConfiguration clientConfiguration = new ClientConfiguration();
 
         amazonS3 = AmazonS3ClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:9002", "Earth"))
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:9005", "Earth"))
                 .withPathStyleAccessEnabled(true)
                 .withClientConfiguration(clientConfiguration)
                 .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
                 .build();
 
         s3Mock = new S3Mock.Builder()
-                .withPort(9002)
+                .withPort(9005)
                 .withInMemoryBackend()
                 .build();
 
@@ -3667,7 +3672,7 @@ public class DocumentSpaceIntegrationTests {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        UUID app2Id = MAPPER.readValue(app1Result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+        UUID app2Id = MAPPER.readValue(app2Result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
         app2.setId(app2Id);
 
         // try to get files from space1 as app1
@@ -3773,7 +3778,7 @@ public class DocumentSpaceIntegrationTests {
                                 .build())))
                 .andExpect(status().isNoContent());
 
-        // can assign people now
+        // the app1 can assign people now
         mockMvc.perform(post(ENDPOINT_V2 +"/spaces/{id}/users", space1Id.toString())
                         .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                         .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("app1"))
@@ -3864,6 +3869,130 @@ public class DocumentSpaceIntegrationTests {
         mockMvc.perform(delete(APP_CLIENT_ENDPOINT_V2 + "/{id}", app1Id)
                         .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
                         .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO()))
+                .andExpect(status().isOk());
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    void testDigitizeDocSpaceAccess() throws Exception {
+        // test that request coming from Digitize app clients can use assigned doc spaces
+
+        UUID space1Id = createSpaceWithFiles("space1");
+
+        // make sure Tron Digitize itself is an app client
+        mockMvc.perform(post(APP_CLIENT_ENDPOINT_V2)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(AppClientUserDto.builder()
+                                .name("digitize")
+                                .build())))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        // predefine scratchUser1
+        ScratchStorageUserDto scratchUser1 = ScratchStorageUserDto
+                .builder()
+                .email("scratch_user1@test.com")
+                .build();
+
+        // persist/create scratchUser1
+        mockMvc.perform(post("/v2/scratch/users")
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(scratchUser1)))
+                .andExpect(status().isCreated());
+
+        // make an digitize app called "app1"
+        UUID scratchApp = UUID.randomUUID();
+        Map<String, String> app1Record = new HashMap<>();
+        app1Record.put("id", scratchApp.toString());
+        app1Record.put("appName", "app1");
+        mockMvc.perform(post("/v2/scratch/apps")
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(app1Record)))
+                .andExpect(status().isCreated());
+
+        // get the scratch privs from the db
+        List<PrivilegeDto> privs = Lists.newArrayList(privRepo
+            .findAll())
+                .stream()
+                .map(item -> new ModelMapper().map(item, PrivilegeDto.class))
+                .collect(Collectors.toList());
+
+        Long scratchReadPrivId = privs.stream()
+                .filter(item -> item.getName().equals("SCRATCH_READ"))
+                .collect(Collectors.toList()).get(0).getId();
+
+        // define scratchUser1's privilege (READ) set to app1
+        ScratchStorageAppUserPrivDto user1PrivDto =
+                ScratchStorageAppUserPrivDto.builder()
+                        .email(scratchUser1.getEmail())
+                        .privilegeId(scratchReadPrivId)
+                        .build();
+
+        mockMvc.perform(patch("/v2/scratch/apps/{appId}/user", scratchApp)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(user1PrivDto)))
+                .andExpect(status().isOk());
+
+        // at this point we just have a standard digitize scratch space set up
+        //  the digitize app has NOT been turned into an app client yet, so
+        //  shouldn't be able to interact with the document space
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(scratchUser1.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("digitize"))
+                        .header("digitize-id", scratchApp.toString()))
+                .andExpect(status().isForbidden());
+
+        // now make app1 an app client (digitize apps that are app clients have to be named with the
+        // prefix of "digitize-")
+        AppClientUserDto app1 = AppClientUserDto.builder()
+                .id(UUID.randomUUID())
+                .name("digitize-app1")
+                .appClientDeveloperEmails(Lists.newArrayList(admin.getEmail()))
+                .build();
+
+        MvcResult app1Result = mockMvc.perform(post(APP_CLIENT_ENDPOINT_V2)
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(app1)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID app1Id = MAPPER.readValue(app1Result.getResponse().getContentAsString(), AppClientUserDto.class).getId();
+        app1.setId(app1Id);
+
+        // now try to read again - should still be 403
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(scratchUser1.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("digitize"))
+                        .header("digitize-id", scratchApp.toString()))
+                .andExpect(status().isForbidden());
+
+        // add "digitize-app1" to app clients allowed to access (READ) from space1
+        mockMvc.perform(post(ENDPOINT_V2 + "/spaces/{id}/app-client", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(admin.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeaderFromSSO())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(DocumentSpaceAppClientMemberRequestDto.builder()
+                                .appClientId(app1Id)
+                                .privileges(Lists.newArrayList())
+                                .build())))
+                .andExpect(status().isNoContent());
+
+        // now try to read again - should be 200
+        mockMvc.perform(get(ENDPOINT_V2 + "/spaces/{id}/contents?path=/", space1Id.toString())
+                        .header(JwtUtils.AUTH_HEADER_NAME, JwtUtils.createToken(scratchUser1.getEmail()))
+                        .header(JwtUtils.XFCC_HEADER_NAME, JwtUtils.generateXfccHeader("digitize"))
+                        .header("digitize-id", scratchApp.toString()))
                 .andExpect(status().isOk());
     }
 }
