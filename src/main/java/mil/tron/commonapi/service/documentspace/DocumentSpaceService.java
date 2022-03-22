@@ -3,6 +3,7 @@ package mil.tron.commonapi.service.documentspace;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.entity.documentspace.DocumentSpace;
@@ -69,21 +70,22 @@ public interface DocumentSpaceService {
 
     DocumentSpace convertDocumentSpaceRequestDtoToEntity(DocumentSpaceRequestDto documentSpaceInfoDto);
     DocumentSpaceResponseDto convertDocumentSpaceEntityToResponseDto(DocumentSpace documentSpace);
-    
+
+    // user management
     void addDashboardUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceDashboardMemberRequestDto documentSpaceMemberDto);
-
     Page<DocumentSpaceDashboardMemberResponseDto> getDashboardUsersForDocumentSpace(UUID documentSpaceId, Pageable pageable);
-
     List<DocumentSpacePrivilegeDto> getDashboardUserPrivilegesForDocumentSpace(UUID documentSpaceId, String dashboardUserEmail);
-
     void removeDashboardUserFromDocumentSpace(UUID documentSpaceId, String[] emails);
-
     List<String> batchAddDashboardUserToDocumentSpace(UUID documentSpaceId, MultipartFile file);
-
     void setDashboardUserDefaultDocumentSpace(UUID documentSpaceId, String dashboardUserEmail);
-
     void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace);
-    
+
+    // app client user management
+    void addAppClientUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceAppClientMemberRequestDto documentSpaceAppClientMemberRequestDto);
+    void removeAppClientUserFromDocumentSpace(UUID documentSpaceId, UUID appClientId);
+    List<DocumentSpaceAppClientResponseDto> getAppClientsForDocumentSpace(UUID documentSpaceId);
+    List<AppClientSummaryDto> getAppClientsForAssignmentToDocumentSpace(UUID documentSpaceId);
+
     Page<RecentDocumentDto> getRecentlyUploadedFilesByAuthUser(String authenticatedUsername, Pageable pageable);
     Page<RecentDocumentDto> getRecentlyUploadedFilesBySpace(UUID spaceId, Date date, Pageable pageable);
 

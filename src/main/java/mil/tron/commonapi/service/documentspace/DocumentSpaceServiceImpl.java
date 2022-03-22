@@ -10,6 +10,7 @@ import liquibase.util.csv.opencsv.CSVReader;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.entity.DashboardUser;
@@ -1297,6 +1298,48 @@ public class DocumentSpaceServiceImpl implements DocumentSpaceService {
 	@Override
 	public void unsetDashboardUsersDefaultDocumentSpace(DocumentSpace documentSpace) {
 		dashboardUserRepository.unsetDashboardUsersDefaultDocumentSpaceForDocumentSpace(documentSpace.getId());
+	}
+
+	/**
+	 * Add an app client user to a document space with given permissions (READ will be added implicitly)
+	 * @param documentSpaceId
+	 * @param documentSpaceAppClientMemberRequestDto
+	 */
+	@Override
+	public void addAppClientUserToDocumentSpace(UUID documentSpaceId, DocumentSpaceAppClientMemberRequestDto documentSpaceAppClientMemberRequestDto) {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		List<DocumentSpacePrivilegeType> privilegeTypes = this.mapToPrivilegeTypes(documentSpaceAppClientMemberRequestDto.getPrivileges());
+		// Implicitly add READ privilege
+		privilegeTypes.add(DocumentSpacePrivilegeType.READ);
+		documentSpacePrivilegeService.addPrivilegesToAppClientUser(documentSpace, documentSpaceAppClientMemberRequestDto.getAppClientId(), privilegeTypes);
+	}
+
+	/**
+	 * Completely remove an app client from a document space
+	 * @param documentSpaceId
+	 * @param appClientId
+	 */
+	@Override
+	public void removeAppClientUserFromDocumentSpace(UUID documentSpaceId, UUID appClientId) {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		documentSpacePrivilegeService.removePrivilegesFromAppClientUser(documentSpace, appClientId);
+	}
+
+	/**
+	 * Returns a list of app clients given a document space and their privileges in that space
+	 * @param documentSpaceId
+	 * @return
+	 */
+	@Override
+	public List<DocumentSpaceAppClientResponseDto> getAppClientsForDocumentSpace(UUID documentSpaceId) {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		return documentSpacePrivilegeService.getAppClientsForDocumentSpace(documentSpace);
+	}
+
+	@Override
+	public List<AppClientSummaryDto> getAppClientsForAssignmentToDocumentSpace(UUID documentSpaceId) {
+		DocumentSpace documentSpace = getDocumentSpaceOrElseThrow(documentSpaceId);
+		return documentSpacePrivilegeService.getAppClientsForAssignmentToDocumentSpace(documentSpace);
 	}
 
 	@Override

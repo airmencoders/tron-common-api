@@ -12,6 +12,8 @@ import mil.tron.commonapi.annotation.minio.IfMinioEnabledOnIL4OrDevLocal;
 import mil.tron.commonapi.annotation.response.WrappedEnvelopeResponse;
 import mil.tron.commonapi.annotation.security.PreAuthorizeDashboardAdmin;
 import mil.tron.commonapi.annotation.security.PreAuthorizeOnlySSO;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDto;
+import mil.tron.commonapi.dto.appclient.AppClientSummaryDtoResponseWrapper;
 import mil.tron.commonapi.dto.documentspace.*;
 import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDto;
 import mil.tron.commonapi.dto.documentspace.mobile.DocumentMobileDtoResponseWrapper;
@@ -1025,5 +1027,84 @@ public class DocumentSpaceController {
 																	   Principal principal) {
 
 		return new ResponseEntity<>(documentSpaceService.findFilesInSpaceLike(id, searchDto.getQuery(), pageable, principal), HttpStatus.OK);
+	}
+
+	@Operation(summary = "Adds an App Client to a Document Space", description = "Adds an App Client to a Document Space with specified privileges")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Membership privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
+	@PostMapping("/spaces/{id}/app-client")
+	public ResponseEntity<Object> addAppClientToDocumentSpace(
+			@PathVariable UUID id,
+			@Valid @RequestBody DocumentSpaceAppClientMemberRequestDto dto) {
+		documentSpaceService.addAppClientUserToDocumentSpace(id, dto);
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Removes one or more App Client(s) from a Document Space", description = "Removes App Client(s) from a Document Space and their privileges")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204",
+					description = "Successful operation"),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@PreAuthorizeOnlySSO
+	@PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
+	@DeleteMapping("/spaces/{id}/app-client")
+	public ResponseEntity<Object> removeAppClientFromDocumentSpace(
+			@PathVariable UUID id,
+			@RequestParam UUID appClientId) {
+		documentSpaceService.removeAppClientUserFromDocumentSpace(id, appClientId);
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
+	@Operation(summary = "Gets the App Clients that can access a given Document Space", description = "Gets the App Clients that can access a space and their privileges")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = DocumentSpaceAppClientResponseDtoWrapper.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Membership privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorizeOnlySSO
+	@PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
+	@GetMapping("/spaces/{id}/app-clients")
+	public ResponseEntity<List<DocumentSpaceAppClientResponseDto>> getAppClientUsersForDocumentSpace(@PathVariable UUID id) {
+		return ResponseEntity.ok(documentSpaceService.getAppClientsForDocumentSpace(id));
+	}
+
+	@Operation(summary = "Gets list of App Clients that are available to assignment to given doc space",
+			description = "The list includes those that are not associated currently with given space")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200",
+					description = "Successful operation",
+					content = @Content(schema = @Schema(implementation = AppClientSummaryDtoResponseWrapper.class))),
+			@ApiResponse(responseCode = "404",
+					description = "Not Found - space not found",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class))),
+			@ApiResponse(responseCode = "403",
+					description = "Forbidden (Requires Membership privilege to document space, or DASHBOARD_ADMIN)",
+					content = @Content(schema = @Schema(implementation = ExceptionResponse.class)))
+	})
+	@WrappedEnvelopeResponse
+	@PreAuthorizeOnlySSO
+	@PreAuthorize("@accessCheckDocumentSpace.hasMembershipAccess(authentication, #id)")
+	@GetMapping("/spaces/{id}/available-app-clients")
+	public ResponseEntity<List<AppClientSummaryDto>> getAppClientsForAssignmentToDocumentSpace(@PathVariable UUID id) {
+		return ResponseEntity.ok(documentSpaceService.getAppClientsForAssignmentToDocumentSpace(id));
 	}
 }
